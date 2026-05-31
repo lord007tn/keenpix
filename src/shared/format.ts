@@ -37,9 +37,3 @@ export function fmtNum(n: number, decimals = 1): string {
   }
   return String(n)
 }
-
-/** Percentage with sign: 0.142 -> "+14.2%". */
-export function fmtPct(ratio: number, decimals = 1): string {
-  const pct = ratio * 100
-  return `${pct >= 0 ? '+' : ''}${pct.toFixed(decimals)}%`
-}

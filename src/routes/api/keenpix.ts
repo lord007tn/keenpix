@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { handleTransform } from '@/actions/transform/handle-transform'
+import { handleTransform } from '@/actions/transform'
 
 export const Route = createFileRoute('/api/keenpix')({
   server: {

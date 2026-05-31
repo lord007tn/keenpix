@@ -11,13 +11,6 @@ export class TransformError extends Error {
   }
 }
 
-/** The validated fetch target — the URL plus its already-resolved, allowlisted IP. */
-export interface ValidatedOrigin {
-  family: 4 | 6
-  ip: string
-  url: URL
-}
-
 // Hoisted (biome perf): compiled once at module load, not per call.
 const BRACKET_OPEN_RE = /^\[/
 const BRACKET_CLOSE_RE = /\]$/
@@ -28,7 +21,7 @@ const HEX_MAPPED_V4_RE = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/
 // fe80::/10 link-local + fec0::/10 site-local (deprecated but still routed).
 const LINK_SITE_LOCAL_RE = /^fe[89a-f]/
 
-export function isPrivateIp(ip: string): boolean {
+export function isPrivateIp(ip: string) {
   // Normalize: drop brackets + IPv6 zone id, lowercase.
   let addr = ip
     .toLowerCase()
@@ -83,7 +76,7 @@ export function isPrivateIp(ip: string): boolean {
 export async function assertSafeOrigin(
   rawUrl: string,
   allowedOrigins: string[],
-): Promise<ValidatedOrigin> {
+) {
   let url: URL
   try {
     url = new URL(rawUrl)

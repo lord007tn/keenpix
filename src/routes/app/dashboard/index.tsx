@@ -2,7 +2,13 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
 import { ProjectsDataTable } from '@/components/app/projects-data-table'
 import { SectionCards } from '@/components/app/section-cards'
-import { Card, CardContent } from '@/components/ui/card'
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from '@/components/ui/empty'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { getDashboardFn } from '@/functions/dashboard'
 import type { AnalyticsRange } from '@/shared/types'
@@ -39,22 +45,22 @@ function DashboardPage() {
   if (projects.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <div className="font-semibold text-lg">
-              Create your first project
-            </div>
-            <p className="max-w-md text-muted-foreground text-sm">
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>Create your first project</EmptyTitle>
+            <EmptyDescription>
               A project points keenpix at one image origin. Add the source host
               to its allowlist under Settings, then request{' '}
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
                 /api/keenpix?project=ID&amp;url=…
               </code>{' '}
               — no API keys.
-            </p>
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
             <NewProjectDialog />
-          </CardContent>
-        </Card>
+          </EmptyContent>
+        </Empty>
       </div>
     )
   }
