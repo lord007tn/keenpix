@@ -213,7 +213,8 @@ function AccountPage() {
         <CardHeader>
           <CardTitle>Security</CardTitle>
           <CardDescription>
-            This self-hosted instance uses a single seeded admin account.
+            This self-hosted instance is bootstrapped with a super admin
+            account.
           </CardDescription>
         </CardHeader>
         <CardContent className="divide-y">
@@ -227,12 +228,12 @@ function AccountPage() {
             </Badge>
           </Row>
           <Row
-            description="Configured through KEENPIX_ADMIN_PASSWORD."
+            description="Configured through KEENPIX_SUPER_ADMIN_PASSWORD or an invitation."
             label="Password"
           >
             <Badge variant="outline">
               <KeyRoundIcon data-icon="inline-start" />
-              Managed by seed
+              Email and password
             </Badge>
           </Row>
         </CardContent>

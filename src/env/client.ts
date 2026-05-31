@@ -1,7 +1,7 @@
 import { createEnv } from '@t3-oss/env-core'
 import { z } from 'zod'
 
-const optionalUrl = z.string().url().optional()
+const optionalUrl = z.url().optional()
 
 export const clientEnv = createEnv({
   clientPrefix: 'VITE_',

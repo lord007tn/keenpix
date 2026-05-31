@@ -1,11 +1,9 @@
-import 'dotenv/config'
-import os from 'node:os'
 import { createEnv } from '@t3-oss/env-core'
 import { z } from 'zod'
 
 const DEFAULT_CACHE_MAX_BYTES = 2 * 1024 * 1024 * 1024
 
-const optionalUrl = z.string().url().optional()
+const optionalUrl = z.url().optional()
 
 export const env = createEnv({
   server: {
@@ -49,8 +47,18 @@ export const env = createEnv({
       .default(10_000),
     KEENPIX_MAX_CONCURRENCY: z.coerce.number().int().positive().optional(),
     KEENPIX_MAX_QUEUE: z.coerce.number().int().positive().default(100),
-    KEENPIX_ADMIN_EMAIL: z.string().email().optional(),
+    KEENPIX_SUPER_ADMIN_EMAIL: z.email().optional(),
+    KEENPIX_SUPER_ADMIN_PASSWORD: z.string().min(1).optional(),
+    // Backward-compatible aliases for older self-host deployments.
+    KEENPIX_ADMIN_EMAIL: z.email().optional(),
     KEENPIX_ADMIN_PASSWORD: z.string().min(1).optional(),
+    SMTP_HOST: z.string().min(1).optional(),
+    SMTP_PORT: z.coerce.number().int().positive().default(587),
+    SMTP_SECURE: z.enum(['true', 'false', '1', '0']).optional(),
+    SMTP_USER: z.string().min(1).optional(),
+    SMTP_PASSWORD: z.string().min(1).optional(),
+    SMTP_FROM_EMAIL: z.email().optional(),
+    SMTP_FROM_NAME: z.string().min(1).optional(),
   },
   clientPrefix: 'VITE_',
   client: {},
@@ -58,5 +66,3 @@ export const env = createEnv({
   emptyStringAsUndefined: true,
   isServer: true,
 })
-
-export const DEFAULT_MAX_CONCURRENCY = Math.max(2, os.cpus().length)
