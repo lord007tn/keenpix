@@ -20,9 +20,9 @@ export default function keenpixLoader({ src, width, quality }) {
   // next/image passes `src` as-is; Keenpix needs an absolute URL.
   const url = src.startsWith('http') ? src : `${origin}${src}`
 
-  const params = new URLSearchParams({ project, url, w: String(width), fmt: 'auto' })
+  const params = new URLSearchParams({ project, w: String(width), fmt: 'auto' })
   if (quality) params.set('q', String(quality))
-  return `${host}/api/keenpix?${params.toString()}`
+  return `${host}/img/${encodeURIComponent(url)}?${params.toString()}`
 }
 ```
 

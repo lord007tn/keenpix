@@ -9,9 +9,9 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 
 /**
  * Dev-only: stop the dev static-asset handler from shadowing the transform
- * route. It classifies a request as a static file — and 404s `/api/keenpix` —
- * when the URL ends in an image extension (e.g. `&url=…/photo.jpg`) OR when the
- * browser sends `Sec-Fetch-Dest: image` (which every `<img src="/api/keenpix…">`
+ * route. It classifies a request as a static file — and 404s `/img/...` — when
+ * the URL ends in an image extension (e.g. `/img/https://.../photo.jpg`) OR when
+ * the browser sends `Sec-Fetch-Dest: image` (which every `<img src="/img/...">`
  * does). We neutralize both signals before the request reaches the handler.
  * Production (Nitro node-server) routes by pathname and is unaffected, so this
  * only restores dev↔prod parity.
@@ -25,7 +25,7 @@ function keenpixDevApiPassthrough(): Plugin {
     configureServer(server) {
       server.middlewares.use((req, _res, next) => {
         const url = req.url
-        if (url?.startsWith('/api/keenpix')) {
+        if (url?.startsWith('/img/')) {
           if (req.headers['sec-fetch-dest'] === 'image') {
             req.headers['sec-fetch-dest'] = 'empty'
           }

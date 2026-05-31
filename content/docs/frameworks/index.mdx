@@ -24,11 +24,11 @@ const PROJECT = 'YOUR_PROJECT_ID'
 type Opts = { w?: number; h?: number; q?: number; fmt?: string; fit?: string; dpr?: number }
 
 export function keenpix(src: string, opts: Opts = {}): string {
-  const params = new URLSearchParams({ project: PROJECT, url: src })
+  const params = new URLSearchParams({ project: PROJECT })
   for (const [k, v] of Object.entries(opts)) {
     if (v != null) params.set(k, String(v))
   }
-  return `${HOST}/api/keenpix?${params.toString()}`
+  return `${HOST}/img/${encodeURIComponent(src)}?${params.toString()}`
 }
 
 // A responsive srcset across common widths.
