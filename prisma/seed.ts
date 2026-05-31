@@ -1,21 +1,22 @@
 import { PrismaPg } from '@prisma/adapter-pg'
 import { hashPassword } from 'better-auth/crypto'
-import { env } from '../src/env/server'
 import { PrismaClient } from '../src/generated/prisma/client'
 
-if (!env.DATABASE_URL) {
+const DATABASE_URL = process.env.DATABASE_URL
+const SUPER_ADMIN_EMAIL =
+  process.env.KEENPIX_SUPER_ADMIN_EMAIL ?? process.env.KEENPIX_ADMIN_EMAIL
+const SUPER_ADMIN_PASSWORD =
+  process.env.KEENPIX_SUPER_ADMIN_PASSWORD ?? process.env.KEENPIX_ADMIN_PASSWORD
+
+if (!DATABASE_URL) {
   throw new Error('Set DATABASE_URL before seeding.')
 }
 
 const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: env.DATABASE_URL }),
+  adapter: new PrismaPg({ connectionString: DATABASE_URL }),
 })
 
 const ORG_ID = 'org_default'
-const SUPER_ADMIN_EMAIL =
-  env.KEENPIX_SUPER_ADMIN_EMAIL ?? env.KEENPIX_ADMIN_EMAIL
-const SUPER_ADMIN_PASSWORD =
-  env.KEENPIX_SUPER_ADMIN_PASSWORD ?? env.KEENPIX_ADMIN_PASSWORD
 
 async function seedSuperAdminUser() {
   if (!SUPER_ADMIN_EMAIL) {
