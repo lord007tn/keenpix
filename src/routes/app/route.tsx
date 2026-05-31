@@ -9,9 +9,6 @@ import { listProjectsFn } from '@/functions/projects'
 import { ProjectProvider } from '@/stores/project-context'
 
 export const Route = createFileRoute('/app')({
-  head: () => ({
-    meta: [{ name: 'robots', content: 'noindex,nofollow' }],
-  }),
   // The active project id is carried in ?project= across every /app page.
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
     project: typeof search.project === 'string' ? search.project : undefined,
@@ -24,6 +21,9 @@ export const Route = createFileRoute('/app')({
     return { user }
   },
   loader: () => listProjectsFn(),
+  head: () => ({
+    meta: [{ name: 'robots', content: 'noindex,nofollow' }],
+  }),
   component: AppLayout,
   errorComponent: RouteError,
 })

@@ -22,6 +22,7 @@ import {
 } from '@/lib/seo'
 
 export const Route = createFileRoute('/')({
+  loader: () => getPublicConfigFn(),
   head: ({ loaderData }) => {
     if (loaderData?.selfHost) {
       return {
@@ -58,7 +59,6 @@ export const Route = createFileRoute('/')({
       ],
     }
   },
-  loader: () => getPublicConfigFn(),
   component: Home,
 })
 
@@ -124,7 +124,7 @@ const FEATURES = [
   {
     icon: LayersIcon,
     title: 'Caches you can reason about',
-    body: 'Content-addressed disk cache with HIT/MISS headers. Front it with Cloudflare and your origin barely wakes up.',
+    body: 'Content-addressed disk cache with long-lived immutable responses. Add a CDN cache rule and your origin barely wakes up.',
   },
   {
     icon: GlobeIcon,
@@ -163,13 +163,6 @@ function MarketingPage() {
 
       <main id="main-content">
         <section className="relative overflow-hidden border-b">
-          <div
-            className="pointer-events-none absolute top-[-120px] left-1/2 h-[420px] w-[760px] -translate-x-1/2 opacity-60"
-            style={{
-              background:
-                'radial-gradient(ellipse, color-mix(in oklab, var(--primary) 22%, transparent), transparent 70%)',
-            }}
-          />
           <div className="relative mx-auto max-w-3xl px-6 py-16 text-center sm:py-24">
             <div className="mb-6 flex justify-center gap-2">
               <Badge variant="success">

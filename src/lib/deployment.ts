@@ -1,18 +1,17 @@
+import { env } from '@/env/server'
+
 const TRAILING_SLASH = /\/$/
 
 export function isSelfHosted() {
-  return (
-    process.env.KEENPIX_SELF_HOST === 'true' ||
-    process.env.KEENPIX_SELF_HOST === '1'
-  )
+  return env.KEENPIX_SELF_HOST === 'true' || env.KEENPIX_SELF_HOST === '1'
 }
 
 export function getAppUrl() {
   if (
-    process.env.NODE_ENV === 'production' &&
+    env.NODE_ENV === 'production' &&
     !isSelfHosted() &&
-    !process.env.KEENPIX_APP_URL &&
-    !process.env.BETTER_AUTH_URL
+    !env.KEENPIX_APP_URL &&
+    !env.BETTER_AUTH_URL
   ) {
     throw new Error(
       'Set KEENPIX_APP_URL or BETTER_AUTH_URL for hosted production metadata.',
@@ -20,8 +19,8 @@ export function getAppUrl() {
   }
 
   return (
-    process.env.KEENPIX_APP_URL ||
-    process.env.BETTER_AUTH_URL ||
+    env.KEENPIX_APP_URL ||
+    env.BETTER_AUTH_URL ||
     'http://localhost:3000'
   ).replace(TRAILING_SLASH, '')
 }

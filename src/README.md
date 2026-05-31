@@ -5,15 +5,15 @@ One-way dependency flow:
 
 ```
 routes/  →  functions/  →  actions/  →  data-access/  →  db / lib
-(thin UI)   (server Fns)   (pure logic)  (drizzle)
+(thin UI)   (server Fns)   (use cases)    (Prisma)
 ```
 
 - `routes/` — TanStack Router file-based routes (UI + API endpoints). Keep thin; call `*Fn`.
 - `functions/` — Server functions ("fat fn" layer). `createServerFn` + middleware + zod. **Every export ends with `Fn`.**
-- `actions/` — Pure business logic. No HTTP, no auth, no zod. e.g. the sharp pipeline (`actions/transform`), analytics aggregation (`actions/analytics`). Plain verb names.
-- `data-access/` — Pure DB operations only: `getX` / `listX` / `createX` / `updateX` / `deleteX`. (Returns **mock data** first; real drizzle later.)
-- `db/` — drizzle schema, relations, client (SQLite/libsql).
-- `lib/` — external integrations: `auth/` (better-auth), `sharp/` (transform wrapper), `cdn/` (cache-control + cache-key helpers).
+- `actions/` — Business orchestration. No route objects, no UI, no auth middleware. e.g. transform fetch/queue/cache orchestration in `actions/transform`. Plain verb names.
+- `data-access/` — Pure DB operations and DB health probes only: `getX` / `listX` / `createX` / `updateX` / `deleteX` / `checkX`.
+- `db/` — Prisma client bootstrap.
+- `lib/` — external integrations and reusable infrastructure: `auth/` (better-auth), `sharp/` (transform wrapper), `cdn/` (cache-control/cache-key/cache storage), `logger`.
 - `components/ui/` — frozen shadcn components (don't hand-edit except to add `cva` variants).
 - `components/app/` — shared app components (sidebar, topbar, stat cards, chart wrappers).
 - `features/` — domain modules (components/schemas/types) for analytics, projects, logs.

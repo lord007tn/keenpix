@@ -4,8 +4,9 @@ description: Deploy Keenpix with Docker in about a minute.
 icon: Container
 ---
 
-Keenpix runs as a single Node container (sharp needs Node, not an edge runtime). Put any
-CDN in front of `/api/keenpix` and it absorbs the immutable responses for you.
+Keenpix runs as a single Node container (sharp needs Node, not an edge runtime). Put a
+CDN in front of `/api/keenpix`, then configure that CDN to cache the endpoint's
+immutable image responses.
 
 ## The 60-second deploy
 
@@ -38,6 +39,6 @@ Browser/CDN ──▶ Keenpix container (Node + sharp) ──▶ your image orig
                       └── disk cache (volume)   +   Postgres (projects, request logs)
 ```
 
-Scale horizontally behind a load balancer; the disk cache is per-instance, and the CDN +
-`immutable` responses keep origin traffic low. See [Configuration](/docs/self-hosting/configuration)
-for every environment variable.
+Scale horizontally behind a load balancer; the disk cache is per-instance, and CDN cache
+rules plus `immutable` responses keep origin traffic low. See
+[Configuration](/docs/self-hosting/configuration) for every environment variable.

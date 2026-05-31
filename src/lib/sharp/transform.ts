@@ -1,4 +1,5 @@
 import sharp from 'sharp'
+import { env } from '@/env/server'
 
 // libvips already parallelizes within a single pipeline; cap per-call worker
 // threads so N concurrent transforms don't spawn N×CPU threads and thrash.
@@ -9,8 +10,7 @@ sharp.concurrency(1)
  * decompression bombs — a tiny compressed file that expands to a huge raw bitmap.
  * Override with KEENPIX_MAX_INPUT_PIXELS; defaults to ~50 MP.
  */
-const MAX_INPUT_PIXELS =
-  Number(process.env.KEENPIX_MAX_INPUT_PIXELS) || 50_000_000
+const MAX_INPUT_PIXELS = env.KEENPIX_MAX_INPUT_PIXELS
 
 /**
  * Longest output side when a request gives NO explicit w/h. Without this a
@@ -18,7 +18,7 @@ const MAX_INPUT_PIXELS =
  * can pin a CPU for tens of seconds. Bounds that worst case; never upscales.
  * Override with KEENPIX_MAX_DIMENSION.
  */
-const MAX_DIMENSION = Number(process.env.KEENPIX_MAX_DIMENSION) || 4096
+const MAX_DIMENSION = env.KEENPIX_MAX_DIMENSION
 
 export type OutputFormat = 'avif' | 'webp' | 'jpeg' | 'png'
 export type Fit = 'cover' | 'contain' | 'fill' | 'inside'
@@ -58,7 +58,7 @@ export function contentTypeFor(format: OutputFormat): string {
 }
 
 /** Decode + auto-orient (honours EXIF rotation) into a sharp pipeline. */
-export function createPipeline(input: Buffer): sharp.Sharp {
+function createPipeline(input: Buffer): sharp.Sharp {
   return sharp(input, {
     failOn: 'truncated',
     limitInputPixels: MAX_INPUT_PIXELS,
@@ -66,7 +66,7 @@ export function createPipeline(input: Buffer): sharp.Sharp {
 }
 
 /** Resize to the (dpr-scaled) target box; never upscales past the source. */
-export function applyResize(
+function applyResize(
   pipeline: sharp.Sharp,
   opts: TransformOptions,
 ): sharp.Sharp {
@@ -92,18 +92,20 @@ export function applyResize(
 }
 
 /** Post-resize effects (currently gaussian blur). */
-export function applyEffects(
+function applyBlur(pipeline: sharp.Sharp, opts: TransformOptions): sharp.Sharp {
+  return pipeline.blur(Math.min(1000, Math.max(0.3, opts.blur ?? 0.3)))
+}
+
+function applyMetadataPolicy(
   pipeline: sharp.Sharp,
   opts: TransformOptions,
 ): sharp.Sharp {
-  if (opts.blur && opts.blur > 0) {
-    return pipeline.blur(Math.min(1000, Math.max(0.3, opts.blur)))
-  }
-  return pipeline
+  // sharp strips metadata by default; opt back in when the project disables it.
+  return opts.stripMetadata === false ? pipeline.keepMetadata() : pipeline
 }
 
 /** Encode to the requested output format at the given quality. */
-export function encodeFormat(
+function encodeFormat(
   pipeline: sharp.Sharp,
   opts: TransformOptions,
 ): sharp.Sharp {
@@ -121,17 +123,31 @@ export function encodeFormat(
   }
 }
 
+type TransformStep = (
+  pipeline: sharp.Sharp,
+  opts: TransformOptions,
+) => sharp.Sharp
+
+function buildTransformSteps(opts: TransformOptions): TransformStep[] {
+  const steps: TransformStep[] = [applyResize]
+
+  if (opts.blur && opts.blur > 0) {
+    steps.push(applyBlur)
+  }
+
+  steps.push(applyMetadataPolicy, encodeFormat)
+  return steps
+}
+
 /** Full pipeline: bytes in → optimized bytes + output metadata. */
 export async function transformImage(
   input: Buffer,
   opts: TransformOptions,
 ): Promise<TransformResult> {
-  let pipeline = applyEffects(applyResize(createPipeline(input), opts), opts)
-  // sharp strips metadata by default; opt back in when the project disables it.
-  if (opts.stripMetadata === false) {
-    pipeline = pipeline.keepMetadata()
+  let pipeline = createPipeline(input)
+  for (const step of buildTransformSteps(opts)) {
+    pipeline = step(pipeline, opts)
   }
-  pipeline = encodeFormat(pipeline, opts)
   const { data, info } = await pipeline.toBuffer({ resolveWithObject: true })
   return {
     data,

@@ -70,6 +70,7 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_SELF_HOST` | – | Set `true` to run app-only self-host mode. Docker images default this to `true`. |
 | `KEENPIX_CACHE_DIR` | – | Disk cache location (default `./.keenpix-cache`). |
 | `KEENPIX_CACHE_MAX_BYTES` | – | LRU eviction cap (default 2 GB). |
+| `KEENPIX_MEMORY_CACHE_MAX_BYTES` | – | In-process hot variant LRU cap; set `0` to disable (default 64 MB). |
 | `KEENPIX_MAX_ORIGIN_BYTES` | – | Reject origin responses larger than this (default 50 MB). |
 | `KEENPIX_MAX_INPUT_PIXELS` | – | Decompression-bomb ceiling (default ~50 MP). |
 | `KEENPIX_MAX_DIMENSION` | – | Longest output side when a request omits `w`/`h` (default 4096). |
@@ -97,7 +98,7 @@ GET /api/keenpix?project=<id>&url=<origin>&w=&h=&q=&fmt=&fit=&dpr=&blur=
 | `dpr` | Device pixel ratio 1–3. |
 | `blur` | Gaussian blur sigma. |
 
-Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`, so a CDN in front of Keenpix caches each variant. `x-keenpix-cache: HIT|MISS` reports cache status.
+Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`, so a CDN can cache each image variant once you configure it to cache `/api/keenpix` with the full query string.
 
 **Failure modes:**
 
@@ -124,6 +125,8 @@ In an `<img>`, any non-200 shows as a broken image — a 403 almost always means
 | `pnpm test` | Unit tests (vitest) |
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm lint` / `pnpm fix` | Biome check / auto-fix |
+| `pnpm knip` / `pnpm doctor` | Dead-code and React health scans |
+| `pnpm health` | Full local quality gate: lint, typecheck, tests, knip, doctor, build |
 | `pnpm db:migrate` / `db:seed` | Prisma migrate / seed |
 
 ---

@@ -10,14 +10,12 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import path from 'node:path'
+import { LRUCache } from 'lru-cache'
+import { env } from '@/env/server'
 
-const CACHE_DIR = process.env.KEENPIX_CACHE_DIR ?? './.keenpix-cache'
-const DEFAULT_MAX_BYTES = 2 * 1024 * 1024 * 1024 // 2 GB
-const parsedMax = Number(process.env.KEENPIX_CACHE_MAX_BYTES)
-// A malformed value (e.g. "2GB") must fall back to the default — NOT become NaN,
-// which would make every comparison in maybeEvict false and wipe the whole cache.
-const MAX_BYTES =
-  Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : DEFAULT_MAX_BYTES
+const CACHE_DIR = env.KEENPIX_CACHE_DIR
+const MAX_BYTES = env.KEENPIX_CACHE_MAX_BYTES
+const MEMORY_MAX_BYTES = env.KEENPIX_MEMORY_CACHE_MAX_BYTES
 /** After eviction we leave roughly this much headroom (90% of cap). */
 const TARGET_BYTES = Math.floor(MAX_BYTES * 0.9)
 /** Only enumerate the cache every Nth write (avoids stat'ing on every request). */
@@ -29,6 +27,14 @@ const EXT: Record<string, string> = {
   jpeg: 'jpg',
   png: 'png',
 }
+
+const memoryCache =
+  MEMORY_MAX_BYTES > 0
+    ? new LRUCache<string, Buffer>({
+        maxSize: MEMORY_MAX_BYTES,
+        sizeCalculation: (value) => value.byteLength,
+      })
+    : null
 
 export interface TransformKeyInput {
   blur?: number
@@ -56,10 +62,19 @@ function pathFor(key: string, fmt: string): string {
   return path.join(CACHE_DIR, `${key}.${EXT[fmt] ?? 'bin'}`)
 }
 
+function memoryKey(key: string, fmt: string) {
+  return `${key}.${fmt}`
+}
+
 export async function readCache(
   key: string,
   fmt: string,
 ): Promise<Buffer | null> {
+  const hot = memoryCache?.get(memoryKey(key, fmt))
+  if (hot) {
+    return hot
+  }
+
   const file = pathFor(key, fmt)
   try {
     const buf = await readFile(file)
@@ -71,6 +86,7 @@ export async function readCache(
     utimes(file, now, now).catch(() => {
       // ignore
     })
+    memoryCache?.set(memoryKey(key, fmt), buf)
     return buf
   } catch {
     return null
@@ -93,6 +109,7 @@ export async function writeCache(
   try {
     await writeFile(tmp, data)
     await rename(tmp, final)
+    memoryCache?.set(memoryKey(key, fmt), data)
   } catch (err) {
     await unlink(tmp).catch(() => {
       // temp may not exist; ignore
@@ -105,6 +122,15 @@ export async function writeCache(
     maybeEvict().catch(() => {
       // best-effort
     })
+  }
+}
+
+export function getCacheRuntimeStats() {
+  return {
+    diskMaxBytes: MAX_BYTES,
+    memoryItemCount: memoryCache?.size ?? 0,
+    memoryMaxBytes: MEMORY_MAX_BYTES,
+    memorySizeBytes: memoryCache?.calculatedSize ?? 0,
   }
 }
 

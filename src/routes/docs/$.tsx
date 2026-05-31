@@ -30,6 +30,12 @@ interface DocsLoaderData {
 }
 
 export const Route = createFileRoute('/docs/$')({
+  loader: async ({ params }) => {
+    const slugs = params._splat?.split('/').filter(Boolean) ?? []
+    const data = (await serverLoader({ data: slugs })) as DocsLoaderData
+    await clientLoader.preload(data.path)
+    return data
+  },
   // Fumadocs styles are scoped to /docs via this stylesheet — the rest of the
   // app is unaffected.
   head: ({ loaderData }: { loaderData?: DocsLoaderData }) => {
@@ -82,12 +88,6 @@ export const Route = createFileRoute('/docs/$')({
     }
   },
   component: Page,
-  loader: async ({ params }) => {
-    const slugs = params._splat?.split('/').filter(Boolean) ?? []
-    const data = (await serverLoader({ data: slugs })) as DocsLoaderData
-    await clientLoader.preload(data.path)
-    return data
-  },
 })
 
 const serverLoader = createServerFn({ method: 'GET' })
