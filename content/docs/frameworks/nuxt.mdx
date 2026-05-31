@@ -1,0 +1,60 @@
+---
+title: Nuxt
+description: Register Keenpix as a custom @nuxt/image provider.
+icon: Mountain
+---
+
+[`@nuxt/image`](https://image.nuxt.com) supports custom providers, so `<NuxtImg>` and
+`<NuxtPicture>` can route through Keenpix with full responsive support.
+
+## 1. Add a provider
+
+```ts
+// providers/keenpix.ts
+import { createOperationsGenerator } from '#image'
+
+const operationsGenerator = createOperationsGenerator({
+  keyMap: { width: 'w', height: 'h', quality: 'q', format: 'fmt', fit: 'fit' },
+  joinWith: '&',
+  formatter: (key, value) => `${key}=${value}`,
+})
+
+export const getImage = (src, { modifiers = {}, baseURL = '', project = '' } = {}) => {
+  const operations = operationsGenerator(modifiers)
+  const url = src.startsWith('http') ? src : `${baseURL}${src}` // Keenpix needs an absolute URL
+  const query = `project=${project}&url=${encodeURIComponent(url)}${operations ? `&${operations}` : ''}`
+  return { url: `${process.env.KEENPIX_HOST}/api/keenpix?${query}` }
+}
+```
+
+## 2. Register it
+
+```ts
+// nuxt.config.ts
+export default defineNuxtConfig({
+  modules: ['@nuxt/image'],
+  image: {
+    providers: {
+      keenpix: {
+        name: 'keenpix',
+        provider: '~/providers/keenpix.ts',
+        options: { baseURL: 'https://cdn.example.com', project: 'YOUR_ID' },
+      },
+    },
+  },
+})
+```
+
+## 3. Use it
+
+```vue
+<template>
+  <NuxtImg provider="keenpix" src="/hero.jpg" width="1200" sizes="100vw" format="avif" />
+</template>
+```
+
+<Callout title="Simpler option">
+  If you don't need `@nuxt/image`'s responsive machinery, skip the provider and bind a
+  plain `<img :src="keenpix('/hero.jpg', { w: 1200 })">` using the
+  [universal helper](/docs/frameworks#the-universal-pattern).
+</Callout>

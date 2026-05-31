@@ -1,0 +1,31 @@
+---
+title: SvelteKit
+description: Use the URL helper with a native <img>.
+icon: Flame
+---
+
+Use the [universal helper](/docs/frameworks#the-universal-pattern) directly in markup:
+
+```svelte
+<script lang="ts">
+  import { keenpix, keenpixSrcSet } from '$lib/keenpix'
+  export let src: string
+  export let width = 1280
+</script>
+
+<img
+  src={keenpix(src, { w: width, fmt: 'auto' })}
+  srcset={keenpixSrcSet(src)}
+  sizes="100vw"
+  loading="lazy"
+  decoding="async"
+  alt=""
+/>
+```
+
+```svelte
+<KeenpixImage src="https://cdn.example.com/hero.jpg" width={1280} />
+```
+
+Put `PUBLIC_KEENPIX_HOST` / `PUBLIC_KEENPIX_PROJECT` in `.env` and read them via
+`$env/static/public` inside `keenpix.ts`.

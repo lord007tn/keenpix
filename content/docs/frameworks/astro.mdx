@@ -1,0 +1,28 @@
+---
+title: Astro
+description: Serve remote images through Keenpix with a plain <img>.
+icon: Rocket
+---
+
+Astro's built-in `<Image>` optimizes **local** assets at build time. To optimize **remote**
+images at request time, offload to Keenpix with the [universal helper](/docs/frameworks#the-universal-pattern)
+and a native `<img>` (works in `.astro`, MDX, and any UI framework island):
+
+```astro
+---
+import { keenpix, keenpixSrcSet } from '../lib/keenpix'
+const src = 'https://cdn.example.com/hero.jpg'
+---
+
+<img
+  src={keenpix(src, { w: 1280, fmt: 'auto' })}
+  srcset={keenpixSrcSet(src)}
+  sizes="100vw"
+  loading="lazy"
+  decoding="async"
+  alt="Hero"
+/>
+```
+
+This skips Astro's own image service for that element, letting Keenpix (and your CDN)
+handle resizing and caching.

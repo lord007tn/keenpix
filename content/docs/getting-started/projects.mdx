@@ -1,0 +1,34 @@
+---
+title: Projects & access
+description: How projects, the allowlist, and keyless access fit together.
+icon: FolderKey
+---
+
+A **project** is Keenpix's core primitive: it's one origin, one allowlist, and one
+analytics view. A single Keenpix instance can host many projects (one per site, brand,
+or environment).
+
+## Keyless by design
+
+There are no API keys. Access to the transform endpoint is gated entirely by each
+project's **domain allowlist** — Keenpix will only fetch an image whose source host is
+on the list. This means:
+
+- You can put the transform URL directly in public HTML; there's no secret to leak.
+- An empty allowlist blocks **every** request (fail-closed).
+- Private/internal addresses are always refused (see [Security](/docs/concepts/security)).
+
+## Anatomy of a request
+
+```text
+https://keenpix.example.com/api/keenpix
+  ?project=PROJECT_ID                      ← which project (its allowlist gates access)
+  &url=https://cdn.example.com/hero.jpg    ← absolute source URL (host must be allowed)
+  &w=1200&fmt=auto                         ← transforms
+```
+
+## Scoping the dashboard
+
+The dashboard works at two levels: **All projects** (org-wide analytics and logs) or a
+single project picked from the switcher at the top of the sidebar. Settings are always
+per-project.

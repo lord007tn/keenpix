@@ -1,0 +1,167 @@
+# Keenpix
+
+A self-hosted image-optimization service — a drop-in, open-source alternative to ImageKit/imgix. Point it at your origin, request a URL, and Keenpix fetches the image, transforms it with [sharp](https://sharp.pixelplumbing.com/), caches it to disk, and serves it CDN-ready.
+
+- **Transform API** — `GET /api/keenpix?project=…&url=…&w=…&fmt=…` → resize / re-encode (AVIF/WebP/JPEG/PNG) / blur, content-negotiated, immutably cacheable.
+- **No API keys** — access is gated entirely by each project's **domain allowlist**. An empty allowlist fails closed (403), so a fresh project is never an open proxy.
+- **Projects** — each project = one origin + an allowlist + its own request logs.
+- **Built-in analytics** — requests, bandwidth saved, cache hit-rate, formats, latency — from the request log.
+- **Auth** — single seeded admin account (via [better-auth](https://better-auth.com)) gating the dashboard.
+- **Hardened for the open internet** — SSRF guard (allowlist + private/loopback/link-local/CGNAT + IPv4-mapped-IPv6 + DNS-rebinding blocks), decompression-bomb + response-size + concurrency limits.
+
+Stack: TanStack Start (React 19, SSR) · Prisma 7 + PostgreSQL · sharp · Docker. MIT licensed.
+
+---
+
+## Quick start (Docker — the self-host path)
+
+Requires Docker + Docker Compose.
+
+```bash
+cp .env.example .env
+# Generate a signing secret and put it in .env (compose refuses to start without one):
+#   openssl rand -hex 32   →   BETTER_AUTH_SECRET=...
+# Set POSTGRES_PASSWORD, KEENPIX_ADMIN_EMAIL, and KEENPIX_ADMIN_PASSWORD in .env.
+docker compose up -d --build
+```
+
+The app comes up on **http://localhost:3000**. Compose runs Postgres, applies migrations on boot, seeds the default org and admin user, and exposes `/api/health` for the container healthcheck. Docker/self-host mode sets `KEENPIX_SELF_HOST=true`, so `/` shows a private self-host splash with links into `/app` and `/docs`; the dashboard, API, and docs are served, while public marketing and LLM export routes are not.
+
+**First run (empty database):**
+1. Open http://localhost:3000 and sign in with `KEENPIX_ADMIN_EMAIL` and `KEENPIX_ADMIN_PASSWORD`.
+2. Create a **project** (its origin hostname is added to the allowlist automatically).
+3. In **Settings**, add any other image hosts under **Allowed hosts**, and copy the **Project ID** (shown at the top of Settings).
+4. Request an image — **no API key**, just make sure the source host is allowlisted:
+   ```bash
+   curl -o out.webp \
+     "http://localhost:3000/api/keenpix?project=<PROJECT_ID>&w=600&fmt=webp&url=https://your-cdn.example.com/photo.jpg"
+   ```
+
+---
+
+## Quick start (local dev)
+
+Requires Node 22+, pnpm, and a PostgreSQL database.
+
+```bash
+pnpm install
+cp .env.example .env          # point DATABASE_URL at your Postgres
+                              # and set KEENPIX_ADMIN_EMAIL / KEENPIX_ADMIN_PASSWORD
+pnpm db:migrate               # apply schema
+pnpm db:seed                  # seed default org + admin user
+pnpm dev                      # http://localhost:3000
+```
+
+---
+
+## Configuration
+
+All via environment variables (see `.env.example`):
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `DATABASE_URL` | ✅ | PostgreSQL connection string. |
+| `POSTGRES_PASSWORD` | ✅ (compose) | Password for the bundled Compose Postgres service. Compose refuses to start without it. |
+| `BETTER_AUTH_SECRET` | ✅ (prod) | Session signing secret — `openssl rand -hex 32`. The app refuses to boot in production with a missing or known-weak/placeholder value. |
+| `BETTER_AUTH_URL` | – | Public base URL (default `http://localhost:3000`). HTTPS enables secure cookies automatically. |
+| `KEENPIX_APP_URL` | – | Canonical URL used for hosted docs metadata and generated OG/LLM links. Defaults to `BETTER_AUTH_URL`. |
+| `KEENPIX_ADMIN_EMAIL` | ✅ | Email for the seeded admin account. |
+| `KEENPIX_ADMIN_PASSWORD` | ✅ | Password for the seeded admin account. |
+| `KEENPIX_SELF_HOST` | – | Set `true` to run app-only self-host mode. Docker images default this to `true`. |
+| `KEENPIX_CACHE_DIR` | – | Disk cache location (default `./.keenpix-cache`). |
+| `KEENPIX_CACHE_MAX_BYTES` | – | LRU eviction cap (default 2 GB). |
+| `KEENPIX_MAX_ORIGIN_BYTES` | – | Reject origin responses larger than this (default 50 MB). |
+| `KEENPIX_MAX_INPUT_PIXELS` | – | Decompression-bomb ceiling (default ~50 MP). |
+| `KEENPIX_MAX_DIMENSION` | – | Longest output side when a request omits `w`/`h` (default 4096). |
+| `KEENPIX_ORIGIN_TIMEOUT_MS` | – | Per-attempt origin fetch timeout; a slow origin returns 504 (default 10000). |
+| `KEENPIX_MAX_CONCURRENCY` / `KEENPIX_MAX_QUEUE` | – | Concurrent transform jobs / queue depth before shedding 503. |
+
+---
+
+## Transform API
+
+```
+GET /api/keenpix?project=<id>&url=<origin>&w=&h=&q=&fmt=&fit=&dpr=&blur=
+```
+
+**No authentication header.** Access is controlled by the project's allowlist — the request only succeeds if `url`'s host is listed under that project's **Allowed hosts**.
+
+| Param | Meaning |
+|---|---|
+| `project` | Project id (copy it from **Settings → Project ID**). Its allowlist is the gate. |
+| `url` | Source image URL — its host must be on the project allowlist. |
+| `w` / `h` | Target width/height (1–5000, never upscaled). |
+| `q` | Quality 30–100 (default 75). |
+| `fmt` | `auto` (Accept-negotiated), `avif`, `webp`, `jpeg`, `png`. |
+| `fit` | `cover` / `contain` / `fill` / `inside`. |
+| `dpr` | Device pixel ratio 1–3. |
+| `blur` | Gaussian blur sigma. |
+
+Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`, so a CDN in front of Keenpix caches each variant. `x-keenpix-cache: HIT|MISS` reports cache status.
+
+**Failure modes:**
+
+| Status | When |
+|---|---|
+| **400** | Missing `?url` or `?project`, or a malformed/non-http(s) URL |
+| **403** | `url` host not on the project allowlist (or the allowlist is empty), or it resolves to a private/loopback/link-local/CGNAT/multicast address (incl. IPv4-mapped IPv6 and DNS-rebinding) |
+| **404** | Unknown `project` id |
+| **413** | Origin image exceeds `KEENPIX_MAX_ORIGIN_BYTES` |
+| **502** | Origin unreachable, errored, returned a non-image body, or too many redirects |
+| **503** | Transform queue saturated (back-pressure) |
+| **504** | Origin timed out |
+
+In an `<img>`, any non-200 shows as a broken image — a 403 almost always means the source host isn't on the allowlist.
+
+---
+
+## Scripts
+
+| Command | Does |
+|---|---|
+| `pnpm dev` | Dev server on :3000 |
+| `pnpm build` / `pnpm preview` | Production build / preview |
+| `pnpm test` | Unit tests (vitest) |
+| `pnpm typecheck` | `tsc --noEmit` |
+| `pnpm lint` / `pnpm fix` | Biome check / auto-fix |
+| `pnpm db:migrate` / `db:seed` | Prisma migrate / seed |
+
+---
+
+## Releases and Docker Images
+
+Keenpix uses semantic version tags in the form `vMAJOR.MINOR.PATCH` (for example `v0.1.0`). Pushing a valid tag runs [`changelogithub`](https://github.com/antfu/changelogithub) to create GitHub release notes, and the Docker workflow builds GHCR images for the self-hosted app.
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The compose file defaults to `ghcr.io/lord007tn/keenpix:latest`; override with `KEENPIX_IMAGE` if you want a pinned tag or digest.
+
+---
+
+## Hosted Docs
+
+Hosted builds serve the marketing page, Fumadocs documentation, docs search, `llms.txt`, `llms-full.txt`, and generated docs OG images. Self-hosted builds serve the dashboard, API, and documentation, but skip the marketing landing page and LLM export routes.
+
+---
+
+## Architecture
+
+Four one-way layers: **route → server fn (`*Fn`) → action (pure) → data-access (Prisma)**. The transform endpoint (`/api/keenpix`) is an API route handler calling the pure sharp/SSRF/cache actions directly. Every record is `orgId`-scoped (self-host runs as a single org; SaaS-ready later).
+
+```
+src/
+  routes/        UI + API route handlers (/api/keenpix, /api/health, /api/auth)
+  functions/     server fns (auth-gated via middleware)
+  actions/       pure logic — transform pipeline, SSRF guard
+  data-access/   Prisma queries
+  lib/           sharp, cache, auth
+```
+
+---
+
+## License
+
+[MIT](./LICENSE).

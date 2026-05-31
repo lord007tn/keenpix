@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: keenpix
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}"
+    # Intentionally not published to the host by default. The app connects
+    # internally via postgres:5432.
+    volumes:
+      - keenpix_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d keenpix']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
+    build:
+      context: .
+      args:
+        VITE_KEENPIX_PUBLIC_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+        VERSION: ${KEENPIX_VERSION:-0.1.0}
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      KEENPIX_SELF_HOST: "true"
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/keenpix
+      # Required — generate with: openssl rand -hex 32. Compose refuses to start
+      # if unset, so no deploy can ever ship with a known/default signing secret.
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (openssl rand -hex 32)}"
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      VITE_KEENPIX_PUBLIC_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      KEENPIX_ADMIN_EMAIL: "${KEENPIX_ADMIN_EMAIL:?set KEENPIX_ADMIN_EMAIL}"
+      KEENPIX_ADMIN_PASSWORD: "${KEENPIX_ADMIN_PASSWORD:?set KEENPIX_ADMIN_PASSWORD}"
+      KEENPIX_CACHE_DIR: /var/cache/keenpix
+    ports:
+      - '3000:3000'
+    volumes:
+      - keenpix_cache:/var/cache/keenpix
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+
+volumes:
+  keenpix_pg:
+  keenpix_cache:

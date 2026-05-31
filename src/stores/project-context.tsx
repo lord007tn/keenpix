@@ -1,0 +1,63 @@
+import { useNavigate, useRouterState } from '@tanstack/react-router'
+import { createContext, type ReactNode, use, useMemo } from 'react'
+import type { Project } from '@/shared/types'
+
+interface ProjectContextValue {
+  /** The selected project, or undefined in "All projects" mode. */
+  currentProject: Project | undefined
+  /** True when no single project is selected (org-wide / "All projects"). */
+  isAll: boolean
+  /** The active project id, or undefined in "All projects" mode. */
+  projectId: string | undefined
+  projects: Project[]
+  /** Set the scope: a project id, or null for "All projects". */
+  setProject: (id: string | null) => void
+}
+
+const ProjectContext = createContext<ProjectContextValue | null>(null)
+
+export function ProjectProvider({
+  projects,
+  children,
+}: {
+  projects: Project[]
+  children: ReactNode
+}) {
+  const navigate = useNavigate()
+  // The active scope lives in the URL (?project=) so it survives refresh, is
+  // shareable, and lets route loaders scope their queries. No param — or a
+  // stale id that no longer matches a project — means "All projects".
+  const searchProject = useRouterState({
+    select: (s) => (s.location.search as { project?: string }).project,
+  })
+
+  const value = useMemo<ProjectContextValue>(() => {
+    const projectId =
+      searchProject && projects.some((p) => p.id === searchProject)
+        ? searchProject
+        : undefined
+    const currentProject = projects.find((p) => p.id === projectId)
+    return {
+      projects,
+      projectId,
+      currentProject,
+      isAll: projectId === undefined,
+      setProject: (id: string | null) => {
+        navigate({
+          to: '.',
+          search: (prev) => ({ ...prev, project: id ?? undefined }),
+        })
+      },
+    }
+  }, [projects, searchProject, navigate])
+
+  return <ProjectContext value={value}>{children}</ProjectContext>
+}
+
+export function useProject() {
+  const ctx = use(ProjectContext)
+  if (!ctx) {
+    throw new Error('useProject must be used within a ProjectProvider')
+  }
+  return ctx
+}

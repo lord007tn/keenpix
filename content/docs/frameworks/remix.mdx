@@ -1,0 +1,30 @@
+---
+title: Remix / React Router
+description: Use the URL helper with a native <img>.
+icon: Disc
+---
+
+Remix (and React Router v7) has no image component, so use the
+[universal helper](/docs/frameworks#the-universal-pattern) with a native `<img>` — or the
+same `<KeenpixImage>` from the [React guide](/docs/frameworks/react).
+
+```tsx
+import { keenpix, keenpixSrcSet } from '~/lib/keenpix'
+
+export default function Hero() {
+  const src = 'https://cdn.example.com/hero.jpg'
+  return (
+    <img
+      alt="Hero"
+      decoding="async"
+      loading="lazy"
+      sizes="100vw"
+      src={keenpix(src, { w: 1280, fmt: 'auto' })}
+      srcSet={keenpixSrcSet(src)}
+    />
+  )
+}
+```
+
+Expose the host/project to the client via Remix's `window.ENV` pattern (a `loader` + a
+`<script>` in `root.tsx`), then read them in `keenpix.ts`.

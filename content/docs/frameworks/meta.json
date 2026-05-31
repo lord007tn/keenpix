@@ -1,0 +1,16 @@
+{
+  "title": "Frameworks",
+  "icon": "Boxes",
+  "pages": [
+    "index",
+    "nextjs",
+    "nuxt",
+    "tanstack-start",
+    "react",
+    "vue",
+    "sveltekit",
+    "astro",
+    "remix",
+    "html"
+  ]
+}

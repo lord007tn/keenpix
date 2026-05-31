@@ -1,0 +1,36 @@
+---
+title: Vue
+description: Bind :src to the URL helper.
+icon: Component
+---
+
+In any Vue 3 app, import the [universal helper](/docs/frameworks#the-universal-pattern)
+and bind it. For reuse, make a tiny component:
+
+```vue
+<!-- KeenpixImage.vue -->
+<script setup lang="ts">
+import { keenpix, keenpixSrcSet } from '@/lib/keenpix'
+
+const props = withDefaults(
+  defineProps<{ src: string; width?: number; sizes?: string }>(),
+  { width: 1280, sizes: '100vw' },
+)
+</script>
+
+<template>
+  <img
+    :src="keenpix(props.src, { w: props.width, fmt: 'auto' })"
+    :srcset="keenpixSrcSet(props.src)"
+    :sizes="props.sizes"
+    loading="lazy"
+    decoding="async"
+  />
+</template>
+```
+
+```vue
+<KeenpixImage src="https://cdn.example.com/hero.jpg" :width="1280" alt="Hero" />
+```
+
+(Prefer `@nuxt/image`? See the [Nuxt guide](/docs/frameworks/nuxt) for a custom provider.)

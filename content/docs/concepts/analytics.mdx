@@ -1,0 +1,31 @@
+---
+title: Analytics
+description: Every request is logged — here's what you get for free.
+icon: ChartArea
+---
+
+Analytics is built in, not bolted on. Every request to `/api/keenpix` writes a log row
+(timestamp, project, path, width, format, status, cache hit/miss, latency, bytes in/out,
+region), and the dashboard reads real aggregates from it.
+
+## What you get
+
+- **KPIs** — total requests, bandwidth saved, cache hit-rate, and p95 latency, each with
+  a real trend versus the previous window.
+- **Requests over time** — cache hits vs live-optimized, with a range toggle (24h–90d).
+- **Format distribution** — how much traffic is AVIF / WebP / JPEG.
+- **Response latency** — a p50/p95/p99 breakdown and a histogram.
+- **Top images** — the most-requested paths.
+- **Live logs** — every request, newest first, with faceted filters (format, status,
+  cache, region).
+
+## Scope: all projects or one
+
+The switcher at the top of the sidebar sets the scope. **All projects** shows org-wide
+totals plus a per-project breakdown; pick a single project to scope every chart, the
+logs, and the KPIs to it.
+
+<Callout type="info">
+  Analytics are computed from the request log in Postgres. High-volume deployments can
+  move the log to ClickHouse later without changing the dashboard.
+</Callout>

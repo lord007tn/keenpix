@@ -1,0 +1,47 @@
+---
+title: Quickstart
+description: Your first optimized image in two minutes — no SDK, no API key.
+icon: Zap
+---
+
+Keenpix is just an HTTP endpoint, so the fastest integration is a plain `<img>` tag.
+
+## 1. Allow your source host
+
+Open **Settings → Security → Allowed hosts** for your project and add the hostname your
+images come from (e.g. `cdn.example.com`). Keenpix refuses to fetch from any host that
+isn't on the list — an empty allowlist blocks every request. This is the entire access
+model: no API keys.
+
+<Callout title="Find your project id">
+  It's under **Settings → General → Project ID**. You pass it as `project=` in every URL.
+</Callout>
+
+## 2. Point an `<img>` at the endpoint
+
+```html
+<img
+  src="https://keenpix.example.com/api/keenpix?project=YOUR_ID&url=https://cdn.example.com/hero.jpg&w=1200&fmt=auto"
+  sizes="100vw"
+  loading="lazy"
+  decoding="async"
+  alt="Hero"
+/>
+```
+
+The first request is a cache **MISS** (Keenpix fetches + transforms the original); every
+later request for the same parameters is a **HIT** served straight from disk.
+
+## 3. Tune the output
+
+Add query parameters to resize and re-encode:
+
+| Param | Example   | Effect                                  |
+| ----- | --------- | --------------------------------------- |
+| `w`   | `w=1200`  | Resize to 1200px wide                   |
+| `q`   | `q=80`    | Quality 30–100 (default from settings)  |
+| `fmt` | `fmt=auto`| Negotiate AVIF/WebP from `Accept`       |
+| `dpr` | `dpr=2`   | Render at 2× for retina screens         |
+
+See the [API reference](/docs/reference/parameters) for the full list, or jump to your
+[framework guide](/docs/frameworks).

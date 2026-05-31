@@ -1,0 +1,5 @@
+{
+  "title": "How it works",
+  "icon": "Workflow",
+  "pages": ["how-it-works", "caching", "security", "analytics"]
+}
