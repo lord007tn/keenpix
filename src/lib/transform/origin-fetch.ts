@@ -1,6 +1,7 @@
 import { Agent, fetch as undiciFetch } from 'undici'
 import { env } from '@/env/server'
-import { assertSafeOrigin, TransformError } from './ssrf'
+import { TransformError } from '@/errors/transform'
+import { assertSafeOrigin } from './safe-origin'
 
 type ValidatedOrigin = Awaited<ReturnType<typeof assertSafeOrigin>>
 

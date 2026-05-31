@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { assertSafeOrigin, isPrivateIp, TransformError } from './ssrf'
+import { TransformError } from '@/errors/transform'
+import { assertSafeOrigin, isPrivateIp } from './safe-origin'
 
 describe('isPrivateIp', () => {
   it('flags loopback, private, link-local, CGNAT and multicast/reserved', () => {

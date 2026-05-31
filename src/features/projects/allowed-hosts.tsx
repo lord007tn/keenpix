@@ -5,8 +5,8 @@ import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { getErrorMessage } from '@/errors/common'
 import { addAllowedHostFn, removeAllowedHostFn } from '@/functions/projects'
-import { getErrorMessage } from '@/lib/errors'
 
 export function AllowedHosts({
   projectId,

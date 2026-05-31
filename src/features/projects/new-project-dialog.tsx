@@ -21,8 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { getErrorMessage } from '@/errors/common'
 import { createProjectFn } from '@/functions/projects'
-import { getErrorMessage } from '@/lib/errors'
 import type { ProjectEnv } from '@/shared/types'
 
 const ENVS: ProjectEnv[] = ['production', 'staging', 'development']

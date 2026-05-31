@@ -1,15 +1,6 @@
 import { lookup } from 'node:dns/promises'
 import net from 'node:net'
-
-/** Thrown by the transform pipeline with an HTTP status. */
-export class TransformError extends Error {
-  status: number
-  constructor(message: string, status: number) {
-    super(message)
-    this.status = status
-    this.name = 'TransformError'
-  }
-}
+import { TransformError } from '@/errors/transform'
 
 // Hoisted (biome perf): compiled once at module load, not per call.
 const BRACKET_OPEN_RE = /^\[/

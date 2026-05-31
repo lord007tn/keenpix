@@ -5,8 +5,8 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { getErrorMessage } from '@/errors/common'
 import { updateProjectSettingsFn } from '@/functions/projects'
-import { getErrorMessage } from '@/lib/errors'
 import type { Project } from '@/shared/types'
 
 interface Patch {

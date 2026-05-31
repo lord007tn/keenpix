@@ -1,3 +1,4 @@
+import { TransformError } from '@/errors/transform'
 import { readCache, writeCache } from '@/lib/cdn/cache'
 import {
   type OutputFormat,
@@ -6,8 +7,8 @@ import {
 } from '@/lib/sharp/transform'
 import { runTransformJob } from './concurrency'
 import { logCacheWriteError } from './logging'
-import { fetchOriginImage } from './origin'
-import { type assertSafeOrigin, TransformError } from './ssrf'
+import { fetchOriginImage } from './origin-fetch'
+import type { assertSafeOrigin } from './safe-origin'
 
 type ValidatedOrigin = Awaited<ReturnType<typeof assertSafeOrigin>>
 

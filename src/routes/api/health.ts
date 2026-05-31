@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getTransformQueueStats } from '@/actions/transform/concurrency'
 import { checkDatabaseHealth } from '@/data-access/health'
 import { getCacheRuntimeStats } from '@/lib/cdn/cache'
+import { getTransformQueueStats } from '@/lib/transform/concurrency'
 
 export const Route = createFileRoute('/api/health')({
   server: {
