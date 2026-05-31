@@ -8,15 +8,32 @@ Set these in `.env` (or your orchestrator's secrets).
 
 ## Core
 
-| Variable             | Required | Default            | Purpose                                          |
-| -------------------- | -------- | ------------------ | ------------------------------------------------ |
-| `DATABASE_URL`       | yes      | —                  | Postgres connection string                       |
-| `POSTGRES_PASSWORD`  | yes (compose) | —             | Password for the bundled Compose Postgres service |
-| `BETTER_AUTH_SECRET` | yes (prod) | —                | Session secret; must be 32+ random chars         |
-| `KEENPIX_ADMIN_EMAIL` | yes      | —                  | Email for the seeded admin account               |
-| `KEENPIX_ADMIN_PASSWORD` | yes   | —                  | Password for the seeded admin account            |
-| `KEENPIX_CACHE_DIR`  | no       | `./.keenpix-cache` | Where transformed images are cached on disk      |
-| `KEENPIX_SELF_HOST`  | no       | `false`            | `true` disables the marketing site — the landing page becomes a minimal self-hosted splash |
+| Variable                         | Required      | Default            | Purpose                                                                                    |
+| -------------------------------- | ------------- | ------------------ | ------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`                   | yes           | —                  | Postgres connection string                                                                 |
+| `POSTGRES_PASSWORD`              | yes (compose) | —                  | Password for the bundled Compose Postgres service                                          |
+| `BETTER_AUTH_SECRET`             | yes (prod)    | —                  | Session secret; must be 32+ random chars                                                   |
+| `KEENPIX_SUPER_ADMIN_EMAIL`      | yes           | —                  | Email for the bootstrapped super admin account                                             |
+| `KEENPIX_SUPER_ADMIN_PASSWORD`   | yes           | —                  | Password for the bootstrapped super admin account                                          |
+| `KEENPIX_ADMIN_EMAIL`            | legacy alias  | —                  | Backward-compatible alias for `KEENPIX_SUPER_ADMIN_EMAIL`                                  |
+| `KEENPIX_ADMIN_PASSWORD`         | legacy alias  | —                  | Backward-compatible alias for `KEENPIX_SUPER_ADMIN_PASSWORD`                               |
+| `KEENPIX_CACHE_DIR`              | no            | `./.keenpix-cache` | Where transformed images are cached on disk                                                |
+| `KEENPIX_SELF_HOST`              | no            | `false`            | `true` disables the marketing site — the landing page becomes a minimal self-hosted splash |
+
+## SMTP
+
+SMTP can be managed from **Settings → Email**. The environment variables below
+act as defaults when database-managed SMTP settings are not enabled.
+
+| Variable          | Default | Purpose                                      |
+| ----------------- | ------- | -------------------------------------------- |
+| `SMTP_HOST`       | —       | SMTP server hostname                         |
+| `SMTP_PORT`       | `587`   | SMTP server port                             |
+| `SMTP_SECURE`     | `false` | `true` for implicit TLS, `false` for STARTTLS |
+| `SMTP_USER`       | —       | SMTP username                                |
+| `SMTP_PASSWORD`   | —       | SMTP password                                |
+| `SMTP_FROM_EMAIL` | —       | Sender email address                         |
+| `SMTP_FROM_NAME`  | —       | Sender display name                          |
 
 ## Limits & performance
 

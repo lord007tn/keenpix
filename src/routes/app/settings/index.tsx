@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouteContext } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/app/page-header'
@@ -11,6 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { SmtpSettingsPanel } from '@/features/admin/smtp-settings'
+import { StaffManagement } from '@/features/admin/staff-management'
 import { AllowedHosts } from '@/features/projects/allowed-hosts'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { PipelineSettings } from '@/features/projects/pipeline-settings'
@@ -44,6 +46,35 @@ function SettingRow({
 
 function SettingsPage() {
   const { currentProject, isAll, projects, setProject } = useProject()
+  const { user } = useRouteContext({ from: '/app' })
+  const isSuperAdmin = user.role === 'super_admin'
+  const workspaceAdmin = isSuperAdmin ? (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Staff</CardTitle>
+          <CardDescription>
+            Invite people into this self-hosted workspace.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <StaffManagement />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Email</CardTitle>
+          <CardDescription>
+            SMTP configuration for test emails and optional invitation delivery.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SmtpSettingsPanel />
+        </CardContent>
+      </Card>
+    </>
+  ) : null
 
   // Settings are per-project. In "All projects" scope there's nothing to
   // configure — prompt the user to pick a project (or create one).
@@ -51,6 +82,7 @@ function SettingsPage() {
     return (
       <div className="flex max-w-4xl flex-col gap-6 p-6">
         <PageHeader subtitle="Per-project configuration." title="Settings" />
+        {workspaceAdmin}
         <Card>
           <CardHeader>
             <CardTitle>Pick a project</CardTitle>
@@ -111,6 +143,8 @@ function SettingsPage() {
         subtitle="Per-project configuration."
         title="Settings"
       />
+
+      {workspaceAdmin}
 
       <Card>
         <CardHeader>
@@ -175,7 +209,7 @@ function SettingsPage() {
         <CardHeader>
           <CardTitle>Security</CardTitle>
           <CardDescription>
-            Access is controlled entirely by the allowlist — keenpix only
+            Access is controlled entirely by the allowlist: keenpix only
             transforms images whose source host is listed here. No API keys to
             manage or leak.
           </CardDescription>
