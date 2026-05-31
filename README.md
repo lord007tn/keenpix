@@ -6,7 +6,7 @@ A self-hosted image-optimization service — a drop-in, open-source alternative 
 - **No API keys** — access is gated entirely by each project's **domain allowlist**. An empty allowlist fails closed (403), so a fresh project is never an open proxy.
 - **Projects** — each project = one origin + an allowlist + its own request logs.
 - **Built-in analytics** — requests, bandwidth saved, cache hit-rate, formats, latency — from the request log.
-- **Auth** — single seeded admin account (via [better-auth](https://better-auth.com)) gating the dashboard.
+- **Auth** — seeded super admin, copyable staff invitations, and optional SMTP-backed invite/test emails.
 - **Hardened for the open internet** — SSRF guard (allowlist + private/loopback/link-local/CGNAT + IPv4-mapped-IPv6 + DNS-rebinding blocks), decompression-bomb + response-size + concurrency limits.
 
 Stack: TanStack Start (React 19, SSR) · Prisma 7 + PostgreSQL · sharp · Docker. Apache-2.0 licensed.
@@ -21,17 +21,18 @@ Requires Docker + Docker Compose.
 cp .env.example .env
 # Generate a signing secret and put it in .env (compose refuses to start without one):
 #   openssl rand -hex 32   →   BETTER_AUTH_SECRET=...
-# Set POSTGRES_PASSWORD, KEENPIX_ADMIN_EMAIL, and KEENPIX_ADMIN_PASSWORD in .env.
+# Set POSTGRES_PASSWORD, KEENPIX_SUPER_ADMIN_EMAIL, and KEENPIX_SUPER_ADMIN_PASSWORD in .env.
 docker compose up -d --build
 ```
 
-The app comes up on **http://localhost:3000**. Compose runs Postgres, applies migrations on boot, seeds the default org and admin user, and exposes `/api/health` for the container healthcheck. Docker/self-host mode sets `KEENPIX_SELF_HOST=true`, so `/` shows a private self-host splash with links into `/app` and `/docs`; the dashboard, API, and docs are served, while public marketing and LLM export routes are not.
+The app comes up on **http://localhost:3000**. Compose runs Postgres, applies migrations on boot, seeds the default org and super admin user, and exposes `/api/health` for the container healthcheck. Docker/self-host mode sets `KEENPIX_SELF_HOST=true`, so `/` shows a private self-host splash with links into `/app` and `/docs`; the dashboard, API, and docs are served, while public marketing and LLM export routes are not.
 
 **First run (empty database):**
-1. Open http://localhost:3000 and sign in with `KEENPIX_ADMIN_EMAIL` and `KEENPIX_ADMIN_PASSWORD`.
+1. Open http://localhost:3000 and sign in with `KEENPIX_SUPER_ADMIN_EMAIL` and `KEENPIX_SUPER_ADMIN_PASSWORD`.
 2. Create a **project** (its origin hostname is added to the allowlist automatically).
-3. In **Settings**, add any other image hosts under **Allowed hosts**, and copy the **Project ID** (shown at the top of Settings).
-4. Request an image — **no API key**, just make sure the source host is allowlisted:
+3. In **Settings**, invite staff by copying an invitation link, and optionally configure SMTP to send invitation/test emails.
+4. Add any other image hosts under **Allowed hosts**, and copy the **Project ID** (shown at the top of Settings).
+5. Request an image — **no API key**, just make sure the source host is allowlisted:
    ```bash
    curl -o out.webp \
      "http://localhost:3000/api/keenpix?project=<PROJECT_ID>&w=600&fmt=webp&url=https://your-cdn.example.com/photo.jpg"
@@ -46,7 +47,7 @@ Requires Node 22+, pnpm, and a PostgreSQL database.
 ```bash
 pnpm install
 cp .env.example .env          # point DATABASE_URL at your Postgres
-                              # and set KEENPIX_ADMIN_EMAIL / KEENPIX_ADMIN_PASSWORD
+                              # and set KEENPIX_SUPER_ADMIN_EMAIL / KEENPIX_SUPER_ADMIN_PASSWORD
 pnpm db:migrate               # apply schema
 pnpm db:seed                  # seed default org + admin user
 pnpm dev                      # http://localhost:3000
@@ -65,8 +66,11 @@ All via environment variables (see `.env.example`):
 | `BETTER_AUTH_SECRET` | ✅ (prod) | Session signing secret — `openssl rand -hex 32`. The app refuses to boot in production with a missing or known-weak/placeholder value. |
 | `BETTER_AUTH_URL` | – | Public base URL (default `http://localhost:3000`). HTTPS enables secure cookies automatically. |
 | `KEENPIX_APP_URL` | – | Canonical URL used for hosted docs metadata and generated OG/LLM links. Defaults to `BETTER_AUTH_URL`. |
-| `KEENPIX_ADMIN_EMAIL` | ✅ | Email for the seeded admin account. |
-| `KEENPIX_ADMIN_PASSWORD` | ✅ | Password for the seeded admin account. |
+| `KEENPIX_SUPER_ADMIN_EMAIL` | ✅ | Email for the seeded super admin account. |
+| `KEENPIX_SUPER_ADMIN_PASSWORD` | ✅ | Password for the seeded super admin account. |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` | – | Optional SMTP defaults used when database SMTP settings are not enabled. |
+| `SMTP_USER` / `SMTP_PASSWORD` | – | Optional SMTP credentials. |
+| `SMTP_FROM_EMAIL` / `SMTP_FROM_NAME` | – | Optional SMTP sender defaults. |
 | `KEENPIX_SELF_HOST` | – | Set `true` to run app-only self-host mode. Docker images default this to `true`. |
 | `KEENPIX_CACHE_DIR` | – | Disk cache location (default `./.keenpix-cache`). |
 | `KEENPIX_CACHE_MAX_BYTES` | – | LRU eviction cap (default 2 GB). |

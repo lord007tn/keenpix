@@ -20,6 +20,20 @@ model Org {
   projects  Project[]
 }
 
+model SmtpSettings {
+  id        String   @id
+  enabled   Boolean  @default(false)
+  host      String?
+  port      Int      @default(587)
+  secure    Boolean  @default(false)
+  username  String?
+  password  String?
+  fromEmail String?
+  fromName  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Project {
   id             String       @id @default(cuid())
   orgId          String
@@ -81,6 +95,23 @@ model User {
   accounts      Account[]
 
   @@index([email])
+}
+
+model StaffInvitation {
+  id          String    @id @default(cuid())
+  email       String
+  role        String    @default("staff")
+  tokenHash   String    @unique
+  status      String    @default("pending")
+  invitedById String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([email])
+  @@index([status, expiresAt])
 }
 
 model Session {

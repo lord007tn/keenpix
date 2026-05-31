@@ -15,6 +15,7 @@ import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as InviteTokenRouteImport } from './routes/invite/$token'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiKeenpixRouteImport } from './routes/api/keenpix'
@@ -58,6 +59,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRouteRoute,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DocsSplatRoute = DocsSplatRouteImport.update({
   id: '/docs/$',
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/api/keenpix': typeof ApiKeenpixRoute
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/api/keenpix': typeof ApiKeenpixRoute
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/app': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
@@ -171,6 +179,7 @@ export interface FileRoutesById {
   '/api/keenpix': typeof ApiKeenpixRoute
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
     | '/api/keenpix'
     | '/api/search'
     | '/docs/$'
+    | '/invite/$token'
     | '/app/'
     | '/api/auth/$'
     | '/og/docs/$'
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/api/keenpix'
     | '/api/search'
     | '/docs/$'
+    | '/invite/$token'
     | '/app'
     | '/api/auth/$'
     | '/og/docs/$'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/api/keenpix'
     | '/api/search'
     | '/docs/$'
+    | '/invite/$token'
     | '/app/'
     | '/api/auth/$'
     | '/og/docs/$'
@@ -253,6 +265,7 @@ export interface RootRouteChildren {
   ApiKeenpixRoute: typeof ApiKeenpixRoute
   ApiSearchRoute: typeof ApiSearchRoute
   DocsSplatRoute: typeof DocsSplatRoute
+  InviteTokenRoute: typeof InviteTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   OgDocsSplatRoute: typeof OgDocsSplatRoute
 }
@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/docs/$': {
       id: '/docs/$'
@@ -421,6 +441,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiKeenpixRoute: ApiKeenpixRoute,
   ApiSearchRoute: ApiSearchRoute,
   DocsSplatRoute: DocsSplatRoute,
+  InviteTokenRoute: InviteTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   OgDocsSplatRoute: OgDocsSplatRoute,
 }

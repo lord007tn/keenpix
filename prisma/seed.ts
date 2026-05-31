@@ -12,47 +12,53 @@ const prisma = new PrismaClient({
 })
 
 const ORG_ID = 'org_default'
-const ADMIN_EMAIL = env.KEENPIX_ADMIN_EMAIL
-const ADMIN_PASSWORD = env.KEENPIX_ADMIN_PASSWORD
+const SUPER_ADMIN_EMAIL =
+  env.KEENPIX_SUPER_ADMIN_EMAIL ?? env.KEENPIX_ADMIN_EMAIL
+const SUPER_ADMIN_PASSWORD =
+  env.KEENPIX_SUPER_ADMIN_PASSWORD ?? env.KEENPIX_ADMIN_PASSWORD
 
-async function seedAdminUser() {
-  if (!ADMIN_EMAIL) {
-    throw new Error('Set KEENPIX_ADMIN_EMAIL before seeding the admin user.')
+async function seedSuperAdminUser() {
+  if (!SUPER_ADMIN_EMAIL) {
+    throw new Error(
+      'Set KEENPIX_SUPER_ADMIN_EMAIL before seeding the super admin user.',
+    )
   }
 
   const existingAdmin = await prisma.user.findUnique({
-    where: { email: ADMIN_EMAIL },
+    where: { email: SUPER_ADMIN_EMAIL },
     include: { accounts: true },
   })
 
-  if (!(ADMIN_PASSWORD || existingAdmin)) {
-    throw new Error('Set KEENPIX_ADMIN_PASSWORD before seeding the admin user.')
+  if (!(SUPER_ADMIN_PASSWORD || existingAdmin)) {
+    throw new Error(
+      'Set KEENPIX_SUPER_ADMIN_PASSWORD before seeding the super admin user.',
+    )
   }
 
   const admin = await prisma.user.upsert({
-    where: { email: ADMIN_EMAIL },
+    where: { email: SUPER_ADMIN_EMAIL },
     update: {
       emailVerified: true,
       name: 'Admin',
-      role: 'admin',
+      role: 'super_admin',
       banned: false,
       banReason: null,
       banExpires: null,
     },
     create: {
-      email: ADMIN_EMAIL,
+      email: SUPER_ADMIN_EMAIL,
       emailVerified: true,
       name: 'Admin',
-      role: 'admin',
+      role: 'super_admin',
       banned: false,
     },
   })
 
-  if (!ADMIN_PASSWORD) {
+  if (!SUPER_ADMIN_PASSWORD) {
     return
   }
 
-  const password = await hashPassword(ADMIN_PASSWORD)
+  const password = await hashPassword(SUPER_ADMIN_PASSWORD)
   const credentialAccount = existingAdmin?.accounts.find(
     (account) => account.providerId === 'credential',
   )
@@ -84,9 +90,9 @@ async function main() {
     create: { id: ORG_ID, name: 'Keenpix' },
   })
 
-  await seedAdminUser()
+  await seedSuperAdminUser()
 
-  console.log(`Seeded default org and admin user ${ADMIN_EMAIL}.`)
+  console.log(`Seeded default org and super admin user ${SUPER_ADMIN_EMAIL}.`)
 }
 
 main()
