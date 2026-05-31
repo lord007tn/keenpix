@@ -25,8 +25,8 @@
   "packageManager": "pnpm@10.30.3",
   "scripts": {
     "dev": "vite dev --port 3000",
-    "build": "vite build",
-    "build:selfhost": "vite build",
+    "build": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
+    "build:selfhost": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
     "start": "node .output/server/index.mjs",
     "preview": "vite preview",
     "test": "vitest run",
