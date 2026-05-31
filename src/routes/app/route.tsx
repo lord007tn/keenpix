@@ -8,6 +8,14 @@ import { getSessionFn } from '@/functions/auth'
 import { listProjectsFn } from '@/functions/projects'
 import { ProjectProvider } from '@/stores/project-context'
 
+const sidebarStyle: CSSProperties & {
+  '--header-height': string
+  '--sidebar-width': string
+} = {
+  '--sidebar-width': 'calc(var(--spacing) * 72)',
+  '--header-height': 'calc(var(--spacing) * 12)',
+}
+
 export const Route = createFileRoute('/app')({
   // The active project id is carried in ?project= across every /app page.
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
@@ -33,14 +41,7 @@ function AppLayout() {
   const { user } = Route.useRouteContext()
   return (
     <ProjectProvider projects={projects}>
-      <SidebarProvider
-        style={
-          {
-            '--sidebar-width': 'calc(var(--spacing) * 72)',
-            '--header-height': 'calc(var(--spacing) * 12)',
-          } as CSSProperties
-        }
-      >
+      <SidebarProvider style={sidebarStyle}>
         <AppSidebar user={user} />
         <SidebarInset id="main-content">
           <AppTopbar />

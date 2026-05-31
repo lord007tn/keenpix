@@ -1,6 +1,6 @@
 /** Projects data-access — Prisma-backed. */
 import { prisma } from '@/db'
-import type { Project, ProjectEnv } from '@/shared/types'
+import { isProjectEnv, type Project, type ProjectEnv } from '@/shared/types'
 
 const DEFAULT_ORG = 'org_default'
 
@@ -25,7 +25,7 @@ function toProject(p: ProjectRow): Project {
     orgId: p.orgId,
     name: p.name,
     origin: p.origin,
-    env: p.env as ProjectEnv,
+    env: isProjectEnv(p.env) ? p.env : 'production',
     allowedOrigins: p.allowedOrigins,
     color1: p.color1,
     color2: p.color2,
@@ -60,7 +60,7 @@ const COLOR_PRESETS = [
   { color1: '#8B5CF6', color2: '#D8B4FE' },
   { color1: '#F59E0B', color2: '#FCD34D' },
   { color1: '#EF4444', color2: '#FCA5A5' },
-] as const
+]
 
 export interface NewProjectInput {
   allowedOrigins?: string[]
@@ -94,20 +94,6 @@ function deriveAllowedOriginsFromUrl(originUrl: string): string[] {
   } catch {
     return []
   }
-}
-
-const SCHEME_RE = /^https?:\/\//
-const PATH_RE = /\/.*$/
-const PORT_RE = /:\d+$/
-
-/** Normalize a user-entered host: drop scheme/path/port, lowercase. */
-export function normalizeHost(input: string): string {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(SCHEME_RE, '')
-    .replace(PATH_RE, '')
-    .replace(PORT_RE, '')
 }
 
 export async function addAllowedOrigin(

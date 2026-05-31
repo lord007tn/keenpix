@@ -2,6 +2,12 @@
 
 export type ProjectEnv = 'production' | 'staging' | 'development'
 
+export function isProjectEnv(value: unknown): value is ProjectEnv {
+  return (
+    value === 'production' || value === 'staging' || value === 'development'
+  )
+}
+
 export interface Project {
   allowedOrigins: string[]
   /** Auto-negotiate AVIF/WebP from the Accept header for fmt=auto requests. */
@@ -22,6 +28,10 @@ export interface Project {
 }
 
 export type AnalyticsRange = '24h' | '7d' | '30d' | '90d'
+
+export function isAnalyticsRange(value: unknown): value is AnalyticsRange {
+  return value === '24h' || value === '7d' || value === '30d' || value === '90d'
+}
 
 export interface TimePoint {
   bandwidthIn: number
@@ -55,11 +65,19 @@ export interface LatencyBin {
 /** Any HTTP status the transform endpoint can log (200/400/403/404/413/5xx). */
 export type LogStatus = number
 
+export type LogFormat = 'avif' | 'webp' | 'jpeg' | 'png'
+
+export function isLogFormat(value: unknown): value is LogFormat {
+  return (
+    value === 'avif' || value === 'webp' || value === 'jpeg' || value === 'png'
+  )
+}
+
 export interface LogRow {
   bytesIn: number
   bytesOut: number
   cached: boolean
-  format: 'avif' | 'webp' | 'jpeg' | 'png'
+  format: LogFormat
   id: string
   latency: number
   path: string

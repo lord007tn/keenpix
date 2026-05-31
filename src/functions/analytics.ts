@@ -8,34 +8,12 @@ import {
   getTopImages,
 } from '@/data-access/analytics'
 import { authMiddleware } from '@/lib/auth/guards'
-import type { AnalyticsRange, ProjectBreakdownRow } from '@/shared/types'
-
-const RANGES: AnalyticsRange[] = ['24h', '7d', '30d', '90d']
-
-interface AnalyticsInput {
-  format?: string[]
-  project?: string
-  range: AnalyticsRange
-  status?: string[]
-}
+import { analyticsInputSchema } from '@/schemas/analytics'
+import type { ProjectBreakdownRow } from '@/shared/types'
 
 export const getAnalyticsFn = createServerFn({ method: 'GET' })
+  .inputValidator(analyticsInputSchema)
   .middleware([authMiddleware])
-  .inputValidator(
-    (input: AnalyticsInput): AnalyticsInput => ({
-      range: RANGES.includes(input?.range) ? input.range : '24h',
-      project:
-        typeof input?.project === 'string' && input.project
-          ? input.project
-          : undefined,
-      format: Array.isArray(input?.format)
-        ? input.format.filter((f) => typeof f === 'string')
-        : undefined,
-      status: Array.isArray(input?.status)
-        ? input.status.filter((s) => typeof s === 'string')
-        : undefined,
-    }),
-  )
   .handler(async ({ data: { range, project, format, status } }) => {
     const filters = { format, status }
     const [summary, series, formats, topImages, latency, breakdown] =

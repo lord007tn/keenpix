@@ -11,34 +11,37 @@ export function getErrorMessage(
   }
 
   if (typeof error === 'object' && error !== null) {
-    const maybeError = error as {
-      message?: unknown
-      error?: unknown
-      issues?: unknown
+    const directMessage =
+      nonEmptyString(Reflect.get(error, 'message')) ??
+      nonEmptyString(Reflect.get(error, 'error'))
+    if (directMessage) {
+      return directMessage
     }
 
-    if (typeof maybeError.message === 'string' && maybeError.message.trim()) {
-      return maybeError.message
-    }
-
-    if (typeof maybeError.error === 'string' && maybeError.error.trim()) {
-      return maybeError.error
-    }
-
-    if (Array.isArray(maybeError.issues)) {
-      const firstIssue = maybeError.issues.find(
-        (issue): issue is { message?: unknown } =>
-          typeof issue === 'object' && issue !== null && 'message' in issue,
-      )
-      if (
-        firstIssue &&
-        typeof firstIssue.message === 'string' &&
-        firstIssue.message.trim()
-      ) {
-        return firstIssue.message
-      }
+    const issueMessage = firstIssueMessage(Reflect.get(error, 'issues'))
+    if (issueMessage) {
+      return issueMessage
     }
   }
 
   return fallback
+}
+
+function nonEmptyString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value : undefined
+}
+
+function firstIssueMessage(value: unknown) {
+  if (!Array.isArray(value)) {
+    return
+  }
+  for (const issue of value) {
+    if (typeof issue !== 'object' || issue === null) {
+      continue
+    }
+    const message = nonEmptyString(Reflect.get(issue, 'message'))
+    if (message) {
+      return message
+    }
+  }
 }

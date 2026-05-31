@@ -1,3 +1,4 @@
+import { useForm } from '@tanstack/react-form'
 import {
   ClipboardCopyIcon,
   MailIcon,
@@ -27,8 +28,14 @@ import {
   getAdminWorkspaceFn,
   revokeInvitationFn,
 } from '@/functions/admin'
+import { getFieldError } from '@/lib/form-errors'
+import { createInvitationSchema } from '@/schemas/admin'
 
 type StaffRole = 'admin' | 'staff'
+
+function isStaffRole(value: unknown): value is StaffRole {
+  return value === 'admin' || value === 'staff'
+}
 
 interface StaffUser {
   createdAt: string
@@ -53,6 +60,15 @@ const invitationDateFormatter = new Intl.DateTimeFormat('en-US', {
   day: '2-digit',
   year: 'numeric',
 })
+const DEFAULT_INVITE_VALUES: {
+  email: string
+  role: StaffRole
+  sendEmail: boolean
+} = {
+  email: '',
+  role: 'staff',
+  sendEmail: false,
+}
 
 function fmtDate(value: string) {
   return invitationDateFormatter.format(new Date(value))
@@ -66,12 +82,32 @@ async function copy(text: string) {
 export function StaffManagement() {
   const [users, setUsers] = useState<StaffUser[]>([])
   const [invitations, setInvitations] = useState<StaffInvitationRow[]>([])
-  const [email, setEmail] = useState('')
-  const [role, setRole] = useState<StaffRole>('staff')
-  const [sendEmail, setSendEmail] = useState(false)
   const [lastInviteLink, setLastInviteLink] = useState('')
   const [loading, setLoading] = useState(true)
-  const [pending, setPending] = useState(false)
+  const inviteForm = useForm({
+    defaultValues: DEFAULT_INVITE_VALUES,
+    validators: {
+      onChange: createInvitationSchema,
+      onSubmit: createInvitationSchema,
+    },
+    onSubmit: async ({ value }) => {
+      setLastInviteLink('')
+      const payload = createInvitationSchema.parse(value)
+      try {
+        const invitation = await createInvitationFn({ data: payload })
+        inviteForm.reset()
+        setLastInviteLink(invitation.inviteLink)
+        toast.success(
+          payload.sendEmail
+            ? 'Invitation created and emailed'
+            : 'Invitation created',
+        )
+        await load()
+      } catch (e) {
+        toast.error(getErrorMessage(e, 'Could not create invitation'))
+      }
+    },
+  })
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -90,27 +126,6 @@ export function StaffManagement() {
     load()
   }, [load])
 
-  async function createInvite() {
-    setPending(true)
-    setLastInviteLink('')
-    try {
-      const invitation = await createInvitationFn({
-        data: { email: email.trim(), role, sendEmail },
-      })
-      setEmail('')
-      setRole('staff')
-      setLastInviteLink(invitation.inviteLink)
-      toast.success(
-        sendEmail ? 'Invitation created and emailed' : 'Invitation created',
-      )
-      await load()
-    } catch (e) {
-      toast.error(getErrorMessage(e, 'Could not create invitation'))
-    } finally {
-      setPending(false)
-    }
-  }
-
   async function revoke(id: string) {
     try {
       await revokeInvitationFn({ data: { id } })
@@ -125,50 +140,96 @@ export function StaffManagement() {
     <div className="flex flex-col gap-5">
       <CardDescription>
         Super admins can invite staff with a copyable link. Email delivery is
-        optional and uses the staff SMTP settings in this section.
+        optional and uses the staff SMTP settings in the Mailing tab.
       </CardDescription>
 
-      <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="invite-email">Staff email</Label>
-          <Input
-            autoComplete="email"
-            id="invite-email"
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="teammate@example.com"
-            type="email"
-            value={email}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label>Role</Label>
-          <Select onValueChange={(v) => setRole(v as StaffRole)} value={role}>
-            <SelectTrigger aria-label="Invitation role" className="w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="staff">staff</SelectItem>
-              <SelectItem value="admin">admin</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <form
+        className="grid gap-3 md:grid-cols-[1fr_auto_auto]"
+        onSubmit={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          inviteForm.handleSubmit()
+        }}
+      >
+        <inviteForm.Field name="email">
+          {(field) => {
+            const error = getFieldError(field.state.meta)
+            return (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={field.name}>Staff email</Label>
+                <Input
+                  aria-describedby={error ? `${field.name}-error` : undefined}
+                  aria-invalid={!!error}
+                  autoComplete="email"
+                  id={field.name}
+                  name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="teammate@example.com"
+                  type="email"
+                  value={field.state.value}
+                />
+                {error ? (
+                  <p
+                    className="text-destructive text-xs"
+                    id={`${field.name}-error`}
+                  >
+                    {error}
+                  </p>
+                ) : null}
+              </div>
+            )
+          }}
+        </inviteForm.Field>
+        <inviteForm.Field name="role">
+          {(field) => (
+            <div className="flex flex-col gap-1.5">
+              <Label>Role</Label>
+              <Select
+                onValueChange={(v) => {
+                  if (isStaffRole(v)) {
+                    field.handleChange(v)
+                  }
+                }}
+                value={field.state.value}
+              >
+                <SelectTrigger aria-label="Invitation role" className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="staff">staff</SelectItem>
+                  <SelectItem value="admin">admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </inviteForm.Field>
         <div className="flex flex-col justify-end gap-2">
-          <div className="flex h-9 items-center gap-2 text-sm">
-            <Switch
-              aria-label="Email invitation"
-              checked={sendEmail}
-              disabled={pending}
-              onCheckedChange={setSendEmail}
-              size="sm"
-            />
-            Email link
-          </div>
-          <Button disabled={pending || !email.trim()} onClick={createInvite}>
-            <UserPlusIcon data-icon="inline-start" />
-            Invite
-          </Button>
+          <inviteForm.Field name="sendEmail">
+            {(field) => (
+              <div className="flex h-9 items-center gap-2 text-sm">
+                <Switch
+                  aria-label="Email invitation"
+                  checked={field.state.value}
+                  onCheckedChange={field.handleChange}
+                  size="sm"
+                />
+                Email link
+              </div>
+            )}
+          </inviteForm.Field>
+          <inviteForm.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+          >
+            {([canSubmit, isSubmitting]) => (
+              <Button disabled={!canSubmit || isSubmitting} type="submit">
+                <UserPlusIcon data-icon="inline-start" />
+                Invite
+              </Button>
+            )}
+          </inviteForm.Subscribe>
         </div>
-      </div>
+      </form>
 
       {lastInviteLink ? (
         <div className="flex flex-col gap-2 rounded-md border bg-muted/40 p-3">

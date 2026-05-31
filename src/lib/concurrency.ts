@@ -12,19 +12,13 @@ const MAX_CONCURRENT = Math.max(
 )
 const MAX_QUEUE = env.KEENPIX_MAX_QUEUE
 
-interface QueuedTransform<T> {
-  reject: (reason: unknown) => void
-  resolve: (value: T) => void
-  work: () => Promise<T>
+interface QueuedTransform {
+  run: () => Promise<void>
 }
 
-const transformQueue = new AsyncQueuer<QueuedTransform<unknown>>(
+const transformQueue = new AsyncQueuer<QueuedTransform>(
   async (item) => {
-    try {
-      item.resolve(await item.work())
-    } catch (error) {
-      item.reject(error)
-    }
+    await item.run()
   },
   {
     concurrency: MAX_CONCURRENT,
@@ -38,9 +32,13 @@ const transformQueue = new AsyncQueuer<QueuedTransform<unknown>>(
 export function runQueuedJob<T>(work: () => Promise<T>) {
   return new Promise<T>((resolve, reject) => {
     const accepted = transformQueue.addItem({
-      work,
-      resolve: resolve as (value: unknown) => void,
-      reject,
+      run: async () => {
+        try {
+          resolve(await work())
+        } catch (error) {
+          reject(error)
+        }
+      },
     })
 
     if (!accepted) {

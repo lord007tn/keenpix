@@ -1,3 +1,4 @@
+import { useForm } from '@tanstack/react-form'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -7,7 +8,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { authClient } from '@/lib/auth/client'
+import { getFieldError } from '@/lib/form-errors'
+import { loginSchema } from '@/schemas/auth'
 
 export const Route = createFileRoute('/(auth)/login')({
   head: () => ({
@@ -21,29 +25,28 @@ export const Route = createFileRoute('/(auth)/login')({
 
 function LoginPage() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  async function signIn() {
-    if (pending) {
-      return
-    }
-    setError(null)
-    setPending(true)
-    const { error: err } = await authClient.signIn.email({
-      email,
-      password,
-    })
-    setPending(false)
-    if (err) {
-      setError(err.message ?? 'Could not sign in.')
-      return
-    }
-    toast.success('Signed in')
-    navigate({ to: '/app/dashboard', search: { range: '30d' } })
-  }
+  const form = useForm({
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+    validators: {
+      onChange: loginSchema,
+      onSubmit: loginSchema,
+    },
+    onSubmit: async ({ value }) => {
+      setError(null)
+      const payload = loginSchema.parse(value)
+      const { error: err } = await authClient.signIn.email(payload)
+      if (err) {
+        setError(err.message ?? 'Could not sign in.')
+        return
+      }
+      toast.success('Signed in')
+      navigate({ to: '/app/dashboard', search: { range: '30d' } })
+    },
+  })
 
   return (
     <main
@@ -71,31 +74,88 @@ function LoginPage() {
             className="flex flex-col gap-3"
             onSubmit={(e) => {
               e.preventDefault()
-              if (email && password) {
-                signIn()
-              }
+              e.stopPropagation()
+              form.handleSubmit()
             }}
           >
-            <Input
-              aria-label="Email address"
-              autoComplete="email"
-              autoFocus
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-              type="email"
-              value={email}
-            />
-            <Input
-              aria-label="Password"
-              autoComplete="current-password"
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              type="password"
-              value={password}
-            />
-            <Button disabled={pending || !(email && password)} type="submit">
-              {pending ? 'Signing in...' : 'Sign in'}
-            </Button>
+            <form.Field name="email">
+              {(field) => {
+                const fieldError = getFieldError(field.state.meta)
+                return (
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="sr-only" htmlFor={field.name}>
+                      Email address
+                    </Label>
+                    <Input
+                      aria-describedby={
+                        fieldError ? `${field.name}-error` : undefined
+                      }
+                      aria-invalid={!!fieldError}
+                      autoComplete="email"
+                      autoFocus
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="you@company.com"
+                      type="email"
+                      value={field.state.value}
+                    />
+                    {fieldError ? (
+                      <p
+                        className="text-destructive text-xs"
+                        id={`${field.name}-error`}
+                      >
+                        {fieldError}
+                      </p>
+                    ) : null}
+                  </div>
+                )
+              }}
+            </form.Field>
+            <form.Field name="password">
+              {(field) => {
+                const fieldError = getFieldError(field.state.meta)
+                return (
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="sr-only" htmlFor={field.name}>
+                      Password
+                    </Label>
+                    <Input
+                      aria-describedby={
+                        fieldError ? `${field.name}-error` : undefined
+                      }
+                      aria-invalid={!!fieldError}
+                      autoComplete="current-password"
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="Password"
+                      type="password"
+                      value={field.state.value}
+                    />
+                    {fieldError ? (
+                      <p
+                        className="text-destructive text-xs"
+                        id={`${field.name}-error`}
+                      >
+                        {fieldError}
+                      </p>
+                    ) : null}
+                  </div>
+                )
+              }}
+            </form.Field>
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+            >
+              {([canSubmit, isSubmitting]) => (
+                <Button disabled={!canSubmit || isSubmitting} type="submit">
+                  {isSubmitting ? 'Signing in...' : 'Sign in'}
+                </Button>
+              )}
+            </form.Subscribe>
           </form>
         </CardContent>
       </Card>

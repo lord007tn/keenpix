@@ -1,15 +1,9 @@
 import { createEnv } from '@t3-oss/env-core'
-import { z } from 'zod'
-
-const optionalUrl = z.url().optional()
+import { clientEnvSchema } from '@/schemas/env'
 
 export const clientEnv = createEnv({
   clientPrefix: 'VITE_',
-  client: {
-    VITE_KEENPIX_PUBLIC_URL: optionalUrl,
-    VITE_KEENPIX_AUTH_URL: optionalUrl,
-    VITE_BETTER_AUTH_URL: optionalUrl,
-  },
+  client: clientEnvSchema,
   runtimeEnv: import.meta.env,
   emptyStringAsUndefined: true,
   isServer: typeof window === 'undefined',

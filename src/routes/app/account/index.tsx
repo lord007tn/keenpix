@@ -49,7 +49,7 @@ const THEMES = [
   { value: 'light', label: 'Light', icon: SunIcon },
   { value: 'dark', label: 'Dark', icon: MoonIcon },
   { value: 'system', label: 'System', icon: MonitorIcon },
-] as const
+]
 
 function ThemeControl() {
   const { theme, setTheme } = useTheme()

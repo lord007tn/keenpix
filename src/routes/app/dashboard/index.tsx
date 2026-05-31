@@ -11,20 +11,14 @@ import {
 } from '@/components/ui/empty'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { getDashboardFn } from '@/functions/dashboard'
-import type { AnalyticsRange } from '@/shared/types'
+import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
-
-const RANGES: AnalyticsRange[] = ['24h', '7d', '30d', '90d']
 
 export const Route = createFileRoute('/app/dashboard/')({
   validateSearch: (
     search: Record<string, unknown>,
   ): { range: AnalyticsRange; project?: string } => ({
-    range:
-      typeof search.range === 'string' &&
-      RANGES.includes(search.range as AnalyticsRange)
-        ? (search.range as AnalyticsRange)
-        : '30d',
+    range: isAnalyticsRange(search.range) ? search.range : '30d',
     project: typeof search.project === 'string' ? search.project : undefined,
   }),
   loaderDeps: ({ search }) => ({
