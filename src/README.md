@@ -14,7 +14,6 @@ routes/  →  functions/  →  actions/  →  data-access/  →  db / lib
 - `data-access/` — Pure DB operations and DB health probes only: `getX` / `listX` / `createX` / `updateX` / `deleteX` / `checkX`.
 - `db/` — Prisma client bootstrap.
 - `errors/` — Shared error classes and normalization helpers. Domain errors live here, not inside actions/lib modules.
-- `layouts/` — Shared layout configuration and wrappers.
 - `lib/` — external integrations and reusable infrastructure: `auth/` (better-auth), `sharp/` (transform wrapper), `transform/` (SSRF/origin/parameter helpers), `cdn/` (cache-control/cache-key/cache storage), `concurrency`, `logger`.
 - `components/ui/` — frozen shadcn components (don't hand-edit except to add `cva` variants).
 - `components/app/` — shared app components (sidebar, topbar, stat cards, chart wrappers).

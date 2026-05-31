@@ -12,7 +12,6 @@ import {
 import { RootProvider } from 'fumadocs-ui/provider/tanstack'
 import { Suspense } from 'react'
 import { getMDXComponents } from '@/components/mdx'
-import { baseOptions } from '@/layouts/shared'
 import { getAppUrl, isSelfHosted } from '@/lib/deployment'
 import { absoluteUrl, docsJsonLd } from '@/lib/seo'
 import { source } from '@/lib/source'
@@ -141,7 +140,14 @@ function Page() {
   return (
     // theme.enabled=false → reuse the app's existing next-themes provider.
     <RootProvider theme={{ enabled: false }}>
-      <DocsLayout {...baseOptions()} tree={pageTree}>
+      <DocsLayout
+        links={[
+          { text: 'Dashboard', url: '/app' },
+          { text: 'Home', url: '/' },
+        ]}
+        nav={{ title: 'Keenpix docs' }}
+        tree={pageTree}
+      >
         <Suspense>{clientLoader.useContent(path)}</Suspense>
       </DocsLayout>
     </RootProvider>
