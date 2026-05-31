@@ -15,21 +15,23 @@ git clone <your-fork> keenpix && cd keenpix
 cp .env.example .env
 # set a strong secret:
 #   BETTER_AUTH_SECRET=$(openssl rand -hex 32)
-# set POSTGRES_PASSWORD, KEENPIX_ADMIN_EMAIL, and KEENPIX_ADMIN_PASSWORD
+# set POSTGRES_PASSWORD, KEENPIX_SUPER_ADMIN_EMAIL, and KEENPIX_SUPER_ADMIN_PASSWORD
 docker compose up -d --build
 # → http://localhost:3000
 ```
 
 `docker-compose.yml` ships the app plus Postgres. On boot the container runs
-`prisma migrate deploy`, seeds the default org and admin user, then serves the
-dashboard and the transform endpoint as a non-root user.
+`prisma migrate deploy`, seeds the default org and super admin user, then serves
+the dashboard and the transform endpoint as a non-root user.
 
 ## After deploy
 
-1. Sign in as `KEENPIX_ADMIN_EMAIL` with `KEENPIX_ADMIN_PASSWORD`.
+1. Sign in as `KEENPIX_SUPER_ADMIN_EMAIL` with `KEENPIX_SUPER_ADMIN_PASSWORD`.
 2. Create a project pointed at your image origin.
 3. Add your source host under **Settings → Security → Allowed hosts**.
-4. Request `/api/keenpix?project=ID&url=…` — no API keys.
+4. Invite any staff from **Settings → Staff**. Copy the invitation link, or send
+   it by email after SMTP is configured.
+5. Request `/api/keenpix?project=ID&url=…` — no API keys.
 
 ## Architecture
 

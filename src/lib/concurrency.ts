@@ -1,9 +1,11 @@
+import os from 'node:os'
 import { AsyncQueuer } from '@tanstack/pacer'
-import { DEFAULT_MAX_CONCURRENCY, env } from '@/env/server'
+import { env } from '@/env/server'
 import { TransformError } from '@/errors/transform'
 
 /** Max simultaneous fetch+transform jobs (the memory/CPU-heavy path). Excess
  * requests queue; past MAX_QUEUE we shed load with 503 rather than OOM. */
+const DEFAULT_MAX_CONCURRENCY = Math.max(2, os.cpus().length)
 const MAX_CONCURRENT = Math.max(
   1,
   env.KEENPIX_MAX_CONCURRENCY ?? DEFAULT_MAX_CONCURRENCY,
