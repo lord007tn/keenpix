@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { SmtpSettingsPanel } from '@/features/admin/smtp-settings'
+import { MailingPanel, SmtpSettingsPanel } from '@/features/admin/smtp-settings'
 import { StaffManagement } from '@/features/admin/staff-management'
 import { AllowedHosts } from '@/features/projects/allowed-hosts'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
@@ -54,23 +54,33 @@ function SettingsPage() {
         <CardHeader>
           <CardTitle>Staff</CardTitle>
           <CardDescription>
-            Invite people into this self-hosted workspace.
+            Invite teammates and configure how staff invitations are emailed.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-6">
           <StaffManagement />
+          <div className="flex flex-col gap-4 border-t pt-6">
+            <div>
+              <h3 className="font-medium text-sm">Invitation email delivery</h3>
+              <p className="text-muted-foreground text-xs">
+                SMTP credentials only affect staff invite emails.
+              </p>
+            </div>
+            <SmtpSettingsPanel />
+          </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Email</CardTitle>
+          <CardTitle>Mailing</CardTitle>
           <CardDescription>
-            SMTP configuration for test emails and optional invitation delivery.
+            Check the active sender and send a test message before inviting
+            staff.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SmtpSettingsPanel />
+          <MailingPanel />
         </CardContent>
       </Card>
     </>

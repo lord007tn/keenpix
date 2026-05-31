@@ -125,7 +125,7 @@ export function StaffManagement() {
     <div className="flex flex-col gap-5">
       <CardDescription>
         Super admins can invite staff with a copyable link. Email delivery is
-        optional and uses the SMTP settings below.
+        optional and uses the staff SMTP settings in this section.
       </CardDescription>
 
       <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
