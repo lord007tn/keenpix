@@ -33,7 +33,7 @@ const transformQueue = new AsyncQueuer<QueuedTransform<unknown>>(
   },
 )
 
-export function runTransformJob<T>(work: () => Promise<T>) {
+export function runQueuedJob<T>(work: () => Promise<T>) {
   return new Promise<T>((resolve, reject) => {
     const accepted = transformQueue.addItem({
       work,
@@ -47,7 +47,7 @@ export function runTransformJob<T>(work: () => Promise<T>) {
   })
 }
 
-export function getTransformQueueStats() {
+export function getQueueStats() {
   const state = transformQueue.store.state
 
   return {

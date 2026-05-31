@@ -1,10 +1,15 @@
 import { getProject } from '@/data-access/projects'
 import { insertRequestLog } from '@/data-access/request-logs'
 import { getTransformErrorStatus, TransformError } from '@/errors/transform'
-import { buildCacheKey } from '@/lib/cdn/cache'
-import type { OutputFormat } from '@/lib/sharp/transform'
-import { readOrCreateTransform } from '@/lib/transform/cache-transform'
-import { logPath, logServerError } from '@/lib/transform/logging'
+import { buildCacheKey, readCache, writeCache } from '@/lib/cdn/cache'
+import { runQueuedJob } from '@/lib/concurrency'
+import { errorContext, logger } from '@/lib/logger'
+import {
+  type OutputFormat,
+  type TransformOptions,
+  transformImage,
+} from '@/lib/sharp/transform'
+import { fetchOriginImage } from '@/lib/transform/origin-fetch'
 import { parseTransformParams } from '@/lib/transform/params'
 import { assertSafeOrigin } from '@/lib/transform/safe-origin'
 
@@ -19,6 +24,73 @@ export interface OptimizeProjectImageInput {
 export interface OptimizedProjectImage {
   body: Buffer
   format: OutputFormat
+}
+
+type ValidatedOrigin = Awaited<ReturnType<typeof assertSafeOrigin>>
+
+interface CachedTransformInput {
+  allowedOrigins: string[]
+  cacheKey: string
+  format: OutputFormat
+  origin: ValidatedOrigin
+  transformOptions: TransformOptions
+}
+
+const inflightTransforms = new Map<string, Promise<Buffer>>()
+
+function logPath(src: string) {
+  try {
+    return new URL(src).pathname
+  } catch {
+    return src.slice(0, 200)
+  }
+}
+
+async function readOrCreateTransform({
+  allowedOrigins,
+  cacheKey,
+  format,
+  origin,
+  transformOptions,
+}: CachedTransformInput) {
+  const cachedOut = await readCache(cacheKey, format)
+  if (cachedOut) {
+    return { out: cachedOut, cached: true, bytesIn: 0 }
+  }
+
+  const existing = inflightTransforms.get(cacheKey)
+  if (existing) {
+    return { out: await existing, cached: false, bytesIn: 0 }
+  }
+
+  let producedBytesIn = 0
+  const work = runQueuedJob(async () => {
+    const input = await fetchOriginImage(origin, allowedOrigins)
+    producedBytesIn = input.byteLength
+
+    let result: Awaited<ReturnType<typeof transformImage>>
+    try {
+      result = await transformImage(input, transformOptions)
+    } catch (error) {
+      if (error instanceof TransformError) {
+        throw error
+      }
+      throw new TransformError('Origin is not a valid image', 502)
+    }
+
+    await writeCache(cacheKey, format, result.data).catch((error) => {
+      logger.warn(errorContext(error), 'Cache write failed')
+    })
+
+    return result.data
+  })
+
+  inflightTransforms.set(cacheKey, work)
+  try {
+    return { out: await work, cached: false, bytesIn: producedBytesIn }
+  } finally {
+    inflightTransforms.delete(cacheKey)
+  }
 }
 
 /**
@@ -90,7 +162,10 @@ export async function optimizeProjectImage({
   } catch (error) {
     status = getTransformErrorStatus(error)
     if (status >= 500) {
-      logServerError(src, error)
+      logger.error(
+        { ...errorContext(error), path: logPath(src) },
+        'Image transform failed',
+      )
     }
     throw error
   } finally {

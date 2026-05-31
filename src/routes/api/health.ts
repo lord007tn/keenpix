@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { checkDatabaseHealth } from '@/data-access/health'
 import { getCacheRuntimeStats } from '@/lib/cdn/cache'
-import { getTransformQueueStats } from '@/lib/transform/concurrency'
+import { getQueueStats } from '@/lib/concurrency'
 
 export const Route = createFileRoute('/api/health')({
   server: {
@@ -20,7 +20,7 @@ export const Route = createFileRoute('/api/health')({
               checks: {
                 cache: getCacheRuntimeStats(),
                 database,
-                transformQueue: getTransformQueueStats(),
+                transformQueue: getQueueStats(),
               },
               latencyMs: Date.now() - started,
             },
@@ -36,7 +36,7 @@ export const Route = createFileRoute('/api/health')({
               checks: {
                 cache: getCacheRuntimeStats(),
                 database: { ok: false },
-                transformQueue: getTransformQueueStats(),
+                transformQueue: getQueueStats(),
               },
               latencyMs: Date.now() - started,
             },
