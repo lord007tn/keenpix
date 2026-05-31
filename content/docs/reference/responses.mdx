@@ -1,0 +1,31 @@
+---
+title: Responses & errors
+description: Headers and status codes you can expect.
+icon: ListChecks
+---
+
+## Success headers
+
+| Header            | Value                                          |
+| ----------------- | ---------------------------------------------- |
+| `Content-Type`    | `image/avif` · `image/webp` · `image/jpeg` · `image/png` |
+| `Cache-Control`   | `public, max-age=31536000, immutable`          |
+| `Vary`            | `Accept` (so CDNs cache per-format under `fmt=auto`) |
+| `x-keenpix-cache` | `HIT` (from disk) or `MISS` (freshly transformed) |
+
+## Status codes
+
+| Status | Meaning                                                              |
+| ------ | ------------------------------------------------------------------- |
+| `200`  | Optimized image returned                                            |
+| `400`  | Missing `project` or `url`                                          |
+| `403`  | Source host is not on the allowlist, or resolves to a private/SSRF target |
+| `404`  | Unknown `project`                                                   |
+| `413`  | Origin image exceeds the size cap (`KEENPIX_MAX_ORIGIN_BYTES`)      |
+| `502`  | Origin fetch failed                                                 |
+| `503`  | Transform concurrency limit reached — retry shortly                 |
+
+<Callout type="warn">
+  A `403` almost always means the source host isn't on the project's allowlist. Add it
+  under **Settings → Security → Allowed hosts**.
+</Callout>

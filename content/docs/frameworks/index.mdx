@@ -1,0 +1,74 @@
+---
+title: Framework integrations
+description: Keenpix is just a URL, so it drops into any framework that renders an image.
+icon: Boxes
+---
+
+Keenpix has **no SDK**. Integrating it means producing the right URL and putting it in an
+`<img>` (or your framework's image component). There are two flavours:
+
+1. **Pluggable loaders** — frameworks with a built-in image component you can point at a
+   custom backend: [Next.js](/docs/frameworks/nextjs) and [Nuxt](/docs/frameworks/nuxt).
+2. **URL builder + native `<img>`** — everywhere else. A tiny helper builds the URL and
+   you render a normal image with `srcset` for responsiveness.
+
+## The universal pattern
+
+Drop this helper anywhere (it's framework-agnostic — plain TypeScript):
+
+```ts
+// keenpix.ts
+const HOST = 'https://keenpix.example.com'
+const PROJECT = 'YOUR_PROJECT_ID'
+
+type Opts = { w?: number; h?: number; q?: number; fmt?: string; fit?: string; dpr?: number }
+
+export function keenpix(src: string, opts: Opts = {}): string {
+  const params = new URLSearchParams({ project: PROJECT, url: src })
+  for (const [k, v] of Object.entries(opts)) {
+    if (v != null) params.set(k, String(v))
+  }
+  return `${HOST}/api/keenpix?${params.toString()}`
+}
+
+// A responsive srcset across common widths.
+export function keenpixSrcSet(src: string, widths = [640, 960, 1280, 1920], opts: Opts = {}) {
+  return widths.map((w) => `${keenpix(src, { ...opts, w })} ${w}w`).join(', ')
+}
+```
+
+Then render a fully responsive, auto-format image with native HTML:
+
+```html
+<img
+  src="${keenpix('/hero.jpg', { w: 1280, fmt: 'auto' })}"
+  srcset="${keenpixSrcSet('/hero.jpg', [640, 960, 1280, 1920])}"
+  sizes="100vw"
+  loading="lazy"
+  decoding="async"
+  alt="Hero"
+/>
+```
+
+<Callout>
+  Tip: read `HOST` and `PROJECT` from environment variables so you can swap instances per
+  environment without touching component code.
+</Callout>
+
+## Pick your framework
+
+<Cards>
+  <Card title="Next.js" href="/docs/frameworks/nextjs" description="Custom next/image loader" />
+  <Card title="Nuxt" href="/docs/frameworks/nuxt" description="@nuxt/image custom provider" />
+  <Card title="TanStack Start" href="/docs/frameworks/tanstack-start" description="URL builder + <img>" />
+  <Card title="React (Vite)" href="/docs/frameworks/react" description="A <KeenpixImage> component" />
+  <Card title="Vue" href="/docs/frameworks/vue" description="Bind :src to the helper" />
+  <Card title="SvelteKit" href="/docs/frameworks/sveltekit" description="Helper + <img>" />
+  <Card title="Astro" href="/docs/frameworks/astro" description="Remote images via <img>" />
+  <Card title="Remix" href="/docs/frameworks/remix" description="Helper + <img>" />
+  <Card title="Plain HTML" href="/docs/frameworks/html" description="Any backend, any language" />
+</Cards>
+
+Don't see yours? If it can render an `<img>` tag, the [universal pattern](#the-universal-pattern)
+above already works — that includes Angular, Solid, Qwik, Gatsby, Laravel, Rails, Django,
+WordPress, and static-site generators.

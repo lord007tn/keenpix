@@ -1,0 +1,35 @@
+---
+title: Keenpix
+description: Self-hosted, drop-in image optimization. One endpoint, no SDK, no API keys.
+icon: Sparkles
+---
+
+Keenpix is a self-hosted image-optimization service — an open-source alternative to
+ImageKit, imgix, and Cloudinary. It's a single HTTP endpoint that fetches an image from
+your origin, transforms it with [sharp](https://sharp.pixelplumbing.com) (resize +
+re-encode to AVIF / WebP / JPEG), caches the result on disk, and serves it behind a
+long-lived, immutable `Cache-Control`.
+
+There's no SDK to install and no API key to leak — **a request is just a URL**:
+
+```html
+<img
+  src="https://keenpix.example.com/api/keenpix?project=PROJECT_ID&url=https://cdn.example.com/hero.jpg&w=1200&fmt=auto"
+  alt="Hero"
+/>
+```
+
+## Start here
+
+- [**Quickstart**](/docs/getting-started/quickstart) — your first optimized image in two minutes.
+- [**How it works**](/docs/concepts/how-it-works) — the request lifecycle, caching, and security model.
+- [**Frameworks**](/docs/frameworks) — drop Keenpix into Next.js, Nuxt, TanStack Start, SvelteKit, Astro, and more.
+- [**API reference**](/docs/reference/endpoint) — every query parameter and response header.
+- [**Self-hosting**](/docs/self-hosting) — deploy with Docker in about a minute.
+
+## Why Keenpix
+
+- **Drop-in.** Any framework that renders an `<img>` works — no rewrite required.
+- **Self-hosted.** Runs as a single container on your own infrastructure; put any CDN in front of it.
+- **Keyless.** Access is gated by a per-project domain allowlist, not by secrets.
+- **Built-in analytics.** Every request is logged: requests, bandwidth saved, cache hit-rate, and latency.

@@ -1,0 +1,37 @@
+---
+title: Security
+description: The allowlist, SSRF protection, and why there are no API keys.
+icon: ShieldCheck
+---
+
+A transform endpoint is, by definition, a "fetch any URL" engine — so it must be guarded.
+Keenpix treats that as core, not a fast-follow.
+
+## The allowlist (access control)
+
+Each project has a list of **allowed source hosts**. A request is served only if `?url`'s
+host is on that project's list. The list is checked **before** the cache, and an empty
+list blocks everything (fail-closed). This is why Keenpix needs no API keys: a transform
+URL is safe to publish, because it can only ever hit hosts you've approved.
+
+## SSRF protection
+
+Even for an allowed host, Keenpix refuses to become a proxy into your private network:
+
+- **Private/internal IPs are blocked** — loopback, RFC-1918, link-local, CGNAT, IPv6
+  unique-local / link-local / multicast, and IPv4-mapped IPv6 forms.
+- **The resolved IP is pinned** into the connection, closing the DNS-rebinding window
+  between the check and the connect.
+- **Every redirect hop is re-validated**, so a `302` to an internal host is refused.
+
+## Denial-of-service guards
+
+- Origin responses are **size-capped** (streamed with a byte ceiling → `413`).
+- Concurrent transforms are bounded; excess load sheds with `503` rather than OOM.
+- sharp runs with a `limitInputPixels` ceiling and `failOn: 'truncated'`.
+
+## Sign-in
+
+The dashboard is protected by a single seeded admin account. Set
+`KEENPIX_ADMIN_EMAIL` and `KEENPIX_ADMIN_PASSWORD` before running the seed or
+Docker container - see [Configuration](/docs/self-hosting/configuration).

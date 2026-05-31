@@ -1,0 +1,27 @@
+---
+title: Parameters
+description: Every query parameter the transform endpoint accepts.
+icon: SlidersHorizontal
+---
+
+All transform parameters are optional; out-of-range values are clamped, not rejected.
+
+| Param     | Type     | Range / values                          | Default            | Description                                   |
+| --------- | -------- | --------------------------------------- | ------------------ | --------------------------------------------- |
+| `project` | string   | —                                       | **required**       | Project id (allowlist gates access)           |
+| `url`     | string   | absolute URL                            | **required**       | Source image; host must be allowlisted        |
+| `w`       | int      | 1–5000                                  | bounded original   | Target width (px)                             |
+| `h`       | int      | 1–5000                                  | —                  | Target height (px); combine with `fit`        |
+| `q`       | int      | 30–100                                  | project default    | Output quality                                |
+| `fmt`     | enum     | `auto` `avif` `webp` `jpeg` `png`       | `auto`             | Output format (`auto` negotiates from Accept) |
+| `fit`     | enum     | `cover` `contain` `fill` `inside`       | `cover`            | How to fit the `w`×`h` box                    |
+| `dpr`     | int      | 1–3                                     | `1`                | Device pixel ratio (multiplies `w`/`h`)       |
+| `blur`    | int      | 0–1000                                  | `0`                | Gaussian blur sigma                           |
+
+## Notes
+
+- **No upscaling.** Keenpix never enlarges past the source resolution.
+- **`dpr`** multiplies the target dimensions — `w=400&dpr=2` renders at 800px.
+- **`fmt=auto`** depends on the project's *Auto-format* setting; when off, `auto` serves
+  JPEG. An explicit `fmt` is always honoured.
+- **`q`** defaults to the project's *Default quality* (**Settings → Pipeline**).

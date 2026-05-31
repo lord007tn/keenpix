@@ -1,0 +1,29 @@
+---
+title: Configuration
+description: Environment variables for a self-hosted instance.
+icon: Settings2
+---
+
+Set these in `.env` (or your orchestrator's secrets).
+
+## Core
+
+| Variable             | Required | Default            | Purpose                                          |
+| -------------------- | -------- | ------------------ | ------------------------------------------------ |
+| `DATABASE_URL`       | yes      | —                  | Postgres connection string                       |
+| `POSTGRES_PASSWORD`  | yes (compose) | —             | Password for the bundled Compose Postgres service |
+| `BETTER_AUTH_SECRET` | yes (prod) | —                | Session secret; must be 32+ random chars         |
+| `KEENPIX_ADMIN_EMAIL` | yes      | —                  | Email for the seeded admin account               |
+| `KEENPIX_ADMIN_PASSWORD` | yes   | —                  | Password for the seeded admin account            |
+| `KEENPIX_CACHE_DIR`  | no       | `./.keenpix-cache` | Where transformed images are cached on disk      |
+| `KEENPIX_SELF_HOST`  | no       | `false`            | `true` disables the marketing site — the landing page becomes a minimal self-hosted splash |
+
+## Limits & performance
+
+| Variable                   | Default        | Purpose                                          |
+| -------------------------- | -------------- | ------------------------------------------------ |
+| `KEENPIX_MAX_ORIGIN_BYTES` | `52428800` (50MB) | Max bytes pulled from an origin before `413`  |
+| `KEENPIX_MAX_CONCURRENCY`  | CPU count      | Max simultaneous transforms before queueing      |
+| `KEENPIX_MAX_QUEUE`        | `100`          | Queue depth before shedding load with `503`      |
+| `KEENPIX_MAX_INPUT_PIXELS` | `50000000`     | Decode-time pixel ceiling (decompression-bomb guard) |
+| `KEENPIX_MAX_DIMENSION`    | `4096`         | Longest output side when a request gives no `w`/`h` |

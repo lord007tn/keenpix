@@ -1,0 +1,14 @@
+{
+  "name": "@prisma/studio-core",
+  "version": "0.0.0-keenpix-stub",
+  "private": true,
+  "type": "commonjs",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./data/bff": "./index.js",
+    "./data/mysql2": "./index.js",
+    "./data/node-sqlite": "./index.js",
+    "./data/postgresjs": "./index.js"
+  }
+}

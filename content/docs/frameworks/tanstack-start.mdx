@@ -1,0 +1,31 @@
+---
+title: TanStack Start
+description: Use the URL helper with a native <img>.
+icon: Zap
+---
+
+TanStack Start (and TanStack Router) has no built-in image component, so use the
+[universal helper](/docs/frameworks#the-universal-pattern) with a native `<img>`. This is
+also exactly how the Keenpix dashboard itself is built.
+
+```tsx
+import { keenpix, keenpixSrcSet } from '~/lib/keenpix'
+
+export function Hero() {
+  return (
+    <img
+      alt="Hero"
+      decoding="async"
+      loading="lazy"
+      sizes="100vw"
+      src={keenpix('/hero.jpg', { w: 1280, fmt: 'auto' })}
+      srcSet={keenpixSrcSet('/hero.jpg', [640, 960, 1280, 1920])}
+    />
+  )
+}
+```
+
+<Callout>
+  Read `HOST` / `PROJECT` from `import.meta.env` (e.g. `VITE_KEENPIX_HOST`) so the helper
+  works in both server and client renders.
+</Callout>

@@ -1,0 +1,139 @@
+import { TrendingDownIcon, TrendingUpIcon } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { fmtBytes, fmtNum } from '@/shared/format'
+import type { DashboardKpis, KpiValue } from '@/shared/types'
+
+/** Relative % change vs the previous window; null when there's no baseline. */
+function relDelta(v: KpiValue): number | null {
+  if (v.prev === 0) {
+    return v.value === 0 ? 0 : null
+  }
+  return ((v.value - v.prev) / v.prev) * 100
+}
+
+function TrendBadge({
+  delta,
+  unit = '%',
+}: {
+  delta: number | null
+  unit?: string
+}) {
+  if (delta === null) {
+    return <Badge variant="outline">New</Badge>
+  }
+  const up = delta >= 0
+  const Icon = up ? TrendingUpIcon : TrendingDownIcon
+  return (
+    <Badge variant="outline">
+      <Icon data-icon="inline-start" />
+      {up ? '+' : ''}
+      {delta.toFixed(1)}
+      {unit}
+    </Badge>
+  )
+}
+
+function trendWord(delta: number | null): string {
+  if (delta === null || delta === 0) {
+    return 'No change'
+  }
+  return delta > 0 ? 'Trending up' : 'Trending down'
+}
+
+/** The four dashboard-01-style KPI cards, on real Keenpix data + real trends. */
+export function SectionCards({ kpis }: { kpis: DashboardKpis }) {
+  const reqDelta = relDelta(kpis.requests)
+  const bwDelta = relDelta(kpis.bandwidthSaved)
+  const hitPp = kpis.hitRate.value - kpis.hitRate.prev
+  const p95Delta = relDelta(kpis.p95)
+
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <Card className="@container/card">
+        <CardHeader>
+          <CardDescription>Total requests</CardDescription>
+          <CardTitle className="font-semibold @[250px]/card:text-3xl text-2xl tabular-nums">
+            {fmtNum(kpis.requests.value)}
+          </CardTitle>
+          <CardAction>
+            <TrendBadge delta={reqDelta} />
+          </CardAction>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1 text-sm">
+          <div className="line-clamp-1 font-medium">
+            {trendWord(reqDelta)} vs previous period
+          </div>
+          <div className="text-muted-foreground">
+            Optimized image requests served
+          </div>
+        </CardFooter>
+      </Card>
+
+      <Card className="@container/card">
+        <CardHeader>
+          <CardDescription>Bandwidth saved</CardDescription>
+          <CardTitle className="font-semibold @[250px]/card:text-3xl text-2xl tabular-nums">
+            {fmtBytes(kpis.bandwidthSaved.value, 1)}
+          </CardTitle>
+          <CardAction>
+            <TrendBadge delta={bwDelta} />
+          </CardAction>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1 text-sm">
+          <div className="line-clamp-1 font-medium">
+            {trendWord(bwDelta)} vs previous period
+          </div>
+          <div className="text-muted-foreground">
+            Saved versus serving the originals
+          </div>
+        </CardFooter>
+      </Card>
+
+      <Card className="@container/card">
+        <CardHeader>
+          <CardDescription>Cache hit rate</CardDescription>
+          <CardTitle className="font-semibold @[250px]/card:text-3xl text-2xl tabular-nums">
+            {kpis.hitRate.value.toFixed(1)}%
+          </CardTitle>
+          <CardAction>
+            <TrendBadge delta={hitPp} unit="pp" />
+          </CardAction>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1 text-sm">
+          <div className="line-clamp-1 font-medium">
+            {trendWord(hitPp)} vs previous period
+          </div>
+          <div className="text-muted-foreground">
+            Requests served straight from cache
+          </div>
+        </CardFooter>
+      </Card>
+
+      <Card className="@container/card">
+        <CardHeader>
+          <CardDescription>p95 latency</CardDescription>
+          <CardTitle className="font-semibold @[250px]/card:text-3xl text-2xl tabular-nums">
+            {kpis.p95.value}ms
+          </CardTitle>
+          <CardAction>
+            <TrendBadge delta={p95Delta} />
+          </CardAction>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1 text-sm">
+          <div className="line-clamp-1 font-medium">Lower is better</div>
+          <div className="text-muted-foreground">
+            95% of responses were faster
+          </div>
+        </CardFooter>
+      </Card>
+    </div>
+  )
+}

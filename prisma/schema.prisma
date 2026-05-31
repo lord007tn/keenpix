@@ -1,0 +1,129 @@
+// Keenpix — Prisma schema (Postgres). Prisma 7 prisma-client generator +
+// driver adapter (PrismaPg). Mirrors the joodcms pattern.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────
+// Keenpix domain (org-scoped for SaaS-readiness)
+// ─────────────────────────────────────────────────────────────
+model Org {
+  id        String    @id @default(cuid())
+  name      String
+  createdAt DateTime  @default(now())
+  projects  Project[]
+}
+
+model Project {
+  id             String       @id @default(cuid())
+  orgId          String
+  org            Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name           String
+  origin         String
+  env            String       @default("production")
+  allowedOrigins String[]
+  color1         String       @default("#FF6B2C")
+  color2         String       @default("#FFA76B")
+  // Per-project pipeline defaults (applied when a request omits the param).
+  autoFormat     Boolean      @default(true)
+  stripMetadata  Boolean      @default(true)
+  defaultQuality Int          @default(75)
+  createdAt      DateTime     @default(now())
+  requestLogs    RequestLog[]
+
+  @@index([orgId])
+}
+
+model RequestLog {
+  id        String   @id @default(cuid())
+  orgId     String
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ts        DateTime @default(now())
+  path      String
+  width     Int?
+  quality   Int?
+  format    String
+  status    Int
+  cached    Boolean
+  latencyMs Float
+  bytesIn   Int
+  bytesOut  Int
+  region    String?
+  country   String?
+
+  @@index([projectId, ts])
+  @@index([orgId, ts])
+}
+
+// ─────────────────────────────────────────────────────────────
+// better-auth models
+// ─────────────────────────────────────────────────────────────
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  name          String?
+  image         String?
+  role          String    @default("user")
+  banned        Boolean   @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+
+  @@index([email])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  impersonatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}

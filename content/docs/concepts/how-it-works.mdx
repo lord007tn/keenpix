@@ -1,0 +1,55 @@
+---
+title: How it works
+description: The request lifecycle — from a URL to an optimized, cached image.
+icon: Workflow
+---
+
+Keenpix turns a URL into an optimized image. There's no build step and no SDK: the query
+string **is** the API.
+
+## The request lifecycle
+
+```text
+ Browser
+   │  GET /api/keenpix?project=ID&url=https://cdn.example.com/hero.jpg&w=1200&fmt=auto
+   ▼
+ Keenpix
+   │ 1. Resolve the project, check ?url's host against the project allowlist (+ SSRF block)
+   │ 2. Build a cache key from (project, url, w, h, q, fmt, fit, dpr, blur)
+   │ 3. Cache HIT?  ──yes──▶  stream bytes from disk         (x-keenpix-cache: HIT)
+   │        │ no
+   │        ▼
+   │ 4. Fetch the original from your origin (size-capped, IP-pinned)
+   │ 5. Transform with sharp: decode → resize → effects → re-encode
+   │ 6. Write the result to the disk cache, then stream it   (x-keenpix-cache: MISS)
+   ▼
+ Response: image/avif|webp|jpeg  +  Cache-Control: public, max-age=31536000, immutable
+```
+
+Every request is also written to a log that powers the [analytics](/docs/concepts/analytics).
+
+## The sharp pipeline
+
+Keenpix decodes the source once and runs a fixed, safe pipeline:
+
+1. **Decode + auto-orient** — honours EXIF rotation, with a pixel ceiling that guards
+   against decompression bombs.
+2. **Resize** — to your `w`/`h` box with the chosen `fit`, multiplied by `dpr`. It never
+   upscales past the source. With no `w`/`h`, the longest side is bounded so a huge
+   original can't pin a CPU.
+3. **Effects** — optional gaussian `blur`.
+4. **Re-encode** — to the negotiated `fmt` at the resolved quality.
+
+## Format negotiation
+
+When `fmt=auto` (or `fmt` is omitted) Keenpix reads the browser's `Accept` header and
+serves **AVIF → WebP → JPEG** in order of support, and sets `Vary: Accept` so CDNs cache
+each variant correctly. A project can turn this off (then `fmt=auto` serves JPEG); an
+explicit `fmt=avif|webp|jpeg|png` is always honoured.
+
+## Per-project defaults
+
+Each project carries defaults applied when a request omits a parameter — **default
+quality**, **auto-format**, and **strip-metadata** — editable under
+**Settings → Pipeline**. See [Self-hosting → Configuration](/docs/self-hosting/configuration)
+for the instance-wide limits.

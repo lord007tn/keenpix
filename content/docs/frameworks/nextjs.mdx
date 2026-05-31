@@ -1,0 +1,52 @@
+---
+title: Next.js
+description: Use Keenpix as a custom loader for next/image.
+icon: Triangle
+---
+
+`next/image` lets you swap its optimizer for a custom loader. Point it at Keenpix and keep
+using `<Image>` exactly as before — Next still generates the `srcset`, Keenpix serves
+each width.
+
+## 1. Add the loader
+
+```js
+// keenpix-loader.js
+export default function keenpixLoader({ src, width, quality }) {
+  const host = process.env.NEXT_PUBLIC_KEENPIX_HOST
+  const project = process.env.NEXT_PUBLIC_KEENPIX_PROJECT
+  const origin = process.env.NEXT_PUBLIC_IMAGE_ORIGIN ?? ''
+
+  // next/image passes `src` as-is; Keenpix needs an absolute URL.
+  const url = src.startsWith('http') ? src : `${origin}${src}`
+
+  const params = new URLSearchParams({ project, url, w: String(width), fmt: 'auto' })
+  if (quality) params.set('q', String(quality))
+  return `${host}/api/keenpix?${params.toString()}`
+}
+```
+
+## 2. Point next.config at it
+
+```js
+// next.config.js
+module.exports = {
+  images: { loader: 'custom', loaderFile: './keenpix-loader.js' },
+}
+```
+
+## 3. Use `<Image>` normally
+
+```jsx
+import Image from 'next/image'
+
+export default function Hero() {
+  return <Image src="/hero/spring.jpg" width={1920} height={1080} alt="Spring" />
+}
+```
+
+<Callout>
+  Add **both** your Keenpix host and your image origin host to the project's allowlist
+  (**Settings → Security**). Set `NEXT_PUBLIC_KEENPIX_HOST`, `NEXT_PUBLIC_KEENPIX_PROJECT`,
+  and `NEXT_PUBLIC_IMAGE_ORIGIN` in `.env`.
+</Callout>

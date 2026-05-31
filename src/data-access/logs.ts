@@ -1,0 +1,28 @@
+/** Request-logs data-access — Prisma-backed (reads from request_logs). */
+import { prisma } from '@/db'
+import type { LogRow } from '@/shared/types'
+
+export async function listLogs(
+  limit = 36,
+  projectId?: string,
+): Promise<LogRow[]> {
+  const rows = await prisma.requestLog.findMany({
+    where: projectId ? { projectId } : undefined,
+    orderBy: { ts: 'desc' },
+    take: limit,
+  })
+  return rows.map((r) => ({
+    id: r.id,
+    projectId: r.projectId,
+    ts: r.ts.toISOString().replace('T', ' ').slice(5, 19),
+    path: r.path,
+    w: r.width ?? 0,
+    q: r.quality ?? 0,
+    format: r.format as LogRow['format'],
+    status: r.status,
+    cached: r.cached,
+    latency: r.latencyMs,
+    bytesIn: r.bytesIn,
+    bytesOut: r.bytesOut,
+  }))
+}

@@ -1,0 +1,35 @@
+---
+title: React (Vite)
+description: A small <KeenpixImage> component for any React app.
+icon: Atom
+---
+
+For any React app (Vite, CRA, Parcel…), wrap the [universal helper](/docs/frameworks#the-universal-pattern)
+in a reusable component:
+
+```tsx
+// KeenpixImage.tsx
+import { keenpix, keenpixSrcSet } from './keenpix'
+
+type Props = React.ComponentProps<'img'> & { src: string; width?: number }
+
+export function KeenpixImage({ src, width = 1280, sizes = '100vw', ...rest }: Props) {
+  return (
+    <img
+      decoding="async"
+      loading="lazy"
+      sizes={sizes}
+      src={keenpix(src, { w: width, fmt: 'auto' })}
+      srcSet={keenpixSrcSet(src)}
+      {...rest}
+    />
+  )
+}
+```
+
+```tsx
+<KeenpixImage src="https://cdn.example.com/hero.jpg" width={1280} alt="Hero" />
+```
+
+This works identically in Solid, Qwik, and Preact — only the `class`/`className` prop name
+differs.

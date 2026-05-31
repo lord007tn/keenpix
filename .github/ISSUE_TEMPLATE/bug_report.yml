@@ -1,0 +1,26 @@
+name: Bug report
+description: Report a reproducible Keenpix bug.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Exact steps, request URL shape, env vars involved, and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Keenpix version/tag, Docker image digest if applicable, Node version, browser, and OS.
+    validations:
+      required: true

@@ -1,0 +1,43 @@
+---
+title: Deploy
+description: Deploy Keenpix with Docker in about a minute.
+icon: Container
+---
+
+Keenpix runs as a single Node container (sharp needs Node, not an edge runtime). Put any
+CDN in front of `/api/keenpix` and it absorbs the immutable responses for you.
+
+## The 60-second deploy
+
+```bash
+git clone <your-fork> keenpix && cd keenpix
+cp .env.example .env
+# set a strong secret:
+#   BETTER_AUTH_SECRET=$(openssl rand -hex 32)
+# set POSTGRES_PASSWORD, KEENPIX_ADMIN_EMAIL, and KEENPIX_ADMIN_PASSWORD
+docker compose up -d --build
+# → http://localhost:3000
+```
+
+`docker-compose.yml` ships the app plus Postgres. On boot the container runs
+`prisma migrate deploy`, seeds the default org and admin user, then serves the
+dashboard and the transform endpoint as a non-root user.
+
+## After deploy
+
+1. Sign in as `KEENPIX_ADMIN_EMAIL` with `KEENPIX_ADMIN_PASSWORD`.
+2. Create a project pointed at your image origin.
+3. Add your source host under **Settings → Security → Allowed hosts**.
+4. Request `/api/keenpix?project=ID&url=…` — no API keys.
+
+## Architecture
+
+```text
+Browser/CDN ──▶ Keenpix container (Node + sharp) ──▶ your image origin
+                      │
+                      └── disk cache (volume)   +   Postgres (projects, request logs)
+```
+
+Scale horizontally behind a load balancer; the disk cache is per-instance, and the CDN +
+`immutable` responses keep origin traffic low. See [Configuration](/docs/self-hosting/configuration)
+for every environment variable.
