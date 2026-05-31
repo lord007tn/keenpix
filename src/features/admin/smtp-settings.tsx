@@ -42,9 +42,7 @@ const EMPTY: SmtpForm = {
 
 export function SmtpSettingsPanel() {
   const [form, setForm] = useState<SmtpForm>(EMPTY)
-  const [testRecipient, setTestRecipient] = useState('')
   const [pending, setPending] = useState(false)
-  const [testing, setTesting] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -103,24 +101,18 @@ export function SmtpSettingsPanel() {
     }
   }
 
-  async function sendTest() {
-    setTesting(true)
-    try {
-      await sendTestEmailFn({ data: { to: testRecipient.trim() } })
-      toast.success('Test email sent')
-    } catch (e) {
-      toast.error(getErrorMessage(e, 'Could not send test email'))
-    } finally {
-      setTesting(false)
-    }
-  }
-
   return (
-    <div className="flex flex-col gap-5">
+    <form
+      className="flex flex-col gap-5"
+      onSubmit={async (event) => {
+        event.preventDefault()
+        await save()
+      }}
+    >
       <div className="flex items-start justify-between gap-4">
         <CardDescription>
-          Configure SMTP for test emails and optional invitation delivery. Env
-          SMTP values are used when database settings are not enabled.
+          Configure the SMTP connection used when staff invitations are emailed.
+          Env SMTP values are used when database settings are not enabled.
         </CardDescription>
         <Badge variant={form.source === 'environment' ? 'info' : 'outline'}>
           {form.source}
@@ -209,16 +201,99 @@ export function SmtpSettingsPanel() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button disabled={pending} onClick={save}>
-          Save email settings
+        <Button disabled={pending} type="submit">
+          Save staff email settings
         </Button>
       </div>
+    </form>
+  )
+}
 
-      <div className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-end">
+export function MailingPanel() {
+  const [form, setForm] = useState<SmtpForm>(EMPTY)
+  const [testRecipient, setTestRecipient] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [testing, setTesting] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await getAdminWorkspaceFn()
+      setForm({
+        enabled: data.smtp.enabled,
+        fromEmail: data.smtp.fromEmail,
+        fromName: data.smtp.fromName,
+        host: data.smtp.host,
+        password: '',
+        passwordSet: data.smtp.passwordSet,
+        port: String(data.smtp.port),
+        secure: data.smtp.secure,
+        source: data.smtp.source,
+        username: data.smtp.username,
+      })
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Could not load mailing settings'))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function sendTest() {
+    setTesting(true)
+    try {
+      await sendTestEmailFn({ data: { to: testRecipient.trim() } })
+      toast.success('Test email sent')
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Could not send test email'))
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const sender = form.fromName
+    ? `${form.fromName} <${form.fromEmail || 'not configured'}>`
+    : form.fromEmail || 'Not configured'
+  const transport = form.host
+    ? `${form.host}:${form.port}${form.secure ? ' TLS' : ''}`
+    : 'Not configured'
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant={form.source === 'environment' ? 'info' : 'outline'}>
+          {form.source}
+        </Badge>
+        <Badge variant={form.enabled ? 'success' : 'outline'}>
+          {form.enabled ? 'enabled' : 'disabled'}
+        </Badge>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-md border p-3">
+          <div className="text-muted-foreground text-xs">Sender</div>
+          <div className="mt-1 break-all font-medium text-sm">{sender}</div>
+        </div>
+        <div className="rounded-md border p-3">
+          <div className="text-muted-foreground text-xs">Transport</div>
+          <div className="mt-1 break-all font-medium text-sm">{transport}</div>
+        </div>
+      </div>
+
+      <form
+        className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-end"
+        onSubmit={async (event) => {
+          event.preventDefault()
+          await sendTest()
+        }}
+      >
         <div className="flex flex-1 flex-col gap-1.5">
-          <Label htmlFor="test-recipient">Test recipient</Label>
+          <Label htmlFor="mailing-test-recipient">Test recipient</Label>
           <Input
-            id="test-recipient"
+            id="mailing-test-recipient"
             onChange={(e) => setTestRecipient(e.target.value)}
             placeholder="you@example.com"
             type="email"
@@ -226,14 +301,14 @@ export function SmtpSettingsPanel() {
           />
         </div>
         <Button
-          disabled={testing || !testRecipient.trim()}
-          onClick={sendTest}
+          disabled={loading || testing || !testRecipient.trim()}
+          type="submit"
           variant="outline"
         >
           <SendIcon data-icon="inline-start" />
           Send test
         </Button>
-      </div>
+      </form>
     </div>
   )
 }
