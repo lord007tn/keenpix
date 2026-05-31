@@ -28,8 +28,8 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { getErrorMessage } from '@/errors/common'
 import { authClient, signOut } from '@/lib/auth/client'
-import { getErrorMessage } from '@/lib/errors'
 import { useProject } from '@/stores/project-context'
 
 export const Route = createFileRoute('/app/account/')({
