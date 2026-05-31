@@ -2,7 +2,7 @@
 
 A self-hosted image-optimization service — a drop-in, open-source alternative to ImageKit/imgix. Point it at your origin, request a URL, and Keenpix fetches the image, transforms it with [sharp](https://sharp.pixelplumbing.com/), caches it to disk, and serves it CDN-ready.
 
-- **Transform API** — `GET /api/keenpix?project=…&url=…&w=…&fmt=…` → resize / re-encode (AVIF/WebP/JPEG/PNG) / blur, content-negotiated, immutably cacheable.
+- **Transform API** — `GET /img/https://origin.example/photo.jpg?project=…&w=…&fmt=…` → resize / re-encode (AVIF/WebP/JPEG/PNG) / blur, content-negotiated, immutably cacheable.
 - **No API keys** — access is gated entirely by each project's **domain allowlist**. An empty allowlist fails closed (403), so a fresh project is never an open proxy.
 - **Projects** — each project = one origin + an allowlist + its own request logs.
 - **Built-in analytics** — requests, bandwidth saved, cache hit-rate, formats, latency — from the request log.
@@ -35,7 +35,7 @@ The app comes up on **http://localhost:3000**. Compose runs Postgres, applies mi
 5. Request an image — **no API key**, just make sure the source host is allowlisted:
    ```bash
    curl -o out.webp \
-     "http://localhost:3000/api/keenpix?project=<PROJECT_ID>&w=600&fmt=webp&url=https://your-cdn.example.com/photo.jpg"
+     "http://localhost:3000/img/https://your-cdn.example.com/photo.jpg?project=<PROJECT_ID>&w=600&fmt=webp"
    ```
 
 ---
@@ -86,15 +86,15 @@ All via environment variables (see `.env.example`):
 ## Transform API
 
 ```
-GET /api/keenpix?project=<id>&url=<origin>&w=&h=&q=&fmt=&fit=&dpr=&blur=
+GET /img/<origin-url>?project=<id>&w=&h=&q=&fmt=&fit=&dpr=&blur=
 ```
 
-**No authentication header.** Access is controlled by the project's allowlist — the request only succeeds if `url`'s host is listed under that project's **Allowed hosts**.
+**No authentication header.** Access is controlled by the project's allowlist — the request only succeeds if the source URL's host is listed under that project's **Allowed hosts**.
 
 | Param | Meaning |
 |---|---|
 | `project` | Project id (copy it from **Settings → Project ID**). Its allowlist is the gate. |
-| `url` | Source image URL — its host must be on the project allowlist. |
+| path source | Source image URL after `/img/` — its host must be on the project allowlist. |
 | `w` / `h` | Target width/height (1–5000, never upscaled). |
 | `q` | Quality 30–100 (default 75). |
 | `fmt` | `auto` (Accept-negotiated), `avif`, `webp`, `jpeg`, `png`. |
@@ -102,14 +102,16 @@ GET /api/keenpix?project=<id>&url=<origin>&w=&h=&q=&fmt=&fit=&dpr=&blur=
 | `dpr` | Device pixel ratio 1–3. |
 | `blur` | Gaussian blur sigma. |
 
-Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`, so a CDN can cache each image variant once you configure it to cache `/api/keenpix` with the full query string.
+Simple source URLs can be written directly in the path. If the source URL contains its own `?` or `#`, URL-encode the source before appending Keenpix transform parameters.
+
+Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`, so a CDN can cache each image variant once you configure it to cache `/img/*` with the full query string. The source URL lives in the path so Cloudflare and other CDNs can still see the source file extension; use explicit `fmt` values unless your CDN can cache separate `Accept` variants.
 
 **Failure modes:**
 
 | Status | When |
 |---|---|
-| **400** | Missing `?url` or `?project`, or a malformed/non-http(s) URL |
-| **403** | `url` host not on the project allowlist (or the allowlist is empty), or it resolves to a private/loopback/link-local/CGNAT/multicast address (incl. IPv4-mapped IPv6 and DNS-rebinding) |
+| **400** | Missing source URL or `?project`, or a malformed/non-http(s) URL |
+| **403** | Source host not on the project allowlist (or the allowlist is empty), or it resolves to a private/loopback/link-local/CGNAT/multicast address (incl. IPv4-mapped IPv6 and DNS-rebinding) |
 | **404** | Unknown `project` id |
 | **413** | Origin image exceeds `KEENPIX_MAX_ORIGIN_BYTES` |
 | **502** | Origin unreachable, errored, returned a non-image body, or too many redirects |
@@ -156,11 +158,11 @@ Hosted builds serve the marketing page, Fumadocs documentation, docs search, `ll
 
 ## Architecture
 
-Four one-way layers: **route → server fn (`*Fn`) → action (pure) → data-access (Prisma)**. The transform endpoint (`/api/keenpix`) is an API route handler calling the pure sharp/SSRF/cache actions directly. Every record is `orgId`-scoped (self-host runs as a single org; SaaS-ready later).
+Four one-way layers: **route → server fn (`*Fn`) → action (pure) → data-access (Prisma)**. The transform endpoint (`/img/*`) is a route handler calling the pure sharp/SSRF/cache actions directly. Every record is `orgId`-scoped (self-host runs as a single org; SaaS-ready later).
 
 ```
 src/
-  routes/        UI + API route handlers (/api/keenpix, /api/health, /api/auth)
+  routes/        UI + API route handlers (/img/*, /api/health, /api/auth)
   functions/     server fns (auth-gated via middleware)
   actions/       pure logic — transform pipeline, SSRF guard
   data-access/   Prisma queries

@@ -11,7 +11,7 @@ server-side language (PHP, Ruby, Python, Go, …). Build the URL and render an `
 
 ```html
 <img
-  src="https://keenpix.example.com/api/keenpix?project=YOUR_ID&url=https://cdn.example.com/hero.jpg&w=1280&fmt=avif"
+  src="https://keenpix.example.com/img/https://cdn.example.com/hero.jpg?project=YOUR_ID&w=1280&fmt=avif"
   sizes="100vw"
   loading="lazy"
   decoding="async"
@@ -23,11 +23,11 @@ server-side language (PHP, Ruby, Python, Go, …). Build the URL and render an `
 
 ```html
 <img
-  src="https://keenpix.example.com/api/keenpix?project=YOUR_ID&url=https://cdn.example.com/hero.jpg&w=1280&fmt=auto"
+  src="https://keenpix.example.com/img/https://cdn.example.com/hero.jpg?project=YOUR_ID&w=1280&fmt=auto"
   srcset="
-    https://keenpix.example.com/api/keenpix?project=YOUR_ID&url=https://cdn.example.com/hero.jpg&w=640&fmt=auto   640w,
-    https://keenpix.example.com/api/keenpix?project=YOUR_ID&url=https://cdn.example.com/hero.jpg&w=1280&fmt=auto 1280w,
-    https://keenpix.example.com/api/keenpix?project=YOUR_ID&url=https://cdn.example.com/hero.jpg&w=1920&fmt=auto 1920w
+    https://keenpix.example.com/img/https://cdn.example.com/hero.jpg?project=YOUR_ID&w=640&fmt=auto   640w,
+    https://keenpix.example.com/img/https://cdn.example.com/hero.jpg?project=YOUR_ID&w=1280&fmt=auto 1280w,
+    https://keenpix.example.com/img/https://cdn.example.com/hero.jpg?project=YOUR_ID&w=1920&fmt=auto 1920w
   "
   sizes="100vw"
   alt="Hero"
@@ -39,12 +39,12 @@ server-side language (PHP, Ruby, Python, Go, …). Build the URL and render an `
 ```php
 <?php
 function keenpix(string $src, int $w): string {
-  $q = http_build_query(['project' => 'YOUR_ID', 'url' => $src, 'w' => $w, 'fmt' => 'auto']);
-  return "https://keenpix.example.com/api/keenpix?$q";
+  $q = http_build_query(['project' => 'YOUR_ID', 'w' => $w, 'fmt' => 'auto']);
+  return "https://keenpix.example.com/img/" . rawurlencode($src) . "?$q";
 }
 ?>
 <img src="<?= keenpix('https://cdn.example.com/hero.jpg', 1280) ?>" alt="Hero" />
 ```
 
 The same one-liner works in Rails, Django, Laravel, or a CMS template — just URL-encode
-the `url` parameter.
+source URLs that contain their own query string or fragment.

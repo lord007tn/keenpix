@@ -92,7 +92,7 @@ export function PipelineSettings({ project }: { project: Project }) {
   return (
     <div className="divide-y">
       <Row
-        description="Detect the Accept header and serve AVIF/WebP where supported. Off serves JPEG for fmt=auto requests."
+        description="Detect Accept and serve AVIF/WebP. Use with an Accept-aware CDN cache, or prefer explicit fmt values."
         label="Auto-format"
       >
         <Switch

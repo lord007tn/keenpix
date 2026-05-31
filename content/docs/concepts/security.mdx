@@ -9,7 +9,7 @@ Keenpix treats that as core, not a fast-follow.
 
 ## The allowlist (access control)
 
-Each project has a list of **allowed source hosts**. A request is served only if `?url`'s
+Each project has a list of **allowed source hosts**. A request is served only if the source URL's
 host is on that project's list. The list is checked **before** the cache, and an empty
 list blocks everything (fail-closed). This is why Keenpix needs no API keys: a transform
 URL is safe to publish, because it can only ever hit hosts you've approved.
