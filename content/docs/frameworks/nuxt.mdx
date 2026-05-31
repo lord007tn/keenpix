@@ -22,8 +22,10 @@ const operationsGenerator = createOperationsGenerator({
 export const getImage = (src, { modifiers = {}, baseURL = '', project = '' } = {}) => {
   const operations = operationsGenerator(modifiers)
   const url = src.startsWith('http') ? src : `${baseURL}${src}` // Keenpix needs an absolute URL
-  const query = `project=${project}&url=${encodeURIComponent(url)}${operations ? `&${operations}` : ''}`
-  return { url: `${process.env.KEENPIX_HOST}/api/keenpix?${query}` }
+  const query = `project=${project}${operations ? `&${operations}` : ''}`
+  return {
+    url: `${process.env.KEENPIX_HOST}/img/${encodeURIComponent(url)}?${query}`,
+  }
 }
 ```
 

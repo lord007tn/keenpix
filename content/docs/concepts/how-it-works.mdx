@@ -11,10 +11,10 @@ string **is** the API.
 
 ```text
  Browser
-   │  GET /api/keenpix?project=ID&url=https://cdn.example.com/hero.jpg&w=1200&fmt=auto
+   │  GET /img/https://cdn.example.com/hero.jpg?project=ID&w=1200&fmt=auto
    ▼
  Keenpix
-   │ 1. Resolve the project, check ?url's host against the project allowlist (+ SSRF block)
+   │ 1. Resolve the project, check the source host against the project allowlist (+ SSRF block)
    │ 2. Build a cache key from (project, url, w, h, q, fmt, fit, dpr, blur)
    │ 3. Cache HIT?  ──yes──▶  stream bytes from disk
    │        │ no
@@ -43,9 +43,10 @@ Keenpix decodes the source once and runs a parameter-selected, safe pipeline:
 ## Format negotiation
 
 When `fmt=auto` (or `fmt` is omitted) Keenpix reads the browser's `Accept` header and
-serves **AVIF → WebP → JPEG** in order of support, and sets `Vary: Accept` so CDNs cache
-each variant correctly. A project can turn this off (then `fmt=auto` serves JPEG); an
-explicit `fmt=avif|webp|jpeg|png` is always honoured.
+serves **AVIF → WebP → JPEG** in order of support, and sets `Vary: Accept`. Use
+`fmt=auto` behind a CDN only when that CDN can cache separate variants by `Accept`;
+otherwise generate explicit `fmt=avif|webp|jpeg|png` URLs. A project can turn
+auto-format off (then `fmt=auto` serves JPEG); an explicit format is always honoured.
 
 ## Per-project defaults
 

@@ -33,11 +33,14 @@ Cache-Control: public, max-age=31536000, immutable
 Vary: Accept
 ```
 
-Because the format and every transform live in the URL, the response is immutable.
-Configure your CDN to cache `/api/keenpix` responses, including the full query string.
-For Cloudflare, that usually means a Cache Rule for the endpoint; orange-cloud proxying
-alone is not enough for every API-looking path. `Vary: Accept` keeps per-format variants
-correct under `fmt=auto`.
+Because the source URL and every transform live in the URL, the response is immutable.
+Configure your CDN to cache `/img/*` responses, including the full query string. For
+Cloudflare, that usually means a Cache Rule for the endpoint; orange-cloud proxying alone
+is not enough for every dynamic-looking path.
+
+`Vary: Accept` keeps per-format variants correct under `fmt=auto` only when your CDN
+supports caching separate variants by `Accept`. On CDNs that do not, prefer explicit
+`fmt=avif`, `fmt=webp`, `fmt=jpeg`, or `fmt=png` URLs.
 
 ## Where it's stored
 

@@ -162,7 +162,7 @@ function SettingsPage() {
         </CardHeader>
         <CardContent className="divide-y">
           <SettingRow
-            description="Use this in your transform URLs: /api/keenpix?project=<id>&url=…"
+            description="Use this in your transform URLs: /img/<source-url>?project=<id>"
             label="Project ID"
           >
             <div className="flex items-center gap-2">

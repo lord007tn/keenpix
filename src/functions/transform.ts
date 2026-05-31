@@ -6,17 +6,24 @@ import {
 import { cacheControl } from '@/lib/cdn/cache'
 import { contentTypeFor } from '@/lib/sharp/transform'
 
+const LEADING_SLASHES_RE = /^\/+/
+
 /**
  * HTTP boundary for the transform API. Routes call functions; functions adapt
  * request/response details and delegate use-case work to actions.
  */
-export async function handleTransformRequest(request: Request) {
+export async function handleTransformRequest(
+  request: Request,
+  pathSource?: string,
+) {
   const startedAt = Date.now()
   const searchParams = new URL(request.url).searchParams
-  const src = searchParams.get('url')
+  const src = pathSource
+    ? decodeSourcePath(pathSource)
+    : searchParams.get('url')
 
   if (!src) {
-    return new Response('Missing ?url', { status: 400 })
+    return new Response('Missing source image URL', { status: 400 })
   }
 
   const projectId = searchParams.get('project')
@@ -45,5 +52,14 @@ export async function handleTransformRequest(request: Request) {
     return new Response(getPublicTransformErrorMessage(error), {
       status: getTransformErrorStatus(error),
     })
+  }
+}
+
+function decodeSourcePath(pathSource: string) {
+  const trimmed = pathSource.replace(LEADING_SLASHES_RE, '')
+  try {
+    return decodeURIComponent(trimmed)
+  } catch {
+    return trimmed
   }
 }
