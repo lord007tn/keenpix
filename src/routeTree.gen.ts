@@ -16,9 +16,9 @@ import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as InviteTokenRouteImport } from './routes/invite/$token'
+import { Route as ImgSplatRouteImport } from './routes/img/$'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
-import { Route as ApiKeenpixRouteImport } from './routes/api/keenpix'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as AppSettingsIndexRouteImport } from './routes/app/settings/index'
@@ -65,6 +65,11 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ImgSplatRoute = ImgSplatRouteImport.update({
+  id: '/img/$',
+  path: '/img/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DocsSplatRoute = DocsSplatRouteImport.update({
   id: '/docs/$',
   path: '/docs/$',
@@ -73,11 +78,6 @@ const DocsSplatRoute = DocsSplatRouteImport.update({
 const ApiSearchRoute = ApiSearchRouteImport.update({
   id: '/api/search',
   path: '/api/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiKeenpixRoute = ApiKeenpixRouteImport.update({
-  id: '/api/keenpix',
-  path: '/api/keenpix',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -134,9 +134,9 @@ export interface FileRoutesByFullPath {
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
   '/login': typeof authLoginRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/keenpix': typeof ApiKeenpixRoute
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
+  '/img/$': typeof ImgSplatRoute
   '/invite/$token': typeof InviteTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -154,9 +154,9 @@ export interface FileRoutesByTo {
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
   '/login': typeof authLoginRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/keenpix': typeof ApiKeenpixRoute
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
+  '/img/$': typeof ImgSplatRoute
   '/invite/$token': typeof InviteTokenRoute
   '/app': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -176,9 +176,9 @@ export interface FileRoutesById {
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
   '/(auth)/login': typeof authLoginRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/keenpix': typeof ApiKeenpixRoute
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
+  '/img/$': typeof ImgSplatRoute
   '/invite/$token': typeof InviteTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -199,9 +199,9 @@ export interface FileRouteTypes {
     | '/{$llmFile}.txt'
     | '/login'
     | '/api/health'
-    | '/api/keenpix'
     | '/api/search'
     | '/docs/$'
+    | '/img/$'
     | '/invite/$token'
     | '/app/'
     | '/api/auth/$'
@@ -219,9 +219,9 @@ export interface FileRouteTypes {
     | '/{$llmFile}.txt'
     | '/login'
     | '/api/health'
-    | '/api/keenpix'
     | '/api/search'
     | '/docs/$'
+    | '/img/$'
     | '/invite/$token'
     | '/app'
     | '/api/auth/$'
@@ -240,9 +240,9 @@ export interface FileRouteTypes {
     | '/{$llmFile}.txt'
     | '/(auth)/login'
     | '/api/health'
-    | '/api/keenpix'
     | '/api/search'
     | '/docs/$'
+    | '/img/$'
     | '/invite/$token'
     | '/app/'
     | '/api/auth/$'
@@ -262,9 +262,9 @@ export interface RootRouteChildren {
   Char123llmFileChar125DottxtRoute: typeof Char123llmFileChar125DottxtRoute
   authLoginRoute: typeof authLoginRoute
   ApiHealthRoute: typeof ApiHealthRoute
-  ApiKeenpixRoute: typeof ApiKeenpixRoute
   ApiSearchRoute: typeof ApiSearchRoute
   DocsSplatRoute: typeof DocsSplatRoute
+  ImgSplatRoute: typeof ImgSplatRoute
   InviteTokenRoute: typeof InviteTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   OgDocsSplatRoute: typeof OgDocsSplatRoute
@@ -321,6 +321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/img/$': {
+      id: '/img/$'
+      path: '/img/$'
+      fullPath: '/img/$'
+      preLoaderRoute: typeof ImgSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/docs/$': {
       id: '/docs/$'
       path: '/docs/$'
@@ -333,13 +340,6 @@ declare module '@tanstack/react-router' {
       path: '/api/search'
       fullPath: '/api/search'
       preLoaderRoute: typeof ApiSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/keenpix': {
-      id: '/api/keenpix'
-      path: '/api/keenpix'
-      fullPath: '/api/keenpix'
-      preLoaderRoute: typeof ApiKeenpixRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -438,9 +438,9 @@ const rootRouteChildren: RootRouteChildren = {
   Char123llmFileChar125DottxtRoute: Char123llmFileChar125DottxtRoute,
   authLoginRoute: authLoginRoute,
   ApiHealthRoute: ApiHealthRoute,
-  ApiKeenpixRoute: ApiKeenpixRoute,
   ApiSearchRoute: ApiSearchRoute,
   DocsSplatRoute: DocsSplatRoute,
+  ImgSplatRoute: ImgSplatRoute,
   InviteTokenRoute: InviteTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   OgDocsSplatRoute: OgDocsSplatRoute,

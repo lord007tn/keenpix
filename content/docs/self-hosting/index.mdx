@@ -5,8 +5,8 @@ icon: Container
 ---
 
 Keenpix runs as a single Node container (sharp needs Node, not an edge runtime). Put a
-CDN in front of `/api/keenpix`, then configure that CDN to cache the endpoint's
-immutable image responses.
+CDN in front of `/img/*`, then configure that CDN to cache the endpoint's immutable
+image responses.
 
 ## The 60-second deploy
 
@@ -31,7 +31,7 @@ the dashboard and the transform endpoint as a non-root user.
 3. Add your source host under **Settings → Security → Allowed hosts**.
 4. Invite any staff from **Settings → Staff**. Copy the invitation link, or send
    it by email after SMTP is configured.
-5. Request `/api/keenpix?project=ID&url=…` — no API keys.
+5. Request `/img/https://your-origin.example/photo.jpg?project=ID&w=1200&fmt=webp` — no API keys.
 
 ## Architecture
 
@@ -43,4 +43,5 @@ Browser/CDN ──▶ Keenpix container (Node + sharp) ──▶ your image orig
 
 Scale horizontally behind a load balancer; the disk cache is per-instance, and CDN cache
 rules plus `immutable` responses keep origin traffic low. See
+[CDN setup](/docs/self-hosting/cdn) for Cloudflare and non-Cloudflare caching rules, and
 [Configuration](/docs/self-hosting/configuration) for every environment variable.

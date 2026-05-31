@@ -1,26 +1,29 @@
 ---
 title: The endpoint
-description: GET /api/keenpix — the one and only endpoint.
+description: GET /img/<source> — the image transform endpoint.
 icon: Webhook
 ---
 
-Keenpix exposes a single endpoint. No API key — the project's allowlist is the access
-control.
+Keenpix exposes a single image endpoint. No API key — the project's allowlist is the
+access control.
 
 ```http
-GET /api/keenpix?project=PROJECT_ID&url=SOURCE_URL&w=…&fmt=…
+GET /img/SOURCE_URL?project=PROJECT_ID&w=…&fmt=…
 ```
 
-| Part      | Required | Notes                                                       |
-| --------- | -------- | ----------------------------------------------------------- |
-| `project` | yes      | Project id; its allowlist gates access. Missing → `400`.    |
-| `url`     | yes      | Absolute source URL. Host must be allowlisted. Missing → `400`. |
-| transforms| no       | `w`, `h`, `q`, `fmt`, `fit`, `dpr`, `blur` — see [Parameters](/docs/reference/parameters). |
+| Part       | Required | Notes                                                       |
+| ---------- | -------- | ----------------------------------------------------------- |
+| path source| yes      | Absolute source URL after `/img/`. Host must be allowlisted. Missing → `400`. |
+| `project`  | yes      | Project id; its allowlist gates access. Missing → `400`.    |
+| transforms | no       | `w`, `h`, `q`, `fmt`, `fit`, `dpr`, `blur` — see [Parameters](/docs/reference/parameters). |
+
+Simple source URLs can be written directly in the path. If the source URL contains its
+own `?` or `#`, URL-encode the source before appending Keenpix transform parameters.
 
 ## Example
 
 ```bash
-curl -I "https://keenpix.example.com/api/keenpix?project=store&url=https://cdn.example.com/hero.jpg&w=800&fmt=webp"
+curl -I "https://keenpix.example.com/img/https://cdn.example.com/hero.jpg?project=store&w=800&fmt=webp"
 # HTTP/1.1 200 OK
 # content-type: image/webp
 # cache-control: public, max-age=31536000, immutable

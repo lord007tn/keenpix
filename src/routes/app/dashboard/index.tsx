@@ -52,7 +52,7 @@ function DashboardPage() {
               A project points keenpix at one image origin. Add the source host
               to its allowlist under Settings, then request{' '}
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-                /api/keenpix?project=ID&amp;url=…
+                /img/https://origin.example/photo.jpg?project=ID
               </code>{' '}
               — no API keys.
             </EmptyDescription>

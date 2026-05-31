@@ -1,0 +1,74 @@
+---
+title: CDN setup
+description: Put Cloudflare or another CDN in front of a self-hosted Keenpix instance.
+icon: Cloud
+---
+
+Keenpix runs image processing on your server and emits immutable, CDN-ready image
+responses. Your CDN should cache only the image transform path:
+
+```text
+/img/<SOURCE_URL>?project=PROJECT_ID&w=1200&fmt=webp
+```
+
+Do not cache the dashboard, auth routes, docs, or health checks.
+
+## Cloudflare
+
+1. Create a DNS record such as `images.example.com` pointing at your VPS and enable the
+   orange-cloud proxy.
+2. Use **Full (strict)** SSL with a valid origin certificate or Let's Encrypt certificate
+   on the VPS.
+3. Create a Cache Rule matching only the image path:
+
+   ```text
+   http.host eq "images.example.com" and starts_with(http.request.uri.path, "/img/")
+   ```
+
+4. Set the rule to **Eligible for cache**.
+5. Keep all query string parameters in the cache key. Do not use "Ignore Query String".
+   Enable query-string sorting if available.
+6. Let Cloudflare respect Keenpix's origin header, or set an edge TTL that matches the
+   immutable image lifetime:
+
+   ```http
+   Cache-Control: public, max-age=31536000, immutable
+   ```
+
+Cloudflare proxying alone is not the complete setup for this app. The transform route is
+dynamic from Cloudflare's perspective, so add the Cache Rule above to make `/img/*`
+eligible for edge cache.
+
+## Format negotiation
+
+The preferred URL shape puts the source URL in the path:
+
+```text
+https://images.example.com/img/https://cdn.example.com/hero.jpg?project=store&w=1200&fmt=auto
+```
+
+That keeps the source file extension in Cloudflare's request path, which is important if
+you use Cloudflare's image variant caching with `Vary: Accept`.
+
+For the highest cache hit rate on any CDN, request explicit formats in the URL:
+
+```text
+https://images.example.com/img/https://cdn.example.com/hero.jpg?project=store&w=1200&fmt=webp
+```
+
+Use `fmt=auto` only when your CDN can cache separate variants by `Accept` or has image
+variant support enabled. Otherwise, two browsers can ask for the same URL but need
+different output formats.
+
+## Other CDNs
+
+Use the same rules with Fastly, Bunny, CloudFront, Caddy, Nginx, or another proxy:
+
+- Cache only paths that start with `/img/`.
+- Include the full path and full query string in the cache key.
+- Respect `Cache-Control` from Keenpix.
+- Respect `Vary: Accept` if you use `fmt=auto`; otherwise use explicit `fmt` values.
+- Keep dashboard and auth paths uncached.
+
+If the CDN cannot vary by `Accept`, use explicit `fmt=avif`, `fmt=webp`, `fmt=jpeg`, or
+`fmt=png` in generated image URLs.
