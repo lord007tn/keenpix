@@ -59,4 +59,4 @@ EXPOSE 3000
 # Apply migrations, then boot the Nitro node-server build. Invoke the prisma CLI
 # JS directly — the node_modules/.bin/prisma shim re-enters pnpm (deps-status
 # check) which, as non-root, writes to /app and crashes with EACCES.
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node node_modules/prisma/build/index.js db seed && node .output/server/index.mjs"]
+CMD ["sh", "-c", "export PATH=/app/node_modules/.bin:$PATH && node node_modules/prisma/build/index.js migrate deploy && node node_modules/prisma/build/index.js db seed && node .output/server/index.mjs"]
