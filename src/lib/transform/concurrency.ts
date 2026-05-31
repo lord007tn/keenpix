@@ -1,6 +1,6 @@
 import { AsyncQueuer } from '@tanstack/pacer'
 import { DEFAULT_MAX_CONCURRENCY, env } from '@/env/server'
-import { TransformError } from './ssrf'
+import { TransformError } from '@/errors/transform'
 
 /** Max simultaneous fetch+transform jobs (the memory/CPU-heavy path). Excess
  * requests queue; past MAX_QUEUE we shed load with 503 rather than OOM. */
