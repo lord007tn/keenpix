@@ -1,15 +1,19 @@
-import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { hashPassword } from 'better-auth/crypto'
+import { env } from '../src/env/server'
 import { PrismaClient } from '../src/generated/prisma/client'
 
+if (!env.DATABASE_URL) {
+  throw new Error('Set DATABASE_URL before seeding.')
+}
+
 const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL ?? '' }),
+  adapter: new PrismaPg({ connectionString: env.DATABASE_URL }),
 })
 
 const ORG_ID = 'org_default'
-const ADMIN_EMAIL = process.env.KEENPIX_ADMIN_EMAIL
-const ADMIN_PASSWORD = process.env.KEENPIX_ADMIN_PASSWORD
+const ADMIN_EMAIL = env.KEENPIX_ADMIN_EMAIL
+const ADMIN_PASSWORD = env.KEENPIX_ADMIN_PASSWORD
 
 async function seedAdminUser() {
   if (!ADMIN_EMAIL) {

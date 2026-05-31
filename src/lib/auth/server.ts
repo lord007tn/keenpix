@@ -3,8 +3,9 @@ import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { admin } from 'better-auth/plugins'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { prisma } from '@/db'
+import { env } from '@/env/server'
 
-const isProd = process.env.NODE_ENV === 'production'
+const isProd = env.NODE_ENV === 'production'
 
 /** Reject placeholder/known-weak secrets (normalized) so the repo's own dev
  * value — and any human-written placeholder, including the one shipped in
@@ -25,7 +26,7 @@ function isWeakSecret(secret: string): boolean {
 }
 
 function resolveAuthSecret(): string {
-  const s = process.env.BETTER_AUTH_SECRET
+  const s = env.BETTER_AUTH_SECRET
   if (s && !isWeakSecret(s)) {
     return s
   }
@@ -37,7 +38,7 @@ function resolveAuthSecret(): string {
   return s ?? 'dev-secret-change-me'
 }
 
-const authUrl = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'
+const authUrl = env.BETTER_AUTH_URL ?? 'http://localhost:3000'
 
 export const auth = betterAuth({
   baseURL: authUrl,

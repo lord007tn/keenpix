@@ -1,17 +1,47 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { prisma } from '@/db'
+import { getTransformQueueStats } from '@/actions/transform/concurrency'
+import { checkDatabaseHealth } from '@/data-access/health'
+import { getCacheRuntimeStats } from '@/lib/cdn/cache'
 
-/** Readiness probe: 200 when the DB is reachable, 503 otherwise. Used by the
- * container healthcheck so orchestration waits for a genuinely-ready app. */
 export const Route = createFileRoute('/api/health')({
   server: {
     handlers: {
       GET: async () => {
+        const started = Date.now()
         try {
-          await prisma.$queryRaw`SELECT 1`
-          return Response.json({ status: 'ok' })
+          const database = await checkDatabaseHealth()
+          return Response.json(
+            {
+              ok: true,
+              service: 'keenpix',
+              status: 'ok',
+              timestamp: new Date().toISOString(),
+              uptimeSeconds: Math.round(process.uptime()),
+              checks: {
+                cache: getCacheRuntimeStats(),
+                database,
+                transformQueue: getTransformQueueStats(),
+              },
+              latencyMs: Date.now() - started,
+            },
+            { headers: { 'cache-control': 'no-store' } },
+          )
         } catch {
-          return Response.json({ status: 'degraded' }, { status: 503 })
+          return Response.json(
+            {
+              ok: false,
+              service: 'keenpix',
+              status: 'degraded',
+              timestamp: new Date().toISOString(),
+              checks: {
+                cache: getCacheRuntimeStats(),
+                database: { ok: false },
+                transformQueue: getTransformQueueStats(),
+              },
+              latencyMs: Date.now() - started,
+            },
+            { headers: { 'cache-control': 'no-store' }, status: 503 },
+          )
         }
       },
     },
