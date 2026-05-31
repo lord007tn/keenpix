@@ -1,51 +1,30 @@
 import { createServerFn } from '@tanstack/react-start'
-import { z } from 'zod'
+import {
+  acceptInvitation,
+  createStaffInvitation,
+  getEffectiveSmtpSettings,
+  getInvitationByToken,
+  getPublicSmtpSettings,
+  listInvitations,
+  listStaffUsers,
+  revokeInvitation,
+  updateSmtpSettings,
+} from '@/data-access/admin'
 import { authMiddleware, requireSuperAdmin } from '@/lib/auth/guards'
-
-const roleSchema = z.enum(['admin', 'staff'])
-
-const inviteSchema = z.object({
-  email: z.email(),
-  expiresDays: z.number().int().min(1).max(30).optional(),
-  role: roleSchema.default('staff'),
-  sendEmail: z.boolean().optional(),
-})
-
-const tokenSchema = z.object({
-  token: z.string().min(20),
-})
-
-const acceptInviteSchema = z.object({
-  name: z.string().max(80).optional(),
-  password: z.string().min(8),
-  token: z.string().min(20),
-})
-
-const revokeInviteSchema = z.object({
-  id: z.string().min(1),
-})
-
-const smtpSchema = z.object({
-  enabled: z.boolean(),
-  fromEmail: z.email().or(z.literal('')).optional(),
-  fromName: z.string().max(80).optional(),
-  host: z.string().max(255).optional(),
-  password: z.string().max(500).optional(),
-  port: z.number().int().min(1).max(65_535),
-  secure: z.boolean(),
-  username: z.string().max(255).optional(),
-})
-
-const testEmailSchema = z.object({
-  to: z.email(),
-})
+import { sendSmtpMail, verifySmtp } from '@/lib/email/smtp'
+import {
+  acceptInvitationSchema,
+  createInvitationSchema,
+  invitationTokenSchema,
+  revokeInvitationSchema,
+  sendTestEmailSchema,
+  smtpSettingsSchema,
+} from '@/schemas/admin'
 
 export const getAdminWorkspaceFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
     requireSuperAdmin(context)
-    const { getPublicSmtpSettings, listInvitations, listStaffUsers } =
-      await import('@/data-access/admin')
     const [users, invitations, smtp] = await Promise.all([
       listStaffUsers(),
       listInvitations(),
@@ -55,13 +34,10 @@ export const getAdminWorkspaceFn = createServerFn({ method: 'GET' })
   })
 
 export const createInvitationFn = createServerFn({ method: 'POST' })
+  .inputValidator(createInvitationSchema)
   .middleware([authMiddleware])
-  .inputValidator(inviteSchema)
   .handler(async ({ context, data }) => {
     requireSuperAdmin(context)
-    const { createStaffInvitation, getEffectiveSmtpSettings } = await import(
-      '@/data-access/admin'
-    )
     const invitation = await createStaffInvitation({
       email: data.email,
       role: data.role,
@@ -73,7 +49,6 @@ export const createInvitationFn = createServerFn({ method: 'POST' })
       if (!settings) {
         throw new Error('SMTP is not configured')
       }
-      const { sendSmtpMail } = await import('@/lib/email/smtp')
       await sendSmtpMail(settings, {
         to: invitation.email,
         subject: 'You are invited to Keenpix',
@@ -85,57 +60,47 @@ export const createInvitationFn = createServerFn({ method: 'POST' })
   })
 
 export const revokeInvitationFn = createServerFn({ method: 'POST' })
+  .inputValidator(revokeInvitationSchema)
   .middleware([authMiddleware])
-  .inputValidator(revokeInviteSchema)
-  .handler(async ({ context, data }) => {
+  .handler(({ context, data }) => {
     requireSuperAdmin(context)
-    const { revokeInvitation } = await import('@/data-access/admin')
     return revokeInvitation(data.id)
   })
 
 export const getInvitationFn = createServerFn({ method: 'GET' })
-  .inputValidator(tokenSchema)
-  .handler(async ({ data }) => {
-    const { getInvitationByToken } = await import('@/data-access/admin')
-    return getInvitationByToken(data.token)
-  })
+  .inputValidator(invitationTokenSchema)
+  .handler(async ({ data }) => getInvitationByToken(data.token))
 
 export const acceptInvitationFn = createServerFn({ method: 'POST' })
-  .inputValidator(acceptInviteSchema)
-  .handler(async ({ data }) => {
-    const { acceptInvitation } = await import('@/data-access/admin')
-    return acceptInvitation(data)
-  })
+  .inputValidator(acceptInvitationSchema)
+  .handler(async ({ data }) => acceptInvitation(data))
 
 export const updateSmtpSettingsFn = createServerFn({ method: 'POST' })
+  .inputValidator(smtpSettingsSchema)
   .middleware([authMiddleware])
-  .inputValidator(smtpSchema)
-  .handler(async ({ context, data }) => {
+  .handler(({ context, data }) => {
     requireSuperAdmin(context)
-    const { updateSmtpSettings } = await import('@/data-access/admin')
     return updateSmtpSettings({
       enabled: data.enabled,
       host: data.host,
       port: data.port,
       secure: data.secure,
       username: data.username,
-      password: data.password,
+      password: data.password || undefined,
       fromEmail: data.fromEmail,
       fromName: data.fromName,
     })
   })
 
 export const sendTestEmailFn = createServerFn({ method: 'POST' })
+  .inputValidator(sendTestEmailSchema)
   .middleware([authMiddleware])
-  .inputValidator(testEmailSchema)
   .handler(async ({ context, data }) => {
     requireSuperAdmin(context)
-    const { getEffectiveSmtpSettings } = await import('@/data-access/admin')
     const settings = await getEffectiveSmtpSettings()
     if (!settings) {
       throw new Error('SMTP is not configured')
     }
-    const { sendSmtpMail, verifySmtp } = await import('@/lib/email/smtp')
     await verifySmtp(settings)
     await sendSmtpMail(settings, {
       to: data.to,

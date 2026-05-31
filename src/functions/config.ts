@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { isSelfHosted } from '@/lib/deployment'
 
 /**
  * Public, unauthenticated config the landing route needs at render time.
@@ -6,10 +7,7 @@ import { createServerFn } from '@tanstack/react-start'
  * "this is a self-hosted instance" splash instead.
  */
 export const getPublicConfigFn = createServerFn({ method: 'GET' }).handler(
-  async () => {
-    const { isSelfHosted } = await import('@/lib/deployment')
-    return {
-      selfHost: isSelfHosted(),
-    }
-  },
+  async () => ({
+    selfHost: isSelfHosted(),
+  }),
 )

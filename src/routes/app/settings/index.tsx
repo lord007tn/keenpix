@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MailingPanel, SmtpSettingsPanel } from '@/features/admin/smtp-settings'
 import { StaffManagement } from '@/features/admin/staff-management'
 import { AllowedHosts } from '@/features/projects/allowed-hosts'
@@ -49,41 +50,48 @@ function SettingsPage() {
   const { user } = useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
   const workspaceAdmin = isSuperAdmin ? (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Staff</CardTitle>
-          <CardDescription>
-            Invite teammates and configure how staff invitations are emailed.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-6">
-          <StaffManagement />
-          <div className="flex flex-col gap-4 border-t pt-6">
-            <div>
-              <h3 className="font-medium text-sm">Invitation email delivery</h3>
-              <p className="text-muted-foreground text-xs">
-                SMTP credentials only affect staff invite emails.
-              </p>
-            </div>
-            <SmtpSettingsPanel />
-          </div>
-        </CardContent>
-      </Card>
+    <Card>
+      <CardHeader>
+        <CardTitle>Workspace</CardTitle>
+        <CardDescription>
+          Manage staff access and the mailing configuration used for
+          invitations.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="staff">
+          <TabsList>
+            <TabsTrigger value="staff">Staff</TabsTrigger>
+            <TabsTrigger value="mailing">Mailing</TabsTrigger>
+          </TabsList>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Mailing</CardTitle>
-          <CardDescription>
-            Check the active sender and send a test message before inviting
-            staff.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <MailingPanel />
-        </CardContent>
-      </Card>
-    </>
+          <TabsContent className="pt-6" value="staff">
+            <StaffManagement />
+          </TabsContent>
+
+          <TabsContent className="flex flex-col gap-6 pt-6" value="mailing">
+            <div className="flex flex-col gap-4">
+              <div>
+                <h3 className="font-medium text-sm">SMTP connection</h3>
+                <p className="text-muted-foreground text-xs">
+                  Credentials used when staff invitations are emailed.
+                </p>
+              </div>
+              <SmtpSettingsPanel />
+            </div>
+            <div className="flex flex-col gap-4 border-t pt-6">
+              <div>
+                <h3 className="font-medium text-sm">Delivery check</h3>
+                <p className="text-muted-foreground text-xs">
+                  Confirm the active sender and send a test message.
+                </p>
+              </div>
+              <MailingPanel />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   ) : null
 
   // Settings are per-project. In "All projects" scope there's nothing to

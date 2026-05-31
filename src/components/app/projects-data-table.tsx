@@ -6,6 +6,7 @@ import {
   type SortingState,
   useReactTable,
 } from '@tanstack/react-table'
+import { ReactTableDevtools } from '@tanstack/react-table-devtools'
 import { ArrowUpDownIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
@@ -29,7 +30,7 @@ interface ProjectRow extends Project {
   requests: number
 }
 
-const ENVS = ['all', 'production', 'staging', 'development'] as const
+const ENVS = ['all', 'production', 'staging', 'development']
 
 const columns: ColumnDef<ProjectRow>[] = [
   {
@@ -119,7 +120,7 @@ export function ProjectsDataTable({
   onSelect: (id: string) => void
 }) {
   const [sorting, setSorting] = useState<SortingState>([])
-  const [env, setEnv] = useState<string>('all')
+  const [env, setEnv] = useState('all')
 
   const rows = useMemo<ProjectRow[]>(
     () =>
@@ -147,7 +148,7 @@ export function ProjectsDataTable({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Tabs onValueChange={(v) => setEnv(v as string)} value={env}>
+        <Tabs onValueChange={setEnv} value={env}>
           <TabsList>
             {ENVS.map((e) => (
               <TabsTrigger className="capitalize" key={e} value={e}>
@@ -205,6 +206,13 @@ export function ProjectsDataTable({
           </TableBody>
         </Table>
       </Card>
+      {import.meta.env.DEV ? (
+        <ReactTableDevtools
+          containerElement="div"
+          initialIsOpen={false}
+          table={table}
+        />
+      ) : null}
     </div>
   )
 }

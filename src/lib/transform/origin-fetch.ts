@@ -4,6 +4,7 @@ import { TransformError } from '@/errors/transform'
 import { assertSafeOrigin } from './safe-origin'
 
 type ValidatedOrigin = Awaited<ReturnType<typeof assertSafeOrigin>>
+type OriginResponse = Awaited<ReturnType<typeof undiciFetch>>
 
 /** Max bytes pulled from an origin before refusing (413). A cache MISS buffers
  * the whole origin response in memory, so this bounds the OOM blast radius. */
@@ -20,7 +21,7 @@ const ORIGIN_TIMEOUT_MS = env.KEENPIX_ORIGIN_TIMEOUT_MS
 function mapFetchError(err: unknown) {
   const name = err instanceof Error ? err.name : ''
   const code =
-    err instanceof Error ? ((err as { code?: string }).code ?? '') : ''
+    err instanceof Error && 'code' in err ? Reflect.get(err, 'code') : ''
   if (
     name === 'TimeoutError' ||
     name === 'AbortError' ||
@@ -49,7 +50,7 @@ function makePinnedAgent(origin: ValidatedOrigin) {
       // the array form back; older paths use the (err, address, family) form.
       // Support both shapes for safety.
       lookup: (_hostname, options, cb) => {
-        if ((options as { all?: boolean }).all) {
+        if (Reflect.get(options, 'all')) {
           cb(null, [{ address: origin.ip, family: origin.family }])
         } else {
           cb(null, origin.ip, origin.family)
@@ -60,7 +61,7 @@ function makePinnedAgent(origin: ValidatedOrigin) {
 }
 
 /** Read a response body into a Buffer, aborting if it exceeds `max` bytes. */
-async function readCapped(res: Response, max: number) {
+async function readCapped(res: OriginResponse, max: number) {
   const body = res.body
   if (!body) {
     const buf = Buffer.from(await res.arrayBuffer())
@@ -107,14 +108,14 @@ export async function fetchOriginImage(
   for (let hop = 0; hop < 4; hop++) {
     const agent = makePinnedAgent(current)
     try {
-      let res: Response
+      let res: OriginResponse
       try {
-        res = (await undiciFetch(current.url, {
+        res = await undiciFetch(current.url, {
           headers: { 'user-agent': 'keenpix/0.1' },
           redirect: 'manual',
           signal: AbortSignal.timeout(ORIGIN_TIMEOUT_MS),
           dispatcher: agent,
-        })) as unknown as Response
+        })
       } catch (err) {
         // Network-level failure (timeout, refused, reset, DNS) reaching the
         // origin — a gateway problem, surfaced as 504/502, never a bare 500.

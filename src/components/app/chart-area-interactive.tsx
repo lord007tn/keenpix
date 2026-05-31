@@ -14,7 +14,11 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import type { AnalyticsRange, TimePoint } from '@/shared/types'
+import {
+  type AnalyticsRange,
+  isAnalyticsRange,
+  type TimePoint,
+} from '@/shared/types'
 
 const chartConfig = {
   cached: { label: 'Cache hits', color: 'var(--chart-2)' },
@@ -48,8 +52,8 @@ export function ChartAreaInteractive({
         <CardAction>
           <ToggleGroup
             onValueChange={(v: string[]) => {
-              const next = v[0] as AnalyticsRange | undefined
-              if (next) {
+              const next = v[0]
+              if (isAnalyticsRange(next)) {
                 onRangeChange(next)
               }
             }}

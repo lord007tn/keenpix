@@ -29,7 +29,11 @@ import {
 } from '@/features/analytics/charts'
 import { getAnalyticsFn } from '@/functions/analytics'
 import { fmtBytes, fmtNum } from '@/shared/format'
-import type { AnalyticsRange, ProjectBreakdownRow } from '@/shared/types'
+import {
+  type AnalyticsRange,
+  isAnalyticsRange,
+  type ProjectBreakdownRow,
+} from '@/shared/types'
 import { useProject } from '@/stores/project-context'
 
 const RANGES: AnalyticsRange[] = ['24h', '7d', '30d', '90d']
@@ -54,11 +58,7 @@ export const Route = createFileRoute('/app/analytics/')({
     project?: string
     status?: string[]
   } => ({
-    range:
-      typeof search.range === 'string' &&
-      RANGES.includes(search.range as AnalyticsRange)
-        ? (search.range as AnalyticsRange)
-        : '24h',
+    range: isAnalyticsRange(search.range) ? search.range : '24h',
     project: typeof search.project === 'string' ? search.project : undefined,
     format: parseStringArray(search.format),
     status: parseStringArray(search.status),
@@ -119,6 +119,10 @@ const VIEW_TITLES: Record<AreaView, string> = {
   requests: 'Requests over time',
   bandwidth: 'Bandwidth over time',
   cache: 'Cache hit rate over time',
+}
+
+function isAreaView(value: unknown): value is AreaView {
+  return value === 'requests' || value === 'bandwidth' || value === 'cache'
 }
 
 function ProjectBreakdown({
@@ -220,8 +224,8 @@ function AnalyticsPage() {
             />
             <ToggleGroup
               onValueChange={(v: string[]) => {
-                const next = v[0] as AnalyticsRange | undefined
-                if (next) {
+                const next = v[0]
+                if (isAnalyticsRange(next)) {
                   navigate({ search: (p) => ({ ...p, range: next }) })
                 }
               }}
@@ -279,8 +283,8 @@ function AnalyticsPage() {
           <CardTitle>{VIEW_TITLES[view]}</CardTitle>
           <ToggleGroup
             onValueChange={(v: string[]) => {
-              const next = v[0] as AreaView | undefined
-              if (next) {
+              const next = v[0]
+              if (isAreaView(next)) {
                 setView(next)
               }
             }}

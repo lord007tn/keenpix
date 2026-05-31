@@ -220,9 +220,7 @@ function LogsPage() {
                   {l.status}
                 </TableCell>
                 <TableCell
-                  className={
-                    l.cached ? 'text-success-text' : 'text-primary-text'
-                  }
+                  className={l.cached ? 'text-success-text' : 'text-primary'}
                 >
                   {l.cached ? 'HIT' : 'MISS'}
                 </TableCell>

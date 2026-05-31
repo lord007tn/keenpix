@@ -1,3 +1,4 @@
+import { useForm } from '@tanstack/react-form'
 import { SendIcon } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -13,6 +14,13 @@ import {
   sendTestEmailFn,
   updateSmtpSettingsFn,
 } from '@/functions/admin'
+import { getFieldError } from '@/lib/form-errors'
+import { sendTestEmailSchema, smtpSettingsSchema } from '@/schemas/admin'
+
+interface SmtpFormMeta {
+  passwordSet: boolean
+  source: string
+}
 
 interface SmtpForm {
   enabled: boolean
@@ -20,10 +28,8 @@ interface SmtpForm {
   fromName: string
   host: string
   password: string
-  passwordSet: boolean
   port: string
   secure: boolean
-  source: string
   username: string
 }
 
@@ -33,80 +39,76 @@ const EMPTY: SmtpForm = {
   fromName: '',
   host: '',
   password: '',
-  passwordSet: false,
   port: '587',
   secure: false,
-  source: 'none',
   username: '',
 }
 
+const EMPTY_META: SmtpFormMeta = {
+  passwordSet: false,
+  source: 'none',
+}
+
 export function SmtpSettingsPanel() {
-  const [form, setForm] = useState<SmtpForm>(EMPTY)
-  const [pending, setPending] = useState(false)
+  const [meta, setMeta] = useState<SmtpFormMeta>(EMPTY_META)
+  const smtpForm = useForm({
+    defaultValues: EMPTY,
+    validators: {
+      onChange: smtpSettingsSchema,
+      onSubmit: smtpSettingsSchema,
+    },
+    onSubmit: async ({ value }) => {
+      try {
+        const saved = await updateSmtpSettingsFn({ data: value })
+        smtpForm.reset({
+          ...value,
+          password: '',
+        })
+        setMeta((current) => ({
+          ...current,
+          passwordSet: saved.passwordSet,
+          source: saved.source,
+        }))
+        toast.success('SMTP settings saved')
+      } catch (e) {
+        toast.error(getErrorMessage(e, 'Could not save SMTP settings'))
+      }
+    },
+  })
 
   const load = useCallback(async () => {
     try {
       const data = await getAdminWorkspaceFn()
-      setForm({
+      smtpForm.reset({
         enabled: data.smtp.enabled,
         fromEmail: data.smtp.fromEmail,
         fromName: data.smtp.fromName,
         host: data.smtp.host,
         password: '',
-        passwordSet: data.smtp.passwordSet,
         port: String(data.smtp.port),
         secure: data.smtp.secure,
-        source: data.smtp.source,
         username: data.smtp.username,
+      })
+      setMeta({
+        passwordSet: data.smtp.passwordSet,
+        source: data.smtp.source,
       })
     } catch (e) {
       toast.error(getErrorMessage(e, 'Could not load SMTP settings'))
     }
-  }, [])
+  }, [smtpForm])
 
   useEffect(() => {
     load()
   }, [load])
-
-  function update<K extends keyof SmtpForm>(key: K, value: SmtpForm[K]) {
-    setForm((current) => ({ ...current, [key]: value }))
-  }
-
-  async function save() {
-    setPending(true)
-    try {
-      const saved = await updateSmtpSettingsFn({
-        data: {
-          enabled: form.enabled,
-          host: form.host.trim(),
-          port: Number(form.port) || 587,
-          secure: form.secure,
-          username: form.username.trim(),
-          password: form.password || undefined,
-          fromEmail: form.fromEmail.trim(),
-          fromName: form.fromName.trim(),
-        },
-      })
-      setForm((current) => ({
-        ...current,
-        password: '',
-        passwordSet: saved.passwordSet,
-        source: saved.source,
-      }))
-      toast.success('SMTP settings saved')
-    } catch (e) {
-      toast.error(getErrorMessage(e, 'Could not save SMTP settings'))
-    } finally {
-      setPending(false)
-    }
-  }
 
   return (
     <form
       className="flex flex-col gap-5"
       onSubmit={async (event) => {
         event.preventDefault()
-        await save()
+        event.stopPropagation()
+        await smtpForm.handleSubmit()
       }}
     >
       <div className="flex items-start justify-between gap-4">
@@ -114,96 +116,236 @@ export function SmtpSettingsPanel() {
           Configure the SMTP connection used when staff invitations are emailed.
           Env SMTP values are used when database settings are not enabled.
         </CardDescription>
-        <Badge variant={form.source === 'environment' ? 'info' : 'outline'}>
-          {form.source}
+        <Badge variant={meta.source === 'environment' ? 'info' : 'outline'}>
+          {meta.source}
         </Badge>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="flex items-center gap-2">
-          <Switch
-            aria-label="Enable SMTP"
-            checked={form.enabled}
-            disabled={pending}
-            onCheckedChange={(v) => update('enabled', v)}
-          />
-          <span className="text-sm">Enable database SMTP settings</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Switch
-            aria-label="Use TLS"
-            checked={form.secure}
-            disabled={pending}
-            onCheckedChange={(v) => update('secure', v)}
-          />
-          <span className="text-sm">Use TLS from connection start</span>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="smtp-host">SMTP host</Label>
-          <Input
-            id="smtp-host"
-            onChange={(e) => update('host', e.target.value)}
-            placeholder="smtp.example.com"
-            value={form.host}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="smtp-port">Port</Label>
-          <Input
-            id="smtp-port"
-            inputMode="numeric"
-            onChange={(e) => update('port', e.target.value)}
-            type="number"
-            value={form.port}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="smtp-user">Username</Label>
-          <Input
-            autoComplete="username"
-            id="smtp-user"
-            onChange={(e) => update('username', e.target.value)}
-            value={form.username}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="smtp-password">
-            Password {form.passwordSet ? '(saved)' : null}
-          </Label>
-          <Input
-            autoComplete="new-password"
-            id="smtp-password"
-            onChange={(e) => update('password', e.target.value)}
-            placeholder={form.passwordSet ? 'Leave blank to keep current' : ''}
-            type="password"
-            value={form.password}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="smtp-from-email">From email</Label>
-          <Input
-            id="smtp-from-email"
-            onChange={(e) => update('fromEmail', e.target.value)}
-            placeholder="keenpix@example.com"
-            type="email"
-            value={form.fromEmail}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="smtp-from-name">From name</Label>
-          <Input
-            id="smtp-from-name"
-            onChange={(e) => update('fromName', e.target.value)}
-            placeholder="Keenpix"
-            value={form.fromName}
-          />
-        </div>
+        <smtpForm.Subscribe selector={(state) => state.isSubmitting}>
+          {(isSubmitting) => (
+            <>
+              <smtpForm.Field name="enabled">
+                {(field) => (
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      aria-label="Enable SMTP"
+                      checked={field.state.value}
+                      disabled={isSubmitting}
+                      onCheckedChange={field.handleChange}
+                    />
+                    <span className="text-sm">
+                      Enable database SMTP settings
+                    </span>
+                  </div>
+                )}
+              </smtpForm.Field>
+              <smtpForm.Field name="secure">
+                {(field) => (
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      aria-label="Use TLS"
+                      checked={field.state.value}
+                      disabled={isSubmitting}
+                      onCheckedChange={field.handleChange}
+                    />
+                    <span className="text-sm">
+                      Use TLS from connection start
+                    </span>
+                  </div>
+                )}
+              </smtpForm.Field>
+            </>
+          )}
+        </smtpForm.Subscribe>
+        <smtpForm.Field name="host">
+          {(field) => {
+            const error = getFieldError(field.state.meta)
+            return (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={field.name}>SMTP host</Label>
+                <Input
+                  aria-describedby={error ? `${field.name}-error` : undefined}
+                  aria-invalid={!!error}
+                  id={field.name}
+                  name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="smtp.example.com"
+                  value={field.state.value}
+                />
+                {error ? (
+                  <p
+                    className="text-destructive text-xs"
+                    id={`${field.name}-error`}
+                  >
+                    {error}
+                  </p>
+                ) : null}
+              </div>
+            )
+          }}
+        </smtpForm.Field>
+        <smtpForm.Field name="port">
+          {(field) => {
+            const error = getFieldError(field.state.meta)
+            return (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={field.name}>Port</Label>
+                <Input
+                  aria-describedby={error ? `${field.name}-error` : undefined}
+                  aria-invalid={!!error}
+                  id={field.name}
+                  inputMode="numeric"
+                  name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  type="number"
+                  value={field.state.value}
+                />
+                {error ? (
+                  <p
+                    className="text-destructive text-xs"
+                    id={`${field.name}-error`}
+                  >
+                    {error}
+                  </p>
+                ) : null}
+              </div>
+            )
+          }}
+        </smtpForm.Field>
+        <smtpForm.Field name="username">
+          {(field) => {
+            const error = getFieldError(field.state.meta)
+            return (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={field.name}>Username</Label>
+                <Input
+                  aria-describedby={error ? `${field.name}-error` : undefined}
+                  aria-invalid={!!error}
+                  autoComplete="username"
+                  id={field.name}
+                  name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  value={field.state.value}
+                />
+                {error ? (
+                  <p
+                    className="text-destructive text-xs"
+                    id={`${field.name}-error`}
+                  >
+                    {error}
+                  </p>
+                ) : null}
+              </div>
+            )
+          }}
+        </smtpForm.Field>
+        <smtpForm.Field name="password">
+          {(field) => {
+            const error = getFieldError(field.state.meta)
+            return (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={field.name}>
+                  Password {meta.passwordSet ? '(saved)' : null}
+                </Label>
+                <Input
+                  aria-describedby={error ? `${field.name}-error` : undefined}
+                  aria-invalid={!!error}
+                  autoComplete="new-password"
+                  id={field.name}
+                  name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder={
+                    meta.passwordSet ? 'Leave blank to keep current' : ''
+                  }
+                  type="password"
+                  value={field.state.value}
+                />
+                {error ? (
+                  <p
+                    className="text-destructive text-xs"
+                    id={`${field.name}-error`}
+                  >
+                    {error}
+                  </p>
+                ) : null}
+              </div>
+            )
+          }}
+        </smtpForm.Field>
+        <smtpForm.Field name="fromEmail">
+          {(field) => {
+            const error = getFieldError(field.state.meta)
+            return (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={field.name}>From email</Label>
+                <Input
+                  aria-describedby={error ? `${field.name}-error` : undefined}
+                  aria-invalid={!!error}
+                  id={field.name}
+                  name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="keenpix@example.com"
+                  type="email"
+                  value={field.state.value}
+                />
+                {error ? (
+                  <p
+                    className="text-destructive text-xs"
+                    id={`${field.name}-error`}
+                  >
+                    {error}
+                  </p>
+                ) : null}
+              </div>
+            )
+          }}
+        </smtpForm.Field>
+        <smtpForm.Field name="fromName">
+          {(field) => {
+            const error = getFieldError(field.state.meta)
+            return (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={field.name}>From name</Label>
+                <Input
+                  aria-describedby={error ? `${field.name}-error` : undefined}
+                  aria-invalid={!!error}
+                  id={field.name}
+                  name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="Keenpix"
+                  value={field.state.value}
+                />
+                {error ? (
+                  <p
+                    className="text-destructive text-xs"
+                    id={`${field.name}-error`}
+                  >
+                    {error}
+                  </p>
+                ) : null}
+              </div>
+            )
+          }}
+        </smtpForm.Field>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button disabled={pending} type="submit">
-          Save staff email settings
-        </Button>
+        <smtpForm.Subscribe
+          selector={(state) => [state.canSubmit, state.isSubmitting]}
+        >
+          {([canSubmit, isSubmitting]) => (
+            <Button disabled={!canSubmit || isSubmitting} type="submit">
+              Save staff email settings
+            </Button>
+          )}
+        </smtpForm.Subscribe>
       </div>
     </form>
   )
@@ -211,9 +353,27 @@ export function SmtpSettingsPanel() {
 
 export function MailingPanel() {
   const [form, setForm] = useState<SmtpForm>(EMPTY)
-  const [testRecipient, setTestRecipient] = useState('')
+  const [meta, setMeta] = useState<SmtpFormMeta>(EMPTY_META)
   const [loading, setLoading] = useState(true)
-  const [testing, setTesting] = useState(false)
+  const testForm = useForm({
+    defaultValues: {
+      to: '',
+    },
+    validators: {
+      onChange: sendTestEmailSchema,
+      onSubmit: sendTestEmailSchema,
+    },
+    onSubmit: async ({ value }) => {
+      const payload = sendTestEmailSchema.parse(value)
+      try {
+        await sendTestEmailFn({ data: payload })
+        testForm.reset()
+        toast.success('Test email sent')
+      } catch (e) {
+        toast.error(getErrorMessage(e, 'Could not send test email'))
+      }
+    },
+  })
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -225,11 +385,13 @@ export function MailingPanel() {
         fromName: data.smtp.fromName,
         host: data.smtp.host,
         password: '',
-        passwordSet: data.smtp.passwordSet,
         port: String(data.smtp.port),
         secure: data.smtp.secure,
-        source: data.smtp.source,
         username: data.smtp.username,
+      })
+      setMeta({
+        passwordSet: data.smtp.passwordSet,
+        source: data.smtp.source,
       })
     } catch (e) {
       toast.error(getErrorMessage(e, 'Could not load mailing settings'))
@@ -242,18 +404,6 @@ export function MailingPanel() {
     load()
   }, [load])
 
-  async function sendTest() {
-    setTesting(true)
-    try {
-      await sendTestEmailFn({ data: { to: testRecipient.trim() } })
-      toast.success('Test email sent')
-    } catch (e) {
-      toast.error(getErrorMessage(e, 'Could not send test email'))
-    } finally {
-      setTesting(false)
-    }
-  }
-
   const sender = form.fromName
     ? `${form.fromName} <${form.fromEmail || 'not configured'}>`
     : form.fromEmail || 'Not configured'
@@ -264,8 +414,8 @@ export function MailingPanel() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={form.source === 'environment' ? 'info' : 'outline'}>
-          {form.source}
+        <Badge variant={meta.source === 'environment' ? 'info' : 'outline'}>
+          {meta.source}
         </Badge>
         <Badge variant={form.enabled ? 'success' : 'outline'}>
           {form.enabled ? 'enabled' : 'disabled'}
@@ -287,27 +437,53 @@ export function MailingPanel() {
         className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-end"
         onSubmit={async (event) => {
           event.preventDefault()
-          await sendTest()
+          event.stopPropagation()
+          await testForm.handleSubmit()
         }}
       >
-        <div className="flex flex-1 flex-col gap-1.5">
-          <Label htmlFor="mailing-test-recipient">Test recipient</Label>
-          <Input
-            id="mailing-test-recipient"
-            onChange={(e) => setTestRecipient(e.target.value)}
-            placeholder="you@example.com"
-            type="email"
-            value={testRecipient}
-          />
-        </div>
-        <Button
-          disabled={loading || testing || !testRecipient.trim()}
-          type="submit"
-          variant="outline"
+        <testForm.Field name="to">
+          {(field) => {
+            const error = getFieldError(field.state.meta)
+            return (
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label htmlFor={field.name}>Test recipient</Label>
+                <Input
+                  aria-describedby={error ? `${field.name}-error` : undefined}
+                  aria-invalid={!!error}
+                  id={field.name}
+                  name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="you@example.com"
+                  type="email"
+                  value={field.state.value}
+                />
+                {error ? (
+                  <p
+                    className="text-destructive text-xs"
+                    id={`${field.name}-error`}
+                  >
+                    {error}
+                  </p>
+                ) : null}
+              </div>
+            )
+          }}
+        </testForm.Field>
+        <testForm.Subscribe
+          selector={(state) => [state.canSubmit, state.isSubmitting]}
         >
-          <SendIcon data-icon="inline-start" />
-          Send test
-        </Button>
+          {([canSubmit, isSubmitting]) => (
+            <Button
+              disabled={loading || !canSubmit || isSubmitting}
+              type="submit"
+              variant="outline"
+            >
+              <SendIcon data-icon="inline-start" />
+              Send test
+            </Button>
+          )}
+        </testForm.Subscribe>
       </form>
     </div>
   )

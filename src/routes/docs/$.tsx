@@ -15,6 +15,7 @@ import { getMDXComponents } from '@/components/mdx'
 import { getAppUrl, isSelfHosted } from '@/lib/deployment'
 import { absoluteUrl, docsJsonLd } from '@/lib/seo'
 import { source } from '@/lib/source'
+import { docsSlugsSchema } from '@/schemas/docs'
 import docsCss from '@/styles/docs.css?url'
 
 interface DocsLoaderData {
@@ -90,7 +91,7 @@ export const Route = createFileRoute('/docs/$')({
 })
 
 const serverLoader = createServerFn({ method: 'GET' })
-  .inputValidator((slugs: string[]) => slugs)
+  .inputValidator(docsSlugsSchema)
   .handler(async ({ data: slugs }) => {
     const page = source.getPage(slugs)
     if (!page) {

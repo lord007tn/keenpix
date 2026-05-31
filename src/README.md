@@ -20,7 +20,7 @@ routes/  →  functions/  →  actions/  →  data-access/  →  db / lib
 - `features/` — domain modules (components/schemas/types) for analytics, projects, logs.
 - `shared/` — cross-cutting types, constants, errors, formatters.
 - `stores/` — client-side state.
-- `styles.css` — global CSS: shadcn OKLCH tokens + `success`/`warning`/`info` + `@theme inline`.
+- `styles.css` — global CSS: shadcn OKLCH tokens, semantic status vars, and `@theme inline`.
 
 ## Naming rules
 - Data-access: `getX`, `listX`, `createX`, `updateX`, `deleteX`.

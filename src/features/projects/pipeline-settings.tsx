@@ -1,3 +1,4 @@
+import { useForm } from '@tanstack/react-form'
 import { useRouter } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
@@ -7,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { getErrorMessage } from '@/errors/common'
 import { updateProjectSettingsFn } from '@/functions/projects'
+import { getFieldError } from '@/lib/form-errors'
+import { projectQualitySchema } from '@/schemas/projects'
 import type { Project } from '@/shared/types'
 
 interface Patch {
@@ -42,8 +45,23 @@ export function PipelineSettings({ project }: { project: Project }) {
   const router = useRouter()
   const [autoFormat, setAutoFormat] = useState(project.autoFormat)
   const [stripMetadata, setStripMetadata] = useState(project.stripMetadata)
-  const [quality, setQuality] = useState(String(project.defaultQuality))
   const [pending, setPending] = useState(false)
+  const qualityForm = useForm({
+    defaultValues: {
+      defaultQuality: String(project.defaultQuality),
+    },
+    validators: {
+      onChange: projectQualitySchema,
+      onSubmit: projectQualitySchema,
+    },
+    onSubmit: async ({ value }) => {
+      const { defaultQuality } = projectQualitySchema.parse(value)
+      const quality = Number(defaultQuality)
+      if (quality !== project.defaultQuality) {
+        await persist({ defaultQuality: quality })
+      }
+    },
+  })
 
   async function persist(patch: Patch): Promise<boolean> {
     setPending(true)
@@ -76,19 +94,6 @@ export function PipelineSettings({ project }: { project: Project }) {
     }
   }
 
-  async function saveQuality() {
-    const n = Math.min(
-      100,
-      Math.max(30, Math.round(Number(quality) || project.defaultQuality)),
-    )
-    setQuality(String(n))
-    if (n !== project.defaultQuality) {
-      await persist({ defaultQuality: n })
-    }
-  }
-
-  const qualityChanged = Number(quality) !== project.defaultQuality
-
   return (
     <div className="divide-y">
       <Row
@@ -117,46 +122,73 @@ export function PipelineSettings({ project }: { project: Project }) {
         description="Quality (30–100) applied when a request omits ?q=. Higher = bigger files."
         label="Default quality"
       >
-        <div className="flex items-center gap-2">
-          <Input
-            aria-label="Default quality"
-            className="w-20 text-right font-mono tabular-nums"
-            inputMode="numeric"
-            max={100}
-            min={30}
-            onBlur={() => {
-              const n = Number(quality)
-              setQuality(
-                quality === '' || Number.isNaN(n)
-                  ? String(project.defaultQuality)
-                  : String(Math.min(100, Math.max(30, Math.round(n)))),
+        <form
+          className="flex flex-col gap-1.5"
+          onSubmit={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            qualityForm.handleSubmit()
+          }}
+        >
+          <qualityForm.Field name="defaultQuality">
+            {(field) => {
+              const error = getFieldError(field.state.meta)
+              return (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      aria-describedby={
+                        error ? `${field.name}-error` : undefined
+                      }
+                      aria-invalid={!!error}
+                      aria-label="Default quality"
+                      className="w-20 text-right font-mono tabular-nums"
+                      inputMode="numeric"
+                      max={100}
+                      min={30}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      type="number"
+                      value={field.state.value}
+                    />
+                    <qualityForm.Subscribe
+                      selector={(state) => ({
+                        canSubmit: state.canSubmit,
+                        isSubmitting: state.isSubmitting,
+                        quality: state.values.defaultQuality,
+                      })}
+                    >
+                      {({ canSubmit, isSubmitting, quality }) => (
+                        <Button
+                          disabled={
+                            pending ||
+                            !canSubmit ||
+                            isSubmitting ||
+                            Number(quality) === project.defaultQuality
+                          }
+                          size="sm"
+                          type="submit"
+                          variant="outline"
+                        >
+                          Save
+                        </Button>
+                      )}
+                    </qualityForm.Subscribe>
+                  </div>
+                  {error ? (
+                    <p
+                      className="text-destructive text-xs"
+                      id={`${field.name}-error`}
+                    >
+                      {error}
+                    </p>
+                  ) : null}
+                </>
               )
             }}
-            onChange={(e) => {
-              const raw = e.target.value
-              const n = Number(raw)
-              // Clamp the upper bound immediately so you can't type e.g. 5000.
-              setQuality(
-                raw === '' || Number.isNaN(n) ? raw : String(Math.min(100, n)),
-              )
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                saveQuality()
-              }
-            }}
-            type="number"
-            value={quality}
-          />
-          <Button
-            disabled={pending || !qualityChanged}
-            onClick={saveQuality}
-            size="sm"
-            variant="outline"
-          >
-            Save
-          </Button>
-        </div>
+          </qualityForm.Field>
+        </form>
       </Row>
     </div>
   )

@@ -1,3 +1,4 @@
+import { useForm } from '@tanstack/react-form'
 import { useRouter } from '@tanstack/react-router'
 import { PlusIcon } from 'lucide-react'
 import { useState } from 'react'
@@ -23,42 +24,15 @@ import {
 } from '@/components/ui/select'
 import { getErrorMessage } from '@/errors/common'
 import { createProjectFn } from '@/functions/projects'
-import type { ProjectEnv } from '@/shared/types'
+import { getFieldError } from '@/lib/form-errors'
+import { createProjectSchema } from '@/schemas/projects'
+import { isProjectEnv, type ProjectEnv } from '@/shared/types'
 
 const ENVS: ProjectEnv[] = ['production', 'staging', 'development']
-
-interface ProjectFormErrors {
-  name?: string
-  origin?: string
-}
-
-function validateProjectForm(name: string, origin: string): ProjectFormErrors {
-  const errors: ProjectFormErrors = {}
-  const trimmedName = name.trim()
-  const trimmedOrigin = origin.trim()
-
-  if (!trimmedName) {
-    errors.name = 'Enter a project name.'
-  } else if (trimmedName.length > 80) {
-    errors.name = 'Use 80 characters or fewer.'
-  }
-
-  if (trimmedOrigin) {
-    try {
-      const url = new URL(trimmedOrigin)
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-        errors.origin = 'Use an http or https URL.'
-      } else if (!url.hostname) {
-        errors.origin = 'Enter a URL with a hostname.'
-      }
-    } catch {
-      errors.origin = 'Enter a valid URL, for example https://cdn.acme.shop.'
-    }
-  } else {
-    errors.origin = 'Enter an origin URL.'
-  }
-
-  return errors
+const DEFAULT_VALUES: { name: string; origin: string; env: ProjectEnv } = {
+  name: '',
+  origin: '',
+  env: 'production',
 }
 
 export function NewProjectDialog({
@@ -73,18 +47,25 @@ export function NewProjectDialog({
   const isControlled = controlledOpen !== undefined
   const [internalOpen, setInternalOpen] = useState(false)
   const open = isControlled ? controlledOpen : internalOpen
-  const [name, setName] = useState('')
-  const [origin, setOrigin] = useState('')
-  const [env, setEnv] = useState<ProjectEnv>('production')
-  const [pending, setPending] = useState(false)
-  const [errors, setErrors] = useState<ProjectFormErrors>({})
-
-  function reset() {
-    setName('')
-    setOrigin('')
-    setEnv('production')
-    setErrors({})
-  }
+  const form = useForm({
+    defaultValues: DEFAULT_VALUES,
+    validators: {
+      onChange: createProjectSchema,
+      onSubmit: createProjectSchema,
+    },
+    onSubmit: async ({ value }) => {
+      const payload = createProjectSchema.parse(value)
+      try {
+        const project = await createProjectFn({ data: payload })
+        toast.success(`Created project ${project.name}`)
+        // Refresh the layout loader so the new project shows in sidebar + dashboard.
+        await router.invalidate()
+        setOpen(false)
+      } catch (e) {
+        toast.error(getErrorMessage(e, 'Could not create project'))
+      }
+    },
+  })
 
   function setOpen(next: boolean) {
     if (!isControlled) {
@@ -92,34 +73,7 @@ export function NewProjectDialog({
     }
     onOpenChange?.(next)
     if (!next) {
-      reset()
-    }
-  }
-
-  async function submit() {
-    const trimmedName = name.trim()
-    const trimmedOrigin = origin.trim()
-    const nextErrors = validateProjectForm(trimmedName, trimmedOrigin)
-    if (Object.values(nextErrors).some(Boolean)) {
-      setErrors(nextErrors)
-      return
-    }
-    setErrors({})
-    setPending(true)
-    try {
-      const project = await createProjectFn({
-        data: { name: trimmedName, origin: trimmedOrigin, env },
-      })
-      toast.success(`Created project ${project.name}`)
-      // Refresh the layout loader so the new project shows in sidebar + dashboard.
-      await router.invalidate()
-      setOpen(false)
-    } catch (e) {
-      const message = getErrorMessage(e, 'Could not create project')
-      setErrors((current) => ({ ...current, origin: message }))
-      toast.error('Could not create project')
-    } finally {
-      setPending(false)
+      form.reset()
     }
   }
 
@@ -142,77 +96,104 @@ export function NewProjectDialog({
           className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault()
-            submit()
+            e.stopPropagation()
+            form.handleSubmit()
           }}
         >
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="project-name">Name</Label>
-            <Input
-              aria-describedby={errors.name ? 'project-name-error' : undefined}
-              aria-invalid={!!errors.name}
-              autoFocus
-              id="project-name"
-              onChange={(e) => {
-                setName(e.target.value)
-                if (errors.name) {
-                  setErrors((current) => ({ ...current, name: undefined }))
-                }
-              }}
-              placeholder="acme.shop"
-              value={name}
-            />
-            {errors.name ? (
-              <p className="text-destructive text-xs" id="project-name-error">
-                {errors.name}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="project-origin">Origin URL</Label>
-            <Input
-              aria-describedby={
-                errors.origin ? 'project-origin-error' : 'project-origin-help'
-              }
-              aria-invalid={!!errors.origin}
-              className="font-mono text-xs"
-              id="project-origin"
-              onChange={(e) => {
-                setOrigin(e.target.value)
-                if (errors.origin) {
-                  setErrors((current) => ({ ...current, origin: undefined }))
-                }
-              }}
-              placeholder="https://cdn.acme.shop"
-              value={origin}
-            />
-            {errors.origin ? (
-              <p className="text-destructive text-xs" id="project-origin-error">
-                {errors.origin}
-              </p>
-            ) : (
-              <span
-                className="text-muted-foreground text-xs"
-                id="project-origin-help"
-              >
-                The origin's hostname is added to the allowlist automatically.
-              </span>
+          <form.Field name="name">
+            {(field) => {
+              const error = getFieldError(field.state.meta)
+              return (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor={field.name}>Name</Label>
+                  <Input
+                    aria-describedby={error ? `${field.name}-error` : undefined}
+                    aria-invalid={!!error}
+                    autoFocus
+                    id={field.name}
+                    name={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="acme.shop"
+                    value={field.state.value}
+                  />
+                  {error ? (
+                    <p
+                      className="text-destructive text-xs"
+                      id={`${field.name}-error`}
+                    >
+                      {error}
+                    </p>
+                  ) : null}
+                </div>
+              )
+            }}
+          </form.Field>
+          <form.Field name="origin">
+            {(field) => {
+              const error = getFieldError(field.state.meta)
+              return (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor={field.name}>Origin URL</Label>
+                  <Input
+                    aria-describedby={
+                      error ? `${field.name}-error` : `${field.name}-help`
+                    }
+                    aria-invalid={!!error}
+                    className="font-mono text-xs"
+                    id={field.name}
+                    name={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="https://cdn.acme.shop"
+                    value={field.state.value}
+                  />
+                  {error ? (
+                    <p
+                      className="text-destructive text-xs"
+                      id={`${field.name}-error`}
+                    >
+                      {error}
+                    </p>
+                  ) : (
+                    <span
+                      className="text-muted-foreground text-xs"
+                      id={`${field.name}-help`}
+                    >
+                      The origin's hostname is added to the allowlist
+                      automatically.
+                    </span>
+                  )}
+                </div>
+              )
+            }}
+          </form.Field>
+          <form.Field name="env">
+            {(field) => (
+              <div className="flex flex-col gap-1.5">
+                <Label>Environment</Label>
+                <Select
+                  onValueChange={(v) => {
+                    if (isProjectEnv(v)) {
+                      field.handleChange(v)
+                    }
+                  }}
+                  value={field.state.value}
+                >
+                  <SelectTrigger aria-label="Environment">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ENVS.map((e) => (
+                      <SelectItem key={e} value={e}>
+                        {e}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>Environment</Label>
-            <Select onValueChange={(v) => setEnv(v as ProjectEnv)} value={env}>
-              <SelectTrigger aria-label="Environment">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ENVS.map((e) => (
-                  <SelectItem key={e} value={e}>
-                    {e}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          </form.Field>
           <DialogFooter>
             <Button
               onClick={() => setOpen(false)}
@@ -221,9 +202,15 @@ export function NewProjectDialog({
             >
               Cancel
             </Button>
-            <Button disabled={pending} type="submit">
-              {pending ? 'Creating…' : 'Create project'}
-            </Button>
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+            >
+              {([canSubmit, isSubmitting]) => (
+                <Button disabled={!canSubmit || isSubmitting} type="submit">
+                  {isSubmitting ? 'Creating...' : 'Create project'}
+                </Button>
+              )}
+            </form.Subscribe>
           </DialogFooter>
         </form>
       </DialogContent>

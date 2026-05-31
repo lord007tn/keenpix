@@ -1,6 +1,6 @@
 /** Request-logs data-access — Prisma-backed (reads from request_logs). */
 import { prisma } from '@/db'
-import type { LogRow } from '@/shared/types'
+import { isLogFormat, type LogRow } from '@/shared/types'
 
 export async function listLogs(
   limit = 36,
@@ -18,7 +18,7 @@ export async function listLogs(
     path: r.path,
     w: r.width ?? 0,
     q: r.quality ?? 0,
-    format: r.format as LogRow['format'],
+    format: isLogFormat(r.format) ? r.format : 'jpeg',
     status: r.status,
     cached: r.cached,
     latency: r.latencyMs,

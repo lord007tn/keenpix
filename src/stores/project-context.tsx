@@ -28,7 +28,10 @@ export function ProjectProvider({
   // shareable, and lets route loaders scope their queries. No param — or a
   // stale id that no longer matches a project — means "All projects".
   const searchProject = useRouterState({
-    select: (s) => (s.location.search as { project?: string }).project,
+    select: (s) =>
+      typeof s.location.search.project === 'string'
+        ? s.location.search.project
+        : undefined,
   })
 
   const value = useMemo<ProjectContextValue>(() => {

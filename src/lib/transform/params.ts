@@ -1,18 +1,5 @@
 import type { Fit, OutputFormat } from '@/lib/sharp/transform'
 
-const FORMATS = [
-  'avif',
-  'webp',
-  'jpeg',
-  'png',
-] as const satisfies readonly OutputFormat[]
-const FITS = [
-  'cover',
-  'contain',
-  'fill',
-  'inside',
-] as const satisfies readonly Fit[]
-
 function clampInt(value: string | null, min: number, max: number) {
   if (!value) {
     return
@@ -29,12 +16,8 @@ function negotiateFormat(
   accept: string,
   autoFormat: boolean,
 ) {
-  if (
-    fmtParam &&
-    fmtParam !== 'auto' &&
-    FORMATS.includes(fmtParam as OutputFormat)
-  ) {
-    return fmtParam as OutputFormat
+  if (fmtParam && fmtParam !== 'auto' && isOutputFormat(fmtParam)) {
+    return fmtParam
   }
   // fmt=auto or omitted: negotiate from Accept only when the project allows it;
   // otherwise serve a universally-compatible JPEG.
@@ -48,6 +31,21 @@ function negotiateFormat(
     return 'webp'
   }
   return 'jpeg'
+}
+
+function isOutputFormat(value: string): value is OutputFormat {
+  return (
+    value === 'avif' || value === 'webp' || value === 'jpeg' || value === 'png'
+  )
+}
+
+function isFit(value: string): value is Fit {
+  return (
+    value === 'cover' ||
+    value === 'contain' ||
+    value === 'fill' ||
+    value === 'inside'
+  )
 }
 
 export function parseTransformParams(
@@ -64,7 +62,7 @@ export function parseTransformParams(
       Math.min(100, Math.max(30, Math.round(defaults.defaultQuality))),
     dpr: clampInt(sp.get('dpr'), 1, 3) ?? 1,
     blur: clampInt(sp.get('blur'), 0, 1000),
-    fit: FITS.includes(fitParam as Fit) ? (fitParam as Fit) : 'cover',
+    fit: isFit(fitParam) ? fitParam : 'cover',
     format: negotiateFormat(sp.get('fmt'), accept, defaults.autoFormat),
   }
 }

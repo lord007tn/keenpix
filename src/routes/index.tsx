@@ -103,33 +103,33 @@ function SelfHostHome() {
 const FEATURES = [
   {
     icon: ZapIcon,
-    title: 'Edge-tuned by default',
-    body: 'AVIF, WebP and JPEG generated on first request, cached forever. Format auto-negotiated per request, baked into the URL so any CDN stays correct.',
+    title: 'Sharp transforms on first request',
+    body: 'AVIF, WebP, JPEG, and PNG are generated with sharp, cached on disk, and served with immutable headers for your CDN.',
   },
   {
     icon: ChartColumnIcon,
     title: 'Analytics built in',
-    body: 'Bandwidth saved, format distribution, cache hit rate, top images, latency — read straight from your request logs. No Grafana installer.',
+    body: 'Requests, bandwidth saved, format distribution, cache hit rate, top images, and latency come straight from request logs.',
   },
   {
     icon: CpuIcon,
     title: 'Drop-in for any framework',
-    body: 'Next.js, Astro, Remix, or plain <img>. One endpoint, one env var, keep your existing tags.',
+    body: 'Next.js, Astro, Remix, or plain <img>. One keyless endpoint with a source URL, project, and optional transform params.',
   },
   {
     icon: ShieldIcon,
-    title: 'Safe by construction',
-    body: 'Per-project origin allowlist + private-IP blocking stop SSRF and hotlinkers before a byte is fetched.',
+    title: 'Allowlist guarded',
+    body: 'Per-project origin allowlists and private-IP blocking stop unsafe source URLs before an origin fetch happens.',
   },
   {
     icon: LayersIcon,
-    title: 'Caches you can reason about',
-    body: 'Content-addressed disk cache with long-lived immutable responses. Add a CDN cache rule and your origin barely wakes up.',
+    title: 'Disk cache you can reason about',
+    body: 'Transform results are cached on local disk. Put a CDN in front of /img/* and cache immutable responses.',
   },
   {
     icon: GlobeIcon,
     title: 'Yours to host',
-    body: 'One Node container, Postgres, sharp. docker compose up and own your image layer.',
+    body: 'Use the included Docker Compose stack, or import the same compose setup into Coolify with the required env values.',
   },
 ]
 
@@ -154,7 +154,7 @@ function MarketingPage() {
               Sign in
             </Link>
             <Link className={buttonVariants({ size: 'sm' })} to="/login">
-              Try the dashboard
+              Dashboard
               <ArrowRightIcon data-icon="inline-end" />
             </Link>
           </div>
@@ -172,7 +172,7 @@ function MarketingPage() {
               <Badge variant="secondary">self-hosted</Badge>
             </div>
             <h1 className="text-balance font-semibold text-3xl tracking-tight sm:text-4xl md:text-5xl">
-              Image optimization,{' '}
+              Self-hosted image optimization,{' '}
               <span
                 className="bg-clip-text text-transparent"
                 style={{
@@ -180,13 +180,13 @@ function MarketingPage() {
                     'linear-gradient(135deg, var(--chart-1), var(--chart-2))',
                 }}
               >
-                on your own metal.
+                behind one URL.
               </span>
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-balance text-lg text-muted-foreground">
-              A drop-in image pipeline for any framework. Self-hosted, open
-              source, and shipped with the analytics you actually wanted from
-              your CDN.
+              Fetch allowlisted origin images, transform them with sharp, cache
+              results on disk, and serve CDN-friendly AVIF, WebP, JPEG, or PNG
+              responses from a single endpoint.
             </p>
             <div className="mt-8 flex justify-center gap-3">
               <Link className={buttonVariants()} to="/login">
@@ -201,7 +201,7 @@ function MarketingPage() {
               </a>
             </div>
             <div className="mt-6 font-mono text-muted-foreground text-xs">
-              $ docker compose up
+              Self-host docs: /docs/self-hosting
             </div>
           </div>
         </section>
@@ -239,15 +239,16 @@ function MarketingPage() {
                 Own your image layer.
               </h2>
               <p className="text-muted-foreground leading-relaxed">
-                One Node container, your Postgres, sharp under the hood. Bring
-                your own object storage or use the local disk. No per-image fee,
-                ever.
+                One Node container, Postgres, sharp, and a local disk cache. Put
+                a CDN in front of /img/*, or deploy the included Compose stack
+                through Coolify and operate the image pipeline on your
+                infrastructure.
               </p>
               <div className="mt-2 flex flex-col gap-2">
                 {[
                   ['1 container', 'app + sharp'],
                   ['Postgres', 'projects, allowlists, logs'],
-                  ['MIT', 'use it forever'],
+                  ['Disk cache', 'cached transform output'],
                 ].map(([k, v]) => (
                   <div
                     className="flex justify-between border-b border-dashed py-2 text-sm"
@@ -259,13 +260,18 @@ function MarketingPage() {
                 ))}
               </div>
             </div>
-            <CodeBlock>{`# clone, then:
-docker compose up --build
+            <CodeBlock>{`# Docker Compose
+cp .env.example .env
+# set POSTGRES_PASSWORD, BETTER_AUTH_SECRET,
+# BETTER_AUTH_URL, VITE_KEENPIX_PUBLIC_URL,
+# KEENPIX_SUPER_ADMIN_EMAIL, KEENPIX_SUPER_ADMIN_PASSWORD
+docker compose up -d
 
-✓ postgres ready on :5432
-✓ keenpix listening on http://0.0.0.0:3000
-  cache: /var/cache/keenpix
-  open http://localhost:3000`}</CodeBlock>
+# Coolify
+Create a Docker Compose resource from the repo.
+Set the same env values, expose app:3000,
+and point BETTER_AUTH_URL + VITE_KEENPIX_PUBLIC_URL
+to your Coolify domain.`}</CodeBlock>
           </div>
         </section>
 
@@ -279,11 +285,11 @@ docker compose up --build
           >
             <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
               <h2 className="font-semibold text-3xl tracking-tight">
-                Free forever. Self-hosted.
+                Self-hosted by design.
               </h2>
               <p className="max-w-md text-muted-foreground">
-                No SaaS plan, no per-image fee, no usage cap. Spin it up and
-                ship.
+                Run the transform API, security checks, disk cache, and
+                dashboard on infrastructure you control.
               </p>
               <Link className={buttonVariants()} to="/login">
                 Open the dashboard

@@ -9,6 +9,20 @@ interface MarkdownPageData {
   title?: string
 }
 
+function markdownPageData(value: unknown): MarkdownPageData {
+  if (typeof value !== 'object' || value === null) {
+    return {}
+  }
+  const markdown = Reflect.get(value, '_markdown')
+  const description = Reflect.get(value, 'description')
+  const title = Reflect.get(value, 'title')
+  return {
+    _markdown: typeof markdown === 'string' ? markdown : undefined,
+    description: typeof description === 'string' ? description : undefined,
+    title: typeof title === 'string' ? title : undefined,
+  }
+}
+
 const generator = llms(source, {
   renderName: (node) => {
     if (node.type === 'root') {
@@ -68,7 +82,7 @@ function llmsFull() {
     'Complete hosted documentation for Keenpix, a self-hosted image optimization service.',
     '',
     ...source.getPages().flatMap((page) => {
-      const data = page.data as MarkdownPageData
+      const data = markdownPageData(page.data)
       const markdown =
         data._markdown?.trim() ||
         [data.description, `Canonical URL: ${baseUrl}${page.url}`]
