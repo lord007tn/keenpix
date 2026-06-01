@@ -9,7 +9,7 @@ services:
     # Keep Postgres private by default. The app connects on the internal
     # Compose network at postgres:5432.
     volumes:
-      - keenpix_pg:/var/lib/postgresql/data
+      - keenpix_pg:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
@@ -33,6 +33,7 @@ services:
       # so copied deployments cannot accidentally ship with a default secret.
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (openssl rand -hex 32)}"
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      BETTER_AUTH_TRUSTED_ORIGINS: ${BETTER_AUTH_TRUSTED_ORIGINS:-${BETTER_AUTH_URL:-http://localhost:3000}}
       KEENPIX_SUPER_ADMIN_EMAIL: "${KEENPIX_SUPER_ADMIN_EMAIL:?set KEENPIX_SUPER_ADMIN_EMAIL}"
       KEENPIX_SUPER_ADMIN_PASSWORD: "${KEENPIX_SUPER_ADMIN_PASSWORD:?set KEENPIX_SUPER_ADMIN_PASSWORD}"
       KEENPIX_CACHE_DIR: /var/cache/keenpix

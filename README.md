@@ -29,6 +29,20 @@ The app comes up on **http://localhost:3000** by default. Set `KEENPIX_PORT` to 
 
 The Docker image entrypoint accepts `start` (default), `migrate`, and `seed`. For normal installs, leave the default `start`; it applies migrations, seeds bootstrap data, then starts the app. Set `KEENPIX_RUN_MIGRATIONS=false` or `KEENPIX_RUN_SEED=false` only when an external deployment workflow owns those steps.
 
+## Quick start (Coolify)
+
+Use [docker-compose.coolify.yml](./docker-compose.coolify.yml) for a Coolify service stack.
+
+1. In Coolify, create a new resource with **Docker Compose Empty**.
+2. Paste the contents of `docker-compose.coolify.yml`.
+3. Set your public domain on the `app` service. Coolify will generate `SERVICE_URL_KEENPIX_3000`, database credentials, the auth secret, and the super-admin password. If you use a custom domain and Coolify does not put it in `COOLIFY_URL`, set `BETTER_AUTH_URL` and `BETTER_AUTH_TRUSTED_ORIGINS` to that public URL.
+4. Optionally change `KEENPIX_SUPER_ADMIN_EMAIL` from the default `admin@example.com`.
+5. Deploy, then sign in with `KEENPIX_SUPER_ADMIN_EMAIL` and the generated `SERVICE_PASSWORD_64_ADMIN` value shown in Coolify's environment variables.
+
+The Coolify stack uses the pinned `ghcr.io/lord007tn/keenpix:v0.1.0` image, keeps Postgres private, persists database/cache volumes, runs migrations and seed on app startup, and exposes the app through Coolify's proxy on container port `3000`.
+
+If an earlier Coolify deploy failed with a Postgres 18 message about existing data in `/var/lib/postgresql/data`, remove the failed `keenpix-pg` volume from that Coolify resource or recreate the resource before deploying this compose. The Coolify compose now uses a fresh `keenpix_pg18` volume mounted at `/var/lib/postgresql`, which is the Postgres 18-compatible layout.
+
 **First run (empty database):**
 1. Open http://localhost:3000 and sign in with `KEENPIX_SUPER_ADMIN_EMAIL` and `KEENPIX_SUPER_ADMIN_PASSWORD`.
 2. Create a **project** (its origin hostname is added to the allowlist automatically).
@@ -67,6 +81,7 @@ All via environment variables (see `.env.example`):
 | `POSTGRES_PASSWORD` | ✅ (compose) | Password for the bundled Compose Postgres service. Compose refuses to start without it. |
 | `BETTER_AUTH_SECRET` | ✅ (prod) | Session signing secret — `openssl rand -hex 32`. The app refuses to boot in production with a missing or known-weak/placeholder value. |
 | `BETTER_AUTH_URL` | – | Public base URL (default `http://localhost:3000`). HTTPS enables secure cookies automatically. |
+| `BETTER_AUTH_TRUSTED_ORIGINS` | – | Comma/whitespace separated origins accepted by Better Auth. Set this to your proxy/custom domain if login returns `Invalid origin`. |
 | `KEENPIX_APP_URL` | – | Canonical URL used for hosted docs metadata and generated OG/LLM links. Defaults to `BETTER_AUTH_URL`. |
 | `KEENPIX_SUPER_ADMIN_EMAIL` | ✅ | Email for the seeded super admin account. |
 | `KEENPIX_SUPER_ADMIN_PASSWORD` | ✅ | Password for the seeded super admin account. |
