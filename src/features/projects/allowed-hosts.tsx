@@ -36,7 +36,6 @@ export function AllowedHosts({
         setHosts(res.allowedOrigins)
         form.reset()
         toast.success('Allowed host added')
-        // Keep the /app projects loader fresh so switching projects shows it too.
         await router.invalidate()
       } catch (e) {
         toast.error(getErrorMessage(e, 'Could not add host'))

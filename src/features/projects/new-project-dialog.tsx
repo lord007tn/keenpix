@@ -39,7 +39,8 @@ export function NewProjectDialog({
   open: controlledOpen,
   onOpenChange,
 }: {
-  /** Controlled open state — when provided, no built-in trigger is rendered. */
+  // When controlled, the sidebar switcher owns the trigger and this component
+  // only renders the dialog body.
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }) {
@@ -58,7 +59,7 @@ export function NewProjectDialog({
       try {
         const project = await createProjectFn({ data: payload })
         toast.success(`Created project ${project.name}`)
-        // Refresh the layout loader so the new project shows in sidebar + dashboard.
+        // Refresh layout/dashboard loaders so the new project appears everywhere.
         await router.invalidate()
         setOpen(false)
       } catch (e) {

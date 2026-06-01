@@ -40,7 +40,8 @@ function Row({
   )
 }
 
-/** Editable per-project pipeline defaults — persisted via updateProjectSettingsFn. */
+// Editable per-project transform defaults. These are used only when a request
+// omits the matching query parameter.
 export function PipelineSettings({ project }: { project: Project }) {
   const router = useRouter()
   const [autoFormat, setAutoFormat] = useState(project.autoFormat)

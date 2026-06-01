@@ -106,10 +106,6 @@ function FilterPill({
   )
 }
 
-/**
- * reui.io-style filters: an "Add filter" button plus a removable pill per active
- * field. Controlled — `values` is a map of fieldKey → selected values.
- */
 export function DataFilters({
   fields,
   values,

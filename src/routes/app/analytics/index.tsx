@@ -38,7 +38,6 @@ import { useProject } from '@/stores/project-context'
 
 const RANGES: AnalyticsRange[] = ['24h', '7d', '30d', '90d']
 
-/** A search param may arrive as an array, a single string, or absent. */
 function parseStringArray(value: unknown): string[] | undefined {
   if (Array.isArray(value)) {
     return value.filter((v): v is string => typeof v === 'string')

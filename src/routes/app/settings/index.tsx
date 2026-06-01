@@ -94,9 +94,9 @@ function SettingsPage() {
     </Card>
   ) : null
 
-  // Settings are per-project. In "All projects" scope there's nothing to
-  // configure — prompt the user to pick a project (or create one).
   if (isAll) {
+    // Settings are per-project. In "All projects" scope, prompt the user to
+    // pick or create a project before showing pipeline/security controls.
     return (
       <div className="flex max-w-4xl flex-col gap-6 p-6">
         <PageHeader subtitle="Per-project configuration." title="Settings" />
@@ -149,8 +149,9 @@ function SettingsPage() {
     )
   }
 
-  // `!isAll` guarantees a current project, but narrow it for the type-checker.
   if (!currentProject) {
+    // !isAll should imply a current project, but keep the render path defensive
+    // while the project context reconciles a stale ?project= value.
     return null
   }
 

@@ -2,7 +2,8 @@ import { createMiddleware } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { auth } from '@/lib/auth/server'
 
-/** Server-fn middleware: rejects unauthenticated calls, exposes userId in context. */
+// Server-fn middleware: reject unauthenticated calls and expose the authenticated
+// user's identity to downstream handlers.
 export const authMiddleware = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
     const session = await auth.api

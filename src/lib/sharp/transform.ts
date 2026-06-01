@@ -24,15 +24,12 @@ export type OutputFormat = 'avif' | 'webp' | 'jpeg' | 'png'
 export type Fit = 'cover' | 'contain' | 'fill' | 'inside'
 
 export interface TransformOptions {
-  /** gaussian blur sigma (0.3–1000); omitted/0 = no blur */
   blur?: number
-  /** device pixel ratio — multiplies the target dimensions (1–3) */
   dpr?: number
   fit: Fit
   format: OutputFormat
   height?: number
   quality: number
-  /** false = keep EXIF/GPS/ICC in the output. Default (true/undefined) strips. */
   stripMetadata?: boolean
   width?: number
 }
@@ -57,7 +54,6 @@ export function contentTypeFor(format: OutputFormat): string {
   return CONTENT_TYPE[format]
 }
 
-/** Decode + auto-orient (honours EXIF rotation) into a sharp pipeline. */
 function createPipeline(input: Buffer): sharp.Sharp {
   return sharp(input, {
     failOn: 'truncated',
@@ -65,7 +61,6 @@ function createPipeline(input: Buffer): sharp.Sharp {
   }).rotate()
 }
 
-/** Resize to the (dpr-scaled) target box; never upscales past the source. */
 function applyResize(
   pipeline: sharp.Sharp,
   opts: TransformOptions,
@@ -91,7 +86,6 @@ function applyResize(
   })
 }
 
-/** Post-resize effects (currently gaussian blur). */
 function applyBlur(pipeline: sharp.Sharp, opts: TransformOptions): sharp.Sharp {
   return pipeline.blur(Math.min(1000, Math.max(0.3, opts.blur ?? 0.3)))
 }
@@ -104,7 +98,6 @@ function applyMetadataPolicy(
   return opts.stripMetadata === false ? pipeline.keepMetadata() : pipeline
 }
 
-/** Encode to the requested output format at the given quality. */
 function encodeFormat(
   pipeline: sharp.Sharp,
   opts: TransformOptions,
@@ -139,7 +132,6 @@ function buildTransformSteps(opts: TransformOptions): TransformStep[] {
   return steps
 }
 
-/** Full pipeline: bytes in → optimized bytes + output metadata. */
 export async function transformImage(
   input: Buffer,
   opts: TransformOptions,

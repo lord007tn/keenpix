@@ -1,4 +1,3 @@
-/** Request-logs data-access — Prisma-backed (reads from request_logs). */
 import { prisma } from '@/db'
 import { isLogFormat, type LogRow } from '@/shared/types'
 

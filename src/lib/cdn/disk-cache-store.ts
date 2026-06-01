@@ -19,13 +19,12 @@ const EXT: Record<string, string> = {
   png: 'png',
 }
 
-/** Only enumerate the cache every Nth write (avoids stat'ing on every request). */
 const EVICTION_PROBE_EVERY = 50
+const noop = () => undefined
 
 export class DiskCacheStore implements CacheStore {
   private readonly cacheDir
   private readonly maxBytes
-  /** After eviction we leave roughly this much headroom (90% of cap). */
   private readonly targetBytes
   private writeCount = 0
 
@@ -44,9 +43,7 @@ export class DiskCacheStore implements CacheStore {
       }
       // Bump mtime so the LRU sweep treats this as recently used.
       const now = new Date()
-      utimes(file, now, now).catch(() => {
-        // ignore
-      })
+      utimes(file, now, now).catch(noop)
       return buf
     } catch {
       return null
@@ -63,18 +60,14 @@ export class DiskCacheStore implements CacheStore {
       await writeFile(tmp, data)
       await rename(tmp, final)
     } catch (err) {
-      await unlink(tmp).catch(() => {
-        // temp may not exist; ignore
-      })
+      await unlink(tmp).catch(noop)
       throw err
     }
 
     this.writeCount++
     if (this.writeCount >= EVICTION_PROBE_EVERY) {
       this.writeCount = 0
-      this.maybeEvict().catch(() => {
-        // best-effort
-      })
+      this.maybeEvict().catch(noop)
     }
   }
 
@@ -116,9 +109,7 @@ export class DiskCacheStore implements CacheStore {
       if (total <= this.targetBytes) {
         break
       }
-      await unlink(e.file).catch(() => {
-        // ignore
-      })
+      await unlink(e.file).catch(noop)
       total -= e.size
     }
   }

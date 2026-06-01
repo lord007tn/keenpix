@@ -1,6 +1,5 @@
 import type { TopItem } from '@/shared/types'
 
-/** Horizontal bar list with a tinted track behind each row. */
 export function BarList({
   data,
   barColor = 'var(--chart-1)',

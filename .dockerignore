@@ -19,10 +19,5 @@ body*.txt
 *-validation-*.png
 clean-db-dashboard.png
 skills-lock.json
-tools/apply-keenpix-rename.ps1
-tools/candidate-names*.txt
-tools/check-domains.ps1
-tools/setup-keenpix-db.mjs
-tools/sweep-domains.ps1
 test-results
 playwright-report

@@ -1,4 +1,3 @@
-/** Request-logs writes + aggregations (Prisma-backed). */
 import { prisma } from '@/db'
 
 export interface NewRequestLog {
