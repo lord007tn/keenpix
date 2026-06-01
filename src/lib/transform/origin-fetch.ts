@@ -6,6 +6,8 @@ import { assertSafeOrigin } from './safe-origin'
 type ValidatedOrigin = Awaited<ReturnType<typeof assertSafeOrigin>>
 type OriginResponse = Awaited<ReturnType<typeof undiciFetch>>
 
+const noop = () => undefined
+
 /** Max bytes pulled from an origin before refusing (413). A cache MISS buffers
  * the whole origin response in memory, so this bounds the OOM blast radius. */
 const MAX_ORIGIN_BYTES = env.KEENPIX_MAX_ORIGIN_BYTES
@@ -34,15 +36,6 @@ function mapFetchError(err: unknown) {
   return new TransformError('Origin fetch failed', 502)
 }
 
-/**
- * Fetch the origin image with the **resolved IP pinned** into the dispatcher
- * (closes the DNS-rebinding TOCTOU window — the host can't flip to an internal
- * IP between our DNS check and the actual TCP connect). Every redirect hop is
- * re-validated through assertSafeOrigin, so a 302 to an internal host fails.
- *
- * TLS SNI + HTTP Host header both still use the original hostname (set by fetch
- * from the URL), so certificate validation works normally for HTTPS origins.
- */
 function makePinnedAgent(origin: ValidatedOrigin) {
   return new Agent({
     connect: {
@@ -80,9 +73,7 @@ async function readCapped(res: OriginResponse, max: number) {
     }
     total += value.byteLength
     if (total > max) {
-      await reader.cancel().catch(() => {
-        // already aborting
-      })
+      await reader.cancel().catch(noop)
       throw new TransformError('Origin image too large', 413)
     }
     chunks.push(Buffer.from(value))
@@ -125,9 +116,7 @@ export async function fetchOriginImage(
       if (res.status >= 300 && res.status < 400) {
         // Discard the redirect body WITHOUT buffering it — it can be arbitrarily
         // large and bypasses the size cap if read via arrayBuffer().
-        await res.body?.cancel().catch(() => {
-          // ignore
-        })
+        await res.body?.cancel().catch(noop)
         const loc = res.headers.get('location')
         if (!loc) {
           throw new TransformError(`Origin responded ${res.status}`, 502)
@@ -139,26 +128,20 @@ export async function fetchOriginImage(
         continue
       }
       if (!res.ok) {
-        await res.body?.cancel().catch(() => {
-          // ignore
-        })
+        await res.body?.cancel().catch(noop)
         throw new TransformError(`Origin responded ${res.status}`, 502)
       }
       // Content-Length can lie or be absent; readCapped enforces the real ceiling.
       const declared = Number(res.headers.get('content-length'))
       if (Number.isFinite(declared) && declared > MAX_ORIGIN_BYTES) {
-        await res.body?.cancel().catch(() => {
-          // ignore
-        })
+        await res.body?.cancel().catch(noop)
         throw new TransformError('Origin image too large', 413)
       }
       return await readCapped(res, MAX_ORIGIN_BYTES)
     } finally {
       // destroy() (not close()) so a half-read or errored body never pins the
       // socket — and thus a concurrency slot — until the AbortSignal fires.
-      agent.destroy().catch(() => {
-        // ignore
-      })
+      agent.destroy().catch(noop)
     }
   }
   throw new TransformError('Too many redirects', 502)

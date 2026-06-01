@@ -42,7 +42,6 @@ export const serverEnvSchema = {
   KEENPIX_MAX_QUEUE: z.coerce.number().int().positive().default(100),
   KEENPIX_SUPER_ADMIN_EMAIL: z.email().optional(),
   KEENPIX_SUPER_ADMIN_PASSWORD: z.string().min(1).optional(),
-  // Backward-compatible aliases for older self-host deployments.
   KEENPIX_ADMIN_EMAIL: z.email().optional(),
   KEENPIX_ADMIN_PASSWORD: z.string().min(1).optional(),
   SMTP_HOST: z.string().min(1).optional(),

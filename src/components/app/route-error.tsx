@@ -1,11 +1,8 @@
 import { useRouter } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 
-/**
- * Recoverable error surface for route loader/render faults. Wired as the /app
- * `errorComponent` and the router-wide `defaultErrorComponent`, so a failed
- * Prisma query or render throw shows a retry affordance instead of a blank page.
- */
+// Used by app routes and the router default so loader/render failures show a
+// retry affordance instead of leaving the user on a blank page.
 export function RouteError({ error }: { error: Error }) {
   const router = useRouter()
   return (

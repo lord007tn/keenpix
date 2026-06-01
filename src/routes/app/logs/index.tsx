@@ -72,7 +72,6 @@ function LogsPage() {
   const statuses = filterValues.status ?? []
   const cacheStates = filterValues.cache ?? []
 
-  // "Live" re-fetches the real request log on an interval — no synthetic rows.
   useEffect(() => {
     if (!live) {
       return
@@ -153,7 +152,6 @@ function LogsPage() {
         title="Live logs"
       />
 
-      {/* Announce the newest request to assistive tech while live. */}
       <div aria-live="polite" className="sr-only" role="status">
         {live && filtered[0]
           ? `Newest request: ${filtered[0].path}, status ${filtered[0].status}, ${filtered[0].format}, ${filtered[0].latency}ms, ${filtered[0].cached ? 'cache hit' : 'cache miss'}`

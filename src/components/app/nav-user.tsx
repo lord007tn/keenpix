@@ -38,7 +38,6 @@ function initials(user: SessionUser): string {
   return (first + second).toUpperCase()
 }
 
-/** Account block pinned to the sidebar footer (avatar + name → account menu). */
 export function NavUser({ user }: { user: SessionUser }) {
   const { isMobile } = useSidebar()
   const navigate = useNavigate()

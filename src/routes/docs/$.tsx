@@ -36,8 +36,6 @@ export const Route = createFileRoute('/docs/$')({
     await clientLoader.preload(data.path)
     return data
   },
-  // Fumadocs styles are scoped to /docs via this stylesheet — the rest of the
-  // app is unaffected.
   head: ({ loaderData }: { loaderData?: DocsLoaderData }) => {
     const title = loaderData?.title
       ? `${loaderData.title} - Keenpix docs`
@@ -139,7 +137,6 @@ function Page() {
   )
 
   return (
-    // theme.enabled=false → reuse the app's existing next-themes provider.
     <RootProvider theme={{ enabled: false }}>
       <DocsLayout
         links={[

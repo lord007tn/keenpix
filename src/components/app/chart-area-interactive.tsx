@@ -32,7 +32,6 @@ const RANGES: { value: AnalyticsRange; label: string }[] = [
   { value: '24h', label: '24 hours' },
 ]
 
-/** dashboard-01-style interactive area chart — cache hits vs optimized, over time. */
 export function ChartAreaInteractive({
   data,
   range,

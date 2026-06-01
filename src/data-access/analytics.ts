@@ -1,7 +1,3 @@
-/**
- * Analytics data-access — real aggregations over request_logs (Prisma/Postgres).
- * Every query is scoped to a project when a projectId is supplied, else org-wide.
- */
 import { prisma } from '@/db'
 import type {
   AnalyticsRange,
@@ -16,6 +12,8 @@ import type {
 } from '@/shared/types'
 import { listProjects } from './projects'
 
+// Real aggregations over request_logs. Every query is scoped to one project when
+// projectId is supplied, otherwise it stays org-wide.
 interface RangeMeta {
   label: (d: Date, i: number) => string
   ms: number
@@ -61,7 +59,7 @@ export interface AnalyticsFilters {
   status?: string[]
 }
 
-/** Build a `where` scoped to the window, optionally a project, and any filters. */
+// Shared Prisma where builder for analytics windows, project scope, and filters.
 function scope(since: Date, projectId?: string, filters?: AnalyticsFilters) {
   const where: {
     format?: { in: string[] }
@@ -86,7 +84,7 @@ function scope(since: Date, projectId?: string, filters?: AnalyticsFilters) {
   return where
 }
 
-/** Nearest-rank percentile over an ascending-sorted array (ms). */
+// Nearest-rank percentile over an ascending-sorted latency list.
 function percentile(sortedAsc: number[], p: number): number {
   if (sortedAsc.length === 0) {
     return 0
@@ -258,7 +256,6 @@ export async function getLatencyBins(
   return bins
 }
 
-/** Real per-project 24h request count + cache hit-rate for the dashboard cards. */
 export async function getProjectStats(): Promise<Record<string, ProjectStat>> {
   const since = new Date(Date.now() - DAY)
   const [byProject, hitsByProject] = await Promise.all([
@@ -286,10 +283,7 @@ export async function getProjectStats(): Promise<Record<string, ProjectStat>> {
   return out
 }
 
-/**
- * Per-project rollup for the "All projects" analytics view — requests, cache
- * hit-rate, and bandwidth saved over the window, joined with project names.
- */
+// Per-project rollup for the org-wide analytics breakdown.
 export async function getProjectBreakdown(
   range: AnalyticsRange,
 ): Promise<ProjectBreakdownRow[]> {
@@ -345,7 +339,6 @@ interface WindowStats {
   requests: number
 }
 
-/** Rollup of one time window — used to compute current-vs-previous KPI trends. */
 async function windowStats(where: object): Promise<WindowStats> {
   const [agg, total, cached, latRows] = await Promise.all([
     prisma.requestLog.aggregate({
@@ -367,10 +360,7 @@ async function windowStats(where: object): Promise<WindowStats> {
   }
 }
 
-/**
- * The four dashboard KPI cards with a REAL trend: each metric over the current
- * window plus the immediately-preceding window of equal length.
- */
+// KPI trends compare the selected window with the immediately previous window.
 export async function getDashboardKpis(
   range: AnalyticsRange,
   projectId?: string,

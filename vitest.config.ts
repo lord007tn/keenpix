@@ -1,8 +1,8 @@
 import tsConfigPaths from 'vite-tsconfig-paths'
 import { defineConfig } from 'vitest/config'
 
-// Lightweight unit-test config — deliberately does NOT load the TanStack Start /
-// Nitro plugins so the security-critical pure functions test in isolation.
+// Keep unit tests on the pure Node path. TanStack Start/Nitro plugins are not
+// loaded here, which keeps security-critical pure-function tests isolated.
 export default defineConfig({
   plugins: [tsConfigPaths({ projects: ['./tsconfig.json'] })],
   test: {

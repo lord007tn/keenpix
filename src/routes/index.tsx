@@ -67,7 +67,6 @@ function Home() {
   return selfHost ? <SelfHostHome /> : <MarketingPage />
 }
 
-/** Shown instead of the marketing site when KEENPIX_SELF_HOST is enabled. */
 function SelfHostHome() {
   return (
     <div
@@ -263,15 +262,14 @@ function MarketingPage() {
             <CodeBlock>{`# Docker Compose
 cp .env.example .env
 # set POSTGRES_PASSWORD, BETTER_AUTH_SECRET,
-# BETTER_AUTH_URL, VITE_KEENPIX_PUBLIC_URL,
-# KEENPIX_SUPER_ADMIN_EMAIL, KEENPIX_SUPER_ADMIN_PASSWORD
+# BETTER_AUTH_URL, KEENPIX_SUPER_ADMIN_EMAIL,
+# KEENPIX_SUPER_ADMIN_PASSWORD
 docker compose up -d
 
 # Coolify
 Create a Docker Compose resource from the repo.
 Set the same env values, expose app:3000,
-and point BETTER_AUTH_URL + VITE_KEENPIX_PUBLIC_URL
-to your Coolify domain.`}</CodeBlock>
+and point BETTER_AUTH_URL to your Coolify domain.`}</CodeBlock>
           </div>
         </section>
 

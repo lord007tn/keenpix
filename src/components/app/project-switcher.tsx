@@ -25,7 +25,8 @@ import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import type { Project } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
 
-/** The active-scope glyph: a Layers icon for "All", else the project gradient. */
+// The active scope is either org-wide ("All projects") or one project. That
+// scope is mirrored into ?project= by the project context.
 function ScopeGlyph({ project }: { project: Project | undefined }) {
   if (!project) {
     return (
@@ -44,10 +45,6 @@ function ScopeGlyph({ project }: { project: Project | undefined }) {
   )
 }
 
-/**
- * Top-of-sidebar scope switcher (the "website / team changer").
- * Picks "All projects" (org-wide) or a single project — drives ?project=.
- */
 export function ProjectSwitcher() {
   const { projects, currentProject, isAll, projectId, setProject } =
     useProject()
@@ -140,7 +137,7 @@ export function ProjectSwitcher() {
         </DropdownMenu>
       </SidebarMenuItem>
 
-      {/* Controlled — opened from the switcher's "New project" item. */}
+      {/* Controlled from the switcher's New project menu item. */}
       <NewProjectDialog onOpenChange={setNewOpen} open={newOpen} />
     </SidebarMenu>
   )
