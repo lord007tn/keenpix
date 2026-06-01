@@ -35,7 +35,7 @@ Use [docker-compose.coolify.yml](./docker-compose.coolify.yml) for a Coolify ser
 
 1. In Coolify, create a new resource with **Docker Compose Empty**.
 2. Paste the contents of `docker-compose.coolify.yml`.
-3. Set your public domain on the `app` service. Coolify will generate `SERVICE_URL_KEENPIX_3000`, database credentials, the auth secret, and the super-admin password. If you use a custom domain and Coolify does not put it in `COOLIFY_URL`, set `BETTER_AUTH_URL` and `BETTER_AUTH_TRUSTED_ORIGINS` to that public URL.
+3. Set your public domain on the `app` service. Coolify will generate `SERVICE_URL_KEENPIX_3000`, database credentials, the auth secret, and the super-admin password. If you use a custom domain, set `BETTER_AUTH_URL` to that public URL.
 4. Optionally change `KEENPIX_SUPER_ADMIN_EMAIL` from the default `admin@example.com`.
 5. Deploy, then sign in with `KEENPIX_SUPER_ADMIN_EMAIL` and the generated `SERVICE_PASSWORD_64_ADMIN` value shown in Coolify's environment variables.
 
@@ -81,7 +81,6 @@ All via environment variables (see `.env.example`):
 | `POSTGRES_PASSWORD` | ✅ (compose) | Password for the bundled Compose Postgres service. Compose refuses to start without it. |
 | `BETTER_AUTH_SECRET` | ✅ (prod) | Session signing secret — `openssl rand -hex 32`. The app refuses to boot in production with a missing or known-weak/placeholder value. |
 | `BETTER_AUTH_URL` | – | Public base URL (default `http://localhost:3000`). HTTPS enables secure cookies automatically. |
-| `BETTER_AUTH_TRUSTED_ORIGINS` | – | Comma/whitespace separated origins accepted by Better Auth. Set this to your proxy/custom domain if login returns `Invalid origin`. |
 | `KEENPIX_APP_URL` | – | Canonical URL used for hosted docs metadata and generated OG/LLM links. Defaults to `BETTER_AUTH_URL`. |
 | `KEENPIX_SUPER_ADMIN_EMAIL` | ✅ | Email for the seeded super admin account. |
 | `KEENPIX_SUPER_ADMIN_PASSWORD` | ✅ | Password for the seeded super admin account. |
