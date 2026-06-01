@@ -35,7 +35,7 @@ Use [docker-compose.coolify.yml](./docker-compose.coolify.yml) for a Coolify ser
 
 1. In Coolify, create a new resource with **Docker Compose Empty**.
 2. Paste the contents of `docker-compose.coolify.yml`.
-3. Set your public domain on the `app` service. Coolify will generate `SERVICE_URL_KEENPIX_3000`, database credentials, the auth secret, and the super-admin password. If you use a custom domain, set `BETTER_AUTH_URL` to that public URL.
+3. Set your public domain on the `app` service. Coolify will generate `SERVICE_URL_APP_3000`, database credentials, the auth secret, and the super-admin password. `BETTER_AUTH_URL` and `KEENPIX_APP_URL` are inferred from `SERVICE_URL_APP_3000`.
 4. Optionally change `KEENPIX_SUPER_ADMIN_EMAIL` from the default `admin@example.com`.
 5. Deploy, then sign in with `KEENPIX_SUPER_ADMIN_EMAIL` and the generated `SERVICE_PASSWORD_64_ADMIN` value shown in Coolify's environment variables.
 
