@@ -1,8 +1,14 @@
 import { getAppUrl, getRepositoryUrl } from '@/lib/deployment'
 
 export const SITE_NAME = 'Keenpix'
+export const SITE_TITLE = 'Keenpix - self-hosted image optimization'
 export const SITE_DESCRIPTION =
-  'Open-source, self-hosted image optimization with sharp, Postgres, disk caching, analytics, and a drop-in transform API.'
+  'Self-hosted image optimization for teams that want a fast, secure, open-source image pipeline with sharp transforms, disk caching, analytics, and one drop-in URL.'
+export const SITE_KEYWORDS =
+  'Keenpix, self-hosted image optimization, open-source image CDN, sharp image transforms, image proxy, WebP, AVIF, Docker image optimizer'
+export const BRAND_IMAGE_PATH = '/brand/keenpix-og.png'
+export const BRAND_ICON_PATH = '/logo512.png'
+export const APP_VERSION = '0.1.1'
 
 export function absoluteUrl(path = '/') {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
@@ -16,7 +22,7 @@ export function softwareApplicationJsonLd() {
     applicationCategory: 'DeveloperApplication',
     codeRepository: getRepositoryUrl(),
     description: SITE_DESCRIPTION,
-    image: absoluteUrl('/brand/keenpix-og.png'),
+    image: absoluteUrl(BRAND_IMAGE_PATH),
     license: `${getRepositoryUrl()}/blob/master/LICENSE`,
     name: SITE_NAME,
     offers: {
@@ -25,7 +31,33 @@ export function softwareApplicationJsonLd() {
       priceCurrency: 'USD',
     },
     operatingSystem: 'Linux, macOS, Windows',
-    softwareVersion: '0.1.0',
+    softwareVersion: APP_VERSION,
+    url: absoluteUrl('/'),
+  }
+}
+
+export function organizationJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    logo: absoluteUrl(BRAND_ICON_PATH),
+    name: SITE_NAME,
+    sameAs: [getRepositoryUrl()],
+    url: absoluteUrl('/'),
+  }
+}
+
+export function webSiteJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    description: SITE_DESCRIPTION,
+    image: absoluteUrl(BRAND_IMAGE_PATH),
+    name: SITE_NAME,
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+    },
     url: absoluteUrl('/'),
   }
 }
@@ -52,7 +84,7 @@ export function docsJsonLd({
       },
       description,
       headline: title,
-      image: absoluteUrl('/brand/keenpix-og.png'),
+      image: absoluteUrl(BRAND_IMAGE_PATH),
       isPartOf: {
         '@type': 'TechArticle',
         name: 'Keenpix documentation',
@@ -65,7 +97,7 @@ export function docsJsonLd({
         '@type': 'Organization',
         logo: {
           '@type': 'ImageObject',
-          url: absoluteUrl('/logo512.png'),
+          url: absoluteUrl(BRAND_ICON_PATH),
         },
         name: SITE_NAME,
       },
