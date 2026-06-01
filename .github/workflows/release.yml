@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   release:
-    name: Generate GitHub release notes
+    name: Publish GitHub release
     runs-on: ubuntu-latest
     steps:
       - name: Validate semver tag
@@ -29,15 +29,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
+      - name: Extract changelog notes
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          awk -v tag="$TAG" '
+            $0 ~ "^## \\[" tag "\\]" { found = 1; next }
+            found && $0 ~ "^## \\[" { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+          if [ ! -s release-notes.md ]; then
+            echo "No CHANGELOG.md section found for ${TAG}"
+            exit 1
+          fi
 
-      - name: Generate release notes
-        run: pnpm dlx changelogithub@14.0.0
+      - name: Create release
+        run: gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-notes.md --verify-tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
