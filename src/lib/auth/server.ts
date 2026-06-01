@@ -6,8 +6,6 @@ import { prisma } from '@/db'
 import { env } from '@/env/server'
 
 const isProd = env.NODE_ENV === 'production'
-const ORIGIN_LIST_SEPARATOR_RE = /[\s,]+/
-const TRAILING_SLASHES_RE = /\/+$/
 
 /** Reject placeholder/known-weak secrets (normalized) so the repo's own dev
  * value — and any human-written placeholder, including the one shipped in
@@ -40,59 +38,11 @@ function resolveAuthSecret(): string {
   return s ?? 'dev-secret-change-me'
 }
 
-function splitOriginList(value: string | undefined) {
-  return value?.split(ORIGIN_LIST_SEPARATOR_RE).filter(Boolean) ?? []
-}
-
-function addOrigin(out: Set<string>, value: string | undefined) {
-  if (!value) {
-    return
-  }
-
-  const raw = value.trim().replace(TRAILING_SLASHES_RE, '')
-  if (!raw) {
-    return
-  }
-
-  if (raw.includes('*')) {
-    out.add(raw)
-    return
-  }
-
-  try {
-    out.add(new URL(raw).origin)
-  } catch {
-    // Ignore malformed optional origins instead of blocking app boot.
-  }
-}
-
-function resolveTrustedOrigins(authUrl: string) {
-  const origins = new Set<string>()
-
-  addOrigin(origins, authUrl)
-  addOrigin(origins, env.KEENPIX_APP_URL)
-
-  for (const origin of splitOriginList(env.COOLIFY_URL)) {
-    addOrigin(origins, origin)
-  }
-
-  for (const host of splitOriginList(env.COOLIFY_FQDN)) {
-    addOrigin(origins, host.includes('://') ? host : `https://${host}`)
-  }
-
-  for (const origin of splitOriginList(env.BETTER_AUTH_TRUSTED_ORIGINS)) {
-    addOrigin(origins, origin)
-  }
-
-  return Array.from(origins)
-}
-
-const authUrl =
-  env.BETTER_AUTH_URL ?? env.COOLIFY_URL ?? 'http://localhost:3000'
+const authUrl = env.BETTER_AUTH_URL ?? 'http://localhost:3000'
 
 export const auth = betterAuth({
   baseURL: authUrl,
-  trustedOrigins: resolveTrustedOrigins(authUrl),
+  trustedOrigins: [new URL(authUrl).origin],
   secret: resolveAuthSecret(),
   advanced: {
     // Secure cookies once the deployment is served over TLS.

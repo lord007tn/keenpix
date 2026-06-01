@@ -10,9 +10,6 @@ export const serverEnvSchema = {
   DATABASE_URL: z.string().min(1).optional(),
   BETTER_AUTH_SECRET: z.string().min(1).optional(),
   BETTER_AUTH_URL: optionalUrlSchema,
-  BETTER_AUTH_TRUSTED_ORIGINS: z.string().min(1).optional(),
-  COOLIFY_URL: z.string().min(1).optional(),
-  COOLIFY_FQDN: z.string().min(1).optional(),
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
     .default('info'),
