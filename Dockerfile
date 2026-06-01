@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 # Node is the deploy target because sharp needs the native libvips runtime.
 # Debian slim matches sharp's prebuilt Linux binaries cleanly.
 FROM node:22-slim AS base
@@ -13,7 +15,8 @@ WORKDIR /app
 
 FROM base AS deps
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --config.minimumReleaseAge=0
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+  pnpm install --frozen-lockfile --config.minimumReleaseAge=0 --store-dir=/pnpm/store
 
 FROM base AS build
 ARG VITE_KEENPIX_PUBLIC_URL
