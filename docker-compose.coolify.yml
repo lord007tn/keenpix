@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-keenpix}
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_64_POSTGRES}
+    volumes:
+      - keenpix_pg18:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$SERVICE_USER_POSTGRES\" -d \"${POSTGRES_DB:-keenpix}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  app:
+    image: ghcr.io/lord007tn/keenpix:v0.1.0
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - SERVICE_URL_KEENPIX_3000
+      - COOLIFY_URL=${COOLIFY_URL:-}
+      - COOLIFY_FQDN=${COOLIFY_FQDN:-}
+      - NODE_ENV=production
+      - PORT=3000
+      - KEENPIX_SELF_HOST=true
+      - DATABASE_URL=postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_64_POSTGRES}@postgres:5432/${POSTGRES_DB:-keenpix}
+      - BETTER_AUTH_SECRET=${SERVICE_HEX_64_KEENPIX}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-${SERVICE_URL_KEENPIX_3000}}
+      - BETTER_AUTH_TRUSTED_ORIGINS=${BETTER_AUTH_TRUSTED_ORIGINS:-${SERVICE_URL_KEENPIX_3000}}
+      - KEENPIX_APP_URL=${KEENPIX_APP_URL:-${SERVICE_URL_KEENPIX_3000}}
+      - KEENPIX_SUPER_ADMIN_EMAIL=${KEENPIX_SUPER_ADMIN_EMAIL:-admin@example.com}
+      - KEENPIX_SUPER_ADMIN_PASSWORD=${SERVICE_PASSWORD_64_ADMIN}
+      - KEENPIX_RUN_MIGRATIONS=${KEENPIX_RUN_MIGRATIONS:-true}
+      - KEENPIX_RUN_SEED=${KEENPIX_RUN_SEED:-true}
+      - KEENPIX_CACHE_DIR=/var/cache/keenpix
+      - KEENPIX_CACHE_MAX_BYTES=${KEENPIX_CACHE_MAX_BYTES:-2147483648}
+      - KEENPIX_MEMORY_CACHE_MAX_BYTES=${KEENPIX_MEMORY_CACHE_MAX_BYTES:-67108864}
+      - KEENPIX_MAX_ORIGIN_BYTES=${KEENPIX_MAX_ORIGIN_BYTES:-52428800}
+      - KEENPIX_MAX_INPUT_PIXELS=${KEENPIX_MAX_INPUT_PIXELS:-50000000}
+      - KEENPIX_MAX_DIMENSION=${KEENPIX_MAX_DIMENSION:-4096}
+      - KEENPIX_ORIGIN_TIMEOUT_MS=${KEENPIX_ORIGIN_TIMEOUT_MS:-10000}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Keenpix}
+    expose:
+      - "3000"
+    volumes:
+      - keenpix_cache:/var/cache/keenpix
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--output", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+
+volumes:
+  keenpix_pg18:
+  keenpix_cache:
