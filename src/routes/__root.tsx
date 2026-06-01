@@ -10,7 +10,14 @@ import { ThemeProvider } from '@/components/theme/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import Devtools from '@/devtools/devtools'
-import { absoluteUrl, SITE_DESCRIPTION } from '@/lib/seo'
+import {
+  absoluteUrl,
+  BRAND_IMAGE_PATH,
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+  SITE_NAME,
+  SITE_TITLE,
+} from '@/lib/seo'
 import appCss from '../styles.css?url'
 
 interface RouterContext {
@@ -22,22 +29,38 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'Keenpix — self-hosted image optimization' },
+      { title: SITE_TITLE },
+      { name: 'application-name', content: SITE_NAME },
       {
         name: 'description',
         content: SITE_DESCRIPTION,
       },
-      { property: 'og:site_name', content: 'Keenpix' },
+      { name: 'keywords', content: SITE_KEYWORDS },
+      { name: 'theme-color', content: '#06101f' },
+      { property: 'og:site_name', content: SITE_NAME },
       { property: 'og:type', content: 'website' },
+      { property: 'og:title', content: SITE_TITLE },
+      { property: 'og:description', content: SITE_DESCRIPTION },
       {
         property: 'og:image',
-        content: absoluteUrl('/brand/keenpix-og.png'),
+        content: absoluteUrl(BRAND_IMAGE_PATH),
       },
+      { property: 'og:image:alt', content: 'Keenpix modular image mark' },
       { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: SITE_TITLE },
+      { name: 'twitter:description', content: SITE_DESCRIPTION },
+      { name: 'twitter:image', content: absoluteUrl(BRAND_IMAGE_PATH) },
     ],
     links: [
       { rel: 'stylesheet', href: appCss },
-      { rel: 'icon', href: '/favicon.ico' },
+      { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+      { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
+      {
+        rel: 'icon',
+        href: '/logo192.png',
+        type: 'image/png',
+        sizes: '192x192',
+      },
       { rel: 'apple-touch-icon', href: '/logo192.png' },
       { rel: 'manifest', href: '/manifest.json' },
       { rel: 'alternate', type: 'text/plain', href: '/llms.txt' },
