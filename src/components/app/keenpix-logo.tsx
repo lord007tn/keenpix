@@ -1,6 +1,5 @@
 import { cn } from '@/lib/utils'
 
-/** Keenpix wordmark: the 7-square glyph + name. */
 export function KeenpixLogo({
   className,
   showName = true,

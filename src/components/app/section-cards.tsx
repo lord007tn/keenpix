@@ -11,7 +11,7 @@ import {
 import { fmtBytes, fmtNum } from '@/shared/format'
 import type { DashboardKpis, KpiValue } from '@/shared/types'
 
-/** Relative % change vs the previous window; null when there's no baseline. */
+// Relative change vs the previous window; null means there is no baseline.
 function relDelta(v: KpiValue): number | null {
   if (v.prev === 0) {
     return v.value === 0 ? 0 : null
@@ -48,7 +48,6 @@ function trendWord(delta: number | null): string {
   return delta > 0 ? 'Trending up' : 'Trending down'
 }
 
-/** The four dashboard-01-style KPI cards, on real Keenpix data + real trends. */
 export function SectionCards({ kpis }: { kpis: DashboardKpis }) {
   const reqDelta = relDelta(kpis.requests)
   const bwDelta = relDelta(kpis.bandwidthSaved)

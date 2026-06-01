@@ -1,61 +1,47 @@
 services:
   postgres:
     image: postgres:18-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: keenpix
-      POSTGRES_USER: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-keenpix}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}"
-    # Intentionally not published to the host by default. The app connects
-    # internally via postgres:5432.
+    # Keep Postgres private by default. The app connects on the internal
+    # Compose network at postgres:5432.
     volumes:
       - keenpix_pg:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d keenpix']
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
       timeout: 5s
       retries: 10
 
   app:
     image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
-    build:
-      context: .
-      args:
-        VITE_KEENPIX_PUBLIC_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
-        VERSION: ${KEENPIX_VERSION:-0.1.0}
-    environment:
-      NODE_ENV: production
-      PORT: 3000
-      KEENPIX_SELF_HOST: "true"
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/keenpix
-      # Required — generate with: openssl rand -hex 32. Compose refuses to start
-      # if unset, so no deploy can ever ship with a known/default signing secret.
-      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (openssl rand -hex 32)}"
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
-      VITE_KEENPIX_PUBLIC_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
-      KEENPIX_SUPER_ADMIN_EMAIL: "${KEENPIX_SUPER_ADMIN_EMAIL:?set KEENPIX_SUPER_ADMIN_EMAIL}"
-      KEENPIX_SUPER_ADMIN_PASSWORD: "${KEENPIX_SUPER_ADMIN_PASSWORD:?set KEENPIX_SUPER_ADMIN_PASSWORD}"
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_SECURE: ${SMTP_SECURE:-false}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
-      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-}
-      KEENPIX_CACHE_DIR: /var/cache/keenpix
-    ports:
-      - '3000:3000'
-    volumes:
-      - keenpix_cache:/var/cache/keenpix
+    env_file:
+      - .env
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
-    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      KEENPIX_SELF_HOST: "true"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-keenpix}"
+      # Required for session signing. Compose refuses to start if this is unset,
+      # so copied deployments cannot accidentally ship with a default secret.
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (openssl rand -hex 32)}"
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      KEENPIX_SUPER_ADMIN_EMAIL: "${KEENPIX_SUPER_ADMIN_EMAIL:?set KEENPIX_SUPER_ADMIN_EMAIL}"
+      KEENPIX_SUPER_ADMIN_PASSWORD: "${KEENPIX_SUPER_ADMIN_PASSWORD:?set KEENPIX_SUPER_ADMIN_PASSWORD}"
+      KEENPIX_CACHE_DIR: /var/cache/keenpix
+    ports:
+      - "${KEENPIX_PORT:-3000}:3000"
+    volumes:
+      - keenpix_cache:/var/cache/keenpix
     healthcheck:
-      test:
-        - CMD
-        - node
-        - -e
-        - fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--output", "/dev/null", "http://127.0.0.1:3000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 6

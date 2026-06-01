@@ -107,7 +107,6 @@ function SortHeader({
   )
 }
 
-/** dashboard-01-style data table over the workspace's projects (real 24h stats). */
 export function ProjectsDataTable({
   projects,
   stats,

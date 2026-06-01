@@ -8,10 +8,8 @@ import { contentTypeFor } from '@/lib/sharp/transform'
 
 const LEADING_SLASHES_RE = /^\/+/
 
-/**
- * HTTP boundary for the transform API. Routes call functions; functions adapt
- * request/response details and delegate use-case work to actions.
- */
+// HTTP boundary for the transform API. Routes handle URL shape here, then the
+// action layer owns project lookup, origin safety, transforms, cache, and logs.
 export async function handleTransformRequest(
   request: Request,
   pathSource?: string,

@@ -19,8 +19,6 @@ function negotiateFormat(
   if (fmtParam && fmtParam !== 'auto' && isOutputFormat(fmtParam)) {
     return fmtParam
   }
-  // fmt=auto or omitted: negotiate from Accept only when the project allows it;
-  // otherwise serve a universally-compatible JPEG.
   if (!autoFormat) {
     return 'jpeg'
   }

@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 
-/** Standard surface header: eyebrow + title + subtitle, with optional actions. */
 export function PageHeader({
   eyebrow,
   title,

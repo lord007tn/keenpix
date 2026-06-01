@@ -17,7 +17,6 @@ const sidebarStyle: CSSProperties & {
 }
 
 export const Route = createFileRoute('/app')({
-  // The active project id is carried in ?project= across every /app page.
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
     project: typeof search.project === 'string' ? search.project : undefined,
   }),

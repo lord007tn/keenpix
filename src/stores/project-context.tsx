@@ -3,14 +3,10 @@ import { createContext, type ReactNode, use, useMemo } from 'react'
 import type { Project } from '@/shared/types'
 
 interface ProjectContextValue {
-  /** The selected project, or undefined in "All projects" mode. */
   currentProject: Project | undefined
-  /** True when no single project is selected (org-wide / "All projects"). */
   isAll: boolean
-  /** The active project id, or undefined in "All projects" mode. */
   projectId: string | undefined
   projects: Project[]
-  /** Set the scope: a project id, or null for "All projects". */
   setProject: (id: string | null) => void
 }
 

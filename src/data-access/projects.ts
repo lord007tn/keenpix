@@ -1,4 +1,3 @@
-/** Projects data-access — Prisma-backed. */
 import { prisma } from '@/db'
 import { isProjectEnv, type Project, type ProjectEnv } from '@/shared/types'
 
@@ -141,7 +140,6 @@ export interface ProjectSettingsPatch {
   stripMetadata?: boolean
 }
 
-/** Update a project's pipeline defaults (auto-format / strip-metadata / quality). */
 export async function updateProjectSettings(
   projectId: string,
   patch: ProjectSettingsPatch,

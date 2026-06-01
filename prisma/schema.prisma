@@ -1,6 +1,5 @@
-// Keenpix — Prisma schema (Postgres). Prisma 7 prisma-client generator +
-// driver adapter (PrismaPg). Mirrors the joodcms pattern.
-
+// Prisma 7 client generator with the Postgres driver adapter configured in
+// prisma.config.ts.
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,9 +9,8 @@ datasource db {
   provider = "postgresql"
 }
 
-// ─────────────────────────────────────────────────────────────
-// Keenpix domain (org-scoped for SaaS-readiness)
-// ─────────────────────────────────────────────────────────────
+// Keenpix domain models. Org-scoped so single-org self-hosting can grow into
+// multi-org SaaS without reshaping request logs and projects.
 model Org {
   id        String    @id @default(cuid())
   name      String
@@ -44,7 +42,7 @@ model Project {
   allowedOrigins String[]
   color1         String       @default("#FF6B2C")
   color2         String       @default("#FFA76B")
-  // Per-project pipeline defaults (applied when a request omits the param).
+  // Defaults applied when a transform request omits the matching query param.
   autoFormat     Boolean      @default(true)
   stripMetadata  Boolean      @default(true)
   defaultQuality Int          @default(75)
@@ -76,9 +74,7 @@ model RequestLog {
   @@index([orgId, ts])
 }
 
-// ─────────────────────────────────────────────────────────────
-// better-auth models
-// ─────────────────────────────────────────────────────────────
+// better-auth tables. Keep these names aligned with the auth adapter config.
 model User {
   id            String    @id @default(cuid())
   email         String    @unique

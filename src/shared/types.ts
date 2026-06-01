@@ -1,5 +1,3 @@
-/** Domain types shared across data-access, functions, and UI. */
-
 export type ProjectEnv = 'production' | 'staging' | 'development'
 
 export function isProjectEnv(value: unknown): value is ProjectEnv {
@@ -10,20 +8,19 @@ export function isProjectEnv(value: unknown): value is ProjectEnv {
 
 export interface Project {
   allowedOrigins: string[]
-  /** Auto-negotiate AVIF/WebP from the Accept header for fmt=auto requests. */
+  // Auto-negotiate AVIF/WebP from Accept when fmt=auto is requested.
   autoFormat: boolean
-  /** gradient stops for the project card header */
   color1: string
   color2: string
   createdAt: string
-  /** Quality (30–100) applied when a request omits ?q=. */
+  // Applied when a transform request omits ?q=.
   defaultQuality: number
   env: ProjectEnv
   id: string
   name: string
   orgId: string
   origin: string
-  /** Strip EXIF/GPS/color profiles from output. */
+  // false preserves metadata such as EXIF, GPS, and ICC profiles.
   stripMetadata: boolean
 }
 
@@ -43,7 +40,6 @@ export interface TimePoint {
 }
 
 export interface FormatSlice {
-  /** css var token, e.g. 'var(--chart-1)' */
   color: string
   label: string
   value: number
@@ -62,7 +58,6 @@ export interface LatencyBin {
   value: number
 }
 
-/** Any HTTP status the transform endpoint can log (200/400/403/404/413/5xx). */
 export type LogStatus = number
 
 export type LogFormat = 'avif' | 'webp' | 'jpeg' | 'png'
@@ -100,13 +95,11 @@ export interface AnalyticsSummary {
   totalRequests: number
 }
 
-/** Per-project 24h rollup for the dashboard cards. */
 export interface ProjectStat {
   hitRate: number
   requests: number
 }
 
-/** Per-project rollup for the "All projects" analytics breakdown. */
 export interface ProjectBreakdownRow {
   bandwidthSaved: number
   hitRate: number
@@ -115,13 +108,12 @@ export interface ProjectBreakdownRow {
   requests: number
 }
 
-/** A KPI value with its previous-window value, so the UI can show a real trend. */
 export interface KpiValue {
+  // Previous-window value used by the dashboard cards to show real trends.
   prev: number
   value: number
 }
 
-/** The four dashboard KPI cards (current window + previous window for trends). */
 export interface DashboardKpis {
   bandwidthSaved: KpiValue
   hitRate: KpiValue

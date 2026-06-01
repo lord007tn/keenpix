@@ -93,10 +93,8 @@ async function readOrCreateTransform({
   }
 }
 
-/**
- * Use case for the transform pipeline. It resolves the project, validates the
- * origin, runs fetch+sharp+cache helpers, and records request analytics.
- */
+// Use case for the transform pipeline: resolve project settings, validate the
+// origin, run fetch + sharp + cache, then record request analytics.
 export async function optimizeProjectImage({
   accept,
   projectId,

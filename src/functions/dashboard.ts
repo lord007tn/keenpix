@@ -8,11 +8,8 @@ import { listProjects } from '@/data-access/projects'
 import { authMiddleware } from '@/lib/auth/guards'
 import { dashboardInputSchema } from '@/schemas/analytics'
 
-/**
- * Dashboard payload: scope-aware KPIs (with real trends) + a requests
- * timeseries for the chart, plus the projects list and per-project 24h stats
- * for the data table.
- */
+// Dashboard payload is assembled server-side so every surface uses the same
+// project scope: KPIs, chart series, project list, and per-project stats.
 export const getDashboardFn = createServerFn({ method: 'GET' })
   .inputValidator(dashboardInputSchema)
   .middleware([authMiddleware])

@@ -11,6 +11,8 @@ import { authMiddleware } from '@/lib/auth/guards'
 import { analyticsInputSchema } from '@/schemas/analytics'
 import type { ProjectBreakdownRow } from '@/shared/types'
 
+// A selected project already scopes the page, so the per-project breakdown only
+// appears in the org-wide "All projects" analytics view.
 export const getAnalyticsFn = createServerFn({ method: 'GET' })
   .inputValidator(analyticsInputSchema)
   .middleware([authMiddleware])
@@ -23,7 +25,6 @@ export const getAnalyticsFn = createServerFn({ method: 'GET' })
         getFormatDistribution(range, project, filters),
         getTopImages(range, project, filters),
         getLatencyBins(range, project, filters),
-        // The per-project breakdown only applies to the org-wide ("All") view.
         project
           ? Promise.resolve<ProjectBreakdownRow[]>([])
           : getProjectBreakdown(range),

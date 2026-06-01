@@ -41,13 +41,10 @@ function keenpixDevApiPassthrough(): Plugin {
 
 const config = defineConfig({
   plugins: [
-    // Fumadocs MDX — compiles content/docs and provides the `collections/*`
-    // modules. Must run before tanstackStart so .mdx routes resolve.
     mdx(),
     keenpixDevApiPassthrough(),
     devtools(),
     nitro(),
-    // this is the plugin that enables path aliases
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],
     }),

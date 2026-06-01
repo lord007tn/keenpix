@@ -44,7 +44,6 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force"
   },
   "prisma": {
@@ -60,8 +59,7 @@
       "sharp"
     ],
     "overrides": {
-      "@hono/node-server": "^1.19.14",
-      "@prisma/studio-core": "link:./tools/prisma-studio-stub"
+      "@hono/node-server": "^1.19.14"
     }
   },
   "dependencies": {

@@ -22,12 +22,13 @@ export interface TransformKeyInput {
   w?: number
 }
 
-/** Content-addressed cache key — includes format so the CDN/disk key is per-format (CDN-safe). */
+// Content-addressed cache key. The negotiated format is included so CDN/disk
+// entries never collide across AVIF/WebP/JPEG/PNG variants.
 export function buildCacheKey(input: TransformKeyInput): string {
   return createHash('sha256').update(JSON.stringify(input)).digest('hex')
 }
 
-/** Long-lived immutable caching — what lets a CDN (Cloudflare) cache the response. */
+// Long-lived immutable caching is what lets an outer CDN cache transform output.
 export function cacheControl(): string {
   return 'public, max-age=31536000, immutable'
 }
