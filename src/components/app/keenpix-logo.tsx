@@ -8,66 +8,22 @@ export function KeenpixLogo({
   showName?: boolean
 }) {
   return (
-    <span className={cn('flex items-center gap-2', className)}>
-      <svg
-        aria-hidden="true"
-        className="size-5"
-        fill="none"
-        viewBox="0 0 14 14"
-      >
-        <rect fill="var(--primary)" height="3" rx="0.6" width="3" x="0" y="0" />
-        <rect
-          fill="var(--chart-2)"
-          height="3"
-          rx="0.6"
-          width="3"
-          x="5.5"
-          y="0"
+    <span className={cn('flex items-center gap-2.5 leading-none', className)}>
+      <span className="flex size-8 items-center justify-center overflow-hidden rounded-md bg-background shadow-sm ring-1 ring-border">
+        <img
+          alt=""
+          aria-hidden="true"
+          className="size-full object-cover"
+          height="32"
+          src="/logo192.png"
+          width="32"
         />
-        <rect
-          fill="var(--primary)"
-          height="3"
-          rx="0.6"
-          width="3"
-          x="11"
-          y="0"
-        />
-        <rect
-          fill="var(--foreground)"
-          height="3"
-          rx="0.6"
-          width="3"
-          x="5.5"
-          y="5.5"
-        />
-        <rect
-          fill="var(--primary)"
-          height="3"
-          rx="0.6"
-          width="3"
-          x="0"
-          y="11"
-        />
-        <rect
-          fill="var(--chart-2)"
-          height="3"
-          rx="0.6"
-          width="3"
-          x="5.5"
-          y="11"
-        />
-        <rect
-          fill="var(--primary)"
-          height="3"
-          rx="0.6"
-          width="3"
-          x="11"
-          y="11"
-        />
-      </svg>
+      </span>
       {showName ? (
-        <span className="font-semibold tracking-tight">keenpix</span>
-      ) : null}
+        <span className="font-semibold tracking-tight">Keenpix</span>
+      ) : (
+        <span className="sr-only">Keenpix</span>
+      )}
     </span>
   )
 }
