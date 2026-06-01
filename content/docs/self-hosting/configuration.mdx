@@ -22,8 +22,10 @@ Set these in `.env` (or your orchestrator's secrets).
 
 ## SMTP
 
-SMTP can be managed from **Settings → Email**. The environment variables below
-act as defaults when database-managed SMTP settings are not enabled.
+SMTP can be managed from **Settings → Email**. When database-managed SMTP is
+enabled and has both a host and sender email, it takes precedence over the
+environment variables below. Env SMTP is only used as a fallback when Settings
+SMTP is disabled or incomplete.
 
 | Variable          | Default | Purpose                                      |
 | ----------------- | ------- | -------------------------------------------- |

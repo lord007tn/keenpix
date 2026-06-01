@@ -36,4 +36,5 @@ The dashboard is bootstrapped with a super admin account. Set
 `KEENPIX_SUPER_ADMIN_EMAIL` and `KEENPIX_SUPER_ADMIN_PASSWORD` before running
 the seed or Docker container. The super admin can create copyable invitation
 links for other staff from **Settings → Staff**. Email delivery is optional and
-uses SMTP configured from **Settings → Email** or the SMTP environment variables.
+uses SMTP configured from **Settings → Email** first. SMTP environment variables
+are only used as a fallback when Settings SMTP is disabled or incomplete.

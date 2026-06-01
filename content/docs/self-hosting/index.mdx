@@ -30,7 +30,8 @@ the dashboard and the transform endpoint as a non-root user.
 2. Create a project pointed at your image origin.
 3. Add your source host under **Settings → Security → Allowed hosts**.
 4. Invite any staff from **Settings → Staff**. Copy the invitation link, or send
-   it by email after SMTP is configured.
+   it by email after SMTP is configured in **Settings → Email**. Env SMTP values
+   are only used as a fallback when Settings SMTP is disabled or incomplete.
 5. Request `/img/https://your-origin.example/photo.jpg?project=ID&w=1200&fmt=webp` — no API keys.
 
 ## Architecture
