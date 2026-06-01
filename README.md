@@ -1,13 +1,19 @@
 # Keenpix
 
-A self-hosted image-optimization service — a drop-in, open-source alternative to ImageKit/imgix. Point it at your origin, request a URL, and Keenpix fetches the image, transforms it with [sharp](https://sharp.pixelplumbing.com/), caches it to disk, and serves it CDN-ready.
+![Keenpix brand image](./public/brand/keenpix-og.png)
 
-- **Transform API** — `GET /img/https://origin.example/photo.jpg?project=…&w=…&fmt=…` → resize / re-encode (AVIF/WebP/JPEG/PNG) / blur, content-negotiated, immutably cacheable.
-- **No API keys** — access is gated entirely by each project's **domain allowlist**. An empty allowlist fails closed (403), so a fresh project is never an open proxy.
-- **Projects** — each project = one origin + an allowlist + its own request logs.
-- **Built-in analytics** — requests, bandwidth saved, cache hit-rate, formats, latency — from the request log.
-- **Auth** — seeded super admin, copyable staff invitations, and optional SMTP-backed invite/test emails.
-- **Hardened for the open internet** — SSRF guard (allowlist + private/loopback/link-local/CGNAT + IPv4-mapped-IPv6 + DNS-rebinding blocks), decompression-bomb + response-size + concurrency limits.
+Keenpix is a self-hosted image optimization layer for teams that want the speed of an image CDN without handing the pipeline to another service. Point it at an allowlisted origin, request one URL, and Keenpix fetches the image, transforms it with [sharp](https://sharp.pixelplumbing.com/), caches the variant to disk, records analytics, and serves a CDN-ready response.
+
+It is built for operators who want the important parts kept visible: project allowlists, request logs, disk cache behavior, and deployment configuration all live in your own stack.
+
+## What Keenpix ships
+
+- **Transform API** - `GET /img/https://origin.example/photo.jpg?project=...&w=...&fmt=...` resizes, re-encodes, blurs, negotiates modern formats, and returns immutable cache headers.
+- **No public API keys** - access is gated by each project's domain allowlist. An empty allowlist fails closed with 403, so a fresh project is never an open proxy.
+- **Projects and origins** - each project owns its source host rules, settings, request logs, and analytics.
+- **Built-in analytics** - requests, bandwidth saved, cache hit rate, output formats, latency, and top images come from the request log.
+- **Self-host dashboard** - seeded super admin, staff invitations, project settings, SMTP configuration, and operational views.
+- **Open-internet hardening** - allowlist checks, private/loopback/link-local/CGNAT blocking, IPv4-mapped IPv6 handling, DNS rebinding protection, response-size limits, decompression-bomb limits, and transform back-pressure.
 
 Stack: TanStack Start (React 19, SSR) · Prisma 7 + PostgreSQL · sharp · Docker. MIT licensed.
 
