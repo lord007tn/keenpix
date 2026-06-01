@@ -2,6 +2,15 @@
 
 All notable changes to Keenpix are documented here.
 
+## [v0.1.1] - 2026-06-01
+
+### Changed
+
+- Reorganized settings into clearer surfaces. Global workspace settings (staff management and email/SMTP) moved out of project Settings into a dedicated **Workspace** area reached from the user menu (super admins only).
+- Project **Settings** is now scoped to a single project — General, Pipeline, and Security — in a tabbed layout.
+- Consolidated SMTP configuration and the delivery check into one card: edit the connection, then save or send a test email from the same place.
+- Trimmed the **Account** page to Profile and Appearance, removing the duplicated security and workspace cards.
+
 ## [v0.1.0] - 2026-06-01
 
 Initial public release for self-hosting.

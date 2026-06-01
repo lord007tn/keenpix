@@ -21,6 +21,7 @@ import { Route as DocsSplatRouteImport } from './routes/docs/$'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
+import { Route as AppWorkspaceIndexRouteImport } from './routes/app/workspace/index'
 import { Route as AppSettingsIndexRouteImport } from './routes/app/settings/index'
 import { Route as AppLogsIndexRouteImport } from './routes/app/logs/index'
 import { Route as AppDashboardIndexRouteImport } from './routes/app/dashboard/index'
@@ -90,6 +91,11 @@ const authLoginRoute = authLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppWorkspaceIndexRoute = AppWorkspaceIndexRouteImport.update({
+  id: '/workspace/',
+  path: '/workspace/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/app/dashboard/': typeof AppDashboardIndexRoute
   '/app/logs/': typeof AppLogsIndexRoute
   '/app/settings/': typeof AppSettingsIndexRoute
+  '/app/workspace/': typeof AppWorkspaceIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/app/dashboard': typeof AppDashboardIndexRoute
   '/app/logs': typeof AppLogsIndexRoute
   '/app/settings': typeof AppSettingsIndexRoute
+  '/app/workspace': typeof AppWorkspaceIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/app/dashboard/': typeof AppDashboardIndexRoute
   '/app/logs/': typeof AppLogsIndexRoute
   '/app/settings/': typeof AppSettingsIndexRoute
+  '/app/workspace/': typeof AppWorkspaceIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -211,6 +220,7 @@ export interface FileRouteTypes {
     | '/app/dashboard/'
     | '/app/logs/'
     | '/app/settings/'
+    | '/app/workspace/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/app/dashboard'
     | '/app/logs'
     | '/app/settings'
+    | '/app/workspace'
   id:
     | '__root__'
     | '/'
@@ -252,6 +263,7 @@ export interface FileRouteTypes {
     | '/app/dashboard/'
     | '/app/logs/'
     | '/app/settings/'
+    | '/app/workspace/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -356,6 +368,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/workspace/': {
+      id: '/app/workspace/'
+      path: '/workspace'
+      fullPath: '/app/workspace/'
+      preLoaderRoute: typeof AppWorkspaceIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/app/settings/': {
       id: '/app/settings/'
       path: '/settings'
@@ -415,6 +434,7 @@ interface AppRouteRouteChildren {
   AppDashboardIndexRoute: typeof AppDashboardIndexRoute
   AppLogsIndexRoute: typeof AppLogsIndexRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
+  AppWorkspaceIndexRoute: typeof AppWorkspaceIndexRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
@@ -424,6 +444,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppDashboardIndexRoute: AppDashboardIndexRoute,
   AppLogsIndexRoute: AppLogsIndexRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
+  AppWorkspaceIndexRoute: AppWorkspaceIndexRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(

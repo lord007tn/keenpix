@@ -1,6 +1,7 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import {
   BookOpenIcon,
+  Building2Icon,
   ChevronsUpDownIcon,
   LogOutIcon,
   MoonIcon,
@@ -45,6 +46,7 @@ export function NavUser({ user }: { user: SessionUser }) {
   const [pending, setPending] = useState(false)
   const isDark = resolvedTheme === 'dark'
   const display = user.name?.trim() || user.email
+  const isSuperAdmin = user.role === 'super_admin'
 
   async function handleSignOut() {
     setPending(true)
@@ -107,6 +109,12 @@ export function NavUser({ user }: { user: SessionUser }) {
                 <UserIcon />
                 Account
               </DropdownMenuItem>
+              {isSuperAdmin ? (
+                <DropdownMenuItem render={<Link to="/app/workspace" />}>
+                  <Building2Icon />
+                  Workspace
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem
                 render={
                   // biome-ignore lint/a11y/useAnchorContent: the icon + "Documentation" label are merged into the anchor by Base UI's render prop
