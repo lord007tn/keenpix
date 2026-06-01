@@ -1,4 +1,5 @@
-import { createFileRoute, useRouteContext } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
+import { ImageIcon, InfoIcon, ShieldIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/app/page-header'
@@ -12,8 +13,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { MailingPanel, SmtpSettingsPanel } from '@/features/admin/smtp-settings'
-import { StaffManagement } from '@/features/admin/staff-management'
 import { AllowedHosts } from '@/features/projects/allowed-hosts'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { PipelineSettings } from '@/features/projects/pipeline-settings'
@@ -47,52 +46,6 @@ function SettingRow({
 
 function SettingsPage() {
   const { currentProject, isAll, projects, setProject } = useProject()
-  const { user } = useRouteContext({ from: '/app' })
-  const isSuperAdmin = user.role === 'super_admin'
-  const workspaceAdmin = isSuperAdmin ? (
-    <Card>
-      <CardHeader>
-        <CardTitle>Workspace</CardTitle>
-        <CardDescription>
-          Manage staff access and the mailing configuration used for
-          invitations.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="staff">
-          <TabsList>
-            <TabsTrigger value="staff">Staff</TabsTrigger>
-            <TabsTrigger value="mailing">Mailing</TabsTrigger>
-          </TabsList>
-
-          <TabsContent className="pt-6" value="staff">
-            <StaffManagement />
-          </TabsContent>
-
-          <TabsContent className="flex flex-col gap-6 pt-6" value="mailing">
-            <div className="flex flex-col gap-4">
-              <div>
-                <h3 className="font-medium text-sm">SMTP connection</h3>
-                <p className="text-muted-foreground text-xs">
-                  Credentials used when staff invitations are emailed.
-                </p>
-              </div>
-              <SmtpSettingsPanel />
-            </div>
-            <div className="flex flex-col gap-4 border-t pt-6">
-              <div>
-                <h3 className="font-medium text-sm">Delivery check</h3>
-                <p className="text-muted-foreground text-xs">
-                  Confirm the active sender and send a test message.
-                </p>
-              </div>
-              <MailingPanel />
-            </div>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
-  ) : null
 
   if (isAll) {
     // Settings are per-project. In "All projects" scope, prompt the user to
@@ -100,10 +53,9 @@ function SettingsPage() {
     return (
       <div className="flex max-w-4xl flex-col gap-6 p-6">
         <PageHeader subtitle="Per-project configuration." title="Settings" />
-        {workspaceAdmin}
         <Card>
           <CardHeader>
-            <CardTitle>Pick a project</CardTitle>
+            <CardTitle>Select a project</CardTitle>
             <CardDescription>
               Settings apply to a single project. Choose one to configure its
               origin, allowlist, and pipeline.
@@ -159,93 +111,115 @@ function SettingsPage() {
     <div className="flex max-w-4xl flex-col gap-6 p-6">
       <PageHeader
         eyebrow={currentProject.name}
-        subtitle="Per-project configuration."
+        subtitle="Configuration for this project."
         title="Settings"
       />
 
-      {workspaceAdmin}
+      <Tabs defaultValue="general">
+        <TabsList>
+          <TabsTrigger value="general">
+            <InfoIcon data-icon="inline-start" />
+            General
+          </TabsTrigger>
+          <TabsTrigger value="pipeline">
+            <ImageIcon data-icon="inline-start" />
+            Pipeline
+          </TabsTrigger>
+          <TabsTrigger value="security">
+            <ShieldIcon data-icon="inline-start" />
+            Security
+          </TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>General</CardTitle>
-        </CardHeader>
-        <CardContent className="divide-y">
-          <SettingRow
-            description="Use this in your transform URLs: /img/<source-url>?project=<id>"
-            label="Project ID"
-          >
-            <div className="flex items-center gap-2">
-              <code className="rounded bg-muted px-2 py-1 font-mono text-xs">
-                {currentProject?.id ?? '—'}
-              </code>
-              <Button
-                onClick={() => {
-                  if (currentProject?.id) {
-                    navigator.clipboard?.writeText(currentProject.id)
-                    toast.success('Project ID copied')
-                  }
-                }}
-                size="sm"
-                variant="outline"
+        <TabsContent className="pt-6" value="general">
+          <Card>
+            <CardHeader>
+              <CardTitle>General</CardTitle>
+              <CardDescription>
+                Identifiers and origin for this project.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="divide-y">
+              <SettingRow
+                description="Use this in your transform URLs: /img/<source-url>?project=<id>"
+                label="Project ID"
               >
-                Copy
-              </Button>
-            </div>
-          </SettingRow>
-          <SettingRow
-            description="The project's display name."
-            label="Project name"
-          >
-            <span className="text-sm sm:text-right">
-              {currentProject?.name ?? '—'}
-            </span>
-          </SettingRow>
-          <SettingRow
-            description="Where keenpix fetches originals from."
-            label="Origin"
-          >
-            <code className="break-all font-mono text-muted-foreground text-xs">
-              {currentProject?.origin ?? '—'}
-            </code>
-          </SettingRow>
-        </CardContent>
-      </Card>
+                <div className="flex items-center gap-2">
+                  <code className="rounded bg-muted px-2 py-1 font-mono text-xs">
+                    {currentProject.id}
+                  </code>
+                  <Button
+                    onClick={() => {
+                      navigator.clipboard?.writeText(currentProject.id)
+                      toast.success('Project ID copied')
+                    }}
+                    size="sm"
+                    variant="outline"
+                  >
+                    Copy
+                  </Button>
+                </div>
+              </SettingRow>
+              <SettingRow
+                description="The project's display name."
+                label="Project name"
+              >
+                <span className="text-sm sm:text-right">
+                  {currentProject.name}
+                </span>
+              </SettingRow>
+              <SettingRow
+                description="Where keenpix fetches originals from."
+                label="Origin"
+              >
+                <code className="break-all font-mono text-muted-foreground text-xs">
+                  {currentProject.origin}
+                </code>
+              </SettingRow>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Pipeline</CardTitle>
-          <CardDescription>
-            Defaults applied when a transform request omits the matching
-            parameter.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <PipelineSettings project={currentProject} />
-        </CardContent>
-      </Card>
+        <TabsContent className="pt-6" value="pipeline">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pipeline</CardTitle>
+              <CardDescription>
+                Defaults applied when a transform request omits the matching
+                parameter.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PipelineSettings project={currentProject} />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Security</CardTitle>
-          <CardDescription>
-            Access is controlled entirely by the allowlist: keenpix only
-            transforms images whose source host is listed here. No API keys to
-            manage or leak.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="divide-y">
-          <SettingRow
-            description="keenpix only fetches from origins on this list. An empty list blocks every request."
-            label="Allowed hosts"
-          >
-            <AllowedHosts
-              initial={currentProject?.allowedOrigins ?? []}
-              key={currentProject?.id}
-              projectId={currentProject?.id ?? ''}
-            />
-          </SettingRow>
-        </CardContent>
-      </Card>
+        <TabsContent className="pt-6" value="security">
+          <Card>
+            <CardHeader>
+              <CardTitle>Security</CardTitle>
+              <CardDescription>
+                Access is controlled entirely by the allowlist: keenpix only
+                transforms images whose source host is listed here. No API keys
+                to manage or leak.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="divide-y">
+              <SettingRow
+                description="keenpix only fetches from origins on this list. An empty list blocks every request."
+                label="Allowed hosts"
+              >
+                <AllowedHosts
+                  initial={currentProject.allowedOrigins ?? []}
+                  key={currentProject.id}
+                  projectId={currentProject.id}
+                />
+              </SettingRow>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
