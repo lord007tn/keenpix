@@ -1,16 +1,9 @@
 import {
   createFileRoute,
-  useNavigate,
   useRouteContext,
   useRouter,
 } from '@tanstack/react-router'
-import {
-  KeyRoundIcon,
-  LogOutIcon,
-  MonitorIcon,
-  MoonIcon,
-  SunIcon,
-} from 'lucide-react'
+import { KeyRoundIcon, MonitorIcon, MoonIcon, SunIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
@@ -29,8 +22,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { getErrorMessage } from '@/errors/common'
-import { authClient, signOut } from '@/lib/auth/client'
-import { useProject } from '@/stores/project-context'
+import { authClient } from '@/lib/auth/client'
 
 export const Route = createFileRoute('/app/account/')({
   component: AccountPage,
@@ -143,24 +135,12 @@ function Row({
 
 function AccountPage() {
   const { user } = useRouteContext({ from: '/app' })
-  const { projects } = useProject()
-  const navigate = useNavigate()
-  const [pending, setPending] = useState(false)
   const display = user.name?.trim() || user.email
-
-  async function handleSignOut() {
-    setPending(true)
-    try {
-      await signOut()
-    } finally {
-      navigate({ to: '/login' })
-    }
-  }
 
   return (
     <div className="flex max-w-4xl flex-col gap-6 p-6">
       <PageHeader
-        subtitle="Your profile and preferences for this self-hosted workspace."
+        subtitle="Your profile and personal preferences."
         title="Account"
       />
 
@@ -193,6 +173,15 @@ function AccountPage() {
                 {user.email}
               </code>
             </Row>
+            <Row
+              description="Set during setup or when you accepted an invitation."
+              label="Sign-in method"
+            >
+              <Badge variant="outline">
+                <KeyRoundIcon data-icon="inline-start" />
+                Email &amp; password
+              </Badge>
+            </Row>
           </div>
         </CardContent>
       </Card>
@@ -205,69 +194,6 @@ function AccountPage() {
         <CardContent className="divide-y">
           <Row description="Light, dark, or follow your system." label="Theme">
             <ThemeControl />
-          </Row>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Security</CardTitle>
-          <CardDescription>
-            This self-hosted instance is bootstrapped with a super admin
-            account.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="divide-y">
-          <Row
-            description="Seeded during Prisma bootstrap."
-            label="Sign-in method"
-          >
-            <Badge variant="info">
-              <KeyRoundIcon data-icon="inline-start" />
-              Email and password
-            </Badge>
-          </Row>
-          <Row
-            description="Configured through KEENPIX_SUPER_ADMIN_PASSWORD or an invitation."
-            label="Password"
-          >
-            <Badge variant="outline">
-              <KeyRoundIcon data-icon="inline-start" />
-              Email and password
-            </Badge>
-          </Row>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Workspace</CardTitle>
-          <CardDescription>
-            A self-hosted Keenpix instance is a single workspace. Each project
-            is one origin, one allowlist, one analytics view.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="divide-y">
-          <Row description="Projects in this workspace." label="Projects">
-            <span className="font-medium text-sm tabular-nums">
-              {projects.length}
-            </span>
-          </Row>
-          <Row
-            description="This instance runs on your own infrastructure."
-            label="Hosting"
-          >
-            <Badge variant="success">Self-hosted</Badge>
-          </Row>
-          <Row description="End your session on this device." label="Session">
-            <Button
-              disabled={pending}
-              onClick={handleSignOut}
-              variant="outline"
-            >
-              <LogOutIcon data-icon="inline-start" />
-              {pending ? 'Signing out…' : 'Sign out'}
-            </Button>
           </Row>
         </CardContent>
       </Card>
