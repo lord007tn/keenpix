@@ -1,8 +1,15 @@
 {
   "id": "/",
   "short_name": "Keenpix",
-  "name": "Keenpix",
+  "name": "Keenpix - self-hosted image optimization",
+  "description": "Open-source, self-hosted image optimization with sharp transforms, disk caching, analytics, and one drop-in URL.",
   "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
