@@ -35,7 +35,7 @@ Use [docker-compose.coolify.yml](./docker-compose.coolify.yml) for a Coolify ser
 
 1. In Coolify, create a new resource with **Docker Compose Empty**.
 2. Paste the contents of `docker-compose.coolify.yml`.
-3. Set your public domain on the `app` service. Coolify will generate `SERVICE_URL_APP_3000`, database credentials, the auth secret, and the super-admin password. `BETTER_AUTH_URL` and `KEENPIX_APP_URL` are inferred from `SERVICE_URL_APP_3000`.
+3. Set your public domain on the `app` service. Coolify will generate `SERVICE_URL_APP`, database credentials, the auth secret, and the super-admin password. `BETTER_AUTH_URL` and `KEENPIX_APP_URL` are inferred from `SERVICE_URL_APP`, which must match the browser-facing URL without the container port.
 4. Optionally change `KEENPIX_SUPER_ADMIN_EMAIL` from the default `admin@example.com`.
 5. Deploy, then sign in with `KEENPIX_SUPER_ADMIN_EMAIL` and the generated `SERVICE_PASSWORD_64_ADMIN` value shown in Coolify's environment variables.
 
@@ -84,9 +84,9 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_APP_URL` | – | Canonical URL used for hosted docs metadata and generated OG/LLM links. Defaults to `BETTER_AUTH_URL`. |
 | `KEENPIX_SUPER_ADMIN_EMAIL` | ✅ | Email for the seeded super admin account. |
 | `KEENPIX_SUPER_ADMIN_PASSWORD` | ✅ | Password for the seeded super admin account. |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` | – | Optional SMTP defaults used when database SMTP settings are not enabled. |
-| `SMTP_USER` / `SMTP_PASSWORD` | – | Optional SMTP credentials. |
-| `SMTP_FROM_EMAIL` / `SMTP_FROM_NAME` | – | Optional SMTP sender defaults. |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` | – | Optional SMTP fallback used only when Settings SMTP is disabled or incomplete. |
+| `SMTP_USER` / `SMTP_PASSWORD` | – | Optional fallback SMTP credentials. |
+| `SMTP_FROM_EMAIL` / `SMTP_FROM_NAME` | – | Optional fallback SMTP sender defaults. |
 | `KEENPIX_SELF_HOST` | – | Set `true` to run app-only self-host mode. Docker images default this to `true`. |
 | `KEENPIX_RUN_MIGRATIONS` / `KEENPIX_RUN_SEED` | – | Docker entrypoint controls for running migrations and bootstrap seed before app start. Defaults to `true`. |
 | `KEENPIX_CACHE_DIR` | – | Disk cache location (default `./.keenpix-cache`). |
