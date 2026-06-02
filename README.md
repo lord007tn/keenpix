@@ -27,6 +27,8 @@ Keenpix keeps helpers and utils scoped by folder and purpose:
 - `helpers/<domain>/` is for pure domain helpers with real parsing, composition, or validation behavior. Do not put broad catch-all files like `helpers/admin.ts` here.
 - `utils/<primitive>/` is for pure generic primitives, not product-specific response shaping.
 - Do not extract functions that only return object literals or forward fields. Keep that code in the owning module unless the helper removes real logic or validation edge cases.
+- Use operation verbs precisely: `getProject` for one identified project, `listProjects` for a collection, and explicit mutation/check verbs such as `create`, `update`, `delete`, `verify`, `enable`, `disable`, `add`, and `remove`.
+- `data-access/` talks to the database; `actions/` combine data-access/helpers/utils/integrations into use cases; `functions/` validate, authorize, shape entry/exit data, and call actions.
 - Function complexity lint rules are disabled on purpose. Prefer readable local control flow over splitting code only for a metric.
 
 See [AGENTS.md](./AGENTS.md) and [src/README.md](./src/README.md) for the full repository rules.

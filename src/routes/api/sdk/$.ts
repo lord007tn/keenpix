@@ -1,13 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import {
-  addAllowedOrigin,
+  addAllowedHost,
   createProject,
   getProject,
   listProjects,
-  removeAllowedOrigin,
+  removeAllowedHost,
   updateProjectSettings,
-} from '@/data-access/projects'
+} from '@/actions/projects'
 import { auth } from '@/lib/auth/server'
 import {
   allowedHostValueSchema,
@@ -15,7 +15,6 @@ import {
   internalProjectSettingsPatchSchema,
 } from '@/schemas/projects'
 
-const DEFAULT_ORG = 'org_default'
 const INTERNAL_API_KEY_CONFIG = 'internal'
 const FORWARDED_PAIR_RE = /\s*([^=;\s]+)=("[^"]+"|[^;\s]+)\s*/g
 const INVALID_FORWARDED_HOST_RE = /[\s/?#\\]/
@@ -87,7 +86,7 @@ async function handleSdkRequest(
 async function handleProjectsCollection(request: Request, method: string) {
   if (method === 'GET') {
     const access = await requireApiKey(request, 'read')
-    const projects = await listProjects(DEFAULT_ORG)
+    const projects = await listProjects()
     return json({
       projects: access.projectId
         ? projects.filter((project) => project.id === access.projectId)
@@ -101,7 +100,7 @@ async function handleProjectsCollection(request: Request, method: string) {
       return jsonError('API key cannot create projects', 403)
     }
     const input = internalCreateProjectSchema.parse(await readJson(request))
-    const project = await createProject({ orgId: DEFAULT_ORG, ...input })
+    const project = await createProject(input)
     return json({ project }, { status: 201 })
   }
 
@@ -118,7 +117,7 @@ async function handleProjectResource(
   }
 
   await requireApiKey(request, 'read', projectId)
-  const project = await getProject(projectId, DEFAULT_ORG)
+  const project = await getProject(projectId)
   return project ? json({ project }) : jsonError('Project not found', 404)
 }
 
@@ -132,7 +131,7 @@ async function handleProjectConfiguration(
   }
 
   await requireApiKey(request, 'read', projectId)
-  const project = await getProject(projectId, DEFAULT_ORG)
+  const project = await getProject(projectId)
   if (!project) {
     return jsonError('Project not found', 404)
   }
@@ -180,7 +179,7 @@ async function handleProjectSettings(
   const patch = internalProjectSettingsPatchSchema.parse(
     await readJson(request),
   )
-  const project = await updateProjectSettings(projectId, patch, DEFAULT_ORG)
+  const project = await updateProjectSettings(projectId, patch)
   return project ? json({ project }) : jsonError('Project not found', 404)
 }
 
@@ -194,14 +193,14 @@ async function handleProjectDomains(
     const { host } = z
       .object({ host: allowedHostValueSchema })
       .parse(await readJson(request))
-    const project = await addAllowedOrigin(projectId, host, DEFAULT_ORG)
+    const project = await addAllowedHost(projectId, host)
     return project ? json({ project }) : jsonError('Project not found', 404)
   }
 
   if (method === 'DELETE') {
     await requireApiKey(request, 'write', projectId)
     const host = await readHostFromRequest(request)
-    const project = await removeAllowedOrigin(projectId, host, DEFAULT_ORG)
+    const project = await removeAllowedHost(projectId, host)
     return project ? json({ project }) : jsonError('Project not found', 404)
   }
 
