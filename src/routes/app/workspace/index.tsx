@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { MailIcon, UsersIcon } from 'lucide-react'
+import { KeyRoundIcon, MailIcon, UsersIcon } from 'lucide-react'
 import { PageHeader } from '@/components/app/page-header'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ApiKeyManagement } from '@/features/admin/api-key-management'
 import { SmtpSettingsPanel } from '@/features/admin/smtp-settings'
 import { StaffManagement } from '@/features/admin/staff-management'
 
@@ -43,6 +44,10 @@ function WorkspacePage() {
             <MailIcon data-icon="inline-start" />
             Email
           </TabsTrigger>
+          <TabsTrigger value="api-keys">
+            <KeyRoundIcon data-icon="inline-start" />
+            API Keys
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent className="pt-6" value="staff">
@@ -70,6 +75,21 @@ function WorkspacePage() {
             </CardHeader>
             <CardContent>
               <SmtpSettingsPanel />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent className="pt-6" value="api-keys">
+          <Card>
+            <CardHeader>
+              <CardTitle>Internal API keys</CardTitle>
+              <CardDescription>
+                Credentials for trusted backend integrations. These are not used
+                by the public image transform endpoint.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ApiKeyManagement />
             </CardContent>
           </Card>
         </TabsContent>
