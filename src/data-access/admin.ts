@@ -8,13 +8,13 @@ import {
   type StaffRole,
   staffInvitationData,
   staffUserData,
-} from './admin-helpers'
+} from './helpers/admin'
 
 const DEFAULT_SMTP_ID = 'default'
 const TOKEN_BYTES = 32
 const DAY_MS = 86_400_000
 
-export type { StaffRole } from './admin-helpers'
+export type { StaffRole } from './helpers/admin'
 
 export interface SmtpSettingsInput {
   enabled?: boolean
