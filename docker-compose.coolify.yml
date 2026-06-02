@@ -16,7 +16,7 @@ services:
       start_period: 30s
 
   app:
-    image: ghcr.io/lord007tn/keenpix:v0.1.0
+    image: ghcr.io/lord007tn/keenpix:v0.1.2
     restart: unless-stopped
     depends_on:
       postgres:

@@ -47,8 +47,11 @@ export async function listProjects(orgId = DEFAULT_ORG): Promise<Project[]> {
   return rows.map(toProject)
 }
 
-export async function getProject(id: string): Promise<Project | undefined> {
-  const p = await prisma.project.findUnique({ where: { id } })
+export async function getProject(
+  id: string,
+  orgId = DEFAULT_ORG,
+): Promise<Project | undefined> {
+  const p = await prisma.project.findFirst({ where: { id, orgId } })
   return p ? toProject(p) : undefined
 }
 
@@ -98,8 +101,9 @@ function deriveAllowedOriginsFromUrl(originUrl: string): string[] {
 export async function addAllowedOrigin(
   projectId: string,
   host: string,
+  orgId = DEFAULT_ORG,
 ): Promise<Project | undefined> {
-  const p = await prisma.project.findUnique({ where: { id: projectId } })
+  const p = await prisma.project.findFirst({ where: { id: projectId, orgId } })
   if (!p) {
     return
   }
@@ -116,11 +120,14 @@ export async function addAllowedOrigin(
 export async function removeAllowedOrigin(
   projectId: string,
   host: string,
+  orgId = DEFAULT_ORG,
 ): Promise<Project | undefined> {
   // Read-modify-write inside a transaction so a concurrent add/remove isn't lost
   // (Prisma has no atomic array-remove the way `push` is atomic for the add).
   const updated = await prisma.$transaction(async (tx) => {
-    const p = await tx.project.findUnique({ where: { id: projectId } })
+    const p = await tx.project.findFirst({
+      where: { id: projectId, orgId },
+    })
     if (!p) {
       return null
     }
@@ -143,8 +150,9 @@ export interface ProjectSettingsPatch {
 export async function updateProjectSettings(
   projectId: string,
   patch: ProjectSettingsPatch,
+  orgId = DEFAULT_ORG,
 ): Promise<Project | undefined> {
-  const p = await prisma.project.findUnique({ where: { id: projectId } })
+  const p = await prisma.project.findFirst({ where: { id: projectId, orgId } })
   if (!p) {
     return
   }

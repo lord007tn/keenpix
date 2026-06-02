@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { getRequestHeaders } from '@tanstack/react-start/server'
 import {
   acceptInvitation,
   createStaffInvitation,
@@ -11,6 +12,7 @@ import {
   updateSmtpSettings,
 } from '@/data-access/admin'
 import { authMiddleware, requireSuperAdmin } from '@/lib/auth/guards'
+import { auth } from '@/lib/auth/server'
 import { sendSmtpMail, verifySmtp } from '@/lib/email/smtp'
 import {
   acceptInvitationSchema,
@@ -20,17 +22,62 @@ import {
   sendTestEmailSchema,
   smtpSettingsSchema,
 } from '@/schemas/admin'
+import { createApiKeySchema, disableApiKeySchema } from '@/schemas/api-keys'
+
+const INTERNAL_API_KEY_CONFIG = 'internal'
+const INTERNAL_API_KEY_PERMISSIONS = {
+  projects: ['read', 'write'],
+}
 
 export const getAdminWorkspaceFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
     requireSuperAdmin(context)
-    const [users, invitations, smtp] = await Promise.all([
+    const [users, invitations, smtp, apiKeys] = await Promise.all([
       listStaffUsers(),
       listInvitations(),
       getPublicSmtpSettings(),
+      auth.api.listApiKeys({
+        headers: new Headers(getRequestHeaders()),
+        query: {
+          configId: INTERNAL_API_KEY_CONFIG,
+          limit: 100,
+          sortBy: 'createdAt',
+          sortDirection: 'desc',
+        },
+      }),
     ])
-    return { users, invitations, smtp }
+    return { users, invitations, smtp, apiKeys: apiKeys.apiKeys }
+  })
+
+export const createApiKeyFn = createServerFn({ method: 'POST' })
+  .inputValidator(createApiKeySchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return auth.api.createApiKey({
+      body: {
+        configId: INTERNAL_API_KEY_CONFIG,
+        name: data.name,
+        userId: context.userId,
+        permissions: INTERNAL_API_KEY_PERMISSIONS,
+      },
+    })
+  })
+
+export const disableApiKeyFn = createServerFn({ method: 'POST' })
+  .inputValidator(disableApiKeySchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return auth.api.updateApiKey({
+      body: {
+        configId: INTERNAL_API_KEY_CONFIG,
+        keyId: data.id,
+        userId: context.userId,
+        enabled: false,
+      },
+    })
   })
 
 export const createInvitationFn = createServerFn({ method: 'POST' })
