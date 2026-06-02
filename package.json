@@ -1,6 +1,6 @@
 {
   "name": "keenpix",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Open-source, self-hosted image optimization with a drop-in transform API, sharp, Postgres, disk caching, and analytics.",
   "private": true,
   "type": "module",
@@ -64,6 +64,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
+    "@better-auth/api-key": "1.6.11",
     "@fontsource-variable/inter": "^5.2.8",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
