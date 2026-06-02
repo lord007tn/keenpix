@@ -11,6 +11,7 @@ import {
   revokeInvitation,
   updateSmtpSettings,
 } from '@/data-access/admin'
+import { listProjects } from '@/data-access/projects'
 import { authMiddleware, requireSuperAdmin } from '@/lib/auth/guards'
 import { auth } from '@/lib/auth/server'
 import { sendSmtpMail, verifySmtp } from '@/lib/email/smtp'
@@ -33,7 +34,7 @@ export const getAdminWorkspaceFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
     requireSuperAdmin(context)
-    const [users, invitations, smtp, apiKeys] = await Promise.all([
+    const [users, invitations, smtp, apiKeys, projects] = await Promise.all([
       listStaffUsers(),
       listInvitations(),
       getPublicSmtpSettings(),
@@ -46,8 +47,9 @@ export const getAdminWorkspaceFn = createServerFn({ method: 'GET' })
           sortDirection: 'desc',
         },
       }),
+      listProjects(),
     ])
-    return { users, invitations, smtp, apiKeys: apiKeys.apiKeys }
+    return { users, invitations, smtp, apiKeys: apiKeys.apiKeys, projects }
   })
 
 export const createApiKeyFn = createServerFn({ method: 'POST' })
@@ -61,6 +63,7 @@ export const createApiKeyFn = createServerFn({ method: 'POST' })
         name: data.name,
         userId: context.userId,
         permissions: INTERNAL_API_KEY_PERMISSIONS,
+        metadata: data.projectId ? { projectId: data.projectId } : null,
       },
     })
   })

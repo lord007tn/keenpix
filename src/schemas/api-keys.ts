@@ -6,6 +6,7 @@ export const createApiKeySchema = z.object({
     80,
     'Use 80 characters or fewer.',
   ),
+  projectId: z.string(),
 })
 
 export const disableApiKeySchema = z.object({
