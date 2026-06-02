@@ -146,9 +146,9 @@ In an `<img>`, any non-200 shows as a broken image — a 403 almost always means
 
 ---
 
-## Internal API
+## SDK API
 
-Internal API keys are for trusted backend integrations such as JoodCMS. They are separate from the public image transform flow: `/img/*` still uses project allowlists and does not require an authentication header.
+SDK API keys are for trusted backend integrations such as JoodCMS. They are separate from the public image transform flow: `/img/*` still uses project allowlists and does not require an authentication header.
 
 Create a key from **Workspace → API Keys** as a super admin. The key is shown once. Send it as either:
 
@@ -162,17 +162,17 @@ All responses are JSON and use `Cache-Control: no-store`.
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/api/internal/projects` | List projects. |
-| `POST` | `/api/internal/projects` | Create a project. Body: `name`, `origin`, `env`, optional `allowedOrigins`. |
-| `GET` | `/api/internal/projects/<projectId>` | Fetch one project. |
-| `PATCH` | `/api/internal/projects/<projectId>/settings` | Update `autoFormat`, `stripMetadata`, and/or `defaultQuality`. |
-| `POST` | `/api/internal/projects/<projectId>/domains` | Add an allowed domain. Body: `host`. |
-| `DELETE` | `/api/internal/projects/<projectId>/domains?host=<host>` | Remove an allowed domain. A JSON body `{ "host": "..." }` is also accepted. |
+| `GET` | `/api/sdk/projects` | List projects. |
+| `POST` | `/api/sdk/projects` | Create a project. Body: `name`, `origin`, `env`, optional `allowedOrigins`. |
+| `GET` | `/api/sdk/projects/<projectId>` | Fetch one project. |
+| `PATCH` | `/api/sdk/projects/<projectId>/settings` | Update `autoFormat`, `stripMetadata`, and/or `defaultQuality`. |
+| `POST` | `/api/sdk/projects/<projectId>/domains` | Add an allowed domain. Body: `host`. |
+| `DELETE` | `/api/sdk/projects/<projectId>/domains?host=<host>` | Remove an allowed domain. A JSON body `{ "host": "..." }` is also accepted. |
 
 Example:
 
 ```bash
-curl -X POST "https://keenpix.example.com/api/internal/projects" \
+curl -X POST "https://keenpix.example.com/api/sdk/projects" \
   -H "Authorization: Bearer $KEENPIX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
