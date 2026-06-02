@@ -77,6 +77,7 @@ export const auth = betterAuth({
         return ctx.headers?.get('x-keenpix-api-key')?.trim() ?? null
       },
       defaultPrefix: 'kp_internal_',
+      enableMetadata: true,
       requireName: true,
       maximumNameLength: 80,
       rateLimit: {
