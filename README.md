@@ -150,7 +150,7 @@ In an `<img>`, any non-200 shows as a broken image — a 403 almost always means
 
 SDK API keys are for trusted backend integrations such as JoodCMS. They are separate from the public image transform flow: `/img/*` still uses project allowlists and does not require an authentication header.
 
-Create a key from **Workspace → API Keys** as a super admin. Keys can be scoped to every project or to a single project. Project-scoped keys can only read or write that project and cannot create new projects. The key is shown once. Send it as either:
+Create a key from **Workspace → API Keys** as a super admin. Keys can be scoped to every project or to a single project. Project scope is stored on the Better Auth API key metadata, so no custom token table is used. Project-scoped keys can only read or write that project and cannot create new projects. The key is shown once. Send it as either:
 
 ```bash
 Authorization: Bearer <KEY>
@@ -158,19 +158,19 @@ Authorization: Bearer <KEY>
 X-Keenpix-Api-Key: <KEY>
 ```
 
-All responses are JSON and use `Cache-Control: no-store`.
+All SDK endpoints live under `/api/sdk`, return JSON, and use `Cache-Control: no-store`. The self-host build currently uses the default org (`org_default`) for SDK project operations.
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/api/sdk/projects` | List projects. |
-| `POST` | `/api/sdk/projects` | Create a project. Body: `name`, `origin`, `env`, optional `allowedOrigins`. |
+| `GET` | `/api/sdk/projects` | List projects visible to the key. All-project keys see all default-org projects; project-scoped keys receive only their project. |
+| `POST` | `/api/sdk/projects` | Create a project. All-project write key required. Body: `name`, `origin`, `env`, optional `allowedOrigins`. |
 | `GET` | `/api/sdk/projects/<projectId>` | Fetch one project. |
-| `GET` | `/api/sdk/projects/<projectId>/configuration` | Fetch integration-safe project configuration: image endpoint, defaults, supported params, and allowed origins. |
-| `PATCH` | `/api/sdk/projects/<projectId>/settings` | Update `autoFormat`, `stripMetadata`, and/or `defaultQuality`. |
-| `POST` | `/api/sdk/projects/<projectId>/domains` | Add an allowed domain. Body: `host`. |
-| `DELETE` | `/api/sdk/projects/<projectId>/domains?host=<host>` | Remove an allowed domain. A JSON body `{ "host": "..." }` is also accepted. |
+| `GET` | `/api/sdk/projects/<projectId>/configuration` | Fetch integration-safe image configuration for clients such as JoodCMS. |
+| `PATCH` | `/api/sdk/projects/<projectId>/settings` | Update transform defaults. Body may include `autoFormat`, `stripMetadata`, and/or `defaultQuality`. |
+| `POST` | `/api/sdk/projects/<projectId>/domains` | Add an allowed source host. Body: `{ "host": "cdn.example.com" }`. Use a hostname, not a URL. |
+| `DELETE` | `/api/sdk/projects/<projectId>/domains?host=<host>` | Remove an allowed source host. A JSON body `{ "host": "cdn.example.com" }` is also accepted. |
 
-Example:
+Create a project:
 
 ```bash
 curl -X POST "https://keenpix.example.com/api/sdk/projects" \
@@ -182,6 +182,50 @@ curl -X POST "https://keenpix.example.com/api/sdk/projects" \
     "env": "production",
     "allowedOrigins": ["cdn.example.com"]
   }'
+```
+
+Read the project configuration that JoodCMS stores and displays:
+
+```bash
+curl "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/configuration" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY"
+```
+
+Response shape:
+
+```json
+{
+  "configuration": {
+    "projectId": "cm...",
+    "projectName": "Storefront",
+    "origin": "https://cdn.example.com",
+    "allowedOrigins": ["cdn.example.com"],
+    "imageBaseUrl": "https://keenpix.example.com/img",
+    "transformUrlTemplate": "https://keenpix.example.com/img/<source-url>?project=cm...",
+    "defaults": {
+      "autoFormat": true,
+      "defaultQuality": 75,
+      "stripMetadata": true
+    },
+    "supportedParameters": ["project", "url", "w", "h", "q", "fmt", "fit", "dpr", "blur"]
+  }
+}
+```
+
+`imageBaseUrl` and `transformUrlTemplate` are derived from `X-Forwarded-Host` and `X-Forwarded-Proto` when a proxy sends them, then fall back to the request origin. In proxied deployments, configure the reverse proxy to forward the public host and protocol so integrations see the external Keenpix URL.
+
+Manage domains and settings:
+
+```bash
+curl -X POST "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/domains" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "host": "assets.customer.com" }'
+
+curl -X PATCH "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/settings" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "autoFormat": true, "defaultQuality": 82, "stripMetadata": true }'
 ```
 
 Failure modes:

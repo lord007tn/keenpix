@@ -55,6 +55,21 @@ export interface PublicSmtpSettings {
   username: string
 }
 
+export interface InternalApiKeyRow {
+  createdAt: Date
+  enabled: boolean
+  expiresAt: Date | null
+  id: string
+  lastRequest: Date | null
+  metadata: {
+    projectId?: string
+  } | null
+  name: string | null
+  permissions: Record<string, string[]> | null
+  prefix: string | null
+  start: string | null
+}
+
 export interface EffectiveSmtpSettings {
   enabled: boolean
   fromEmail: string
@@ -76,6 +91,76 @@ function tokenHash(token: string) {
 
 function iso(d: Date | null | undefined) {
   return d ? d.toISOString() : null
+}
+
+function parseObject(value: string | null) {
+  if (!value) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(value)
+    if (typeof parsed === 'string') {
+      return parseObject(parsed)
+    }
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null
+  } catch {
+    return null
+  }
+}
+
+function parsePermissions(value: string | null) {
+  const parsed = parseObject(value)
+  if (!parsed) {
+    return null
+  }
+
+  const permissions: Record<string, string[]> = {}
+  for (const [resource, actions] of Object.entries(parsed)) {
+    if (Array.isArray(actions)) {
+      permissions[resource] = actions.filter(
+        (action): action is string => typeof action === 'string',
+      )
+    }
+  }
+
+  return permissions
+}
+
+function parseApiKeyMetadata(value: string | null) {
+  const parsed = parseObject(value)
+  const projectId = parsed?.projectId
+  return typeof projectId === 'string' && projectId.trim()
+    ? { projectId: projectId.trim() }
+    : null
+}
+
+function toInternalApiKeyRow(apiKey: {
+  createdAt: Date
+  enabled: boolean
+  expiresAt: Date | null
+  id: string
+  lastRequest: Date | null
+  metadata: string | null
+  name: string | null
+  permissions: string | null
+  prefix: string | null
+  start: string | null
+}): InternalApiKeyRow {
+  return {
+    id: apiKey.id,
+    name: apiKey.name,
+    start: apiKey.start,
+    prefix: apiKey.prefix,
+    enabled: apiKey.enabled,
+    lastRequest: apiKey.lastRequest,
+    expiresAt: apiKey.expiresAt,
+    createdAt: apiKey.createdAt,
+    metadata: parseApiKeyMetadata(apiKey.metadata),
+    permissions: parsePermissions(apiKey.permissions),
+  }
 }
 
 function toStaffUser(user: {
@@ -148,6 +233,43 @@ export async function listInvitations(): Promise<StaffInvitationRow[]> {
     take: 50,
   })
   return rows.map(toInvitation)
+}
+
+export async function listInternalApiKeys(
+  configId: string,
+): Promise<InternalApiKeyRow[]> {
+  const rows = await prisma.apiKey.findMany({
+    where: { configId },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+    select: {
+      id: true,
+      name: true,
+      start: true,
+      prefix: true,
+      enabled: true,
+      lastRequest: true,
+      expiresAt: true,
+      createdAt: true,
+      metadata: true,
+      permissions: true,
+    },
+  })
+
+  return rows.map(toInternalApiKeyRow)
+}
+
+export async function disableInternalApiKey(id: string, configId: string) {
+  const result = await prisma.apiKey.updateMany({
+    where: { id, configId },
+    data: { enabled: false },
+  })
+
+  if (result.count === 0) {
+    throw new Error('API key not found')
+  }
+
+  return { ok: true }
 }
 
 export async function createStaffInvitation(input: {

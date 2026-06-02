@@ -1,11 +1,12 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 import {
   acceptInvitation,
   createStaffInvitation,
+  disableInternalApiKey,
   getEffectiveSmtpSettings,
   getInvitationByToken,
   getPublicSmtpSettings,
+  listInternalApiKeys,
   listInvitations,
   listStaffUsers,
   revokeInvitation,
@@ -25,6 +26,7 @@ import {
 } from '@/schemas/admin'
 import { createApiKeySchema, disableApiKeySchema } from '@/schemas/api-keys'
 
+const DEFAULT_ORG = 'org_default'
 const INTERNAL_API_KEY_CONFIG = 'internal'
 const INTERNAL_API_KEY_PERMISSIONS = {
   projects: ['read', 'write'],
@@ -38,18 +40,10 @@ export const getAdminWorkspaceFn = createServerFn({ method: 'GET' })
       listStaffUsers(),
       listInvitations(),
       getPublicSmtpSettings(),
-      auth.api.listApiKeys({
-        headers: new Headers(getRequestHeaders()),
-        query: {
-          configId: INTERNAL_API_KEY_CONFIG,
-          limit: 100,
-          sortBy: 'createdAt',
-          sortDirection: 'desc',
-        },
-      }),
-      listProjects(),
+      listInternalApiKeys(INTERNAL_API_KEY_CONFIG),
+      listProjects(DEFAULT_ORG),
     ])
-    return { users, invitations, smtp, apiKeys: apiKeys.apiKeys, projects }
+    return { users, invitations, smtp, apiKeys, projects }
   })
 
 export const createApiKeyFn = createServerFn({ method: 'POST' })
@@ -73,14 +67,7 @@ export const disableApiKeyFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
-    return auth.api.updateApiKey({
-      body: {
-        configId: INTERNAL_API_KEY_CONFIG,
-        keyId: data.id,
-        userId: context.userId,
-        enabled: false,
-      },
-    })
+    return disableInternalApiKey(data.id, INTERNAL_API_KEY_CONFIG)
   })
 
 export const createInvitationFn = createServerFn({ method: 'POST' })
