@@ -28,7 +28,7 @@ import { Route as AppDashboardIndexRouteImport } from './routes/app/dashboard/in
 import { Route as AppAnalyticsIndexRouteImport } from './routes/app/analytics/index'
 import { Route as AppAccountIndexRouteImport } from './routes/app/account/index'
 import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
-import { Route as ApiInternalSplatRouteImport } from './routes/api/internal/$'
+import { Route as ApiSdkSplatRouteImport } from './routes/api/sdk/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const Char123llmFileChar125DottxtRoute =
@@ -127,9 +127,9 @@ const OgDocsSplatRoute = OgDocsSplatRouteImport.update({
   path: '/og/docs/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiInternalSplatRoute = ApiInternalSplatRouteImport.update({
-  id: '/api/internal/$',
-  path: '/api/internal/$',
+const ApiSdkSplatRoute = ApiSdkSplatRouteImport.update({
+  id: '/api/sdk/$',
+  path: '/api/sdk/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -152,7 +152,7 @@ export interface FileRoutesByFullPath {
   '/invite/$token': typeof InviteTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/internal/$': typeof ApiInternalSplatRoute
+  '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account/': typeof AppAccountIndexRoute
   '/app/analytics/': typeof AppAnalyticsIndexRoute
@@ -174,7 +174,7 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof InviteTokenRoute
   '/app': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/internal/$': typeof ApiInternalSplatRoute
+  '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account': typeof AppAccountIndexRoute
   '/app/analytics': typeof AppAnalyticsIndexRoute
@@ -198,7 +198,7 @@ export interface FileRoutesById {
   '/invite/$token': typeof InviteTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/internal/$': typeof ApiInternalSplatRoute
+  '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account/': typeof AppAccountIndexRoute
   '/app/analytics/': typeof AppAnalyticsIndexRoute
@@ -223,7 +223,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/app/'
     | '/api/auth/$'
-    | '/api/internal/$'
+    | '/api/sdk/$'
     | '/og/docs/$'
     | '/app/account/'
     | '/app/analytics/'
@@ -245,7 +245,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/app'
     | '/api/auth/$'
-    | '/api/internal/$'
+    | '/api/sdk/$'
     | '/og/docs/$'
     | '/app/account'
     | '/app/analytics'
@@ -268,7 +268,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/app/'
     | '/api/auth/$'
-    | '/api/internal/$'
+    | '/api/sdk/$'
     | '/og/docs/$'
     | '/app/account/'
     | '/app/analytics/'
@@ -291,7 +291,7 @@ export interface RootRouteChildren {
   ImgSplatRoute: typeof ImgSplatRoute
   InviteTokenRoute: typeof InviteTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  ApiInternalSplatRoute: typeof ApiInternalSplatRoute
+  ApiSdkSplatRoute: typeof ApiSdkSplatRoute
   OgDocsSplatRoute: typeof OgDocsSplatRoute
 }
 
@@ -430,11 +430,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OgDocsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/internal/$': {
-      id: '/api/internal/$'
-      path: '/api/internal/$'
-      fullPath: '/api/internal/$'
-      preLoaderRoute: typeof ApiInternalSplatRouteImport
+    '/api/sdk/$': {
+      id: '/api/sdk/$'
+      path: '/api/sdk/$'
+      fullPath: '/api/sdk/$'
+      preLoaderRoute: typeof ApiSdkSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -484,7 +484,7 @@ const rootRouteChildren: RootRouteChildren = {
   ImgSplatRoute: ImgSplatRoute,
   InviteTokenRoute: InviteTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-  ApiInternalSplatRoute: ApiInternalSplatRoute,
+  ApiSdkSplatRoute: ApiSdkSplatRoute,
   OgDocsSplatRoute: OgDocsSplatRoute,
 }
 export const routeTree = rootRouteImport
