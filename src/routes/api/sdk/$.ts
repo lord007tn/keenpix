@@ -20,22 +20,22 @@ const INTERNAL_API_KEY_CONFIG = 'internal'
 
 type ProjectPermission = 'read' | 'write'
 
-export const Route = createFileRoute('/api/internal/$')({
+export const Route = createFileRoute('/api/sdk/$')({
   server: {
     handlers: {
       DELETE: ({ params, request }) =>
-        handleInternalRequest(request, params._splat, 'DELETE'),
+        handleSdkRequest(request, params._splat, 'DELETE'),
       GET: ({ params, request }) =>
-        handleInternalRequest(request, params._splat, 'GET'),
+        handleSdkRequest(request, params._splat, 'GET'),
       PATCH: ({ params, request }) =>
-        handleInternalRequest(request, params._splat, 'PATCH'),
+        handleSdkRequest(request, params._splat, 'PATCH'),
       POST: ({ params, request }) =>
-        handleInternalRequest(request, params._splat, 'POST'),
+        handleSdkRequest(request, params._splat, 'POST'),
     },
   },
 })
 
-async function handleInternalRequest(
+async function handleSdkRequest(
   request: Request,
   splat: string | undefined,
   method: string,
@@ -74,7 +74,7 @@ async function handleInternalRequest(
     if (error instanceof SyntaxError) {
       return jsonError('Invalid JSON request body', 400)
     }
-    return jsonError('Internal API request failed', 500)
+    return jsonError('SDK API request failed', 500)
   }
 }
 

@@ -8,7 +8,7 @@ All notable changes to Keenpix are documented here.
 
 - Added Better Auth API key support for trusted internal integrations.
 - Added a super-admin **Workspace → API Keys** panel to create, copy, list, and disable internal API keys.
-- Added `/api/internal/*` project management endpoints for listing, creating, reading, updating settings, and adding/removing allowed domains.
+- Added `/api/sdk/*` project management endpoints for listing, creating, reading, updating settings, and adding/removing allowed domains.
 
 ### Changed
 
