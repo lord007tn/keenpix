@@ -1,50 +1,15 @@
 import { prisma } from '@/db'
-import { isProjectEnv, type Project, type ProjectEnv } from '@/shared/types'
+import type { Project, ProjectEnv } from '@/shared/types'
+import { projectData } from './helpers/projects'
 
 const DEFAULT_ORG = 'org_default'
-
-interface ProjectRow {
-  allowedOrigins: string[]
-  autoFormat: boolean
-  color1: string
-  color2: string
-  createdAt: Date
-  defaultQuality: number
-  env: string
-  id: string
-  name: string
-  orgId: string
-  origin: string
-  stripMetadata: boolean
-}
-
-function toProject(p: ProjectRow): Project {
-  return {
-    id: p.id,
-    orgId: p.orgId,
-    name: p.name,
-    origin: p.origin,
-    env: isProjectEnv(p.env) ? p.env : 'production',
-    allowedOrigins: p.allowedOrigins,
-    color1: p.color1,
-    color2: p.color2,
-    autoFormat: p.autoFormat,
-    stripMetadata: p.stripMetadata,
-    defaultQuality: p.defaultQuality,
-    createdAt: p.createdAt.toLocaleDateString('en-US', {
-      month: 'short',
-      day: '2-digit',
-      year: 'numeric',
-    }),
-  }
-}
 
 export async function listProjects(orgId = DEFAULT_ORG): Promise<Project[]> {
   const rows = await prisma.project.findMany({
     where: { orgId },
     orderBy: { createdAt: 'asc' },
   })
-  return rows.map(toProject)
+  return rows.map(projectData)
 }
 
 export async function getProject(
@@ -52,7 +17,7 @@ export async function getProject(
   orgId = DEFAULT_ORG,
 ): Promise<Project | undefined> {
   const p = await prisma.project.findFirst({ where: { id, orgId } })
-  return p ? toProject(p) : undefined
+  return p ? projectData(p) : undefined
 }
 
 const COLOR_PRESETS = [
@@ -87,7 +52,7 @@ export async function createProject(input: NewProjectInput): Promise<Project> {
       color2: palette.color2,
     },
   })
-  return toProject(created)
+  return projectData(created)
 }
 
 function deriveAllowedOriginsFromUrl(originUrl: string): string[] {
@@ -108,13 +73,13 @@ export async function addAllowedOrigin(
     return
   }
   if (p.allowedOrigins.includes(host)) {
-    return toProject(p)
+    return projectData(p)
   }
   const updated = await prisma.project.update({
     where: { id: projectId },
     data: { allowedOrigins: { push: host } },
   })
-  return toProject(updated)
+  return projectData(updated)
 }
 
 export async function removeAllowedOrigin(
@@ -138,7 +103,7 @@ export async function removeAllowedOrigin(
       },
     })
   })
-  return updated ? toProject(updated) : undefined
+  return updated ? projectData(updated) : undefined
 }
 
 export interface ProjectSettingsPatch {
@@ -164,5 +129,5 @@ export async function updateProjectSettings(
       defaultQuality: patch.defaultQuality ?? p.defaultQuality,
     },
   })
-  return toProject(updated)
+  return projectData(updated)
 }
