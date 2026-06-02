@@ -1,6 +1,5 @@
 import { prisma } from '@/db'
-import type { Project, ProjectEnv } from '@/shared/types'
-import { projectData } from './helpers/projects'
+import { isProjectEnv, type Project, type ProjectEnv } from '@/shared/types'
 
 const DEFAULT_ORG = 'org_default'
 
@@ -9,7 +8,24 @@ export async function listProjects(orgId = DEFAULT_ORG): Promise<Project[]> {
     where: { orgId },
     orderBy: { createdAt: 'asc' },
   })
-  return rows.map(projectData)
+  return rows.map((project) => ({
+    id: project.id,
+    orgId: project.orgId,
+    name: project.name,
+    origin: project.origin,
+    env: isProjectEnv(project.env) ? project.env : 'production',
+    allowedOrigins: project.allowedOrigins,
+    color1: project.color1,
+    color2: project.color2,
+    autoFormat: project.autoFormat,
+    stripMetadata: project.stripMetadata,
+    defaultQuality: project.defaultQuality,
+    createdAt: project.createdAt.toLocaleDateString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+    }),
+  }))
 }
 
 export async function getProject(
@@ -17,7 +33,26 @@ export async function getProject(
   orgId = DEFAULT_ORG,
 ): Promise<Project | undefined> {
   const p = await prisma.project.findFirst({ where: { id, orgId } })
-  return p ? projectData(p) : undefined
+  return p
+    ? {
+        id: p.id,
+        orgId: p.orgId,
+        name: p.name,
+        origin: p.origin,
+        env: isProjectEnv(p.env) ? p.env : 'production',
+        allowedOrigins: p.allowedOrigins,
+        color1: p.color1,
+        color2: p.color2,
+        autoFormat: p.autoFormat,
+        stripMetadata: p.stripMetadata,
+        defaultQuality: p.defaultQuality,
+        createdAt: p.createdAt.toLocaleDateString('en-US', {
+          month: 'short',
+          day: '2-digit',
+          year: 'numeric',
+        }),
+      }
+    : undefined
 }
 
 const COLOR_PRESETS = [
@@ -52,7 +87,24 @@ export async function createProject(input: NewProjectInput): Promise<Project> {
       color2: palette.color2,
     },
   })
-  return projectData(created)
+  return {
+    id: created.id,
+    orgId: created.orgId,
+    name: created.name,
+    origin: created.origin,
+    env: isProjectEnv(created.env) ? created.env : 'production',
+    allowedOrigins: created.allowedOrigins,
+    color1: created.color1,
+    color2: created.color2,
+    autoFormat: created.autoFormat,
+    stripMetadata: created.stripMetadata,
+    defaultQuality: created.defaultQuality,
+    createdAt: created.createdAt.toLocaleDateString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+    }),
+  }
 }
 
 function deriveAllowedOriginsFromUrl(originUrl: string): string[] {
@@ -73,13 +125,47 @@ export async function addAllowedOrigin(
     return
   }
   if (p.allowedOrigins.includes(host)) {
-    return projectData(p)
+    return {
+      id: p.id,
+      orgId: p.orgId,
+      name: p.name,
+      origin: p.origin,
+      env: isProjectEnv(p.env) ? p.env : 'production',
+      allowedOrigins: p.allowedOrigins,
+      color1: p.color1,
+      color2: p.color2,
+      autoFormat: p.autoFormat,
+      stripMetadata: p.stripMetadata,
+      defaultQuality: p.defaultQuality,
+      createdAt: p.createdAt.toLocaleDateString('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+      }),
+    }
   }
   const updated = await prisma.project.update({
     where: { id: projectId },
     data: { allowedOrigins: { push: host } },
   })
-  return projectData(updated)
+  return {
+    id: updated.id,
+    orgId: updated.orgId,
+    name: updated.name,
+    origin: updated.origin,
+    env: isProjectEnv(updated.env) ? updated.env : 'production',
+    allowedOrigins: updated.allowedOrigins,
+    color1: updated.color1,
+    color2: updated.color2,
+    autoFormat: updated.autoFormat,
+    stripMetadata: updated.stripMetadata,
+    defaultQuality: updated.defaultQuality,
+    createdAt: updated.createdAt.toLocaleDateString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+    }),
+  }
 }
 
 export async function removeAllowedOrigin(
@@ -103,7 +189,26 @@ export async function removeAllowedOrigin(
       },
     })
   })
-  return updated ? projectData(updated) : undefined
+  return updated
+    ? {
+        id: updated.id,
+        orgId: updated.orgId,
+        name: updated.name,
+        origin: updated.origin,
+        env: isProjectEnv(updated.env) ? updated.env : 'production',
+        allowedOrigins: updated.allowedOrigins,
+        color1: updated.color1,
+        color2: updated.color2,
+        autoFormat: updated.autoFormat,
+        stripMetadata: updated.stripMetadata,
+        defaultQuality: updated.defaultQuality,
+        createdAt: updated.createdAt.toLocaleDateString('en-US', {
+          month: 'short',
+          day: '2-digit',
+          year: 'numeric',
+        }),
+      }
+    : undefined
 }
 
 export interface ProjectSettingsPatch {
@@ -129,5 +234,22 @@ export async function updateProjectSettings(
       defaultQuality: patch.defaultQuality ?? p.defaultQuality,
     },
   })
-  return projectData(updated)
+  return {
+    id: updated.id,
+    orgId: updated.orgId,
+    name: updated.name,
+    origin: updated.origin,
+    env: isProjectEnv(updated.env) ? updated.env : 'production',
+    allowedOrigins: updated.allowedOrigins,
+    color1: updated.color1,
+    color2: updated.color2,
+    autoFormat: updated.autoFormat,
+    stripMetadata: updated.stripMetadata,
+    defaultQuality: updated.defaultQuality,
+    createdAt: updated.createdAt.toLocaleDateString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+    }),
+  }
 }
