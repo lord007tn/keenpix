@@ -3,7 +3,6 @@ import { hashPassword } from 'better-auth/crypto'
 import { prisma } from '@/db'
 import { env } from '@/env/server'
 import { getAppUrl } from '@/lib/deployment'
-import { internalApiKeyData } from './helpers/api-keys/internal-api-key'
 
 const DEFAULT_SMTP_ID = 'default'
 const TOKEN_BYTES = 32
@@ -127,7 +126,70 @@ export async function listInternalApiKeys(configId: string) {
     },
   })
 
-  return rows.map(internalApiKeyData)
+  return rows.map((apiKey) => {
+    let metadata: unknown = apiKey.metadata
+    for (let i = 0; i < 2; i++) {
+      if (typeof metadata !== 'string') {
+        break
+      }
+      try {
+        metadata = JSON.parse(metadata)
+      } catch {
+        metadata = null
+        break
+      }
+    }
+
+    let permissions: unknown = apiKey.permissions
+    for (let i = 0; i < 2; i++) {
+      if (typeof permissions !== 'string') {
+        break
+      }
+      try {
+        permissions = JSON.parse(permissions)
+      } catch {
+        permissions = null
+        break
+      }
+    }
+
+    const projectId =
+      metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+        ? Reflect.get(metadata, 'projectId')
+        : null
+
+    return {
+      id: apiKey.id,
+      name: apiKey.name,
+      start: apiKey.start,
+      prefix: apiKey.prefix,
+      enabled: apiKey.enabled,
+      lastRequest: apiKey.lastRequest,
+      expiresAt: apiKey.expiresAt,
+      createdAt: apiKey.createdAt,
+      metadata:
+        typeof projectId === 'string' && projectId.trim()
+          ? { projectId: projectId.trim() }
+          : null,
+      permissions:
+        permissions &&
+        typeof permissions === 'object' &&
+        !Array.isArray(permissions)
+          ? Object.fromEntries(
+              Object.entries(permissions).flatMap(([resource, actions]) =>
+                Array.isArray(actions)
+                  ? [
+                      [
+                        resource,
+                        actions.filter((action) => typeof action === 'string'),
+                      ],
+                    ]
+                  : [],
+              ),
+            )
+          : null,
+    }
+  })
 }
 
 export async function disableInternalApiKey(id: string, configId: string) {

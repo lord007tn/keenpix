@@ -1,19 +1,17 @@
 import { createServerFn } from '@tanstack/react-start'
 import {
-  addAllowedOrigin,
+  addAllowedHost,
   createProject,
   listProjects,
-  removeAllowedOrigin,
+  removeAllowedHost,
   updateProjectSettings,
-} from '@/data-access/projects'
+} from '@/actions/projects'
 import { authMiddleware } from '@/lib/auth/guards'
 import {
   allowedHostSchema,
   createProjectSchema,
   projectSettingsSchema,
 } from '@/schemas/projects'
-
-const DEFAULT_ORG = 'org_default'
 
 export const listProjectsFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
@@ -24,7 +22,6 @@ export const createProjectFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(({ data }) =>
     createProject({
-      orgId: DEFAULT_ORG,
       name: data.name,
       origin: data.origin,
       env: data.env,
@@ -35,7 +32,7 @@ export const addAllowedHostFn = createServerFn({ method: 'POST' })
   .inputValidator(allowedHostSchema)
   .middleware([authMiddleware])
   .handler(async ({ data }) => {
-    const project = await addAllowedOrigin(data.projectId, data.host)
+    const project = await addAllowedHost(data.projectId, data.host)
     if (!project) {
       throw new Error('Project not found')
     }
@@ -46,7 +43,7 @@ export const removeAllowedHostFn = createServerFn({ method: 'POST' })
   .inputValidator(allowedHostSchema)
   .middleware([authMiddleware])
   .handler(async ({ data }) => {
-    const project = await removeAllowedOrigin(data.projectId, data.host)
+    const project = await removeAllowedHost(data.projectId, data.host)
     if (!project) {
       throw new Error('Project not found')
     }

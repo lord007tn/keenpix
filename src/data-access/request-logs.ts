@@ -16,7 +16,7 @@ export interface NewRequestLog {
   width?: number
 }
 
-export async function insertRequestLog(log: NewRequestLog): Promise<void> {
+export async function createRequestLog(log: NewRequestLog): Promise<void> {
   await prisma.requestLog.create({
     data: {
       orgId: log.orgId,

@@ -1,5 +1,5 @@
 import { getProject } from '@/data-access/projects'
-import { insertRequestLog } from '@/data-access/request-logs'
+import { createRequestLog } from '@/data-access/request-logs'
 import { getTransformErrorStatus, TransformError } from '@/errors/transform'
 import { buildCacheKey, readCache, writeCache } from '@/lib/cdn/cache'
 import { runQueuedJob } from '@/lib/concurrency'
@@ -167,7 +167,7 @@ export async function optimizeProjectImage({
     }
     throw error
   } finally {
-    insertRequestLog({
+    createRequestLog({
       orgId: project.orgId,
       projectId: project.id,
       path: logPath(src),
