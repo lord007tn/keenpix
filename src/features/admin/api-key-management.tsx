@@ -29,25 +29,8 @@ import {
 } from '@/functions/admin'
 import { getFieldError } from '@/lib/form-errors'
 import { createApiKeySchema } from '@/schemas/api-keys'
-import type { Project } from '@/shared/types'
 
 const ALL_PROJECTS_SCOPE = '__all_projects__'
-
-interface ApiKeyMetadata {
-  projectId?: string
-}
-
-interface ApiKeyRow {
-  createdAt: Date | string
-  enabled: boolean
-  expiresAt: Date | string | null
-  id: string
-  lastRequest: Date | string | null
-  metadata: ApiKeyMetadata | null
-  name: string | null
-  prefix: string | null
-  start: string | null
-}
 
 const keyDateFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -71,19 +54,14 @@ async function copyKey(text: string) {
   }
 }
 
-function getScopeLabel(apiKey: ApiKeyRow, projects: Project[]) {
-  const projectId = apiKey.metadata?.projectId
-  if (!projectId) {
-    return 'All projects'
-  }
-  return projects.find((project) => project.id === projectId)?.name ?? projectId
-}
-
 export function ApiKeyManagement() {
-  const [apiKeys, setApiKeys] = useState<ApiKeyRow[]>([])
-  const [projects, setProjects] = useState<Project[]>([])
+  const [workspace, setWorkspace] = useState<Awaited<
+    ReturnType<typeof getAdminWorkspaceFn>
+  > | null>(null)
   const [lastKey, setLastKey] = useState('')
   const [loading, setLoading] = useState(true)
+  const apiKeys = workspace?.apiKeys ?? []
+  const projects = workspace?.projects ?? []
   const keyForm = useForm({
     defaultValues: { name: '', projectId: ALL_PROJECTS_SCOPE },
     validators: {
@@ -114,8 +92,7 @@ export function ApiKeyManagement() {
     setLoading(true)
     try {
       const data = await getAdminWorkspaceFn()
-      setApiKeys(data.apiKeys)
-      setProjects(data.projects)
+      setWorkspace(data)
     } catch (e) {
       toast.error(getErrorMessage(e, 'Could not load API keys'))
     } finally {
@@ -250,7 +227,11 @@ export function ApiKeyManagement() {
         ) : (
           apiKeys.map((apiKey) => {
             const start = [apiKey.prefix, apiKey.start].filter(Boolean).join('')
-            const scopeLabel = getScopeLabel(apiKey, projects)
+            const projectId = apiKey.metadata?.projectId
+            const scopeLabel = projectId
+              ? (projects.find((project) => project.id === projectId)?.name ??
+                projectId)
+              : 'All projects'
             return (
               <div className="flex items-center gap-3 p-3" key={apiKey.id}>
                 <KeyRoundIcon className="size-4 text-muted-foreground" />
