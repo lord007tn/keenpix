@@ -10,12 +10,28 @@ It is built for operators who want the important parts kept visible: project all
 
 - **Transform API** - `GET /img/https://origin.example/photo.jpg?project=...&w=...&fmt=...` resizes, re-encodes, blurs, negotiates modern formats, and returns immutable cache headers.
 - **No public API keys** - access is gated by each project's domain allowlist. An empty allowlist fails closed with 403, so a fresh project is never an open proxy.
+- **Internal API keys** - trusted backend systems can manage projects, domains, and pipeline settings through authenticated JSON endpoints.
 - **Projects and origins** - each project owns its source host rules, settings, request logs, and analytics.
 - **Built-in analytics** - requests, bandwidth saved, cache hit rate, output formats, latency, and top images come from the request log.
 - **Self-host dashboard** - seeded super admin, staff invitations, project settings, SMTP configuration, and operational views.
 - **Open-internet hardening** - allowlist checks, private/loopback/link-local/CGNAT blocking, IPv4-mapped IPv6 handling, DNS rebinding protection, response-size limits, decompression-bomb limits, and transform back-pressure.
 
 Stack: TanStack Start (React 19, SSR) · Prisma 7 + PostgreSQL · sharp · Docker. Apache-2.0 licensed.
+
+---
+
+## Code style
+
+Keenpix keeps helpers and utils scoped by folder and purpose:
+
+- `helpers/<domain>/` is for pure domain helpers with real parsing, composition, or validation behavior. Do not put broad catch-all files like `helpers/admin.ts` here.
+- `utils/<primitive>/` is for pure generic primitives, not product-specific response shaping.
+- Do not extract functions that only return object literals or forward fields. Keep that code in the owning module unless the helper removes real logic or validation edge cases.
+- Use operation verbs precisely: `getProject` for one identified project, `listProjects` for a collection, and explicit mutation/check verbs such as `create`, `update`, `delete`, `verify`, `enable`, `disable`, `add`, and `remove`.
+- `data-access/` talks to the database; `actions/` combine data-access/helpers/utils/integrations into use cases; `functions/` validate, authorize, shape entry/exit data, and call actions.
+- Function complexity lint rules are disabled on purpose. Prefer readable local control flow over splitting code only for a metric.
+
+See [AGENTS.md](./AGENTS.md) and [src/README.md](./src/README.md) for the full repository rules.
 
 ---
 
@@ -45,7 +61,7 @@ Use [docker-compose.coolify.yml](./docker-compose.coolify.yml) for a Coolify ser
 4. Optionally change `KEENPIX_SUPER_ADMIN_EMAIL` from the default `admin@example.com`.
 5. Deploy, then sign in with `KEENPIX_SUPER_ADMIN_EMAIL` and the generated `SERVICE_PASSWORD_64_ADMIN` value shown in Coolify's environment variables.
 
-The Coolify stack uses the pinned `ghcr.io/lord007tn/keenpix:v0.1.0` image, keeps Postgres private, persists database/cache volumes, runs migrations and seed on app startup, and exposes the app through Coolify's proxy on container port `3000`.
+The Coolify stack uses the pinned `ghcr.io/lord007tn/keenpix:v0.1.2` image, keeps Postgres private, persists database/cache volumes, runs migrations and seed on app startup, and exposes the app through Coolify's proxy on container port `3000`.
 
 If an earlier Coolify deploy failed with a Postgres 18 message about existing data in `/var/lib/postgresql/data`, remove the failed `keenpix-pg` volume from that Coolify resource or recreate the resource before deploying this compose. The Coolify compose now uses a fresh `keenpix_pg18` volume mounted at `/var/lib/postgresql`, which is the Postgres 18-compatible layout.
 
@@ -142,6 +158,100 @@ Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Ac
 | **504** | Origin timed out |
 
 In an `<img>`, any non-200 shows as a broken image — a 403 almost always means the source host isn't on the allowlist.
+
+---
+
+## SDK API
+
+SDK API keys are for trusted backend integrations such as JoodCMS. They are separate from the public image transform flow: `/img/*` still uses project allowlists and does not require an authentication header.
+
+Create a key from **Workspace → API Keys** as a super admin. Keys can be scoped to every project or to a single project. Project scope is stored on the Better Auth API key metadata, so no custom token table is used. Project-scoped keys can only read or write that project and cannot create new projects. The key is shown once. Send it as either:
+
+```bash
+Authorization: Bearer <KEY>
+# or
+X-Keenpix-Api-Key: <KEY>
+```
+
+All SDK endpoints live under `/api/sdk`, return JSON, and use `Cache-Control: no-store`. The self-host build currently uses the default org (`org_default`) for SDK project operations.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/sdk/projects` | List projects visible to the key. All-project keys see all default-org projects; project-scoped keys receive only their project. |
+| `POST` | `/api/sdk/projects` | Create a project. All-project write key required. Body: `name`, `origin`, `env`, optional `allowedOrigins`. |
+| `GET` | `/api/sdk/projects/<projectId>` | Fetch one project. |
+| `GET` | `/api/sdk/projects/<projectId>/configuration` | Fetch integration-safe image configuration for clients such as JoodCMS. |
+| `PATCH` | `/api/sdk/projects/<projectId>/settings` | Update transform defaults. Body may include `autoFormat`, `stripMetadata`, and/or `defaultQuality`. |
+| `POST` | `/api/sdk/projects/<projectId>/domains` | Add an allowed source host. Body: `{ "host": "cdn.example.com" }`. Use a hostname, not a URL. |
+| `DELETE` | `/api/sdk/projects/<projectId>/domains?host=<host>` | Remove an allowed source host. A JSON body `{ "host": "cdn.example.com" }` is also accepted. |
+
+Create a project:
+
+```bash
+curl -X POST "https://keenpix.example.com/api/sdk/projects" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Storefront",
+    "origin": "https://cdn.example.com",
+    "env": "production",
+    "allowedOrigins": ["cdn.example.com"]
+  }'
+```
+
+Read the project configuration that JoodCMS stores and displays:
+
+```bash
+curl "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/configuration" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY"
+```
+
+Response shape:
+
+```json
+{
+  "configuration": {
+    "projectId": "cm...",
+    "projectName": "Storefront",
+    "origin": "https://cdn.example.com",
+    "allowedOrigins": ["cdn.example.com"],
+    "imageBaseUrl": "https://keenpix.example.com/img",
+    "transformUrlTemplate": "https://keenpix.example.com/img/<source-url>?project=cm...",
+    "defaults": {
+      "autoFormat": true,
+      "defaultQuality": 75,
+      "stripMetadata": true
+    },
+    "supportedParameters": ["project", "url", "w", "h", "q", "fmt", "fit", "dpr", "blur"]
+  }
+}
+```
+
+`imageBaseUrl` and `transformUrlTemplate` are derived from `X-Forwarded-Host` and `X-Forwarded-Proto` when a proxy sends them, then fall back to the request origin. In proxied deployments, configure the reverse proxy to forward the public host and protocol so integrations see the external Keenpix URL.
+
+Manage domains and settings:
+
+```bash
+curl -X POST "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/domains" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "host": "assets.customer.com" }'
+
+curl -X PATCH "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/settings" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "autoFormat": true, "defaultQuality": 82, "stripMetadata": true }'
+```
+
+Failure modes:
+
+| Status | When |
+|---|---|
+| **400** | Invalid JSON, invalid URL/host, or invalid settings. |
+| **401** | Missing or invalid API key. |
+| **403** | API key is project-scoped and cannot access the requested project or operation. |
+| **404** | Unknown project or endpoint. |
+| **429** | API key rate limit exceeded. |
 
 ---
 

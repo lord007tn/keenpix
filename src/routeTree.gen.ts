@@ -28,6 +28,7 @@ import { Route as AppDashboardIndexRouteImport } from './routes/app/dashboard/in
 import { Route as AppAnalyticsIndexRouteImport } from './routes/app/analytics/index'
 import { Route as AppAccountIndexRouteImport } from './routes/app/account/index'
 import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
+import { Route as ApiSdkSplatRouteImport } from './routes/api/sdk/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const Char123llmFileChar125DottxtRoute =
@@ -126,6 +127,11 @@ const OgDocsSplatRoute = OgDocsSplatRouteImport.update({
   path: '/og/docs/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSdkSplatRoute = ApiSdkSplatRouteImport.update({
+  id: '/api/sdk/$',
+  path: '/api/sdk/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/invite/$token': typeof InviteTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account/': typeof AppAccountIndexRoute
   '/app/analytics/': typeof AppAnalyticsIndexRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof InviteTokenRoute
   '/app': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account': typeof AppAccountIndexRoute
   '/app/analytics': typeof AppAnalyticsIndexRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/invite/$token': typeof InviteTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account/': typeof AppAccountIndexRoute
   '/app/analytics/': typeof AppAnalyticsIndexRoute
@@ -214,6 +223,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/app/'
     | '/api/auth/$'
+    | '/api/sdk/$'
     | '/og/docs/$'
     | '/app/account/'
     | '/app/analytics/'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/app'
     | '/api/auth/$'
+    | '/api/sdk/$'
     | '/og/docs/$'
     | '/app/account'
     | '/app/analytics'
@@ -257,6 +268,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/app/'
     | '/api/auth/$'
+    | '/api/sdk/$'
     | '/og/docs/$'
     | '/app/account/'
     | '/app/analytics/'
@@ -279,6 +291,7 @@ export interface RootRouteChildren {
   ImgSplatRoute: typeof ImgSplatRoute
   InviteTokenRoute: typeof InviteTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiSdkSplatRoute: typeof ApiSdkSplatRoute
   OgDocsSplatRoute: typeof OgDocsSplatRoute
 }
 
@@ -417,6 +430,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OgDocsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/sdk/$': {
+      id: '/api/sdk/$'
+      path: '/api/sdk/$'
+      fullPath: '/api/sdk/$'
+      preLoaderRoute: typeof ApiSdkSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -464,6 +484,7 @@ const rootRouteChildren: RootRouteChildren = {
   ImgSplatRoute: ImgSplatRoute,
   InviteTokenRoute: InviteTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiSdkSplatRoute: ApiSdkSplatRoute,
   OgDocsSplatRoute: OgDocsSplatRoute,
 }
 export const routeTree = rootRouteImport
