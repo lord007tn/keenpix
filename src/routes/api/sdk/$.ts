@@ -20,6 +20,10 @@ const INTERNAL_API_KEY_CONFIG = 'internal'
 
 type ProjectPermission = 'read' | 'write'
 
+interface ApiKeyAccess {
+  projectId?: string
+}
+
 export const Route = createFileRoute('/api/sdk/$')({
   server: {
     handlers: {
@@ -55,6 +59,10 @@ async function handleSdkRequest(
       return await handleProjectResource(request, method, segments[1])
     }
 
+    if (segments.length === 3 && segments[2] === 'configuration') {
+      return await handleProjectConfiguration(request, method, segments[1])
+    }
+
     if (segments.length === 3 && segments[2] === 'settings') {
       return await handleProjectSettings(request, method, segments[1])
     }
@@ -80,12 +88,20 @@ async function handleSdkRequest(
 
 async function handleProjectsCollection(request: Request, method: string) {
   if (method === 'GET') {
-    await requireApiKey(request, 'read')
-    return json({ projects: await listProjects(DEFAULT_ORG) })
+    const access = await requireApiKey(request, 'read')
+    const projects = await listProjects(DEFAULT_ORG)
+    return json({
+      projects: access.projectId
+        ? projects.filter((project) => project.id === access.projectId)
+        : projects,
+    })
   }
 
   if (method === 'POST') {
-    await requireApiKey(request, 'write')
+    const access = await requireApiKey(request, 'write')
+    if (access.projectId) {
+      return jsonError('API key cannot create projects', 403)
+    }
     const input = internalCreateProjectSchema.parse(await readJson(request))
     const project = await createProject({ orgId: DEFAULT_ORG, ...input })
     return json({ project }, { status: 201 })
@@ -103,9 +119,55 @@ async function handleProjectResource(
     return jsonError('Not found', 404)
   }
 
-  await requireApiKey(request, 'read')
+  await requireApiKey(request, 'read', projectId)
   const project = await getProject(projectId, DEFAULT_ORG)
   return project ? json({ project }) : jsonError('Project not found', 404)
+}
+
+async function handleProjectConfiguration(
+  request: Request,
+  method: string,
+  projectId: string,
+) {
+  if (method !== 'GET') {
+    return jsonError('Not found', 404)
+  }
+
+  await requireApiKey(request, 'read', projectId)
+  const project = await getProject(projectId, DEFAULT_ORG)
+  if (!project) {
+    return jsonError('Project not found', 404)
+  }
+
+  const requestUrl = new URL(request.url)
+  const publicBaseUrl = requestUrl.origin
+
+  return json({
+    configuration: {
+      projectId: project.id,
+      projectName: project.name,
+      origin: project.origin,
+      allowedOrigins: project.allowedOrigins,
+      imageBaseUrl: `${publicBaseUrl}/img`,
+      transformUrlTemplate: `${publicBaseUrl}/img/<source-url>?project=${project.id}`,
+      defaults: {
+        autoFormat: project.autoFormat,
+        defaultQuality: project.defaultQuality,
+        stripMetadata: project.stripMetadata,
+      },
+      supportedParameters: [
+        'project',
+        'url',
+        'w',
+        'h',
+        'q',
+        'fmt',
+        'fit',
+        'dpr',
+        'blur',
+      ],
+    },
+  })
 }
 
 async function handleProjectSettings(
@@ -117,7 +179,7 @@ async function handleProjectSettings(
     return jsonError('Not found', 404)
   }
 
-  await requireApiKey(request, 'write')
+  await requireApiKey(request, 'write', projectId)
   const patch = internalProjectSettingsPatchSchema.parse(
     await readJson(request),
   )
@@ -131,7 +193,7 @@ async function handleProjectDomains(
   projectId: string,
 ) {
   if (method === 'POST') {
-    await requireApiKey(request, 'write')
+    await requireApiKey(request, 'write', projectId)
     const { host } = z
       .object({ host: allowedHostValueSchema })
       .parse(await readJson(request))
@@ -140,7 +202,7 @@ async function handleProjectDomains(
   }
 
   if (method === 'DELETE') {
-    await requireApiKey(request, 'write')
+    await requireApiKey(request, 'write', projectId)
     const host = await readHostFromRequest(request)
     const project = await removeAllowedOrigin(projectId, host, DEFAULT_ORG)
     return project ? json({ project }) : jsonError('Project not found', 404)
@@ -149,7 +211,11 @@ async function handleProjectDomains(
   return jsonError('Not found', 404)
 }
 
-async function requireApiKey(request: Request, permission: ProjectPermission) {
+async function requireApiKey(
+  request: Request,
+  permission: ProjectPermission,
+  projectId?: string,
+): Promise<ApiKeyAccess> {
   const key = getApiKey(request)
   if (!key) {
     throw jsonError('Missing API key', 401)
@@ -164,7 +230,11 @@ async function requireApiKey(request: Request, permission: ProjectPermission) {
   })
 
   if (result.valid) {
-    return
+    const access = getApiKeyAccess(result.key)
+    if (access.projectId && projectId && access.projectId !== projectId) {
+      throw jsonError('API key cannot access this project', 403)
+    }
+    return access
   }
 
   const status = result.error?.code === 'RATE_LIMIT_EXCEEDED' ? 429 : 401
@@ -173,6 +243,30 @@ async function requireApiKey(request: Request, permission: ProjectPermission) {
       ? result.error.message
       : 'Invalid API key'
   throw jsonError(message, status)
+}
+
+function getApiKeyAccess(key: unknown): ApiKeyAccess {
+  if (!(key && typeof key === 'object')) {
+    return {}
+  }
+
+  const metadata = Reflect.get(key, 'metadata')
+  if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+    const projectId = Reflect.get(metadata, 'projectId')
+    return typeof projectId === 'string' && projectId.trim()
+      ? { projectId: projectId.trim() }
+      : {}
+  }
+
+  if (typeof metadata === 'string' && metadata.trim()) {
+    try {
+      return getApiKeyAccess({ metadata: JSON.parse(metadata) })
+    } catch {
+      return {}
+    }
+  }
+
+  return {}
 }
 
 async function readHostFromRequest(request: Request) {

@@ -14,6 +14,13 @@ import { Button } from '@/components/ui/button'
 import { CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { getErrorMessage } from '@/errors/common'
 import {
   createApiKeyFn,
@@ -22,6 +29,13 @@ import {
 } from '@/functions/admin'
 import { getFieldError } from '@/lib/form-errors'
 import { createApiKeySchema } from '@/schemas/api-keys'
+import type { Project } from '@/shared/types'
+
+const ALL_PROJECTS_SCOPE = '__all_projects__'
+
+interface ApiKeyMetadata {
+  projectId?: string
+}
 
 interface ApiKeyRow {
   createdAt: Date | string
@@ -29,6 +43,7 @@ interface ApiKeyRow {
   expiresAt: Date | string | null
   id: string
   lastRequest: Date | string | null
+  metadata: ApiKeyMetadata | null
   name: string | null
   prefix: string | null
   start: string | null
@@ -49,12 +64,21 @@ async function copyKey(text: string) {
   toast.success('API key copied')
 }
 
+function getScopeLabel(apiKey: ApiKeyRow, projects: Project[]) {
+  const projectId = apiKey.metadata?.projectId
+  if (!projectId) {
+    return 'All projects'
+  }
+  return projects.find((project) => project.id === projectId)?.name ?? projectId
+}
+
 export function ApiKeyManagement() {
   const [apiKeys, setApiKeys] = useState<ApiKeyRow[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [lastKey, setLastKey] = useState('')
   const [loading, setLoading] = useState(true)
   const keyForm = useForm({
-    defaultValues: { name: '' },
+    defaultValues: { name: '', projectId: ALL_PROJECTS_SCOPE },
     validators: {
       onChange: createApiKeySchema,
       onSubmit: createApiKeySchema,
@@ -62,7 +86,13 @@ export function ApiKeyManagement() {
     onSubmit: async ({ value }) => {
       setLastKey('')
       try {
-        const created = await createApiKeyFn({ data: value })
+        const created = await createApiKeyFn({
+          data: {
+            name: value.name,
+            projectId:
+              value.projectId === ALL_PROJECTS_SCOPE ? '' : value.projectId,
+          },
+        })
         keyForm.reset()
         setLastKey(created.key)
         toast.success('API key created')
@@ -78,6 +108,7 @@ export function ApiKeyManagement() {
     try {
       const data = await getAdminWorkspaceFn()
       setApiKeys(data.apiKeys)
+      setProjects(data.projects)
     } catch (e) {
       toast.error(getErrorMessage(e, 'Could not load API keys'))
     } finally {
@@ -142,6 +173,33 @@ export function ApiKeyManagement() {
             )
           }}
         </keyForm.Field>
+        <keyForm.Field name="projectId">
+          {(field) => (
+            <div className="flex flex-col gap-1.5">
+              <Label>Scope</Label>
+              <Select
+                onValueChange={(value) =>
+                  field.handleChange(value ?? ALL_PROJECTS_SCOPE)
+                }
+                value={field.state.value}
+              >
+                <SelectTrigger aria-label="API key scope" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_PROJECTS_SCOPE}>
+                    All projects
+                  </SelectItem>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </keyForm.Field>
         <keyForm.Subscribe
           selector={(state) => [state.canSubmit, state.isSubmitting]}
         >
@@ -185,6 +243,7 @@ export function ApiKeyManagement() {
         ) : (
           apiKeys.map((apiKey) => {
             const start = [apiKey.prefix, apiKey.start].filter(Boolean).join('')
+            const scopeLabel = getScopeLabel(apiKey, projects)
             return (
               <div className="flex items-center gap-3 p-3" key={apiKey.id}>
                 <KeyRoundIcon className="size-4 text-muted-foreground" />
@@ -197,6 +256,9 @@ export function ApiKeyManagement() {
                   </div>
                   <div className="text-muted-foreground text-xs">
                     Last used {fmtDate(apiKey.lastRequest)}
+                  </div>
+                  <div className="text-muted-foreground text-xs">
+                    Scope {scopeLabel}
                   </div>
                 </div>
                 <Badge variant={apiKey.enabled ? 'success' : 'outline'}>

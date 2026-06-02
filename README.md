@@ -150,7 +150,7 @@ In an `<img>`, any non-200 shows as a broken image — a 403 almost always means
 
 SDK API keys are for trusted backend integrations such as JoodCMS. They are separate from the public image transform flow: `/img/*` still uses project allowlists and does not require an authentication header.
 
-Create a key from **Workspace → API Keys** as a super admin. The key is shown once. Send it as either:
+Create a key from **Workspace → API Keys** as a super admin. Keys can be scoped to every project or to a single project. Project-scoped keys can only read or write that project and cannot create new projects. The key is shown once. Send it as either:
 
 ```bash
 Authorization: Bearer <KEY>
@@ -165,6 +165,7 @@ All responses are JSON and use `Cache-Control: no-store`.
 | `GET` | `/api/sdk/projects` | List projects. |
 | `POST` | `/api/sdk/projects` | Create a project. Body: `name`, `origin`, `env`, optional `allowedOrigins`. |
 | `GET` | `/api/sdk/projects/<projectId>` | Fetch one project. |
+| `GET` | `/api/sdk/projects/<projectId>/configuration` | Fetch integration-safe project configuration: image endpoint, defaults, supported params, and allowed origins. |
 | `PATCH` | `/api/sdk/projects/<projectId>/settings` | Update `autoFormat`, `stripMetadata`, and/or `defaultQuality`. |
 | `POST` | `/api/sdk/projects/<projectId>/domains` | Add an allowed domain. Body: `host`. |
 | `DELETE` | `/api/sdk/projects/<projectId>/domains?host=<host>` | Remove an allowed domain. A JSON body `{ "host": "..." }` is also accepted. |
@@ -189,6 +190,7 @@ Failure modes:
 |---|---|
 | **400** | Invalid JSON, invalid URL/host, or invalid settings. |
 | **401** | Missing or invalid API key. |
+| **403** | API key is project-scoped and cannot access the requested project or operation. |
 | **404** | Unknown project or endpoint. |
 | **429** | API key rate limit exceeded. |
 
