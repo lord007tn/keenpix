@@ -3,53 +3,56 @@ import { isProjectEnv, type Project, type ProjectEnv } from '@/shared/types'
 
 const DEFAULT_ORG = 'org_default'
 
-interface ProjectRow {
-  allowedOrigins: string[]
-  autoFormat: boolean
-  color1: string
-  color2: string
-  createdAt: Date
-  defaultQuality: number
-  env: string
-  id: string
-  name: string
-  orgId: string
-  origin: string
-  stripMetadata: boolean
-}
-
-function toProject(p: ProjectRow): Project {
-  return {
-    id: p.id,
-    orgId: p.orgId,
-    name: p.name,
-    origin: p.origin,
-    env: isProjectEnv(p.env) ? p.env : 'production',
-    allowedOrigins: p.allowedOrigins,
-    color1: p.color1,
-    color2: p.color2,
-    autoFormat: p.autoFormat,
-    stripMetadata: p.stripMetadata,
-    defaultQuality: p.defaultQuality,
-    createdAt: p.createdAt.toLocaleDateString('en-US', {
-      month: 'short',
-      day: '2-digit',
-      year: 'numeric',
-    }),
-  }
-}
-
 export async function listProjects(orgId = DEFAULT_ORG): Promise<Project[]> {
   const rows = await prisma.project.findMany({
     where: { orgId },
     orderBy: { createdAt: 'asc' },
   })
-  return rows.map(toProject)
+  return rows.map((project) => ({
+    id: project.id,
+    orgId: project.orgId,
+    name: project.name,
+    origin: project.origin,
+    env: isProjectEnv(project.env) ? project.env : 'production',
+    allowedOrigins: project.allowedOrigins,
+    color1: project.color1,
+    color2: project.color2,
+    autoFormat: project.autoFormat,
+    stripMetadata: project.stripMetadata,
+    defaultQuality: project.defaultQuality,
+    createdAt: project.createdAt.toLocaleDateString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+    }),
+  }))
 }
 
-export async function getProject(id: string): Promise<Project | undefined> {
-  const p = await prisma.project.findUnique({ where: { id } })
-  return p ? toProject(p) : undefined
+export async function getProject(
+  id: string,
+  orgId = DEFAULT_ORG,
+): Promise<Project | undefined> {
+  const p = await prisma.project.findFirst({ where: { id, orgId } })
+  return p
+    ? {
+        id: p.id,
+        orgId: p.orgId,
+        name: p.name,
+        origin: p.origin,
+        env: isProjectEnv(p.env) ? p.env : 'production',
+        allowedOrigins: p.allowedOrigins,
+        color1: p.color1,
+        color2: p.color2,
+        autoFormat: p.autoFormat,
+        stripMetadata: p.stripMetadata,
+        defaultQuality: p.defaultQuality,
+        createdAt: p.createdAt.toLocaleDateString('en-US', {
+          month: 'short',
+          day: '2-digit',
+          year: 'numeric',
+        }),
+      }
+    : undefined
 }
 
 const COLOR_PRESETS = [
@@ -84,7 +87,24 @@ export async function createProject(input: NewProjectInput): Promise<Project> {
       color2: palette.color2,
     },
   })
-  return toProject(created)
+  return {
+    id: created.id,
+    orgId: created.orgId,
+    name: created.name,
+    origin: created.origin,
+    env: isProjectEnv(created.env) ? created.env : 'production',
+    allowedOrigins: created.allowedOrigins,
+    color1: created.color1,
+    color2: created.color2,
+    autoFormat: created.autoFormat,
+    stripMetadata: created.stripMetadata,
+    defaultQuality: created.defaultQuality,
+    createdAt: created.createdAt.toLocaleDateString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+    }),
+  }
 }
 
 function deriveAllowedOriginsFromUrl(originUrl: string): string[] {
@@ -98,29 +118,67 @@ function deriveAllowedOriginsFromUrl(originUrl: string): string[] {
 export async function addAllowedOrigin(
   projectId: string,
   host: string,
+  orgId = DEFAULT_ORG,
 ): Promise<Project | undefined> {
-  const p = await prisma.project.findUnique({ where: { id: projectId } })
+  const p = await prisma.project.findFirst({ where: { id: projectId, orgId } })
   if (!p) {
     return
   }
   if (p.allowedOrigins.includes(host)) {
-    return toProject(p)
+    return {
+      id: p.id,
+      orgId: p.orgId,
+      name: p.name,
+      origin: p.origin,
+      env: isProjectEnv(p.env) ? p.env : 'production',
+      allowedOrigins: p.allowedOrigins,
+      color1: p.color1,
+      color2: p.color2,
+      autoFormat: p.autoFormat,
+      stripMetadata: p.stripMetadata,
+      defaultQuality: p.defaultQuality,
+      createdAt: p.createdAt.toLocaleDateString('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+      }),
+    }
   }
   const updated = await prisma.project.update({
     where: { id: projectId },
     data: { allowedOrigins: { push: host } },
   })
-  return toProject(updated)
+  return {
+    id: updated.id,
+    orgId: updated.orgId,
+    name: updated.name,
+    origin: updated.origin,
+    env: isProjectEnv(updated.env) ? updated.env : 'production',
+    allowedOrigins: updated.allowedOrigins,
+    color1: updated.color1,
+    color2: updated.color2,
+    autoFormat: updated.autoFormat,
+    stripMetadata: updated.stripMetadata,
+    defaultQuality: updated.defaultQuality,
+    createdAt: updated.createdAt.toLocaleDateString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+    }),
+  }
 }
 
 export async function removeAllowedOrigin(
   projectId: string,
   host: string,
+  orgId = DEFAULT_ORG,
 ): Promise<Project | undefined> {
   // Read-modify-write inside a transaction so a concurrent add/remove isn't lost
   // (Prisma has no atomic array-remove the way `push` is atomic for the add).
   const updated = await prisma.$transaction(async (tx) => {
-    const p = await tx.project.findUnique({ where: { id: projectId } })
+    const p = await tx.project.findFirst({
+      where: { id: projectId, orgId },
+    })
     if (!p) {
       return null
     }
@@ -131,7 +189,26 @@ export async function removeAllowedOrigin(
       },
     })
   })
-  return updated ? toProject(updated) : undefined
+  return updated
+    ? {
+        id: updated.id,
+        orgId: updated.orgId,
+        name: updated.name,
+        origin: updated.origin,
+        env: isProjectEnv(updated.env) ? updated.env : 'production',
+        allowedOrigins: updated.allowedOrigins,
+        color1: updated.color1,
+        color2: updated.color2,
+        autoFormat: updated.autoFormat,
+        stripMetadata: updated.stripMetadata,
+        defaultQuality: updated.defaultQuality,
+        createdAt: updated.createdAt.toLocaleDateString('en-US', {
+          month: 'short',
+          day: '2-digit',
+          year: 'numeric',
+        }),
+      }
+    : undefined
 }
 
 export interface ProjectSettingsPatch {
@@ -143,8 +220,9 @@ export interface ProjectSettingsPatch {
 export async function updateProjectSettings(
   projectId: string,
   patch: ProjectSettingsPatch,
+  orgId = DEFAULT_ORG,
 ): Promise<Project | undefined> {
-  const p = await prisma.project.findUnique({ where: { id: projectId } })
+  const p = await prisma.project.findFirst({ where: { id: projectId, orgId } })
   if (!p) {
     return
   }
@@ -156,5 +234,22 @@ export async function updateProjectSettings(
       defaultQuality: patch.defaultQuality ?? p.defaultQuality,
     },
   })
-  return toProject(updated)
+  return {
+    id: updated.id,
+    orgId: updated.orgId,
+    name: updated.name,
+    origin: updated.origin,
+    env: isProjectEnv(updated.env) ? updated.env : 'production',
+    allowedOrigins: updated.allowedOrigins,
+    color1: updated.color1,
+    color2: updated.color2,
+    autoFormat: updated.autoFormat,
+    stripMetadata: updated.stripMetadata,
+    defaultQuality: updated.defaultQuality,
+    createdAt: updated.createdAt.toLocaleDateString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+    }),
+  }
 }

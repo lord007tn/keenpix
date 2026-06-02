@@ -2,6 +2,18 @@
 
 All notable changes to Keenpix are documented here.
 
+## [v0.1.2] - 2026-06-02
+
+### Added
+
+- Added Better Auth API key support for trusted internal integrations.
+- Added a super-admin **Workspace → API Keys** panel to create, copy, list, and disable internal API keys.
+- Added `/api/sdk/*` project management endpoints for listing, creating, reading, updating settings, and adding/removing allowed domains.
+
+### Changed
+
+- Kept the public `/img/*` transform endpoint headerless and allowlist-gated; internal API keys are only for product-management API calls.
+
 ## [v0.1.1] - 2026-06-01
 
 ### Changed

@@ -7,30 +7,10 @@ import { getAppUrl } from '@/lib/deployment'
 const DEFAULT_SMTP_ID = 'default'
 const TOKEN_BYTES = 32
 const DAY_MS = 86_400_000
+const ADMIN_ROLE = 'admin'
+const STAFF_ROLE = 'staff'
 
-export type StaffRole = 'admin' | 'staff'
-
-export interface StaffUser {
-  createdAt: string
-  email: string
-  id: string
-  name: string | null
-  role: string
-}
-
-export interface StaffInvitationRow {
-  acceptedAt: string | null
-  createdAt: string
-  email: string
-  expiresAt: string
-  id: string
-  role: StaffRole
-  status: string
-}
-
-export interface CreatedInvitation extends StaffInvitationRow {
-  inviteLink: string
-}
+export type StaffRole = typeof ADMIN_ROLE | typeof STAFF_ROLE
 
 export interface SmtpSettingsInput {
   enabled?: boolean
@@ -74,46 +54,6 @@ function tokenHash(token: string) {
   return createHash('sha256').update(token).digest('hex')
 }
 
-function iso(d: Date | null | undefined) {
-  return d ? d.toISOString() : null
-}
-
-function toStaffUser(user: {
-  createdAt: Date
-  email: string
-  id: string
-  name: string | null
-  role: string
-}): StaffUser {
-  return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-    createdAt: user.createdAt.toISOString(),
-  }
-}
-
-function toInvitation(invitation: {
-  acceptedAt: Date | null
-  createdAt: Date
-  email: string
-  expiresAt: Date
-  id: string
-  role: string
-  status: string
-}): StaffInvitationRow {
-  return {
-    id: invitation.id,
-    email: invitation.email,
-    role: invitation.role === 'admin' ? 'admin' : 'staff',
-    status: invitation.status,
-    expiresAt: invitation.expiresAt.toISOString(),
-    acceptedAt: iso(invitation.acceptedAt),
-    createdAt: invitation.createdAt.toISOString(),
-  }
-}
-
 function inviteLink(token: string) {
   return `${getAppUrl()}/invite/${token}`
 }
@@ -134,20 +74,135 @@ function envSmtpSettings(): EffectiveSmtpSettings | undefined {
   }
 }
 
-export async function listStaffUsers(): Promise<StaffUser[]> {
+export async function listStaffUsers() {
   const rows = await prisma.user.findMany({
     orderBy: [{ role: 'asc' }, { email: 'asc' }],
     select: { id: true, email: true, name: true, role: true, createdAt: true },
   })
-  return rows.map(toStaffUser)
+  return rows.map((user) => ({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    createdAt: user.createdAt.toISOString(),
+  }))
 }
 
-export async function listInvitations(): Promise<StaffInvitationRow[]> {
+export async function listInvitations() {
   const rows = await prisma.staffInvitation.findMany({
     orderBy: { createdAt: 'desc' },
     take: 50,
   })
-  return rows.map(toInvitation)
+  return rows.map((invitation) => {
+    const role = invitation.role === ADMIN_ROLE ? ADMIN_ROLE : STAFF_ROLE
+    return {
+      id: invitation.id,
+      email: invitation.email,
+      role,
+      status: invitation.status,
+      expiresAt: invitation.expiresAt.toISOString(),
+      acceptedAt: invitation.acceptedAt?.toISOString() ?? null,
+      createdAt: invitation.createdAt.toISOString(),
+    }
+  })
+}
+
+export async function listInternalApiKeys(configId: string) {
+  const rows = await prisma.apiKey.findMany({
+    where: { configId },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+    select: {
+      id: true,
+      name: true,
+      start: true,
+      prefix: true,
+      enabled: true,
+      lastRequest: true,
+      expiresAt: true,
+      createdAt: true,
+      metadata: true,
+      permissions: true,
+    },
+  })
+
+  return rows.map((apiKey) => {
+    let metadata: unknown = apiKey.metadata
+    for (let i = 0; i < 2; i++) {
+      if (typeof metadata !== 'string') {
+        break
+      }
+      try {
+        metadata = JSON.parse(metadata)
+      } catch {
+        metadata = null
+        break
+      }
+    }
+
+    let permissions: unknown = apiKey.permissions
+    for (let i = 0; i < 2; i++) {
+      if (typeof permissions !== 'string') {
+        break
+      }
+      try {
+        permissions = JSON.parse(permissions)
+      } catch {
+        permissions = null
+        break
+      }
+    }
+
+    const projectId =
+      metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+        ? Reflect.get(metadata, 'projectId')
+        : null
+
+    return {
+      id: apiKey.id,
+      name: apiKey.name,
+      start: apiKey.start,
+      prefix: apiKey.prefix,
+      enabled: apiKey.enabled,
+      lastRequest: apiKey.lastRequest,
+      expiresAt: apiKey.expiresAt,
+      createdAt: apiKey.createdAt,
+      metadata:
+        typeof projectId === 'string' && projectId.trim()
+          ? { projectId: projectId.trim() }
+          : null,
+      permissions:
+        permissions &&
+        typeof permissions === 'object' &&
+        !Array.isArray(permissions)
+          ? Object.fromEntries(
+              Object.entries(permissions).flatMap(([resource, actions]) =>
+                Array.isArray(actions)
+                  ? [
+                      [
+                        resource,
+                        actions.filter((action) => typeof action === 'string'),
+                      ],
+                    ]
+                  : [],
+              ),
+            )
+          : null,
+    }
+  })
+}
+
+export async function disableInternalApiKey(id: string, configId: string) {
+  const result = await prisma.apiKey.updateMany({
+    where: { id, configId },
+    data: { enabled: false },
+  })
+
+  if (result.count === 0) {
+    throw new Error('API key not found')
+  }
+
+  return { ok: true }
 }
 
 export async function createStaffInvitation(input: {
@@ -155,7 +210,7 @@ export async function createStaffInvitation(input: {
   expiresDays?: number
   invitedById: string
   role: StaffRole
-}): Promise<CreatedInvitation> {
+}) {
   const token = randomBytes(TOKEN_BYTES).toString('hex')
   const expiresDays = Math.min(30, Math.max(1, input.expiresDays ?? 7))
   const created = await prisma.staffInvitation.create({
@@ -167,7 +222,17 @@ export async function createStaffInvitation(input: {
       expiresAt: new Date(Date.now() + expiresDays * DAY_MS),
     },
   })
-  return { ...toInvitation(created), inviteLink: inviteLink(token) }
+  const role = created.role === ADMIN_ROLE ? ADMIN_ROLE : STAFF_ROLE
+  return {
+    id: created.id,
+    email: created.email,
+    role,
+    status: created.status,
+    expiresAt: created.expiresAt.toISOString(),
+    acceptedAt: created.acceptedAt?.toISOString() ?? null,
+    createdAt: created.createdAt.toISOString(),
+    inviteLink: inviteLink(token),
+  }
 }
 
 export async function revokeInvitation(id: string) {
@@ -175,7 +240,16 @@ export async function revokeInvitation(id: string) {
     where: { id },
     data: { status: 'revoked', revokedAt: new Date() },
   })
-  return toInvitation(updated)
+  const role = updated.role === ADMIN_ROLE ? ADMIN_ROLE : STAFF_ROLE
+  return {
+    id: updated.id,
+    email: updated.email,
+    role,
+    status: updated.status,
+    expiresAt: updated.expiresAt.toISOString(),
+    acceptedAt: updated.acceptedAt?.toISOString() ?? null,
+    createdAt: updated.createdAt.toISOString(),
+  }
 }
 
 export async function getInvitationByToken(token: string) {
@@ -185,7 +259,16 @@ export async function getInvitationByToken(token: string) {
   if (!row) {
     return
   }
-  return toInvitation(row)
+  const role = row.role === ADMIN_ROLE ? ADMIN_ROLE : STAFF_ROLE
+  return {
+    id: row.id,
+    email: row.email,
+    role,
+    status: row.status,
+    expiresAt: row.expiresAt.toISOString(),
+    acceptedAt: row.acceptedAt?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
+  }
 }
 
 export async function acceptInvitation(input: {
@@ -256,7 +339,13 @@ export async function acceptInvitation(input: {
       data: { status: 'accepted', acceptedAt: new Date() },
     })
 
-    return toStaffUser(user)
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      createdAt: user.createdAt.toISOString(),
+    }
   })
 }
 

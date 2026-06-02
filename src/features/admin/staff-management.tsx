@@ -29,30 +29,13 @@ import {
   revokeInvitationFn,
 } from '@/functions/admin'
 import { getFieldError } from '@/lib/form-errors'
-import { createInvitationSchema } from '@/schemas/admin'
+import {
+  type CreateInvitationInput,
+  createInvitationSchema,
+} from '@/schemas/admin'
 
-type StaffRole = 'admin' | 'staff'
-
-function isStaffRole(value: unknown): value is StaffRole {
+function isStaffRole(value: unknown): value is CreateInvitationInput['role'] {
   return value === 'admin' || value === 'staff'
-}
-
-interface StaffUser {
-  createdAt: string
-  email: string
-  id: string
-  name: string | null
-  role: string
-}
-
-interface StaffInvitationRow {
-  acceptedAt: string | null
-  createdAt: string
-  email: string
-  expiresAt: string
-  id: string
-  role: StaffRole
-  status: string
 }
 
 const invitationDateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -60,11 +43,7 @@ const invitationDateFormatter = new Intl.DateTimeFormat('en-US', {
   day: '2-digit',
   year: 'numeric',
 })
-const DEFAULT_INVITE_VALUES: {
-  email: string
-  role: StaffRole
-  sendEmail: boolean
-} = {
+const DEFAULT_INVITE_VALUES: CreateInvitationInput = {
   email: '',
   role: 'staff',
   sendEmail: false,
@@ -80,10 +59,13 @@ async function copy(text: string) {
 }
 
 export function StaffManagement() {
-  const [users, setUsers] = useState<StaffUser[]>([])
-  const [invitations, setInvitations] = useState<StaffInvitationRow[]>([])
+  const [workspace, setWorkspace] = useState<Awaited<
+    ReturnType<typeof getAdminWorkspaceFn>
+  > | null>(null)
   const [lastInviteLink, setLastInviteLink] = useState('')
   const [loading, setLoading] = useState(true)
+  const users = workspace?.users ?? []
+  const invitations = workspace?.invitations ?? []
   const inviteForm = useForm({
     defaultValues: DEFAULT_INVITE_VALUES,
     validators: {
@@ -113,8 +95,7 @@ export function StaffManagement() {
     setLoading(true)
     try {
       const data = await getAdminWorkspaceFn()
-      setUsers(data.users)
-      setInvitations(data.invitations)
+      setWorkspace(data)
     } catch (e) {
       toast.error(getErrorMessage(e, 'Could not load staff settings'))
     } finally {

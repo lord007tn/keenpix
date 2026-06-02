@@ -1,3 +1,4 @@
+import { apiKey } from '@better-auth/api-key'
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { admin } from 'better-auth/plugins'
@@ -65,6 +66,36 @@ export const auth = betterAuth({
     disableSignUp: true,
   },
   plugins: [
+    apiKey({
+      configId: 'internal',
+      apiKeyHeaders: ['x-keenpix-api-key'],
+      customAPIKeyGetter: (ctx) => {
+        const authorization = ctx.headers?.get('authorization')?.trim()
+        if (authorization?.toLowerCase().startsWith('bearer ')) {
+          return authorization.slice(7).trim()
+        }
+        return ctx.headers?.get('x-keenpix-api-key')?.trim() ?? null
+      },
+      defaultPrefix: 'kp_internal_',
+      enableMetadata: true,
+      requireName: true,
+      maximumNameLength: 80,
+      rateLimit: {
+        enabled: true,
+        maxRequests: 10_000,
+        timeWindow: 1000 * 60 * 60 * 24,
+      },
+      permissions: {
+        defaultPermissions: {
+          projects: ['read', 'write'],
+        },
+      },
+      schema: {
+        apikey: {
+          modelName: 'apiKey',
+        },
+      },
+    }),
     admin(),
     // Must be last so it can post-process Set-Cookie headers.
     tanstackStartCookies(),

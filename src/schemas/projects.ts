@@ -46,14 +46,16 @@ export const createProjectSchema = z.object({
   env: projectEnvSchema,
 })
 
+export const allowedHostValueSchema = nonEmptyStringSchema('Enter a host.')
+  .max(255, 'Use 255 characters or fewer.')
+  .transform(normalizeAllowedHost)
+  .refine((host) => HOST_RE.test(host), {
+    message: 'Enter a valid host, e.g. images.example.com.',
+  })
+
 export const allowedHostSchema = z.object({
   projectId: nonEmptyStringSchema(),
-  host: nonEmptyStringSchema('Enter a host.')
-    .max(255, 'Use 255 characters or fewer.')
-    .transform(normalizeAllowedHost)
-    .refine((host) => HOST_RE.test(host), {
-      message: 'Enter a valid host, e.g. images.example.com.',
-    }),
+  host: allowedHostValueSchema,
 })
 
 export const projectSettingsSchema = z.object({
@@ -85,6 +87,20 @@ export const projectQualitySchema = z.object({
       { message: 'Use a value from 30 to 100.' },
     ),
 })
+
+export const internalCreateProjectSchema = createProjectSchema.extend({
+  allowedOrigins: z.array(allowedHostValueSchema).optional(),
+})
+
+export const internalProjectSettingsPatchSchema = projectSettingsSchema
+  .omit({ projectId: true })
+  .refine(
+    (value) =>
+      value.autoFormat !== undefined ||
+      value.stripMetadata !== undefined ||
+      value.defaultQuality !== undefined,
+    { message: 'Send at least one setting to update.' },
+  )
 
 export type CreateProjectInput = z.input<typeof createProjectSchema>
 export type ProjectSettingsInput = z.input<typeof projectSettingsSchema>
