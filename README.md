@@ -10,6 +10,7 @@ It is built for operators who want the important parts kept visible: project all
 
 - **Transform API** - `GET /img/https://origin.example/photo.jpg?project=...&w=...&fmt=...` resizes, re-encodes, blurs, negotiates modern formats, and returns immutable cache headers.
 - **No public API keys** - access is gated by each project's domain allowlist. An empty allowlist fails closed with 403, so a fresh project is never an open proxy.
+- **Internal API keys** - trusted backend systems can manage projects, domains, and pipeline settings through authenticated JSON endpoints.
 - **Projects and origins** - each project owns its source host rules, settings, request logs, and analytics.
 - **Built-in analytics** - requests, bandwidth saved, cache hit rate, output formats, latency, and top images come from the request log.
 - **Self-host dashboard** - seeded super admin, staff invitations, project settings, SMTP configuration, and operational views.
@@ -45,7 +46,7 @@ Use [docker-compose.coolify.yml](./docker-compose.coolify.yml) for a Coolify ser
 4. Optionally change `KEENPIX_SUPER_ADMIN_EMAIL` from the default `admin@example.com`.
 5. Deploy, then sign in with `KEENPIX_SUPER_ADMIN_EMAIL` and the generated `SERVICE_PASSWORD_64_ADMIN` value shown in Coolify's environment variables.
 
-The Coolify stack uses the pinned `ghcr.io/lord007tn/keenpix:v0.1.0` image, keeps Postgres private, persists database/cache volumes, runs migrations and seed on app startup, and exposes the app through Coolify's proxy on container port `3000`.
+The Coolify stack uses the pinned `ghcr.io/lord007tn/keenpix:v0.1.2` image, keeps Postgres private, persists database/cache volumes, runs migrations and seed on app startup, and exposes the app through Coolify's proxy on container port `3000`.
 
 If an earlier Coolify deploy failed with a Postgres 18 message about existing data in `/var/lib/postgresql/data`, remove the failed `keenpix-pg` volume from that Coolify resource or recreate the resource before deploying this compose. The Coolify compose now uses a fresh `keenpix_pg18` volume mounted at `/var/lib/postgresql`, which is the Postgres 18-compatible layout.
 
@@ -142,6 +143,54 @@ Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Ac
 | **504** | Origin timed out |
 
 In an `<img>`, any non-200 shows as a broken image — a 403 almost always means the source host isn't on the allowlist.
+
+---
+
+## Internal API
+
+Internal API keys are for trusted backend integrations such as JoodCMS. They are separate from the public image transform flow: `/img/*` still uses project allowlists and does not require an authentication header.
+
+Create a key from **Workspace → API Keys** as a super admin. The key is shown once. Send it as either:
+
+```bash
+Authorization: Bearer <KEY>
+# or
+X-Keenpix-Api-Key: <KEY>
+```
+
+All responses are JSON and use `Cache-Control: no-store`.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/internal/projects` | List projects. |
+| `POST` | `/api/internal/projects` | Create a project. Body: `name`, `origin`, `env`, optional `allowedOrigins`. |
+| `GET` | `/api/internal/projects/<projectId>` | Fetch one project. |
+| `PATCH` | `/api/internal/projects/<projectId>/settings` | Update `autoFormat`, `stripMetadata`, and/or `defaultQuality`. |
+| `POST` | `/api/internal/projects/<projectId>/domains` | Add an allowed domain. Body: `host`. |
+| `DELETE` | `/api/internal/projects/<projectId>/domains?host=<host>` | Remove an allowed domain. A JSON body `{ "host": "..." }` is also accepted. |
+
+Example:
+
+```bash
+curl -X POST "https://keenpix.example.com/api/internal/projects" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Storefront",
+    "origin": "https://cdn.example.com",
+    "env": "production",
+    "allowedOrigins": ["cdn.example.com"]
+  }'
+```
+
+Failure modes:
+
+| Status | When |
+|---|---|
+| **400** | Invalid JSON, invalid URL/host, or invalid settings. |
+| **401** | Missing or invalid API key. |
+| **404** | Unknown project or endpoint. |
+| **429** | API key rate limit exceeded. |
 
 ---
 
