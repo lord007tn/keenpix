@@ -17,6 +17,9 @@ import {
 
 const DEFAULT_ORG = 'org_default'
 const INTERNAL_API_KEY_CONFIG = 'internal'
+const FORWARDED_PAIR_RE = /\s*([^=;\s]+)=("[^"]+"|[^;\s]+)\s*/g
+const INVALID_FORWARDED_HOST_RE = /[\s/?#\\]/
+const TRAILING_COLON_RE = /:$/
 
 type ProjectPermission = 'read' | 'write'
 
@@ -139,8 +142,7 @@ async function handleProjectConfiguration(
     return jsonError('Project not found', 404)
   }
 
-  const requestUrl = new URL(request.url)
-  const publicBaseUrl = requestUrl.origin
+  const publicBaseUrl = getPublicBaseUrl(request)
 
   return json({
     configuration: {
@@ -286,6 +288,74 @@ function getApiKey(request: Request) {
     return authorization.slice(7).trim()
   }
   return request.headers.get('x-keenpix-api-key')?.trim()
+}
+
+function firstHeaderValue(value: string | null) {
+  return value?.split(',')[0]?.trim() || null
+}
+
+function cleanForwardedValue(value: string | null | undefined) {
+  const first = value?.trim()
+  if (!first) {
+    return null
+  }
+  return first.replace(/^"|"$/g, '')
+}
+
+function parseForwardedHeader(value: string | null) {
+  const first = firstHeaderValue(value)
+  if (!first) {
+    return {}
+  }
+
+  const parts: Record<string, string> = {}
+  for (const match of first.matchAll(FORWARDED_PAIR_RE)) {
+    const key = match[1]?.toLowerCase()
+    const value = cleanForwardedValue(match[2])
+    if (key && value) {
+      parts[key] = value
+    }
+  }
+  return parts
+}
+
+function normalizeForwardedProto(value: string | null | undefined) {
+  const proto = cleanForwardedValue(firstHeaderValue(value ?? null))
+    ?.toLowerCase()
+    .replace(TRAILING_COLON_RE, '')
+  return proto === 'http' || proto === 'https' ? proto : null
+}
+
+function normalizeForwardedHost(value: string | null | undefined) {
+  const host = cleanForwardedValue(firstHeaderValue(value ?? null))
+  if (!host || INVALID_FORWARDED_HOST_RE.test(host)) {
+    return null
+  }
+
+  try {
+    return new URL(`http://${host}`).host
+  } catch {
+    return null
+  }
+}
+
+function getPublicBaseUrl(request: Request) {
+  const requestUrl = new URL(request.url)
+  const forwarded = parseForwardedHeader(request.headers.get('forwarded'))
+  const proto =
+    normalizeForwardedProto(request.headers.get('x-forwarded-proto')) ??
+    normalizeForwardedProto(forwarded.proto) ??
+    requestUrl.protocol.replace(TRAILING_COLON_RE, '')
+  const host =
+    normalizeForwardedHost(request.headers.get('x-forwarded-host')) ??
+    normalizeForwardedHost(forwarded.host) ??
+    requestUrl.host
+
+  try {
+    return new URL(`${proto}://${host}`).origin
+  } catch {
+    return requestUrl.origin
+  }
 }
 
 async function readJson(request: Request) {

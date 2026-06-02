@@ -60,8 +60,15 @@ function fmtDate(value: Date | string | null) {
 }
 
 async function copyKey(text: string) {
-  await navigator.clipboard.writeText(text)
-  toast.success('API key copied')
+  try {
+    if (!navigator.clipboard) {
+      throw new Error('Clipboard API is unavailable')
+    }
+    await navigator.clipboard.writeText(text)
+    toast.success('API key copied')
+  } catch {
+    toast.error('Failed to copy API key')
+  }
 }
 
 function getScopeLabel(apiKey: ApiKeyRow, projects: Project[]) {
