@@ -20,6 +20,19 @@ Stack: TanStack Start (React 19, SSR) · Prisma 7 + PostgreSQL · sharp · Docke
 
 ---
 
+## Code style
+
+Keenpix keeps helpers and utils scoped by folder and purpose:
+
+- `helpers/<domain>/` is for pure domain helpers with real parsing, composition, or validation behavior. Do not put broad catch-all files like `helpers/admin.ts` here.
+- `utils/<primitive>/` is for pure generic primitives, not product-specific response shaping.
+- Do not extract functions that only return object literals or forward fields. Keep that code in the owning module unless the helper removes real logic or validation edge cases.
+- Function complexity lint rules are disabled on purpose. Prefer readable local control flow over splitting code only for a metric.
+
+See [AGENTS.md](./AGENTS.md) and [src/README.md](./src/README.md) for the full repository rules.
+
+---
+
 ## Quick start (Docker — the self-host path)
 
 Requires Docker + Docker Compose.

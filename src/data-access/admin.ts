@@ -3,18 +3,15 @@ import { hashPassword } from 'better-auth/crypto'
 import { prisma } from '@/db'
 import { env } from '@/env/server'
 import { getAppUrl } from '@/lib/deployment'
-import {
-  internalApiKeyData,
-  type StaffRole,
-  staffInvitationData,
-  staffUserData,
-} from './helpers/admin'
+import { internalApiKeyData } from './helpers/api-keys/internal-api-key'
 
 const DEFAULT_SMTP_ID = 'default'
 const TOKEN_BYTES = 32
 const DAY_MS = 86_400_000
+const ADMIN_ROLE = 'admin'
+const STAFF_ROLE = 'staff'
 
-export type { StaffRole } from './helpers/admin'
+export type StaffRole = typeof ADMIN_ROLE | typeof STAFF_ROLE
 
 export interface SmtpSettingsInput {
   enabled?: boolean
@@ -83,7 +80,13 @@ export async function listStaffUsers() {
     orderBy: [{ role: 'asc' }, { email: 'asc' }],
     select: { id: true, email: true, name: true, role: true, createdAt: true },
   })
-  return rows.map(staffUserData)
+  return rows.map((user) => ({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    createdAt: user.createdAt.toISOString(),
+  }))
 }
 
 export async function listInvitations() {
@@ -91,7 +94,18 @@ export async function listInvitations() {
     orderBy: { createdAt: 'desc' },
     take: 50,
   })
-  return rows.map(staffInvitationData)
+  return rows.map((invitation) => {
+    const role = invitation.role === ADMIN_ROLE ? ADMIN_ROLE : STAFF_ROLE
+    return {
+      id: invitation.id,
+      email: invitation.email,
+      role,
+      status: invitation.status,
+      expiresAt: invitation.expiresAt.toISOString(),
+      acceptedAt: invitation.acceptedAt?.toISOString() ?? null,
+      createdAt: invitation.createdAt.toISOString(),
+    }
+  })
 }
 
 export async function listInternalApiKeys(configId: string) {
@@ -146,7 +160,17 @@ export async function createStaffInvitation(input: {
       expiresAt: new Date(Date.now() + expiresDays * DAY_MS),
     },
   })
-  return { ...staffInvitationData(created), inviteLink: inviteLink(token) }
+  const role = created.role === ADMIN_ROLE ? ADMIN_ROLE : STAFF_ROLE
+  return {
+    id: created.id,
+    email: created.email,
+    role,
+    status: created.status,
+    expiresAt: created.expiresAt.toISOString(),
+    acceptedAt: created.acceptedAt?.toISOString() ?? null,
+    createdAt: created.createdAt.toISOString(),
+    inviteLink: inviteLink(token),
+  }
 }
 
 export async function revokeInvitation(id: string) {
@@ -154,7 +178,16 @@ export async function revokeInvitation(id: string) {
     where: { id },
     data: { status: 'revoked', revokedAt: new Date() },
   })
-  return staffInvitationData(updated)
+  const role = updated.role === ADMIN_ROLE ? ADMIN_ROLE : STAFF_ROLE
+  return {
+    id: updated.id,
+    email: updated.email,
+    role,
+    status: updated.status,
+    expiresAt: updated.expiresAt.toISOString(),
+    acceptedAt: updated.acceptedAt?.toISOString() ?? null,
+    createdAt: updated.createdAt.toISOString(),
+  }
 }
 
 export async function getInvitationByToken(token: string) {
@@ -164,7 +197,16 @@ export async function getInvitationByToken(token: string) {
   if (!row) {
     return
   }
-  return staffInvitationData(row)
+  const role = row.role === ADMIN_ROLE ? ADMIN_ROLE : STAFF_ROLE
+  return {
+    id: row.id,
+    email: row.email,
+    role,
+    status: row.status,
+    expiresAt: row.expiresAt.toISOString(),
+    acceptedAt: row.acceptedAt?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
+  }
 }
 
 export async function acceptInvitation(input: {
@@ -235,7 +277,13 @@ export async function acceptInvitation(input: {
       data: { status: 'accepted', acceptedAt: new Date() },
     })
 
-    return staffUserData(user)
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      createdAt: user.createdAt.toISOString(),
+    }
   })
 }
 
