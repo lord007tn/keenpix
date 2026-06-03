@@ -52,7 +52,7 @@ PRs should describe what changed, why it changed, and how it was verified. Inclu
 
 ## Releasing
 
-Maintainers cut releases from a semver tag. See [RELEASE.md](RELEASE.md) for the full checklist — version bump, `CHANGELOG.md` section, tagging, and post-release verification of the GHCR image, health route, and seed flow.
+Maintainers cut releases from a semver tag. See [RELEASE.md](RELEASE.md) for the full checklist — version bump, tagging, automatic changelogithub release notes, and post-release verification of the GHCR image, health route, and seed flow.
 
 ## Security
 

@@ -10,13 +10,17 @@ This is the maintainer checklist for cutting one.
 - [ ] `pnpm health` — lint, typecheck, test, knip, doctor, and build must all pass. CI
       runs the same gate on every push.
 
-## 2. Version and changelog
+## 2. Version
 
 - [ ] Bump `version` in `package.json` to the new `MAJOR.MINOR.PATCH`.
-- [ ] Add a section to `CHANGELOG.md` titled exactly `## [vX.Y.Z] - YYYY-MM-DD`. The
-      release workflow extracts the notes between this heading and the next `## [`
-      heading, so the format must match — including the leading `v`.
 - [ ] Commit: `chore(release): vX.Y.Z`.
+
+Release notes are generated automatically by
+[changelogithub](https://github.com/antfu/changelogithub) from the Conventional Commit
+messages since the previous tag — there is no `CHANGELOG.md` to edit. Write commits as
+`feat: …`, `fix: …`, etc.; anything that doesn't match a recognized type is left out of
+the notes, so granular, well-typed commits make the best release. (`CHANGELOG.md` is kept
+only as a historical record of releases up to v0.1.3.)
 
 ## 3. Tag and push
 
@@ -30,7 +34,7 @@ else.
 
 | Workflow | Trigger | Result |
 | --- | --- | --- |
-| [`release.yml`](.github/workflows/release.yml) | tag `v*` | Reads the matching `CHANGELOG.md` section and creates the GitHub release (`gh release create --verify-tag`). Fails if no `## [vX.Y.Z]` section exists. |
+| [`release.yml`](.github/workflows/release.yml) | tag `v*` | Runs `pnpm release:notes` (changelogithub) to generate notes from Conventional Commits since the previous tag and publish the GitHub release. |
 | [`docker.yml`](.github/workflows/docker.yml) | tag `v*` | Builds and pushes `ghcr.io/lord007tn/keenpix:vX.Y.Z` and `:vX.Y`. |
 | [`docker.yml`](.github/workflows/docker.yml) | push to `master` | Builds and pushes `:latest` (and `:master`). |
 
@@ -59,5 +63,5 @@ Pull the published image and confirm the deploy path works end to end:
 
 - A pre-release tag (`vX.Y.Z-rc.1`) builds and publishes `:vX.Y.Z` / `:vX.Y` the same way.
   It does not move `:latest`, which only tracks `master`.
-- `package.json` `version` should match the latest `CHANGELOG.md` heading. A mismatch
-  means a release was tagged without the version bump in step 2.
+- `package.json` `version` should match the tag you push. Keep release-worthy changes in
+  Conventional Commits so changelogithub can categorize them.
