@@ -272,14 +272,14 @@ Failure modes:
 
 ## Releases and Docker Images
 
-Keenpix uses semantic version tags in the form `vMAJOR.MINOR.PATCH` (for example `v0.1.0`). Pushing a valid tag runs [`changelogithub`](https://github.com/antfu/changelogithub) to create GitHub release notes, and the Docker workflow builds GHCR images for the self-hosted app.
+Keenpix releases from a semantic version tag (`vMAJOR.MINOR.PATCH`, e.g. `v0.1.0`). Before tagging, add a matching `## [vX.Y.Z] - YYYY-MM-DD` section to [CHANGELOG.md](./CHANGELOG.md) and bump `version` in `package.json`. Pushing the tag then creates the GitHub release from that changelog section ([release.yml](./.github/workflows/release.yml)) and publishes the GHCR image as `vX.Y.Z` and `vX.Y` ([docker.yml](./.github/workflows/docker.yml)); pushes to `master` publish `latest`.
 
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-The compose file defaults to `ghcr.io/lord007tn/keenpix:latest`; override with `KEENPIX_IMAGE` if you want a pinned tag or digest.
+See [RELEASE.md](./RELEASE.md) for the full maintainer checklist. The compose file defaults to `ghcr.io/lord007tn/keenpix:latest`; override with `KEENPIX_IMAGE` to pin a tag or digest.
 
 ---
 
