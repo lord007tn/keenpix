@@ -1,6 +1,6 @@
 ---
 title: Security
-description: The allowlist, SSRF protection, and why there are no API keys.
+description: The allowlist, SSRF protection, and why transform URLs need no API key.
 icon: ShieldCheck
 ---
 
@@ -11,8 +11,12 @@ Keenpix treats that as core, not a fast-follow.
 
 Each project has a list of **allowed source hosts**. A request is served only if the source URL's
 host is on that project's list. The list is checked **before** the cache, and an empty
-list blocks everything (fail-closed). This is why Keenpix needs no API keys: a transform
-URL is safe to publish, because it can only ever hit hosts you've approved.
+list blocks everything (fail-closed). This is why a transform URL needs no API key: it
+is safe to publish, because it can only ever hit hosts you've approved.
+
+(Keenpix does have optional **internal API keys** for trusted backend systems that manage
+projects over the JSON API — those are separate from the public transform endpoint. See
+[Projects & access](/docs/getting-started/projects).)
 
 ## SSRF protection
 

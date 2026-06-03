@@ -118,6 +118,7 @@ export async function listInternalApiKeys(configId: string) {
       start: true,
       prefix: true,
       enabled: true,
+      requestCount: true,
       lastRequest: true,
       expiresAt: true,
       createdAt: true,
@@ -164,6 +165,7 @@ export async function listInternalApiKeys(configId: string) {
       start: apiKey.start,
       prefix: apiKey.prefix,
       enabled: apiKey.enabled,
+      requestCount: apiKey.requestCount,
       lastRequest: apiKey.lastRequest,
       expiresAt: apiKey.expiresAt,
       createdAt: apiKey.createdAt,
@@ -190,6 +192,80 @@ export async function listInternalApiKeys(configId: string) {
           : null,
     }
   })
+}
+
+export interface NewApiKeyActivity {
+  apiKeyId: string
+  ipAddress?: string
+  latencyMs?: number
+  method: string
+  path: string
+  projectId?: string
+  scope: 'all_projects' | 'project'
+  status: number
+  userAgent?: string
+}
+
+export async function createApiKeyActivity(input: NewApiKeyActivity) {
+  await prisma.apiKeyActivity.create({
+    data: {
+      apiKeyId: input.apiKeyId,
+      method: input.method,
+      path: input.path,
+      status: input.status,
+      projectId: input.projectId ?? null,
+      scope: input.scope,
+      latencyMs: input.latencyMs ?? null,
+      ipAddress: input.ipAddress ?? null,
+      userAgent: input.userAgent ?? null,
+    },
+  })
+}
+
+export async function listApiKeyActivities(configId: string) {
+  const rows = await prisma.apiKeyActivity.findMany({
+    where: { apiKey: { configId } },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+    select: {
+      id: true,
+      method: true,
+      path: true,
+      status: true,
+      projectId: true,
+      scope: true,
+      latencyMs: true,
+      createdAt: true,
+      apiKey: {
+        select: {
+          id: true,
+          name: true,
+          prefix: true,
+          start: true,
+        },
+      },
+    },
+  })
+
+  return rows.map((activity) => ({
+    id: activity.id,
+    method: activity.method,
+    path: activity.path,
+    status: activity.status,
+    projectId: activity.projectId,
+    scope:
+      activity.scope === 'project' || activity.scope === 'all_projects'
+        ? activity.scope
+        : 'all_projects',
+    latencyMs: activity.latencyMs,
+    createdAt: activity.createdAt.toISOString(),
+    apiKey: {
+      id: activity.apiKey.id,
+      name: activity.apiKey.name,
+      prefix: activity.apiKey.prefix,
+      start: activity.apiKey.start,
+    },
+  }))
 }
 
 export async function disableInternalApiKey(id: string, configId: string) {

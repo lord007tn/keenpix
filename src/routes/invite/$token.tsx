@@ -18,16 +18,16 @@ import { getErrorMessage } from '@/errors/common'
 import { acceptInvitationFn, getInvitationFn } from '@/functions/admin'
 import { authClient } from '@/lib/auth/client'
 import { getFieldError } from '@/lib/form-errors'
+import { noIndexPageHead } from '@/lib/seo'
 import { acceptInvitationSchema } from '@/schemas/admin'
 
 export const Route = createFileRoute('/invite/$token')({
   loader: ({ params }) => getInvitationFn({ data: { token: params.token } }),
-  head: () => ({
-    meta: [
-      { title: 'Accept invitation - Keenpix' },
-      { name: 'robots', content: 'noindex,nofollow' },
-    ],
-  }),
+  head: () =>
+    noIndexPageHead(
+      'Accept invitation',
+      'Accept a private Keenpix workspace invitation and create your staff account.',
+    ),
   component: InvitePage,
 })
 
