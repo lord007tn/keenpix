@@ -25,25 +25,22 @@ jobs:
             exit 1
           fi
 
+      # changelogithub derives the previous tag from history, so fetch everything.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Extract changelog notes
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          awk -v tag="$TAG" '
-            $0 ~ "^## \\[" tag "\\]" { found = 1; next }
-            found && $0 ~ "^## \\[" { exit }
-            found { print }
-          ' CHANGELOG.md > release-notes.md
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
 
-          if [ ! -s release-notes.md ]; then
-            echo "No CHANGELOG.md section found for ${TAG}"
-            exit 1
-          fi
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
-      - name: Create release
-        run: gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-notes.md --verify-tag
+      # Generates the GitHub release notes from conventional commits since the
+      # previous tag and publishes the release for this tag.
+      - name: Publish release notes
+        run: pnpm release:notes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
