@@ -110,7 +110,11 @@ export function NavUser({ user }: { user: SessionUser }) {
                 Account
               </DropdownMenuItem>
               {isSuperAdmin ? (
-                <DropdownMenuItem render={<Link to="/app/workspace" />}>
+                <DropdownMenuItem
+                  render={
+                    <Link search={{ tab: 'staff' }} to="/app/workspace" />
+                  }
+                >
                   <Building2Icon />
                   Workspace
                 </DropdownMenuItem>

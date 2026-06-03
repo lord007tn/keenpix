@@ -6,6 +6,7 @@ import mdx from 'fumadocs-mdx/vite'
 import { nitro } from 'nitro/vite'
 import { defineConfig, type Plugin } from 'vite'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
+import packageJson from './package.json' with { type: 'json' }
 
 /**
  * Dev-only: stop the dev static-asset handler from shadowing the transform
@@ -40,6 +41,9 @@ function keenpixDevApiPassthrough(): Plugin {
 }
 
 const config = defineConfig({
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(packageJson.version),
+  },
   plugins: [
     mdx(),
     keenpixDevApiPassthrough(),

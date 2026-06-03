@@ -6,6 +6,7 @@ import { RouteError } from '@/components/app/route-error'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { getSessionFn } from '@/functions/auth'
 import { listProjectsFn } from '@/functions/projects'
+import { appPageHead } from '@/lib/seo'
 import { ProjectProvider } from '@/stores/project-context'
 
 const sidebarStyle: CSSProperties & {
@@ -15,6 +16,11 @@ const sidebarStyle: CSSProperties & {
   '--sidebar-width': 'calc(var(--spacing) * 72)',
   '--header-height': 'calc(var(--spacing) * 12)',
 }
+
+const APP_ROUTE_HEAD = appPageHead(
+  'App',
+  'Private Keenpix control plane for image optimization projects, analytics, logs, and settings.',
+)
 
 export const Route = createFileRoute('/app')({
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
@@ -29,7 +35,11 @@ export const Route = createFileRoute('/app')({
   },
   loader: () => listProjectsFn(),
   head: () => ({
-    meta: [{ name: 'robots', content: 'noindex,nofollow' }],
+    ...APP_ROUTE_HEAD,
+    meta: [
+      ...APP_ROUTE_HEAD.meta,
+      { name: 'robots', content: 'noindex,nofollow' },
+    ],
   }),
   component: AppLayout,
   errorComponent: RouteError,

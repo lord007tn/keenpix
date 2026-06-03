@@ -41,11 +41,30 @@ model ApiKey {
   updatedAt           DateTime  @updatedAt
   permissions         String?
   metadata            String?
+  activities          ApiKeyActivity[]
 
   @@index([configId])
   @@index([key])
   @@index([referenceId])
   @@map("apikey")
+}
+
+model ApiKeyActivity {
+  id        String   @id @default(cuid())
+  apiKeyId  String
+  apiKey    ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  method    String
+  path      String
+  status    Int
+  projectId String?
+  scope     String
+  latencyMs Float?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([apiKeyId, createdAt])
+  @@index([createdAt])
 }
 
 model SmtpSettings {

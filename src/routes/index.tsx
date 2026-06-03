@@ -34,6 +34,11 @@ export const Route = createFileRoute('/')({
       return {
         meta: [
           { title: 'Self-hosted Keenpix' },
+          {
+            name: 'description',
+            content:
+              'Private self-hosted Keenpix instance for managing image optimization projects, analytics, and pipeline settings.',
+          },
           { name: 'robots', content: 'noindex,nofollow' },
         ],
       }

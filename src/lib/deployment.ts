@@ -1,4 +1,5 @@
 import { env } from '@/env/server'
+import { REPOSITORY_URL } from '@/shared/repository'
 
 const TRAILING_SLASH = /\/$/
 
@@ -26,5 +27,5 @@ export function getAppUrl() {
 }
 
 export function getRepositoryUrl() {
-  return 'https://github.com/lord007tn/keenpix'
+  return REPOSITORY_URL
 }
