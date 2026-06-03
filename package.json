@@ -39,7 +39,7 @@
     "doctor": "react-doctor --full --no-score --fail-on none",
     "health": "pnpm lint && pnpm run typecheck && pnpm test && pnpm run knip && pnpm run doctor && pnpm build",
     "toolchain": "pnpm run health",
-    "release:notes": "pnpm dlx changelogithub@0.14.1",
+    "release:notes": "pnpm dlx changelogithub@14.0.0",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
