@@ -1,22 +1,31 @@
 import { useForm } from '@tanstack/react-form'
 import {
+  ActivityIcon,
   ClipboardCopyIcon,
   KeyRoundIcon,
-  RotateCwIcon,
-  ShieldCheckIcon,
   XIcon,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CardDescription } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
+  SelectGroup,
+  SelectLabel as SelectGroupLabel,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -32,14 +41,52 @@ import { createApiKeySchema } from '@/schemas/api-keys'
 
 const ALL_PROJECTS_SCOPE = '__all_projects__'
 
+type WorkspaceData = Awaited<ReturnType<typeof getAdminWorkspaceFn>>
+type CreatedApiKey = Awaited<ReturnType<typeof createApiKeyFn>>
+
 const keyDateFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: '2-digit',
   year: 'numeric',
 })
 
+const activityDateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: '2-digit',
+  hour: 'numeric',
+  minute: '2-digit',
+})
+
 function fmtDate(value: Date | string | null) {
   return value ? keyDateFormatter.format(new Date(value)) : 'Never'
+}
+
+function fmtDateTime(value: Date | string) {
+  return activityDateFormatter.format(new Date(value))
+}
+
+function fmtLatency(value: number | null) {
+  return typeof value === 'number' ? `${Math.round(value)}ms` : 'Unknown'
+}
+
+function projectScopeLabel(
+  projects: Array<{ id: string; name: string }>,
+  projectId?: string | null,
+) {
+  if (!projectId) {
+    return 'All projects'
+  }
+  return projects.find((project) => project.id === projectId)?.name ?? projectId
+}
+
+function statusVariant(status: number) {
+  if (status >= 200 && status < 300) {
+    return 'success'
+  }
+  if (status >= 400) {
+    return 'destructive'
+  }
+  return 'outline'
 }
 
 async function copyKey(text: string) {
@@ -54,22 +101,23 @@ async function copyKey(text: string) {
   }
 }
 
-export function ApiKeyManagement() {
-  const [workspace, setWorkspace] = useState<Awaited<
-    ReturnType<typeof getAdminWorkspaceFn>
-  > | null>(null)
-  const [lastKey, setLastKey] = useState('')
-  const [loading, setLoading] = useState(true)
-  const apiKeys = workspace?.apiKeys ?? []
-  const projects = workspace?.projects ?? []
-  const keyForm = useForm({
+// Create flow lives in a modal: collect name + scope, then reveal the key once.
+function CreateApiKeyDialog({
+  projects,
+  onCreated,
+}: {
+  projects: WorkspaceData['projects']
+  onCreated: (created: CreatedApiKey, projectId: string | null) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [createdKey, setCreatedKey] = useState('')
+  const form = useForm({
     defaultValues: { name: '', projectId: ALL_PROJECTS_SCOPE },
     validators: {
       onChange: createApiKeySchema,
       onSubmit: createApiKeySchema,
     },
     onSubmit: async ({ value }) => {
-      setLastKey('')
       try {
         const created = await createApiKeyFn({
           data: {
@@ -78,25 +126,182 @@ export function ApiKeyManagement() {
               value.projectId === ALL_PROJECTS_SCOPE ? '' : value.projectId,
           },
         })
-        keyForm.reset()
-        setLastKey(created.key)
+        onCreated(
+          created,
+          value.projectId === ALL_PROJECTS_SCOPE ? null : value.projectId,
+        )
+        // Keep the dialog open to reveal the key — it is only shown once.
+        setCreatedKey(created.key)
         toast.success('API key created')
-        await load()
       } catch (e) {
         toast.error(getErrorMessage(e, 'Could not create API key'))
       }
     },
   })
 
+  function changeOpen(next: boolean) {
+    setOpen(next)
+    if (!next) {
+      form.reset()
+      setCreatedKey('')
+    }
+  }
+
+  return (
+    <Dialog onOpenChange={changeOpen} open={open}>
+      <DialogTrigger render={<Button size="sm" />}>
+        <KeyRoundIcon data-icon="inline-start" />
+        Create API key
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {createdKey ? 'API key created' : 'Create API key'}
+          </DialogTitle>
+          <DialogDescription>
+            {createdKey
+              ? 'Copy it now — it is shown only once. Store it in the calling system as a secret.'
+              : 'Keys let trusted internal systems manage projects, domains, and pipeline settings over the JSON API.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        {createdKey ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex gap-2">
+              <Input
+                aria-label="New API key"
+                className="font-mono text-xs"
+                readOnly
+                value={createdKey}
+              />
+              <Button onClick={() => copyKey(createdKey)} variant="outline">
+                <ClipboardCopyIcon data-icon="inline-start" />
+                Copy
+              </Button>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => changeOpen(false)} type="button">
+                Done
+              </Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              form.handleSubmit()
+            }}
+          >
+            <form.Field name="name">
+              {(field) => {
+                const error = getFieldError(field.state.meta)
+                return (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={field.name}>Key name</Label>
+                    <Input
+                      aria-describedby={
+                        error ? `${field.name}-error` : undefined
+                      }
+                      aria-invalid={!!error}
+                      autoFocus
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="Internal integration"
+                      value={field.state.value}
+                    />
+                    {error ? (
+                      <p
+                        className="text-destructive text-xs"
+                        id={`${field.name}-error`}
+                      >
+                        {error}
+                      </p>
+                    ) : null}
+                  </div>
+                )
+              }}
+            </form.Field>
+            <form.Field name="projectId">
+              {(field) => (
+                <div className="flex flex-col gap-1.5">
+                  <Label>Scope</Label>
+                  <Select
+                    onValueChange={(value) =>
+                      field.handleChange(value ?? ALL_PROJECTS_SCOPE)
+                    }
+                    value={field.state.value}
+                  >
+                    <SelectTrigger
+                      aria-label="API key scope"
+                      className="w-full"
+                    >
+                      <SelectValue>
+                        {(value) =>
+                          projectScopeLabel(
+                            projects,
+                            value === ALL_PROJECTS_SCOPE ? null : value,
+                          )
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectGroupLabel>Scope</SelectGroupLabel>
+                        <SelectItem value={ALL_PROJECTS_SCOPE}>
+                          All projects
+                        </SelectItem>
+                        {projects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </form.Field>
+            <DialogFooter>
+              <Button
+                onClick={() => changeOpen(false)}
+                type="button"
+                variant="outline"
+              >
+                Cancel
+              </Button>
+              <form.Subscribe
+                selector={(state) => [state.canSubmit, state.isSubmitting]}
+              >
+                {([canSubmit, isSubmitting]) => (
+                  <Button disabled={!canSubmit || isSubmitting} type="submit">
+                    {isSubmitting ? 'Creating...' : 'Create key'}
+                  </Button>
+                )}
+              </form.Subscribe>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function ApiKeyManagement() {
+  const [workspace, setWorkspace] = useState<WorkspaceData | null>(null)
+  const apiKeys = workspace?.apiKeys ?? []
+  const apiKeyActivities = workspace?.apiKeyActivities ?? []
+  const projects = workspace?.projects ?? []
+
   const load = useCallback(async () => {
-    setLoading(true)
     try {
       const data = await getAdminWorkspaceFn()
       setWorkspace(data)
     } catch (e) {
       toast.error(getErrorMessage(e, 'Could not load API keys'))
-    } finally {
-      setLoading(false)
     }
   }, [])
 
@@ -104,12 +309,49 @@ export function ApiKeyManagement() {
     load()
   }, [load])
 
+  function handleCreated(created: CreatedApiKey, projectId: string | null) {
+    setWorkspace((current) =>
+      current
+        ? {
+            ...current,
+            apiKeys: [
+              {
+                id: created.id,
+                name: created.name,
+                start: created.start,
+                prefix: created.prefix,
+                enabled: created.enabled,
+                requestCount: created.requestCount,
+                lastRequest: created.lastRequest,
+                expiresAt: created.expiresAt,
+                createdAt: created.createdAt,
+                metadata: projectId ? { projectId } : null,
+                permissions: created.permissions,
+              },
+              ...current.apiKeys,
+            ],
+          }
+        : current,
+    )
+  }
+
   async function disable(id: string) {
+    const previous = workspace
+    setWorkspace((current) =>
+      current
+        ? {
+            ...current,
+            apiKeys: current.apiKeys.map((apiKey) =>
+              apiKey.id === id ? { ...apiKey, enabled: false } : apiKey,
+            ),
+          }
+        : current,
+    )
     try {
       await disableApiKeyFn({ data: { id } })
       toast.success('API key disabled')
-      await load()
     } catch (e) {
+      setWorkspace(previous)
       toast.error(getErrorMessage(e, 'Could not disable API key'))
     }
   }
@@ -121,104 +363,12 @@ export function ApiKeyManagement() {
         projects, domains, and pipeline settings over the JSON API.
       </CardDescription>
 
-      <form
-        className="flex flex-col gap-3 sm:flex-row sm:items-end"
-        onSubmit={(event) => {
-          event.preventDefault()
-          event.stopPropagation()
-          keyForm.handleSubmit()
-        }}
-      >
-        <keyForm.Field name="name">
-          {(field) => {
-            const error = getFieldError(field.state.meta)
-            return (
-              <div className="flex flex-1 flex-col gap-1.5">
-                <Label htmlFor={field.name}>Key name</Label>
-                <Input
-                  aria-describedby={error ? `${field.name}-error` : undefined}
-                  aria-invalid={!!error}
-                  id={field.name}
-                  name={field.name}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="JoodCMS integration"
-                  value={field.state.value}
-                />
-                {error ? (
-                  <p
-                    className="text-destructive text-xs"
-                    id={`${field.name}-error`}
-                  >
-                    {error}
-                  </p>
-                ) : null}
-              </div>
-            )
-          }}
-        </keyForm.Field>
-        <keyForm.Field name="projectId">
-          {(field) => (
-            <div className="flex flex-col gap-1.5">
-              <Label>Scope</Label>
-              <Select
-                onValueChange={(value) =>
-                  field.handleChange(value ?? ALL_PROJECTS_SCOPE)
-                }
-                value={field.state.value}
-              >
-                <SelectTrigger aria-label="API key scope" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_PROJECTS_SCOPE}>
-                    All projects
-                  </SelectItem>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </keyForm.Field>
-        <keyForm.Subscribe
-          selector={(state) => [state.canSubmit, state.isSubmitting]}
-        >
-          {([canSubmit, isSubmitting]) => (
-            <Button disabled={!canSubmit || isSubmitting} type="submit">
-              <KeyRoundIcon data-icon="inline-start" />
-              Create key
-            </Button>
-          )}
-        </keyForm.Subscribe>
-      </form>
-
-      {lastKey ? (
-        <Alert>
-          <ShieldCheckIcon />
-          <AlertTitle>Copy this key now</AlertTitle>
-          <AlertDescription>
-            It is shown once. Store it in the calling system as a secret.
-          </AlertDescription>
-          <div className="col-start-2 mt-3 flex gap-2">
-            <Input className="font-mono text-xs" readOnly value={lastKey} />
-            <Button onClick={() => copyKey(lastKey)} variant="outline">
-              <ClipboardCopyIcon data-icon="inline-start" />
-              Copy
-            </Button>
-          </div>
-        </Alert>
-      ) : null}
-
-      <div className="flex items-center justify-between">
-        <span className="font-medium text-sm">API keys</span>
-        <Button disabled={loading} onClick={load} size="sm" variant="ghost">
-          <RotateCwIcon data-icon="inline-start" />
-          Refresh
-        </Button>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm">API keys</span>
+          <Badge variant="outline">{apiKeys.length}</Badge>
+        </div>
+        <CreateApiKeyDialog onCreated={handleCreated} projects={projects} />
       </div>
 
       <div className="divide-y rounded-md border">
@@ -234,7 +384,7 @@ export function ApiKeyManagement() {
               : 'All projects'
             return (
               <div className="flex items-center gap-3 p-3" key={apiKey.id}>
-                <KeyRoundIcon className="size-4 text-muted-foreground" />
+                <KeyRoundIcon className="size-4 shrink-0 text-muted-foreground" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium text-sm">
                     {apiKey.name ?? 'Unnamed key'}
@@ -247,6 +397,9 @@ export function ApiKeyManagement() {
                   </div>
                   <div className="text-muted-foreground text-xs">
                     Scope {scopeLabel}
+                  </div>
+                  <div className="text-muted-foreground text-xs">
+                    {apiKey.requestCount.toLocaleString()} API calls
                   </div>
                 </div>
                 <Badge variant={apiKey.enabled ? 'success' : 'outline'}>
@@ -262,6 +415,56 @@ export function ApiKeyManagement() {
                     <XIcon />
                   </Button>
                 ) : null}
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="font-medium text-sm">API activity</span>
+        <Badge variant="outline">{apiKeyActivities.length}</Badge>
+      </div>
+
+      <div className="divide-y rounded-md border">
+        {apiKeyActivities.length === 0 ? (
+          <p className="p-3 text-muted-foreground text-sm">
+            No API calls recorded yet.
+          </p>
+        ) : (
+          apiKeyActivities.map((activity) => {
+            const keyStart = [
+              activity.apiKey.prefix,
+              activity.apiKey.start,
+            ].filter(Boolean)
+            const keyLabel =
+              activity.apiKey.name ??
+              (keyStart.length > 0
+                ? `${keyStart.join('')}...`
+                : activity.apiKey.id)
+            const scopeLabel = projectScopeLabel(projects, activity.projectId)
+            return (
+              <div className="flex items-center gap-3 p-3" key={activity.id}>
+                <ActivityIcon className="size-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="font-medium text-sm">
+                      {activity.method}
+                    </span>
+                    <span className="truncate font-mono text-xs">
+                      {activity.path}
+                    </span>
+                  </div>
+                  <div className="truncate text-muted-foreground text-xs">
+                    {keyLabel} - {scopeLabel} - {fmtLatency(activity.latencyMs)}
+                  </div>
+                  <div className="text-muted-foreground text-xs">
+                    {fmtDateTime(activity.createdAt)}
+                  </div>
+                </div>
+                <Badge variant={statusVariant(activity.status)}>
+                  {activity.status}
+                </Badge>
               </div>
             )
           })

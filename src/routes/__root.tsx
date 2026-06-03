@@ -41,6 +41,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { property: 'og:type', content: 'website' },
       { property: 'og:title', content: SITE_TITLE },
       { property: 'og:description', content: SITE_DESCRIPTION },
+      { property: 'og:url', content: absoluteUrl('/') },
       {
         property: 'og:image',
         content: absoluteUrl(BRAND_IMAGE_PATH),
@@ -53,15 +54,25 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ],
     links: [
       { rel: 'stylesheet', href: appCss },
+      { rel: 'shortcut icon', href: '/favicon.ico' },
       { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
-      { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
+      {
+        rel: 'icon',
+        href: '/favicon.ico',
+        sizes: '64x64 32x32 24x24 16x16',
+        type: 'image/x-icon',
+      },
       {
         rel: 'icon',
         href: '/logo192.png',
         type: 'image/png',
         sizes: '192x192',
       },
-      { rel: 'apple-touch-icon', href: '/logo192.png' },
+      {
+        rel: 'apple-touch-icon',
+        href: '/logo192.png',
+        sizes: '192x192',
+      },
       { rel: 'manifest', href: '/manifest.json' },
       { rel: 'alternate', type: 'text/plain', href: '/llms.txt' },
     ],

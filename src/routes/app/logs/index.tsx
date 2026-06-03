@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { DownloadIcon, SearchIcon } from 'lucide-react'
+import { DownloadIcon, SearchIcon, XIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { DataFilters, type FilterField } from '@/components/app/data-filters'
 import { PageHeader } from '@/components/app/page-header'
@@ -15,11 +15,17 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { listLogsFn } from '@/functions/logs'
+import { appPageHead } from '@/lib/seo'
 import { fmtBytes } from '@/shared/format'
 import type { LogRow } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
 
 export const Route = createFileRoute('/app/logs/')({
+  head: () =>
+    appPageHead(
+      'Live logs',
+      'Live Keenpix request logs with status, format, cache state, latency, and response size filters.',
+    ),
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
     project: typeof search.project === 'string' ? search.project : undefined,
   }),
@@ -162,11 +168,21 @@ function LogsPage() {
         <div className="relative">
           <SearchIcon className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
           <Input
-            className="pl-8 font-mono text-xs"
+            className="px-8 font-mono text-xs"
             onChange={(e) => setFilter(e.target.value)}
             placeholder="filter by path… e.g. /products/"
             value={filter}
           />
+          {filter ? (
+            <button
+              aria-label="Clear path search"
+              className="absolute top-2.5 right-2.5 text-muted-foreground outline-none hover:text-foreground"
+              onClick={() => setFilter('')}
+              type="button"
+            >
+              <XIcon className="size-4" />
+            </button>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <DataFilters
@@ -174,7 +190,10 @@ function LogsPage() {
             onChange={(key, next) =>
               setFilterValues((v) => ({ ...v, [key]: next }))
             }
-            onClear={() => setFilterValues({})}
+            onClear={() => {
+              setFilterValues({})
+              setFilter('')
+            }}
             values={filterValues}
           />
           <span className="ml-auto text-muted-foreground text-xs tabular-nums">
@@ -189,7 +208,7 @@ function LogsPage() {
             <TableRow>
               <TableHead>Timestamp</TableHead>
               {isAll ? <TableHead>Project</TableHead> : null}
-              <TableHead>Path</TableHead>
+              <TableHead className="w-full">Path</TableHead>
               <TableHead className="text-right">Width</TableHead>
               <TableHead>Format</TableHead>
               <TableHead className="text-right">Status</TableHead>
@@ -207,7 +226,9 @@ function LogsPage() {
                     {projectName.get(l.projectId) ?? l.projectId}
                   </TableCell>
                 ) : null}
-                <TableCell className="max-w-[1px] truncate">{l.path}</TableCell>
+                <TableCell className="w-full max-w-0 truncate">
+                  {l.path}
+                </TableCell>
                 <TableCell className="text-right text-muted-foreground">
                   {l.w}
                 </TableCell>

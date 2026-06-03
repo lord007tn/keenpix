@@ -21,9 +21,11 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar'
 import type { SessionUser } from '@/functions/auth'
+import { APP_VERSION } from '@/lib/seo'
+import { RELEASES_URL } from '@/shared/repository'
 import { useProject } from '@/stores/project-context'
 
-const NAV = [
+const PROJECT_NAV = [
   { to: '/app/dashboard', label: 'Dashboard', icon: LayoutGridIcon },
   { to: '/app/analytics', label: 'Analytics', icon: ChartColumnIcon },
   { to: '/app/logs', label: 'Live logs', icon: ScrollTextIcon },
@@ -42,9 +44,9 @@ export function AppSidebar({ user }: { user: SessionUser }) {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupLabel>Project</SidebarGroupLabel>
           <SidebarMenu>
-            {NAV.map((item) => (
+            {PROJECT_NAV.map((item) => (
               <SidebarMenuItem key={item.to}>
                 <SidebarMenuButton
                   isActive={pathname.startsWith(item.to)}
@@ -73,6 +75,18 @@ export function AppSidebar({ user }: { user: SessionUser }) {
               <BookOpenIcon />
               <span>Documentation</span>
             </SidebarMenuButton>
+            <div className="px-2 pt-1 pb-2 group-data-[collapsible=icon]:hidden">
+              <a
+                aria-label={`Keenpix v${APP_VERSION} — view releases on GitHub`}
+                className="font-mono text-[10px] text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+                href={RELEASES_URL}
+                rel="noreferrer"
+                target="_blank"
+                title="View releases on GitHub"
+              >
+                v{APP_VERSION}
+              </a>
+            </div>
           </SidebarMenuItem>
         </SidebarMenu>
         <NavUser user={user} />

@@ -23,8 +23,14 @@ import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { getErrorMessage } from '@/errors/common'
 import { authClient } from '@/lib/auth/client'
+import { appPageHead } from '@/lib/seo'
 
 export const Route = createFileRoute('/app/account/')({
+  head: () =>
+    appPageHead(
+      'Account',
+      'Manage your Keenpix profile, display name, sign-in details, and appearance preferences.',
+    ),
   component: AccountPage,
 })
 
@@ -121,7 +127,7 @@ function Row({
   children: ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-2 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+    <div className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
       <div className="flex flex-col gap-0.5">
         <span className="font-medium text-sm">{label}</span>
         {description ? (
@@ -161,7 +167,7 @@ function AccountPage() {
               </span>
             </div>
           </div>
-          <div className="divide-y border-t">
+          <div className="mt-2 divide-y rounded-md border">
             <Row description="Shown across the dashboard." label="Display name">
               <NameEditor initial={user.name ?? ''} />
             </Row>
@@ -191,10 +197,15 @@ function AccountPage() {
           <CardTitle>Appearance</CardTitle>
           <CardDescription>How Keenpix looks for you.</CardDescription>
         </CardHeader>
-        <CardContent className="divide-y">
-          <Row description="Light, dark, or follow your system." label="Theme">
-            <ThemeControl />
-          </Row>
+        <CardContent>
+          <div className="divide-y rounded-md border">
+            <Row
+              description="Light, dark, or follow your system."
+              label="Theme"
+            >
+              <ThemeControl />
+            </Row>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -11,15 +11,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authClient } from '@/lib/auth/client'
 import { getFieldError } from '@/lib/form-errors'
+import { noIndexPageHead } from '@/lib/seo'
 import { loginSchema } from '@/schemas/auth'
 
 export const Route = createFileRoute('/(auth)/login')({
-  head: () => ({
-    meta: [
-      { title: 'Sign in - Keenpix' },
-      { name: 'robots', content: 'noindex,nofollow' },
-    ],
-  }),
+  head: () =>
+    noIndexPageHead(
+      'Sign in',
+      'Sign in to manage Keenpix projects, analytics, logs, and workspace settings.',
+    ),
   component: LoginPage,
 })
 
