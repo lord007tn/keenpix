@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
+import { createApiKeyActivity } from '@/actions/admin'
 import {
   addAllowedHost,
   createProject,
@@ -20,6 +21,12 @@ const FORWARDED_PAIR_RE = /\s*([^=;\s]+)=("[^"]+"|[^;\s]+)\s*/g
 const INVALID_FORWARDED_HOST_RE = /[\s/?#\\]/
 const OUTER_QUOTES_RE = /^"|"$/g
 const TRAILING_COLON_RE = /:$/
+
+interface SdkApiActivityContext {
+  apiKeyId?: string
+  projectId?: string
+  scope?: 'all_projects' | 'project'
+}
 
 export const Route = createFileRoute('/api/sdk/$')({
   server: {
@@ -42,50 +49,93 @@ async function handleSdkRequest(
   method: string,
 ) {
   const segments = (splat ?? '').split('/').filter(Boolean)
+  const activity: SdkApiActivityContext = {}
+  const startedAt = performance.now()
+  let response: Response | undefined
 
   try {
     if (segments[0] !== 'projects') {
-      return jsonError('Not found', 404)
+      response = jsonError('Not found', 404)
+      return response
     }
 
     if (segments.length === 1) {
-      return await handleProjectsCollection(request, method)
+      response = await handleProjectsCollection(request, method, activity)
+      return response
     }
 
     if (segments.length === 2) {
-      return await handleProjectResource(request, method, segments[1])
+      response = await handleProjectResource(
+        request,
+        method,
+        segments[1],
+        activity,
+      )
+      return response
     }
 
     if (segments.length === 3 && segments[2] === 'configuration') {
-      return await handleProjectConfiguration(request, method, segments[1])
+      response = await handleProjectConfiguration(
+        request,
+        method,
+        segments[1],
+        activity,
+      )
+      return response
     }
 
     if (segments.length === 3 && segments[2] === 'settings') {
-      return await handleProjectSettings(request, method, segments[1])
+      response = await handleProjectSettings(
+        request,
+        method,
+        segments[1],
+        activity,
+      )
+      return response
     }
 
     if (segments.length === 3 && segments[2] === 'domains') {
-      return await handleProjectDomains(request, method, segments[1])
+      response = await handleProjectDomains(
+        request,
+        method,
+        segments[1],
+        activity,
+      )
+      return response
     }
 
-    return jsonError('Not found', 404)
+    response = jsonError('Not found', 404)
+    return response
   } catch (error) {
     if (error instanceof Response) {
+      response = error
       return error
     }
     if (error instanceof z.ZodError) {
-      return jsonError(error.issues[0]?.message ?? 'Invalid request body', 400)
+      response = jsonError(
+        error.issues[0]?.message ?? 'Invalid request body',
+        400,
+      )
+      return response
     }
     if (error instanceof SyntaxError) {
-      return jsonError('Invalid JSON request body', 400)
+      response = jsonError('Invalid JSON request body', 400)
+      return response
     }
-    return jsonError('SDK API request failed', 500)
+    response = jsonError('SDK API request failed', 500)
+    return response
+  } finally {
+    await recordSdkApiActivity(request, activity, response, startedAt)
   }
 }
 
-async function handleProjectsCollection(request: Request, method: string) {
+async function handleProjectsCollection(
+  request: Request,
+  method: string,
+  activity: SdkApiActivityContext,
+) {
   if (method === 'GET') {
-    const access = await requireApiKey(request, 'read')
+    const access = await requireApiKey(request, 'read', undefined, activity)
     const projects = await listProjects()
     return json({
       projects: access.projectId
@@ -95,7 +145,7 @@ async function handleProjectsCollection(request: Request, method: string) {
   }
 
   if (method === 'POST') {
-    const access = await requireApiKey(request, 'write')
+    const access = await requireApiKey(request, 'write', undefined, activity)
     if (access.projectId) {
       return jsonError('API key cannot create projects', 403)
     }
@@ -111,12 +161,13 @@ async function handleProjectResource(
   request: Request,
   method: string,
   projectId: string,
+  activity: SdkApiActivityContext,
 ) {
   if (method !== 'GET') {
     return jsonError('Not found', 404)
   }
 
-  await requireApiKey(request, 'read', projectId)
+  await requireApiKey(request, 'read', projectId, activity)
   const project = await getProject(projectId)
   return project ? json({ project }) : jsonError('Project not found', 404)
 }
@@ -125,12 +176,13 @@ async function handleProjectConfiguration(
   request: Request,
   method: string,
   projectId: string,
+  activity: SdkApiActivityContext,
 ) {
   if (method !== 'GET') {
     return jsonError('Not found', 404)
   }
 
-  await requireApiKey(request, 'read', projectId)
+  await requireApiKey(request, 'read', projectId, activity)
   const project = await getProject(projectId)
   if (!project) {
     return jsonError('Project not found', 404)
@@ -170,12 +222,13 @@ async function handleProjectSettings(
   request: Request,
   method: string,
   projectId: string,
+  activity: SdkApiActivityContext,
 ) {
   if (method !== 'PATCH') {
     return jsonError('Not found', 404)
   }
 
-  await requireApiKey(request, 'write', projectId)
+  await requireApiKey(request, 'write', projectId, activity)
   const patch = internalProjectSettingsPatchSchema.parse(
     await readJson(request),
   )
@@ -187,9 +240,10 @@ async function handleProjectDomains(
   request: Request,
   method: string,
   projectId: string,
+  activity: SdkApiActivityContext,
 ) {
   if (method === 'POST') {
-    await requireApiKey(request, 'write', projectId)
+    await requireApiKey(request, 'write', projectId, activity)
     const { host } = z
       .object({ host: allowedHostValueSchema })
       .parse(await readJson(request))
@@ -198,7 +252,7 @@ async function handleProjectDomains(
   }
 
   if (method === 'DELETE') {
-    await requireApiKey(request, 'write', projectId)
+    await requireApiKey(request, 'write', projectId, activity)
     const host = await readHostFromRequest(request)
     const project = await removeAllowedHost(projectId, host)
     return project ? json({ project }) : jsonError('Project not found', 404)
@@ -211,6 +265,7 @@ async function requireApiKey(
   request: Request,
   permission: 'read' | 'write',
   projectId?: string,
+  activity?: SdkApiActivityContext,
 ) {
   const key = getApiKey(request)
   if (!key) {
@@ -227,6 +282,12 @@ async function requireApiKey(
 
   if (result.valid) {
     const access = getApiKeyAccess(result.key)
+    const apiKeyId = getApiKeyId(result.key)
+    if (activity && apiKeyId) {
+      activity.apiKeyId = apiKeyId
+      activity.projectId = projectId ?? access.projectId
+      activity.scope = access.projectId ? 'project' : 'all_projects'
+    }
     if (access.projectId && projectId && access.projectId !== projectId) {
       throw jsonError('API key cannot access this project', 403)
     }
@@ -239,6 +300,34 @@ async function requireApiKey(
       ? result.error.message
       : 'Invalid API key'
   throw jsonError(message, status)
+}
+
+async function recordSdkApiActivity(
+  request: Request,
+  activity: SdkApiActivityContext,
+  response: Response | undefined,
+  startedAt: number,
+) {
+  if (!activity.apiKeyId) {
+    return
+  }
+
+  try {
+    const url = new URL(request.url)
+    await createApiKeyActivity({
+      apiKeyId: activity.apiKeyId,
+      method: request.method,
+      path: url.pathname,
+      status: response?.status ?? 500,
+      projectId: activity.projectId,
+      scope: activity.scope ?? 'all_projects',
+      latencyMs: performance.now() - startedAt,
+      ipAddress: getClientIp(request),
+      userAgent: request.headers.get('user-agent') ?? undefined,
+    })
+  } catch {
+    return
+  }
 }
 
 function getApiKeyAccess(key: unknown) {
@@ -265,6 +354,14 @@ function getApiKeyAccess(key: unknown) {
   return {}
 }
 
+function getApiKeyId(key: unknown) {
+  if (!(key && typeof key === 'object')) {
+    return
+  }
+  const id = Reflect.get(key, 'id')
+  return typeof id === 'string' && id.trim() ? id.trim() : undefined
+}
+
 async function readHostFromRequest(request: Request) {
   const queryHost = new URL(request.url).searchParams.get('host')
   if (queryHost) {
@@ -274,6 +371,14 @@ async function readHostFromRequest(request: Request) {
     .object({ host: allowedHostValueSchema })
     .parse(await readJson(request))
   return host
+}
+
+function getClientIp(request: Request) {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip')?.trim() ||
+    undefined
+  )
 }
 
 function getApiKey(request: Request) {

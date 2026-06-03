@@ -8,7 +8,30 @@ export const SITE_KEYWORDS =
   'Keenpix, self-hosted image optimization, open-source image CDN, sharp image transforms, image proxy, WebP, AVIF, Docker image optimizer'
 export const BRAND_IMAGE_PATH = '/brand/keenpix-og.png'
 export const BRAND_ICON_PATH = '/logo512.png'
-export const APP_VERSION = '0.1.1'
+export const APP_VERSION = import.meta.env.VITE_APP_VERSION
+
+export function pageTitle(title: string) {
+  return `${title} - ${SITE_NAME}`
+}
+
+export function appPageHead(title: string, description: string) {
+  return {
+    meta: [
+      { title: pageTitle(title) },
+      { name: 'description', content: description },
+    ],
+  }
+}
+
+export function noIndexPageHead(title: string, description: string) {
+  return {
+    meta: [
+      { title: pageTitle(title) },
+      { name: 'description', content: description },
+      { name: 'robots', content: 'noindex,nofollow' },
+    ],
+  }
+}
 
 export function absoluteUrl(path = '/') {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`

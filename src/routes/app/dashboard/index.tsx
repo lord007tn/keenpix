@@ -11,10 +11,16 @@ import {
 } from '@/components/ui/empty'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { getDashboardFn } from '@/functions/dashboard'
+import { appPageHead } from '@/lib/seo'
 import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
 
 export const Route = createFileRoute('/app/dashboard/')({
+  head: () =>
+    appPageHead(
+      'Dashboard',
+      'Keenpix dashboard for project health, request trends, cache performance, and image optimization activity.',
+    ),
   validateSearch: (
     search: Record<string, unknown>,
   ): { range: AnalyticsRange; project?: string } => ({
@@ -48,7 +54,7 @@ function DashboardPage() {
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
                 /img/https://origin.example/photo.jpg?project=ID
               </code>{' '}
-              — no API keys.
+              — no API key required for transform URLs.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
