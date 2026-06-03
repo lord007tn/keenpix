@@ -1,0 +1,101 @@
+---
+title: Deployment presets
+description: Copy-paste .env starting points for local, single-node, and CDN-fronted deploys.
+icon: SlidersHorizontal
+---
+
+Three ready-made starting points for `.env`. Every variable is documented on the
+[Configuration](/docs/self-hosting/configuration) page — these presets just bundle
+sensible values for common deployment shapes. Always generate your own secret with
+`openssl rand -hex 32`.
+
+<Callout>
+With the bundled `docker-compose.yml`, set `POSTGRES_PASSWORD` and Compose builds
+`DATABASE_URL` for the app automatically. Only set `DATABASE_URL` yourself for a
+non-Docker run (`pnpm start`) or an external database.
+</Callout>
+
+## Local-only (evaluation)
+
+Running on your own machine to try Keenpix. No public URL, no CDN.
+
+```bash
+POSTGRES_PASSWORD="postgres"
+BETTER_AUTH_SECRET="<openssl rand -hex 32>"
+BETTER_AUTH_URL="http://localhost:3000"
+KEENPIX_SUPER_ADMIN_EMAIL="admin@example.com"
+KEENPIX_SUPER_ADMIN_PASSWORD="<a real password>"
+KEENPIX_SELF_HOST="true"
+```
+
+- Plain `http` on localhost, so secure cookies stay off — fine for local only.
+- No SMTP needed: read the OTP code from `docker compose logs app`.
+
+## Single-node production
+
+One server answers both the dashboard and every image transform over HTTPS. No separate
+CDN.
+
+```bash
+POSTGRES_PASSWORD="<a long random password>"
+BETTER_AUTH_SECRET="<openssl rand -hex 32>"
+BETTER_AUTH_URL="https://keenpix.example.com"
+KEENPIX_APP_URL="https://keenpix.example.com"
+KEENPIX_SUPER_ADMIN_EMAIL="you@example.com"
+KEENPIX_SUPER_ADMIN_PASSWORD="<a real password>"
+KEENPIX_SELF_HOST="true"
+
+# Deliver staff invitations and OTP codes.
+SMTP_HOST="smtp.example.com"
+SMTP_PORT="587"
+SMTP_USER="..."
+SMTP_PASSWORD="..."
+SMTP_FROM_EMAIL="keenpix@example.com"
+
+# This box answers every transform: give the disk cache room, bound concurrency.
+KEENPIX_CACHE_MAX_BYTES="10737418240"   # 10 GB
+KEENPIX_MAX_CONCURRENCY="4"
+KEENPIX_MAX_QUEUE="200"
+```
+
+- An `https://` URL turns on secure cookies automatically.
+- Size `KEENPIX_CACHE_MAX_BYTES` to the disk volume; the in-memory LRU
+  (`KEENPIX_MEMORY_CACHE_MAX_BYTES`, default 64 MB) keeps the hottest variants in RAM.
+- Set `KEENPIX_MAX_CONCURRENCY` near the CPU count; load past `KEENPIX_MAX_QUEUE` sheds
+  with `503` instead of overrunning the box.
+
+## CDN-fronted production
+
+A CDN caches `/img/*` and absorbs repeat traffic, so Keenpix only does cold transforms.
+See [CDN setup](/docs/self-hosting/cdn).
+
+```bash
+POSTGRES_PASSWORD="<a long random password>"
+BETTER_AUTH_SECRET="<openssl rand -hex 32>"
+# Point auth at the DASHBOARD host, not the image host the CDN serves.
+BETTER_AUTH_URL="https://admin.keenpix.example.com"
+KEENPIX_APP_URL="https://admin.keenpix.example.com"
+KEENPIX_SUPER_ADMIN_EMAIL="you@example.com"
+KEENPIX_SUPER_ADMIN_PASSWORD="<a real password>"
+KEENPIX_SELF_HOST="true"
+
+SMTP_HOST="smtp.example.com"
+SMTP_PORT="587"
+SMTP_USER="..."
+SMTP_PASSWORD="..."
+SMTP_FROM_EMAIL="keenpix@example.com"
+
+# The CDN absorbs repeat traffic, so the origin disk cache can be smaller.
+KEENPIX_CACHE_MAX_BYTES="2147483648"    # 2 GB
+KEENPIX_MAX_CONCURRENCY="4"
+KEENPIX_MAX_QUEUE="200"
+```
+
+<Callout type="warn">
+Scope the CDN's cache rule to `/img/*` only, or keep the dashboard on a host the CDN
+does not cache. Caching `/app` or `/api/auth` breaks sign-in.
+</Callout>
+
+- Prefer explicit `fmt=webp` / `fmt=avif` in generated URLs unless the CDN can vary by
+  `Accept` — it maximizes the edge hit rate.
+- A smaller origin disk cache is fine because the CDN serves the repeat requests.
