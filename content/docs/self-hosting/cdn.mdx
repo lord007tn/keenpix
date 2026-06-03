@@ -60,15 +60,89 @@ Use `fmt=auto` only when your CDN can cache separate variants by `Accept` or has
 variant support enabled. Otherwise, two browsers can ask for the same URL but need
 different output formats.
 
-## Other CDNs
+## Nginx
 
-Use the same rules with Fastly, Bunny, CloudFront, Caddy, Nginx, or another proxy:
+Nginx can be the caching layer in front of Keenpix. Cache only `/img/`, and put the
+**full request URI** (`$request_uri` includes the path and query string) in the cache key
+so every `?w=` / `?fmt=` variant is stored separately.
+
+```nginx
+# Declare the cache store once, at the http{} level.
+proxy_cache_path /var/cache/nginx/keenpix levels=1:2 keys_zone=keenpix:10m
+                 max_size=10g inactive=30d use_temp_path=off;
+
+server {
+    listen 443 ssl;
+    server_name images.example.com;
+    # ssl_certificate / ssl_certificate_key ...
+
+    # Cache the transform endpoint only.
+    location /img/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_cache       keenpix;
+        proxy_cache_key   "$scheme$request_method$host$request_uri";
+        proxy_cache_valid 200 30d;   # safety net; Keenpix already sends immutable
+        proxy_cache_use_stale error timeout updating;
+        add_header        X-Cache-Status $upstream_cache_status;
+    }
+
+    # Dashboard, auth, docs, and /api/health stay uncached.
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Nginx honors the `Cache-Control: … immutable` and `Vary: Accept` headers Keenpix returns,
+so `fmt=auto` is cached correctly per `Accept` value. Watch `X-Cache-Status`
+(`MISS` then `HIT`) to confirm the cache is working.
+
+## Caddy
+
+A plain Caddy reverse proxy forwards Keenpix's immutable headers untouched, so browsers
+and any downstream CDN still cache `/img/*`:
+
+```text
+images.example.com {
+    reverse_proxy 127.0.0.1:3000
+}
+```
+
+To make Caddy itself an edge cache, build it with the
+[cache-handler](https://github.com/caddyserver/cache-handler) plugin
+(`xcaddy build --with github.com/caddyserver/cache-handler`) and cache only the image
+path:
+
+```text
+{
+    cache   # Souin-backed; respects upstream Cache-Control.
+}
+
+images.example.com {
+    @img path /img/*
+    route {
+        cache @img
+        reverse_proxy 127.0.0.1:3000
+    }
+}
+```
+
+## Fastly, Bunny, CloudFront, and others
+
+The same rules apply to any proxy or CDN:
 
 - Cache only paths that start with `/img/`.
 - Include the full path and full query string in the cache key.
-- Respect `Cache-Control` from Keenpix.
-- Respect `Vary: Accept` if you use `fmt=auto`; otherwise use explicit `fmt` values.
-- Keep dashboard and auth paths uncached.
+- Respect `Cache-Control` from Keenpix — do not shorten or strip it.
+- Respect `Vary: Accept` if you use `fmt=auto`; otherwise generate explicit `fmt` values.
+- Keep dashboard, auth, docs, and `/api/health` uncached.
 
 If the CDN cannot vary by `Accept`, use explicit `fmt=avif`, `fmt=webp`, `fmt=jpeg`, or
 `fmt=png` in generated image URLs.
