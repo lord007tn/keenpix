@@ -28,7 +28,3 @@ roadmap task.
 ## Developer Experience
 
 - Playwright smoke tests for the dashboard, project setup, and transform API.
-- Release checklist that verifies the Docker image, health route, and seed flow.
-- Example CDN rules for Cloudflare, Caddy, and Nginx.
-- Config presets for local-only, single-node production, and CDN-fronted
-  production deployments.
