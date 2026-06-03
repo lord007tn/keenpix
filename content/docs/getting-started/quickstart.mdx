@@ -11,7 +11,7 @@ Keenpix is just an HTTP endpoint, so the fastest integration is a plain `<img>` 
 Open **Settings → Security → Allowed hosts** for your project and add the hostname your
 images come from (e.g. `cdn.example.com`). Keenpix refuses to fetch from any host that
 isn't on the list — an empty allowlist blocks every request. This is the entire access
-model: no API keys.
+model for transform URLs: no API key required.
 
 <Callout title="Find your project id">
   It's under **Settings → General → Project ID**. You pass it as `project=` in every URL.

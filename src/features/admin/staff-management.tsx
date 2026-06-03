@@ -2,7 +2,6 @@ import { useForm } from '@tanstack/react-form'
 import {
   ClipboardCopyIcon,
   MailIcon,
-  RotateCwIcon,
   ShieldCheckIcon,
   UserPlusIcon,
   XIcon,
@@ -38,6 +37,16 @@ function isStaffRole(value: unknown): value is CreateInvitationInput['role'] {
   return value === 'admin' || value === 'staff'
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: 'Super admin',
+  admin: 'Admin',
+  staff: 'Staff',
+}
+
+function roleLabel(role: string) {
+  return ROLE_LABELS[role] ?? role
+}
+
 const invitationDateFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: '2-digit',
@@ -63,7 +72,6 @@ export function StaffManagement() {
     ReturnType<typeof getAdminWorkspaceFn>
   > | null>(null)
   const [lastInviteLink, setLastInviteLink] = useState('')
-  const [loading, setLoading] = useState(true)
   const users = workspace?.users ?? []
   const invitations = workspace?.invitations ?? []
   const inviteForm = useForm({
@@ -79,12 +87,30 @@ export function StaffManagement() {
         const invitation = await createInvitationFn({ data: payload })
         inviteForm.reset()
         setLastInviteLink(invitation.inviteLink)
+        setWorkspace((current) =>
+          current
+            ? {
+                ...current,
+                invitations: [
+                  {
+                    id: invitation.id,
+                    email: invitation.email,
+                    role: invitation.role,
+                    status: invitation.status,
+                    expiresAt: invitation.expiresAt,
+                    acceptedAt: invitation.acceptedAt,
+                    createdAt: invitation.createdAt,
+                  },
+                  ...current.invitations,
+                ],
+              }
+            : current,
+        )
         toast.success(
           payload.sendEmail
             ? 'Invitation created and emailed'
             : 'Invitation created',
         )
-        await load()
       } catch (e) {
         toast.error(getErrorMessage(e, 'Could not create invitation'))
       }
@@ -92,14 +118,11 @@ export function StaffManagement() {
   })
 
   const load = useCallback(async () => {
-    setLoading(true)
     try {
       const data = await getAdminWorkspaceFn()
       setWorkspace(data)
     } catch (e) {
       toast.error(getErrorMessage(e, 'Could not load staff settings'))
-    } finally {
-      setLoading(false)
     }
   }, [])
 
@@ -108,11 +131,24 @@ export function StaffManagement() {
   }, [load])
 
   async function revoke(id: string) {
+    const previous = workspace
+    setWorkspace((current) =>
+      current
+        ? {
+            ...current,
+            invitations: current.invitations.map((invitation) =>
+              invitation.id === id
+                ? { ...invitation, status: 'revoked' }
+                : invitation,
+            ),
+          }
+        : current,
+    )
     try {
       await revokeInvitationFn({ data: { id } })
       toast.success('Invitation revoked')
-      await load()
     } catch (e) {
+      setWorkspace(previous)
       toast.error(getErrorMessage(e, 'Could not revoke invitation'))
     }
   }
@@ -125,7 +161,7 @@ export function StaffManagement() {
       </CardDescription>
 
       <form
-        className="grid gap-3 md:grid-cols-[1fr_auto_auto]"
+        className="grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem_auto] md:items-start"
         onSubmit={(event) => {
           event.preventDefault()
           event.stopPropagation()
@@ -175,20 +211,25 @@ export function StaffManagement() {
                 value={field.state.value}
               >
                 <SelectTrigger aria-label="Invitation role" className="w-36">
-                  <SelectValue />
+                  <SelectValue>
+                    {(value) =>
+                      isStaffRole(value) ? roleLabel(value) : 'Select role'
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="staff">staff</SelectItem>
-                  <SelectItem value="admin">admin</SelectItem>
+                  <SelectItem value="staff">{ROLE_LABELS.staff}</SelectItem>
+                  <SelectItem value="admin">{ROLE_LABELS.admin}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           )}
         </inviteForm.Field>
-        <div className="flex flex-col justify-end gap-2">
-          <inviteForm.Field name="sendEmail">
-            {(field) => (
-              <div className="flex h-9 items-center gap-2 text-sm">
+        <inviteForm.Field name="sendEmail">
+          {(field) => (
+            <div className="flex flex-col gap-1.5">
+              <Label>Delivery</Label>
+              <div className="flex h-9 items-center gap-2 whitespace-nowrap text-sm">
                 <Switch
                   aria-label="Email invitation"
                   checked={field.state.value}
@@ -197,19 +238,21 @@ export function StaffManagement() {
                 />
                 Email link
               </div>
-            )}
-          </inviteForm.Field>
-          <inviteForm.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-          >
-            {([canSubmit, isSubmitting]) => (
+            </div>
+          )}
+        </inviteForm.Field>
+        <inviteForm.Subscribe
+          selector={(state) => [state.canSubmit, state.isSubmitting]}
+        >
+          {([canSubmit, isSubmitting]) => (
+            <div className="flex justify-end md:col-start-3 md:pt-1">
               <Button disabled={!canSubmit || isSubmitting} type="submit">
                 <UserPlusIcon data-icon="inline-start" />
                 Invite
               </Button>
-            )}
-          </inviteForm.Subscribe>
-        </div>
+            </div>
+          )}
+        </inviteForm.Subscribe>
       </form>
 
       {lastInviteLink ? (
@@ -229,39 +272,47 @@ export function StaffManagement() {
         </div>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex min-h-9 items-center justify-between">
             <span className="font-medium text-sm">Users</span>
-            <Button disabled={loading} onClick={load} size="sm" variant="ghost">
-              <RotateCwIcon data-icon="inline-start" />
-              Refresh
-            </Button>
+            <Badge variant="outline">{users.length}</Badge>
           </div>
           <div className="divide-y rounded-md border">
-            {users.map((user) => (
-              <div className="flex items-center gap-3 p-3" key={user.id}>
-                <ShieldCheckIcon className="size-4 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium text-sm">
-                    {user.name || user.email}
+            {users.length === 0 ? (
+              <p className="p-3 text-muted-foreground text-sm">
+                No staff users found.
+              </p>
+            ) : (
+              users.map((user) => (
+                <div className="flex items-center gap-3 p-3" key={user.id}>
+                  <ShieldCheckIcon className="size-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium text-sm">
+                      {user.name || user.email}
+                    </div>
+                    <div className="truncate text-muted-foreground text-xs">
+                      {user.email}
+                    </div>
                   </div>
-                  <div className="truncate text-muted-foreground text-xs">
-                    {user.email}
-                  </div>
+                  <Badge
+                    variant={
+                      user.role === 'super_admin' ? 'success' : 'outline'
+                    }
+                  >
+                    {roleLabel(user.role)}
+                  </Badge>
                 </div>
-                <Badge
-                  variant={user.role === 'super_admin' ? 'success' : 'outline'}
-                >
-                  {user.role}
-                </Badge>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <span className="font-medium text-sm">Recent invitations</span>
+        <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex min-h-9 items-center justify-between">
+            <span className="font-medium text-sm">Recent invitations</span>
+            <Badge variant="outline">{invitations.length}</Badge>
+          </div>
           <div className="divide-y rounded-md border">
             {invitations.length === 0 ? (
               <p className="p-3 text-muted-foreground text-sm">
@@ -273,7 +324,7 @@ export function StaffManagement() {
                   className="flex items-center gap-3 p-3"
                   key={invitation.id}
                 >
-                  <MailIcon className="size-4 text-muted-foreground" />
+                  <MailIcon className="size-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium text-sm">
                       {invitation.email}

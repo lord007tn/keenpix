@@ -1,6 +1,7 @@
 import type { z } from 'zod'
 import {
   getAnalyticsSummary,
+  getAvailableFilters,
   getFormatDistribution,
   getLatencyBins,
   getProjectBreakdown,
@@ -16,13 +17,15 @@ export async function getAnalytics(
     format: input.format ?? [],
     status: input.status ?? [],
   }
-  const [summary, series, formats, topImages, latency] = await Promise.all([
-    getAnalyticsSummary(input.range, input.project, filters),
-    getTimeSeries(input.range, input.project, filters),
-    getFormatDistribution(input.range, input.project, filters),
-    getTopImages(input.range, input.project, filters),
-    getLatencyBins(input.range, input.project, filters),
-  ])
+  const [summary, series, formats, topImages, latency, available] =
+    await Promise.all([
+      getAnalyticsSummary(input.range, input.project, filters),
+      getTimeSeries(input.range, input.project, filters),
+      getFormatDistribution(input.range, input.project, filters),
+      getTopImages(input.range, input.project, filters),
+      getLatencyBins(input.range, input.project, filters),
+      getAvailableFilters(input.range, input.project),
+    ])
   const breakdown = input.project ? [] : await getProjectBreakdown(input.range)
   return {
     range: input.range,
@@ -32,5 +35,6 @@ export async function getAnalytics(
     topImages,
     latency,
     breakdown,
+    available,
   }
 }

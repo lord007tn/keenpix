@@ -16,9 +16,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AllowedHosts } from '@/features/projects/allowed-hosts'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { PipelineSettings } from '@/features/projects/pipeline-settings'
+import { appPageHead } from '@/lib/seo'
 import { useProject } from '@/stores/project-context'
 
 export const Route = createFileRoute('/app/settings/')({
+  head: () =>
+    appPageHead(
+      'Project settings',
+      'Configure Keenpix project origins, image pipeline defaults, and allowed source hosts.',
+    ),
   component: SettingsPage,
 })
 
@@ -186,7 +192,8 @@ function SettingsPage() {
               <CardTitle>Pipeline</CardTitle>
               <CardDescription>
                 Defaults applied when a transform request omits the matching
-                parameter.
+                parameter. Toggles save automatically; Default quality applies
+                when you click Save.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -200,9 +207,9 @@ function SettingsPage() {
             <CardHeader>
               <CardTitle>Security</CardTitle>
               <CardDescription>
-                Access is controlled entirely by the allowlist: keenpix only
-                transforms images whose source host is listed here. No API keys
-                to manage or leak.
+                No API key is required for transform URLs — access to the image
+                endpoint is controlled entirely by the allowlist: keenpix only
+                transforms images whose source host is listed here.
               </CardDescription>
             </CardHeader>
             <CardContent className="divide-y">

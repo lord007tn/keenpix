@@ -199,6 +199,34 @@ export async function getFormatDistribution(
     .sort((a, b) => b.value - a.value)
 }
 
+// Distinct formats and statuses that actually have data in the window. The
+// format/status filters are deliberately ignored so the filter menus always
+// offer every value present (the way Live Logs derives its options from data),
+// rather than a fixed list that can include empty values or feel unhelpful.
+export async function getAvailableFilters(
+  range: AnalyticsRange = '24h',
+  projectId?: string,
+): Promise<{ formats: string[]; statuses: number[] }> {
+  const since = sinceFor(range)
+  const where = scope(since, projectId)
+  const [formatRows, statusRows] = await Promise.all([
+    prisma.requestLog.groupBy({
+      by: ['format'],
+      where,
+      _count: { _all: true },
+    }),
+    prisma.requestLog.groupBy({
+      by: ['status'],
+      where,
+      _count: { _all: true },
+    }),
+  ])
+  return {
+    formats: formatRows.map((r) => r.format).sort(),
+    statuses: statusRows.map((r) => r.status).sort((a, b) => a - b),
+  }
+}
+
 export async function getTopImages(
   range: AnalyticsRange = '24h',
   projectId?: string,

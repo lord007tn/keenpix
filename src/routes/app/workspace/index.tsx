@@ -13,10 +13,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApiKeyManagement } from '@/features/admin/api-key-management'
 import { SmtpSettingsPanel } from '@/features/admin/smtp-settings'
 import { StaffManagement } from '@/features/admin/staff-management'
+import { appPageHead } from '@/lib/seo'
+
+const WORKSPACE_TABS = ['staff', 'email', 'api-keys'] as const
+
+type WorkspaceTab = (typeof WORKSPACE_TABS)[number]
+
+function isWorkspaceTab(value: unknown): value is WorkspaceTab {
+  return value === 'staff' || value === 'email' || value === 'api-keys'
+}
 
 // Workspace = instance-wide settings (staff + mailing). These are global, not
 // per-project, so they live under the user nav rather than project Settings.
 export const Route = createFileRoute('/app/workspace/')({
+  head: () =>
+    appPageHead(
+      'Workspace',
+      'Manage Keenpix staff, SMTP settings, and internal API keys for trusted integrations.',
+    ),
+  validateSearch: (search: Record<string, unknown>): { tab: WorkspaceTab } => ({
+    tab: isWorkspaceTab(search.tab) ? search.tab : 'staff',
+  }),
   beforeLoad: ({ context }) => {
     if (context.user?.role !== 'super_admin') {
       throw redirect({ search: { project: undefined }, to: '/app/account' })
@@ -26,6 +43,9 @@ export const Route = createFileRoute('/app/workspace/')({
 })
 
 function WorkspacePage() {
+  const { tab } = Route.useSearch()
+  const navigate = Route.useNavigate()
+
   return (
     <div className="flex max-w-4xl flex-col gap-6 p-6">
       <PageHeader
@@ -34,7 +54,14 @@ function WorkspacePage() {
         title="Workspace"
       />
 
-      <Tabs defaultValue="staff">
+      <Tabs
+        onValueChange={(value) => {
+          if (isWorkspaceTab(value)) {
+            navigate({ search: (prev) => ({ ...prev, tab: value }) })
+          }
+        }}
+        value={tab}
+      >
         <TabsList>
           <TabsTrigger value="staff">
             <UsersIcon data-icon="inline-start" />
