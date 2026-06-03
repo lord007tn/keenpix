@@ -1,14 +1,17 @@
 import type { z } from 'zod'
 import {
   acceptInvitation as acceptInvitationInDb,
+  createApiKeyActivity as createApiKeyActivityInDb,
   createStaffInvitation,
   disableInternalApiKey,
   getEffectiveSmtpSettings,
   getInvitationByToken,
   getPublicSmtpSettings,
+  listApiKeyActivities,
   listInternalApiKeys,
   listInvitations,
   listStaffUsers,
+  type NewApiKeyActivity,
   revokeInvitation as revokeInvitationInDb,
   type SmtpSettingsInput,
   updateSmtpSettings as updateSmtpSettingsInDb,
@@ -29,14 +32,16 @@ const INTERNAL_API_KEY_PERMISSIONS = {
 }
 
 export async function getAdminWorkspace() {
-  const [users, invitations, smtp, apiKeys, projects] = await Promise.all([
-    listStaffUsers(),
-    listInvitations(),
-    getPublicSmtpSettings(),
-    listInternalApiKeys(INTERNAL_API_KEY_CONFIG),
-    listProjects(DEFAULT_ORG),
-  ])
-  return { users, invitations, smtp, apiKeys, projects }
+  const [users, invitations, smtp, apiKeys, apiKeyActivities, projects] =
+    await Promise.all([
+      listStaffUsers(),
+      listInvitations(),
+      getPublicSmtpSettings(),
+      listInternalApiKeys(INTERNAL_API_KEY_CONFIG),
+      listApiKeyActivities(INTERNAL_API_KEY_CONFIG),
+      listProjects(DEFAULT_ORG),
+    ])
+  return { users, invitations, smtp, apiKeys, apiKeyActivities, projects }
 }
 
 export function createApiKey(
@@ -55,6 +60,10 @@ export function createApiKey(
 
 export function disableApiKey(id: string) {
   return disableInternalApiKey(id, INTERNAL_API_KEY_CONFIG)
+}
+
+export function createApiKeyActivity(input: NewApiKeyActivity) {
+  return createApiKeyActivityInDb(input)
 }
 
 export async function createInvitation(

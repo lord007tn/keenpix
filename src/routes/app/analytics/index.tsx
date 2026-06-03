@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { BarList } from '@/components/app/bar-list'
 import { DataFilters, type FilterField } from '@/components/app/data-filters'
 import { PageHeader } from '@/components/app/page-header'
@@ -28,6 +28,7 @@ import {
   LatencyHistogram,
 } from '@/features/analytics/charts'
 import { getAnalyticsFn } from '@/functions/analytics'
+import { appPageHead } from '@/lib/seo'
 import { fmtBytes, fmtNum } from '@/shared/format'
 import {
   type AnalyticsRange,
@@ -49,6 +50,11 @@ function parseStringArray(value: unknown): string[] | undefined {
 }
 
 export const Route = createFileRoute('/app/analytics/')({
+  head: () =>
+    appPageHead(
+      'Analytics',
+      'Keenpix analytics for bandwidth savings, cache hit rate, formats, latency, and top image paths.',
+    ),
   validateSearch: (
     search: Record<string, unknown>,
   ): {
@@ -80,33 +86,67 @@ export const Route = createFileRoute('/app/analytics/')({
   component: AnalyticsPage,
 })
 
-const ANALYTICS_FIELDS: FilterField[] = [
-  {
-    key: 'format',
-    label: 'Format',
-    options: [
-      { value: 'avif', label: 'AVIF' },
-      { value: 'webp', label: 'WebP' },
-      { value: 'jpeg', label: 'JPEG' },
-      { value: 'png', label: 'PNG' },
-    ],
-  },
-  {
-    key: 'status',
-    label: 'Status',
-    options: [
-      { value: '200', label: '200 OK' },
-      { value: '400', label: '400 Bad Request' },
-      { value: '403', label: '403 Forbidden' },
-      { value: '404', label: '404 Not Found' },
-      { value: '413', label: '413 Too Large' },
-      { value: '500', label: '500 Server Error' },
-      { value: '502', label: '502 Bad Gateway' },
-      { value: '503', label: '503 Busy' },
-      { value: '504', label: '504 Timeout' },
-    ],
-  },
-]
+const FORMAT_LABELS: Record<string, string> = {
+  avif: 'AVIF',
+  webp: 'WebP',
+  jpeg: 'JPEG',
+  jpg: 'JPEG',
+  png: 'PNG',
+  gif: 'GIF',
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  '200': '200 OK',
+  '304': '304 Not Modified',
+  '400': '400 Bad Request',
+  '403': '403 Forbidden',
+  '404': '404 Not Found',
+  '413': '413 Too Large',
+  '500': '500 Server Error',
+  '502': '502 Bad Gateway',
+  '503': '503 Busy',
+  '504': '504 Timeout',
+}
+
+function formatLabel(value: string): string {
+  return FORMAT_LABELS[value] ?? value.toUpperCase()
+}
+
+function statusLabel(value: string): string {
+  return STATUS_LABELS[value] ?? value
+}
+
+// Build the filter fields from the values actually present in the window (plus
+// any currently-selected value, so a stale selection stays removable). A field
+// with no values is omitted rather than opening an empty, broken-looking menu.
+function buildFields(
+  available: { formats: string[]; statuses: number[] },
+  selectedFormat: string[],
+  selectedStatus: string[],
+): FilterField[] {
+  const fields: FilterField[] = []
+  const formatValues = [
+    ...new Set([...available.formats, ...selectedFormat]),
+  ].sort()
+  if (formatValues.length > 0) {
+    fields.push({
+      key: 'format',
+      label: 'Format',
+      options: formatValues.map((v) => ({ value: v, label: formatLabel(v) })),
+    })
+  }
+  const statusValues = [
+    ...new Set([...available.statuses.map(String), ...selectedStatus]),
+  ].sort((a, b) => Number(a) - Number(b))
+  if (statusValues.length > 0) {
+    fields.push({
+      key: 'status',
+      label: 'Status',
+      options: statusValues.map((v) => ({ value: v, label: statusLabel(v) })),
+    })
+  }
+  return fields
+}
 
 const AREA_VIEWS: { value: AreaView; label: string }[] = [
   { value: 'requests', label: 'Requests' },
@@ -187,6 +227,10 @@ function AnalyticsPage() {
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
   const [view, setView] = useState<AreaView>('requests')
+  const fields = useMemo(
+    () => buildFields(data.available, format ?? [], status ?? []),
+    [data.available, format, status],
+  )
 
   const [savedVal, savedUnit] = fmtBytes(data.summary.bandwidthSaved, 1).split(
     ' ',
@@ -201,7 +245,7 @@ function AnalyticsPage() {
         actions={
           <>
             <DataFilters
-              fields={ANALYTICS_FIELDS}
+              fields={fields}
               onChange={(key, next) =>
                 navigate({
                   search: (p) => ({

@@ -13,7 +13,7 @@ import { RootProvider } from 'fumadocs-ui/provider/tanstack'
 import { Suspense } from 'react'
 import { getMDXComponents } from '@/components/mdx'
 import { getAppUrl, isSelfHosted } from '@/lib/deployment'
-import { absoluteUrl, docsJsonLd } from '@/lib/seo'
+import { absoluteUrl, BRAND_IMAGE_PATH, docsJsonLd, SITE_NAME } from '@/lib/seo'
 import { source } from '@/lib/source'
 import { docsSlugsSchema } from '@/schemas/docs'
 import docsCss from '@/styles/docs.css?url'
@@ -37,12 +37,15 @@ export const Route = createFileRoute('/docs/$')({
     return data
   },
   head: ({ loaderData }: { loaderData?: DocsLoaderData }) => {
-    const title = loaderData?.title
-      ? `${loaderData.title} - Keenpix docs`
-      : 'Keenpix docs'
+    const title =
+      loaderData?.title && loaderData.title !== SITE_NAME
+        ? `${loaderData.title} - Keenpix docs`
+        : 'Keenpix docs'
     const description =
       loaderData?.description ??
       'Self-hosted image optimization, caching, analytics, and transform API documentation.'
+    const canonicalUrl = loaderData?.canonicalUrl ?? absoluteUrl('/docs')
+    const ogImage = loaderData?.ogImage ?? absoluteUrl(BRAND_IMAGE_PATH)
 
     return {
       headScripts: loaderData
@@ -54,7 +57,7 @@ export const Route = createFileRoute('/docs/$')({
                   description,
                   path: loaderData.breadcrumbs,
                   title,
-                  url: loaderData.canonicalUrl,
+                  url: canonicalUrl,
                 }),
               ),
             },
@@ -64,7 +67,7 @@ export const Route = createFileRoute('/docs/$')({
         { rel: 'stylesheet', href: docsCss },
         {
           rel: 'canonical',
-          href: loaderData?.canonicalUrl ?? absoluteUrl('/docs'),
+          href: canonicalUrl,
         },
       ],
       meta: [
@@ -76,12 +79,12 @@ export const Route = createFileRoute('/docs/$')({
         { property: 'og:title', content: title },
         { property: 'og:description', content: description },
         { property: 'og:type', content: 'article' },
-        { property: 'og:url', content: loaderData?.canonicalUrl },
-        { property: 'og:image', content: loaderData?.ogImage },
+        { property: 'og:url', content: canonicalUrl },
+        { property: 'og:image', content: ogImage },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:title', content: title },
         { name: 'twitter:description', content: description },
-        { name: 'twitter:image', content: loaderData?.ogImage },
+        { name: 'twitter:image', content: ogImage },
       ],
     }
   },
