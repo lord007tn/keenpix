@@ -2,6 +2,28 @@
 
 All notable changes to Keenpix are documented here.
 
+## [v0.1.3] - 2026-06-03
+
+### Added
+
+- Internal API keys are now created from a modal with a one-time key reveal instead of an inline form.
+- SMTP settings gained a **Test** dialog for sending a test email to a chosen recipient.
+- API key **activity** is recorded and shown under **Workspace → API Keys** (method, path, status, latency).
+- The dashboard sidebar version links to the GitHub releases page.
+
+### Changed
+
+- Analytics format and status filters now list only the values present in the selected window, matching Live Logs — no empty filter menus.
+- Live Logs: **Clear** now also clears the path search, the path search has an inline clear button, and the request **Path** column is wider.
+- Workspace tabs (Staff, Email, API Keys) now update the URL so links and refreshes keep the active tab.
+- SMTP **Save** is enabled only when there are unsaved changes.
+- Staff roles display human-readable labels (for example, "Super admin").
+- Security and documentation copy now scopes "no API key" to transform URLs; internal API keys exist for the management API.
+
+### Fixed
+
+- The mobile **Staff** layout no longer overflows horizontally.
+
 ## [v0.1.2] - 2026-06-02
 
 ### Added
