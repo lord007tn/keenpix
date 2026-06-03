@@ -50,6 +50,10 @@ Use clear Conventional Commit-style prefixes where they fit: `feat:`, `fix:`, `d
 
 PRs should describe what changed, why it changed, and how it was verified. Include screenshots for meaningful UI changes and reproduction steps for bugs.
 
+## Releasing
+
+Maintainers cut releases from a semver tag. See [RELEASE.md](RELEASE.md) for the full checklist — version bump, `CHANGELOG.md` section, tagging, and post-release verification of the GHCR image, health route, and seed flow.
+
 ## Security
 
 Do not open public issues for vulnerabilities. Follow [SECURITY.md](SECURITY.md).
