@@ -78,6 +78,7 @@ export interface LogRow {
   path: string
   projectId: string
   q: number
+  sourceHost: string | null
   status: LogStatus
   ts: string
   w: number
@@ -108,6 +109,13 @@ export interface ProjectBreakdownRow {
   requests: number
 }
 
+export interface DomainBreakdownRow {
+  bandwidthSaved: number
+  domain: string
+  hitRate: number
+  requests: number
+}
+
 export interface KpiValue {
   // Previous-window value used by the dashboard cards to show real trends.
   prev: number
@@ -115,6 +123,8 @@ export interface KpiValue {
 }
 
 export interface DashboardKpis {
+  bandwidthIn: number
+  bandwidthOut: number
   bandwidthSaved: KpiValue
   hitRate: KpiValue
   p95: KpiValue

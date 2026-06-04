@@ -12,14 +12,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   AnalyticsAreaChart,
@@ -27,14 +19,13 @@ import {
   FormatDonut,
   LatencyHistogram,
 } from '@/features/analytics/charts'
+import { DomainBreakdown } from '@/features/analytics/domain-breakdown'
+import { PercentileStat } from '@/features/analytics/percentile-stat'
+import { ProjectBreakdown } from '@/features/analytics/project-breakdown'
 import { getAnalyticsFn } from '@/functions/analytics'
 import { appPageHead } from '@/lib/seo'
 import { compactNumber, humanBytes } from '@/shared/format'
-import {
-  type AnalyticsRange,
-  isAnalyticsRange,
-  type ProjectBreakdownRow,
-} from '@/shared/types'
+import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
 
 const RANGES: AnalyticsRange[] = ['24h', '7d', '30d', '90d']
@@ -58,6 +49,7 @@ export const Route = createFileRoute('/app/analytics/')({
   validateSearch: (
     search: Record<string, unknown>,
   ): {
+    domain?: string[]
     format?: string[]
     range: AnalyticsRange
     project?: string
@@ -65,12 +57,14 @@ export const Route = createFileRoute('/app/analytics/')({
   } => ({
     range: isAnalyticsRange(search.range) ? search.range : '24h',
     project: typeof search.project === 'string' ? search.project : undefined,
+    domain: parseStringArray(search.domain),
     format: parseStringArray(search.format),
     status: parseStringArray(search.status),
   }),
   loaderDeps: ({ search }) => ({
     range: search.range,
     project: search.project,
+    domain: search.domain,
     format: search.format,
     status: search.status,
   }),
@@ -79,6 +73,7 @@ export const Route = createFileRoute('/app/analytics/')({
       data: {
         range: deps.range,
         project: deps.project,
+        domain: deps.domain,
         format: deps.format,
         status: deps.status,
       },
@@ -162,73 +157,34 @@ function isAreaView(value: unknown): value is AreaView {
   return value === 'requests' || value === 'bandwidth' || value === 'cache'
 }
 
-function ProjectBreakdown({
-  rows,
-  onPick,
-}: {
-  rows: ProjectBreakdownRow[]
-  onPick: (id: string) => void
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>By project</CardTitle>
-        <CardDescription>
-          Per-project totals this window — select a row to drill in.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-0">
-        {rows.length === 0 ? (
-          <p className="px-6 py-10 text-center text-muted-foreground text-sm">
-            No requests in this window yet.
-          </p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Project</TableHead>
-                <TableHead className="text-right">Requests</TableHead>
-                <TableHead className="text-right">Bandwidth saved</TableHead>
-                <TableHead className="text-right">Hit rate</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((r) => (
-                <TableRow
-                  className="cursor-pointer"
-                  key={r.projectId}
-                  onClick={() => onPick(r.projectId)}
-                >
-                  <TableCell className="font-medium">{r.name}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {compactNumber(r.requests)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {humanBytes(r.bandwidthSaved, 1)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {r.hitRate.toFixed(1)}%
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
 function AnalyticsPage() {
   const data = Route.useLoaderData()
-  const { range, format, status } = Route.useSearch()
+  const { range, format, status, domain } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
   const [view, setView] = useState<AreaView>('requests')
-  const fields = useMemo(
-    () => buildFields(data.available, format ?? [], status ?? []),
-    [data.available, format, status],
-  )
+  const fields = useMemo(() => {
+    const base = buildFields(data.available, format ?? [], status ?? [])
+    if (isAll) {
+      return base
+    }
+    // The domain filter is per-project: options are the source hosts actually
+    // observed (subdomains included) plus any already-selected value.
+    const domains = [
+      ...new Set([...data.available.domains, ...(domain ?? [])]),
+    ].sort()
+    if (domains.length === 0) {
+      return base
+    }
+    return [
+      ...base,
+      {
+        key: 'domain',
+        label: 'Domain',
+        options: domains.map((d) => ({ value: d, label: d })),
+      },
+    ]
+  }, [data.available, format, status, domain, isAll])
 
   const [savedVal, savedUnit] = humanBytes(
     data.summary.bandwidthSaved,
@@ -257,12 +213,17 @@ function AnalyticsPage() {
                 navigate({
                   search: (p) => ({
                     ...p,
+                    domain: undefined,
                     format: undefined,
                     status: undefined,
                   }),
                 })
               }
-              values={{ format: format ?? [], status: status ?? [] }}
+              values={{
+                domain: domain ?? [],
+                format: format ?? [],
+                status: status ?? [],
+              }}
             />
             <ToggleGroup
               onValueChange={(v: string[]) => {
@@ -293,6 +254,17 @@ function AnalyticsPage() {
           delta={`${data.summary.savingsPct.toFixed(1)}%`}
           label="Bandwidth saved"
           sub="vs origin"
+          tooltip={
+            <div className="flex flex-col gap-0.5">
+              <span>
+                From origin: {humanBytes(data.summary.bandwidthIn, 1)}
+              </span>
+              <span>
+                To clients: {humanBytes(data.summary.bandwidthOut, 1)}
+              </span>
+              <span>Saved: {humanBytes(data.summary.bandwidthSaved, 1)}</span>
+            </div>
+          }
           unit={savedUnit}
           value={savedVal}
         />
@@ -318,6 +290,9 @@ function AnalyticsPage() {
 
       {isAll ? (
         <ProjectBreakdown onPick={setProject} rows={data.breakdown} />
+      ) : null}
+      {!isAll && data.domainBreakdown ? (
+        <DomainBreakdown rows={data.domainBreakdown} />
       ) : null}
 
       <Card>
@@ -389,17 +364,17 @@ function AnalyticsPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="flex gap-6">
-              <PStat
+              <PercentileStat
                 label="p50"
                 tone="text-muted-foreground"
                 value={String(data.summary.p50)}
               />
-              <PStat
+              <PercentileStat
                 label="p95"
                 tone="text-warning-text"
                 value={String(data.summary.p95)}
               />
-              <PStat
+              <PercentileStat
                 label="p99"
                 tone="text-destructive-text"
                 value={String(data.summary.p99)}
@@ -423,28 +398,6 @@ function AnalyticsPage() {
           />
         </CardContent>
       </Card>
-    </div>
-  )
-}
-
-function PStat({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: string
-  tone: string
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className={`font-medium text-xs uppercase tracking-wider ${tone}`}>
-        {label}
-      </span>
-      <span className="font-semibold text-xl tabular-nums">
-        {value}
-        <span className="ml-0.5 text-muted-foreground text-xs">ms</span>
-      </span>
     </div>
   )
 }

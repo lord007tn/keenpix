@@ -2,6 +2,8 @@ import { useForm } from '@tanstack/react-form'
 import dayjs from 'dayjs'
 import {
   ActivityIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   ClipboardCopyIcon,
   KeyRoundIcon,
   XIcon,
@@ -36,14 +38,17 @@ import {
   createApiKeyFn,
   disableApiKeyFn,
   getAdminWorkspaceFn,
+  getApiKeyActivitiesFn,
 } from '@/functions/admin'
 import { getFieldError } from '@/lib/form-errors'
+import { ACTIVITY_PAGE_SIZE } from '@/schemas/admin'
 import { createApiKeySchema } from '@/schemas/api-keys'
 
 const ALL_PROJECTS_SCOPE = '__all_projects__'
 
 type WorkspaceData = Awaited<ReturnType<typeof getAdminWorkspaceFn>>
 type CreatedApiKey = Awaited<ReturnType<typeof createApiKeyFn>>
+type ActivityRow = WorkspaceData['apiKeyActivities'][number]
 
 function projectScopeLabel(
   projects: Array<{ id: string; name: string }>,
@@ -268,18 +273,34 @@ function CreateApiKeyDialog({
 
 export function ApiKeyManagement() {
   const [workspace, setWorkspace] = useState<WorkspaceData | null>(null)
+  const [activities, setActivities] = useState<ActivityRow[]>([])
+  const [activityTotal, setActivityTotal] = useState(0)
+  const [activityPage, setActivityPage] = useState(1)
   const apiKeys = workspace?.apiKeys ?? []
-  const apiKeyActivities = workspace?.apiKeyActivities ?? []
   const projects = workspace?.projects ?? []
 
   const load = useCallback(async () => {
     try {
       const data = await getAdminWorkspaceFn()
       setWorkspace(data)
+      setActivities(data.apiKeyActivities)
+      setActivityTotal(data.apiKeyActivitiesTotal)
+      setActivityPage(1)
     } catch (e) {
       toast.error(getErrorMessage(e, 'Could not load API keys'))
     }
   }, [])
+
+  async function changeActivityPage(next: number) {
+    try {
+      const res = await getApiKeyActivitiesFn({ data: { page: next } })
+      setActivities(res.activities)
+      setActivityTotal(res.total)
+      setActivityPage(next)
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Could not load API activity'))
+    }
+  }
 
   useEffect(() => {
     load()
@@ -402,16 +423,44 @@ export function ApiKeyManagement() {
 
       <div className="flex items-center justify-between">
         <span className="font-medium text-sm">API activity</span>
-        <Badge variant="outline">{apiKeyActivities.length}</Badge>
+        {activityTotal > 0 ? (
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs tabular-nums">
+              {(activityPage - 1) * ACTIVITY_PAGE_SIZE + 1}–
+              {Math.min(activityPage * ACTIVITY_PAGE_SIZE, activityTotal)} of{' '}
+              {activityTotal}
+            </span>
+            <Button
+              aria-label="Previous activity page"
+              disabled={activityPage <= 1}
+              onClick={() => changeActivityPage(activityPage - 1)}
+              size="icon-sm"
+              variant="outline"
+            >
+              <ChevronLeftIcon />
+            </Button>
+            <Button
+              aria-label="Next activity page"
+              disabled={activityPage * ACTIVITY_PAGE_SIZE >= activityTotal}
+              onClick={() => changeActivityPage(activityPage + 1)}
+              size="icon-sm"
+              variant="outline"
+            >
+              <ChevronRightIcon />
+            </Button>
+          </div>
+        ) : (
+          <Badge variant="outline">0</Badge>
+        )}
       </div>
 
       <div className="divide-y rounded-md border">
-        {apiKeyActivities.length === 0 ? (
+        {activities.length === 0 ? (
           <p className="p-3 text-muted-foreground text-sm">
             No API calls recorded yet.
           </p>
         ) : (
-          apiKeyActivities.map((activity) => {
+          activities.map((activity) => {
             const keyStart = [
               activity.apiKey.prefix,
               activity.apiKey.start,

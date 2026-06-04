@@ -15,6 +15,7 @@ export async function listLogs(
     projectId: r.projectId,
     ts: r.ts.toISOString().replace('T', ' ').slice(5, 19),
     path: r.path,
+    sourceHost: r.sourceHost ?? null,
     w: r.width ?? 0,
     q: r.quality ?? 0,
     format: isLogFormat(r.format) ? r.format : 'jpeg',

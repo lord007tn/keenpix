@@ -6,6 +6,7 @@ import {
   disableApiKey,
   getAdminWorkspace,
   getInvitation,
+  listApiKeyActivitiesPage,
   revokeInvitation,
   sendTestEmail,
   updateSmtpSettings,
@@ -13,6 +14,7 @@ import {
 import { authMiddleware, requireSuperAdmin } from '@/lib/auth/guards'
 import {
   acceptInvitationSchema,
+  apiActivityPageSchema,
   createInvitationSchema,
   invitationTokenSchema,
   revokeInvitationSchema,
@@ -26,6 +28,14 @@ export const getAdminWorkspaceFn = createServerFn({ method: 'GET' })
   .handler(({ context }) => {
     requireSuperAdmin(context)
     return getAdminWorkspace()
+  })
+
+export const getApiKeyActivitiesFn = createServerFn({ method: 'GET' })
+  .inputValidator(apiActivityPageSchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return listApiKeyActivitiesPage(data.page)
   })
 
 export const createApiKeyFn = createServerFn({ method: 'POST' })
