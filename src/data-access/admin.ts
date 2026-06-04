@@ -222,11 +222,21 @@ export async function createApiKeyActivity(input: NewApiKeyActivity) {
   })
 }
 
-export async function listApiKeyActivities(configId: string) {
+export function countApiKeyActivities(configId: string) {
+  return prisma.apiKeyActivity.count({ where: { apiKey: { configId } } })
+}
+
+export async function listApiKeyActivities(
+  configId: string,
+  skip = 0,
+  take = 50,
+) {
   const rows = await prisma.apiKeyActivity.findMany({
     where: { apiKey: { configId } },
-    orderBy: { createdAt: 'desc' },
-    take: 50,
+    // id tiebreaker keeps offset pagination stable when timestamps collide.
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    skip,
+    take,
     select: {
       id: true,
       method: true,

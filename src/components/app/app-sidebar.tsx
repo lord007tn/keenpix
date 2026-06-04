@@ -50,7 +50,12 @@ export function AppSidebar({ user }: { user: SessionUser }) {
               <SidebarMenuItem key={item.to}>
                 <SidebarMenuButton
                   isActive={pathname.startsWith(item.to)}
-                  render={<Link search={{ project: projectId }} to={item.to} />}
+                  render={
+                    <Link
+                      search={(prev) => ({ ...prev, project: projectId })}
+                      to={item.to}
+                    />
+                  }
                   tooltip={item.label}
                 >
                   <item.icon />

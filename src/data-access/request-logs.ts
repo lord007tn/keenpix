@@ -12,6 +12,7 @@ export interface NewRequestLog {
   projectId: string
   quality?: number
   region?: string
+  sourceHost?: string
   status: number
   width?: number
 }
@@ -32,6 +33,7 @@ export async function createRequestLog(log: NewRequestLog): Promise<void> {
       bytesOut: log.bytesOut,
       region: log.region ?? null,
       country: log.country ?? null,
+      sourceHost: log.sourceHost ?? null,
     },
   })
 }

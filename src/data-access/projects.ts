@@ -4,6 +4,23 @@ import { isProjectEnv, type Project, type ProjectEnv } from '@/shared/types'
 
 const DEFAULT_ORG = 'org_default'
 
+// Returns the id only when it belongs to a real project in the org, so an
+// unknown/stale ?project= id consistently collapses to "all projects" for both
+// the data scope and the rendered scope.
+export async function resolveProjectId(
+  id: string | undefined,
+  orgId = DEFAULT_ORG,
+): Promise<string | undefined> {
+  if (!id) {
+    return
+  }
+  const found = await prisma.project.findFirst({
+    where: { id, orgId },
+    select: { id: true },
+  })
+  return found?.id
+}
+
 export async function listProjects(orgId = DEFAULT_ORG): Promise<Project[]> {
   const rows = await prisma.project.findMany({
     where: { orgId },
