@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
-import { fmtNum } from '@/shared/format'
+import { compactNumber } from '@/shared/format'
 import type { Project, ProjectStat } from '@/shared/types'
 
 interface ProjectRow extends Project {
@@ -74,7 +74,9 @@ const columns: ColumnDef<ProjectRow>[] = [
       </SortHeader>
     ),
     cell: ({ row }) => (
-      <span className="tabular-nums">{fmtNum(row.original.requests)}</span>
+      <span className="tabular-nums">
+        {compactNumber(row.original.requests)}
+      </span>
     ),
   },
   {
