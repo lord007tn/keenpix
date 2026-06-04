@@ -1,4 +1,4 @@
-import { TrendingDownIcon, TrendingUpIcon } from 'lucide-react'
+import { InfoIcon, TrendingDownIcon, TrendingUpIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
   Card,
@@ -8,6 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { compactNumber, humanBytes } from '@/shared/format'
 import type { DashboardKpis, KpiValue } from '@/shared/types'
 
@@ -78,7 +83,25 @@ export function SectionCards({ kpis }: { kpis: DashboardKpis }) {
 
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Bandwidth saved</CardDescription>
+          <CardDescription>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span className="flex w-fit cursor-help items-center gap-1" />
+                }
+              >
+                Bandwidth saved
+                <InfoIcon className="size-3" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="flex flex-col gap-0.5">
+                  <span>From origin: {humanBytes(kpis.bandwidthIn, 1)}</span>
+                  <span>To clients: {humanBytes(kpis.bandwidthOut, 1)}</span>
+                  <span>Saved: {humanBytes(kpis.bandwidthSaved.value, 1)}</span>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </CardDescription>
           <CardTitle className="font-semibold @[250px]/card:text-3xl text-2xl tabular-nums">
             {humanBytes(kpis.bandwidthSaved.value, 1)}
           </CardTitle>

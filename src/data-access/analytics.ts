@@ -1,8 +1,10 @@
 import { prisma } from '@/db'
+import { Prisma } from '@/generated/prisma/client'
 import type {
   AnalyticsRange,
   AnalyticsSummary,
   DashboardKpis,
+  DomainBreakdownRow,
   FormatSlice,
   LatencyBin,
   ProjectBreakdownRow,
@@ -55,6 +57,7 @@ function sinceFor(range: AnalyticsRange): Date {
 }
 
 export interface AnalyticsFilters {
+  domain?: string[]
   format?: string[]
   status?: string[]
 }
@@ -64,6 +67,7 @@ function scope(since: Date, projectId?: string, filters?: AnalyticsFilters) {
   const where: {
     format?: { in: string[] }
     projectId?: string
+    sourceHost?: { in: string[] }
     status?: { in: number[] }
     ts: { gte: Date }
   } = { ts: { gte: since } }
@@ -72,6 +76,9 @@ function scope(since: Date, projectId?: string, filters?: AnalyticsFilters) {
   }
   if (filters?.format && filters.format.length > 0) {
     where.format = { in: filters.format }
+  }
+  if (filters?.domain && filters.domain.length > 0) {
+    where.sourceHost = { in: filters.domain }
   }
   if (filters?.status && filters.status.length > 0) {
     const codes = filters.status.map(Number).filter((n) => !Number.isNaN(n))
@@ -84,16 +91,62 @@ function scope(since: Date, projectId?: string, filters?: AnalyticsFilters) {
   return where
 }
 
-// Nearest-rank percentile over an ascending-sorted latency list.
-function percentile(sortedAsc: number[], p: number): number {
-  if (sortedAsc.length === 0) {
-    return 0
+// Build the SQL WHERE for the raw percentile query — mirrors scope() but emits
+// parameterized SQL so percentiles can be computed in Postgres.
+function latencyWhereSql(opts: {
+  gte: Date
+  lt?: Date
+  projectId?: string
+  filters?: AnalyticsFilters
+}): Prisma.Sql {
+  const conds: Prisma.Sql[] = [Prisma.sql`"ts" >= ${opts.gte}`]
+  if (opts.lt) {
+    conds.push(Prisma.sql`"ts" < ${opts.lt}`)
   }
-  const idx = Math.min(
-    sortedAsc.length - 1,
-    Math.max(0, Math.ceil((p / 100) * sortedAsc.length) - 1),
-  )
-  return Math.round(sortedAsc[idx])
+  if (opts.projectId) {
+    conds.push(Prisma.sql`"projectId" = ${opts.projectId}`)
+  }
+  if (opts.filters?.format && opts.filters.format.length > 0) {
+    conds.push(Prisma.sql`"format" = ANY(${opts.filters.format})`)
+  }
+  if (opts.filters?.domain && opts.filters.domain.length > 0) {
+    conds.push(Prisma.sql`"sourceHost" = ANY(${opts.filters.domain})`)
+  }
+  if (opts.filters?.status && opts.filters.status.length > 0) {
+    const codes = opts.filters.status
+      .map(Number)
+      .filter((n) => !Number.isNaN(n))
+    if (codes.length > 0) {
+      conds.push(Prisma.sql`"status" = ANY(${codes})`)
+    }
+  }
+  return Prisma.join(conds, ' AND ')
+}
+
+// Continuous (interpolated) latency percentiles computed in Postgres, so we
+// never pull every row's latency into the app just to sort it.
+async function latencyPercentiles(opts: {
+  gte: Date
+  lt?: Date
+  projectId?: string
+  filters?: AnalyticsFilters
+}): Promise<{ p50: number; p95: number; p99: number }> {
+  const rows = await prisma.$queryRaw<
+    Array<{ p50: number | null; p95: number | null; p99: number | null }>
+  >`
+    SELECT
+      percentile_cont(0.5) WITHIN GROUP (ORDER BY "latencyMs") AS p50,
+      percentile_cont(0.95) WITHIN GROUP (ORDER BY "latencyMs") AS p95,
+      percentile_cont(0.99) WITHIN GROUP (ORDER BY "latencyMs") AS p99
+    FROM "RequestLog"
+    WHERE ${latencyWhereSql(opts)}
+  `
+  const r = rows[0]
+  return {
+    p50: Math.round(Number(r?.p50 ?? 0)),
+    p95: Math.round(Number(r?.p95 ?? 0)),
+    p99: Math.round(Number(r?.p99 ?? 0)),
+  }
 }
 
 export async function getAnalyticsSummary(
@@ -103,18 +156,17 @@ export async function getAnalyticsSummary(
 ): Promise<AnalyticsSummary> {
   const since = sinceFor(range)
   const where = scope(since, projectId, filters)
-  const [agg, total, cachedCount, latencyRows] = await Promise.all([
+  const [agg, total, cachedCount, percentiles] = await Promise.all([
     prisma.requestLog.aggregate({
       where,
       _sum: { bytesIn: true, bytesOut: true },
     }),
     prisma.requestLog.count({ where }),
     prisma.requestLog.count({ where: { ...where, cached: true } }),
-    prisma.requestLog.findMany({ where, select: { latencyMs: true } }),
+    latencyPercentiles({ gte: since, projectId, filters }),
   ])
   const bandwidthIn = agg._sum.bytesIn ?? 0
   const bandwidthOut = agg._sum.bytesOut ?? 0
-  const latencies = latencyRows.map((r) => r.latencyMs).sort((a, b) => a - b)
   return {
     totalRequests: total,
     bandwidthIn,
@@ -125,9 +177,9 @@ export async function getAnalyticsSummary(
       bandwidthIn === 0
         ? 0
         : ((bandwidthIn - bandwidthOut) / bandwidthIn) * 100,
-    p50: percentile(latencies, 50),
-    p95: percentile(latencies, 95),
-    p99: percentile(latencies, 99),
+    p50: percentiles.p50,
+    p95: percentiles.p95,
+    p99: percentiles.p99,
   }
 }
 
@@ -206,10 +258,10 @@ export async function getFormatDistribution(
 export async function getAvailableFilters(
   range: AnalyticsRange = '24h',
   projectId?: string,
-): Promise<{ formats: string[]; statuses: number[] }> {
+): Promise<{ formats: string[]; statuses: number[]; domains: string[] }> {
   const since = sinceFor(range)
   const where = scope(since, projectId)
-  const [formatRows, statusRows] = await Promise.all([
+  const [formatRows, statusRows, domainRows] = await Promise.all([
     prisma.requestLog.groupBy({
       by: ['format'],
       where,
@@ -220,10 +272,21 @@ export async function getAvailableFilters(
       where,
       _count: { _all: true },
     }),
+    prisma.requestLog.groupBy({
+      by: ['sourceHost'],
+      where,
+      _count: { _all: true },
+    }),
   ])
   return {
     formats: formatRows.map((r) => r.format).sort(),
     statuses: statusRows.map((r) => r.status).sort((a, b) => a - b),
+    // Source domains actually observed in the window (incl. subdomains), so the
+    // filter options match how origins are stored rather than the bare allowlist.
+    domains: domainRows
+      .map((r) => r.sourceHost)
+      .filter((h): h is string => h !== null)
+      .sort(),
   }
 }
 
@@ -360,31 +423,94 @@ export async function getProjectBreakdown(
     .sort((a, b) => b.requests - a.requests)
 }
 
+// Per-source-domain rollup for a single project's analytics. Only the project's
+// own traffic is grouped; rows with no captured host are dropped.
+export async function getDomainBreakdown(
+  range: AnalyticsRange,
+  projectId: string,
+): Promise<DomainBreakdownRow[]> {
+  const since = sinceFor(range)
+  const where = scope(since, projectId)
+  const [byDomain, hitsByDomain, bytesByDomain] = await Promise.all([
+    prisma.requestLog.groupBy({
+      by: ['sourceHost'],
+      where,
+      _count: { _all: true },
+    }),
+    prisma.requestLog.groupBy({
+      by: ['sourceHost'],
+      where: { ...where, cached: true },
+      _count: { _all: true },
+    }),
+    prisma.requestLog.groupBy({
+      by: ['sourceHost'],
+      where,
+      _sum: { bytesIn: true, bytesOut: true },
+    }),
+  ])
+  const hits = new Map(hitsByDomain.map((g) => [g.sourceHost, g._count._all]))
+  const bytes = new Map(
+    bytesByDomain.map((g) => [
+      g.sourceHost,
+      { in: g._sum.bytesIn ?? 0, out: g._sum.bytesOut ?? 0 },
+    ]),
+  )
+  return byDomain
+    .map((g) => {
+      const domain = g.sourceHost
+      if (domain === null) {
+        return null
+      }
+      const requests = g._count._all
+      const cached = hits.get(domain) ?? 0
+      const b = bytes.get(domain) ?? { in: 0, out: 0 }
+      return {
+        domain,
+        requests,
+        bandwidthSaved: b.in - b.out,
+        hitRate: requests === 0 ? 0 : (cached / requests) * 100,
+      }
+    })
+    .filter((r): r is DomainBreakdownRow => r !== null)
+    .sort((a, b) => b.requests - a.requests)
+}
+
 interface WindowStats {
+  bandwidthIn: number
+  bandwidthOut: number
   bandwidthSaved: number
   hitRate: number
   p95: number
   requests: number
 }
 
-async function windowStats(where: object): Promise<WindowStats> {
-  const [agg, total, cached, latRows] = await Promise.all([
+async function windowStats(
+  projectId: string | undefined,
+  gte: Date,
+  lt?: Date,
+): Promise<WindowStats> {
+  const where = {
+    ...(projectId ? { projectId } : {}),
+    ts: lt ? { gte, lt } : { gte },
+  }
+  const [agg, total, cached, percentiles] = await Promise.all([
     prisma.requestLog.aggregate({
       where,
       _sum: { bytesIn: true, bytesOut: true },
     }),
     prisma.requestLog.count({ where }),
     prisma.requestLog.count({ where: { ...where, cached: true } }),
-    prisma.requestLog.findMany({ where, select: { latencyMs: true } }),
+    latencyPercentiles({ gte, lt, projectId }),
   ])
   const bIn = agg._sum.bytesIn ?? 0
   const bOut = agg._sum.bytesOut ?? 0
-  const lat = latRows.map((r) => r.latencyMs).sort((a, b) => a - b)
   return {
     requests: total,
+    bandwidthIn: bIn,
+    bandwidthOut: bOut,
     bandwidthSaved: bIn - bOut,
     hitRate: total === 0 ? 0 : (cached / total) * 100,
-    p95: percentile(lat, 95),
+    p95: percentiles.p95,
   }
 }
 
@@ -396,17 +522,19 @@ export async function getDashboardKpis(
   const { n, ms } = rangeMeta(range)
   const windowMs = n * ms
   const now = Date.now()
-  const base = projectId ? { projectId } : {}
   const [cur, prev] = await Promise.all([
-    windowStats({ ...base, ts: { gte: new Date(now - windowMs) } }),
-    windowStats({
-      ...base,
-      ts: { gte: new Date(now - 2 * windowMs), lt: new Date(now - windowMs) },
-    }),
+    windowStats(projectId, new Date(now - windowMs)),
+    windowStats(
+      projectId,
+      new Date(now - 2 * windowMs),
+      new Date(now - windowMs),
+    ),
   ])
   return {
     requests: { value: cur.requests, prev: prev.requests },
     bandwidthSaved: { value: cur.bandwidthSaved, prev: prev.bandwidthSaved },
+    bandwidthIn: cur.bandwidthIn,
+    bandwidthOut: cur.bandwidthOut,
     hitRate: { value: cur.hitRate, prev: prev.hitRate },
     p95: { value: cur.p95, prev: prev.p95 },
   }

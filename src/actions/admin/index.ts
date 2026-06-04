@@ -1,6 +1,7 @@
 import type { z } from 'zod'
 import {
   acceptInvitation as acceptInvitationInDb,
+  countApiKeyActivities,
   createApiKeyActivity as createApiKeyActivityInDb,
   createStaffInvitation,
   disableInternalApiKey,
@@ -23,6 +24,7 @@ import type {
   acceptInvitationSchema,
   createInvitationSchema,
 } from '@/schemas/admin'
+import { ACTIVITY_PAGE_SIZE } from '@/schemas/admin'
 import type { createApiKeySchema } from '@/schemas/api-keys'
 
 const DEFAULT_ORG = 'org_default'
@@ -32,16 +34,45 @@ const INTERNAL_API_KEY_PERMISSIONS = {
 }
 
 export async function getAdminWorkspace() {
-  const [users, invitations, smtp, apiKeys, apiKeyActivities, projects] =
-    await Promise.all([
-      listStaffUsers(),
-      listInvitations(),
-      getPublicSmtpSettings(),
-      listInternalApiKeys(INTERNAL_API_KEY_CONFIG),
-      listApiKeyActivities(INTERNAL_API_KEY_CONFIG),
-      listProjects(DEFAULT_ORG),
-    ])
-  return { users, invitations, smtp, apiKeys, apiKeyActivities, projects }
+  const [
+    users,
+    invitations,
+    smtp,
+    apiKeys,
+    apiKeyActivities,
+    apiKeyActivitiesTotal,
+    projects,
+  ] = await Promise.all([
+    listStaffUsers(),
+    listInvitations(),
+    getPublicSmtpSettings(),
+    listInternalApiKeys(INTERNAL_API_KEY_CONFIG),
+    listApiKeyActivities(INTERNAL_API_KEY_CONFIG, 0, ACTIVITY_PAGE_SIZE),
+    countApiKeyActivities(INTERNAL_API_KEY_CONFIG),
+    listProjects(DEFAULT_ORG),
+  ])
+  return {
+    users,
+    invitations,
+    smtp,
+    apiKeys,
+    apiKeyActivities,
+    apiKeyActivitiesTotal,
+    projects,
+  }
+}
+
+export async function listApiKeyActivitiesPage(page: number) {
+  const safePage = Math.max(1, page)
+  const [activities, total] = await Promise.all([
+    listApiKeyActivities(
+      INTERNAL_API_KEY_CONFIG,
+      (safePage - 1) * ACTIVITY_PAGE_SIZE,
+      ACTIVITY_PAGE_SIZE,
+    ),
+    countApiKeyActivities(INTERNAL_API_KEY_CONFIG),
+  ])
+  return { activities, total }
 }
 
 export function createApiKey(
