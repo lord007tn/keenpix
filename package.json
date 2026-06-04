@@ -86,6 +86,7 @@
     "better-auth": "^1.6.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dayjs": "^1.11.20",
     "fumadocs-core": "16.9.3",
     "fumadocs-mdx": "15.0.10",
     "fumadocs-ui": "16.9.3",

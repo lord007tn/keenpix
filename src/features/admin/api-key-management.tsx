@@ -1,4 +1,5 @@
 import { useForm } from '@tanstack/react-form'
+import dayjs from 'dayjs'
 import {
   ActivityIcon,
   ClipboardCopyIcon,
@@ -43,31 +44,6 @@ const ALL_PROJECTS_SCOPE = '__all_projects__'
 
 type WorkspaceData = Awaited<ReturnType<typeof getAdminWorkspaceFn>>
 type CreatedApiKey = Awaited<ReturnType<typeof createApiKeyFn>>
-
-const keyDateFormatter = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: '2-digit',
-  year: 'numeric',
-})
-
-const activityDateFormatter = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: '2-digit',
-  hour: 'numeric',
-  minute: '2-digit',
-})
-
-function fmtDate(value: Date | string | null) {
-  return value ? keyDateFormatter.format(new Date(value)) : 'Never'
-}
-
-function fmtDateTime(value: Date | string) {
-  return activityDateFormatter.format(new Date(value))
-}
-
-function fmtLatency(value: number | null) {
-  return typeof value === 'number' ? `${Math.round(value)}ms` : 'Unknown'
-}
 
 function projectScopeLabel(
   projects: Array<{ id: string; name: string }>,
@@ -393,7 +369,10 @@ export function ApiKeyManagement() {
                     {start ? `${start}...` : apiKey.id}
                   </div>
                   <div className="text-muted-foreground text-xs">
-                    Last used {fmtDate(apiKey.lastRequest)}
+                    Last used{' '}
+                    {apiKey.lastRequest
+                      ? dayjs(apiKey.lastRequest).format('MMM DD, YYYY')
+                      : 'Never'}
                   </div>
                   <div className="text-muted-foreground text-xs">
                     Scope {scopeLabel}
@@ -456,10 +435,13 @@ export function ApiKeyManagement() {
                     </span>
                   </div>
                   <div className="truncate text-muted-foreground text-xs">
-                    {keyLabel} - {scopeLabel} - {fmtLatency(activity.latencyMs)}
+                    {keyLabel} - {scopeLabel} -{' '}
+                    {typeof activity.latencyMs === 'number'
+                      ? `${Math.round(activity.latencyMs)}ms`
+                      : 'Unknown'}
                   </div>
                   <div className="text-muted-foreground text-xs">
-                    {fmtDateTime(activity.createdAt)}
+                    {dayjs(activity.createdAt).format('MMM DD, h:mm A')}
                   </div>
                 </div>
                 <Badge variant={statusVariant(activity.status)}>
