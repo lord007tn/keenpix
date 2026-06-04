@@ -13,7 +13,13 @@ import { RootProvider } from 'fumadocs-ui/provider/tanstack'
 import { Suspense } from 'react'
 import { getMDXComponents } from '@/components/mdx'
 import { getAppUrl, isSelfHosted } from '@/lib/deployment'
-import { absoluteUrl, BRAND_IMAGE_PATH, docsJsonLd, SITE_NAME } from '@/lib/seo'
+import {
+  absoluteUrl,
+  BRAND_IMAGE_PATH,
+  docsJsonLd,
+  SITE_NAME,
+  seo,
+} from '@/lib/seo'
 import { source } from '@/lib/source'
 import { docsSlugsSchema } from '@/schemas/docs'
 import docsCss from '@/styles/docs.css?url'
@@ -71,20 +77,16 @@ export const Route = createFileRoute('/docs/$')({
         },
       ],
       meta: [
-        { title },
-        { name: 'description', content: description },
+        ...seo({
+          title,
+          description,
+          image: ogImage,
+          url: canonicalUrl,
+          type: 'article',
+        }),
         ...(loaderData?.selfHost
           ? [{ name: 'robots', content: 'noindex,nofollow' }]
           : []),
-        { property: 'og:title', content: title },
-        { property: 'og:description', content: description },
-        { property: 'og:type', content: 'article' },
-        { property: 'og:url', content: canonicalUrl },
-        { property: 'og:image', content: ogImage },
-        { name: 'twitter:card', content: 'summary_large_image' },
-        { name: 'twitter:title', content: title },
-        { name: 'twitter:description', content: description },
-        { name: 'twitter:image', content: ogImage },
       ],
     }
   },

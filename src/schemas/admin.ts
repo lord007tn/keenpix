@@ -54,6 +54,12 @@ export const sendTestEmailSchema = z.object({
   to: z.email('Enter a valid recipient email.'),
 })
 
+export const ACTIVITY_PAGE_SIZE = 10
+
+export const apiActivityPageSchema = z.object({
+  page: z.coerce.number().int().min(1).catch(1),
+})
+
 export type CreateInvitationInput = z.input<typeof createInvitationSchema>
 export type SmtpSettingsInput = z.input<typeof smtpSettingsSchema>
 export type SendTestEmailInput = z.input<typeof sendTestEmailSchema>

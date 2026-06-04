@@ -46,6 +46,14 @@ function logPath(src: string) {
   }
 }
 
+function logHost(src: string) {
+  try {
+    return new URL(src).hostname
+  } catch {
+    return
+  }
+}
+
 async function readOrCreateTransform({
   allowedOrigins,
   cacheKey,
@@ -171,6 +179,7 @@ export async function optimizeProjectImage({
       orgId: project.orgId,
       projectId: project.id,
       path: logPath(src),
+      sourceHost: logHost(src),
       width,
       quality,
       format,

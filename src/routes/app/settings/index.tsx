@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ImageIcon, InfoIcon, ShieldIcon } from 'lucide-react'
-import type { ReactNode } from 'react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/app/page-header'
+import { SettingRow } from '@/components/app/setting-row'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -28,28 +28,6 @@ export const Route = createFileRoute('/app/settings/')({
   component: SettingsPage,
 })
 
-function SettingRow({
-  label,
-  description,
-  children,
-}: {
-  label: string
-  description?: string
-  children: ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-2 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
-      <div className="flex flex-col gap-0.5">
-        <span className="font-medium text-sm">{label}</span>
-        {description ? (
-          <span className="text-muted-foreground text-xs">{description}</span>
-        ) : null}
-      </div>
-      <div className="w-full sm:w-auto sm:shrink-0">{children}</div>
-    </div>
-  )
-}
-
 function SettingsPage() {
   const { currentProject, isAll, projects, setProject } = useProject()
 
@@ -58,7 +36,11 @@ function SettingsPage() {
     // pick or create a project before showing pipeline/security controls.
     return (
       <div className="flex max-w-4xl flex-col gap-6 p-6">
-        <PageHeader subtitle="Per-project configuration." title="Settings" />
+        <PageHeader
+          eyebrow="All projects"
+          subtitle="Per-project configuration."
+          title="Settings"
+        />
         <Card>
           <CardHeader>
             <CardTitle>Select a project</CardTitle>
@@ -147,6 +129,7 @@ function SettingsPage() {
             </CardHeader>
             <CardContent className="divide-y">
               <SettingRow
+                className="py-4 first:pt-0 last:pb-0 sm:items-start"
                 description="Use this in your transform URLs: /img/<source-url>?project=<id>"
                 label="Project ID"
               >
@@ -167,6 +150,7 @@ function SettingsPage() {
                 </div>
               </SettingRow>
               <SettingRow
+                className="py-4 first:pt-0 last:pb-0 sm:items-start"
                 description="The project's display name."
                 label="Project name"
               >
@@ -175,6 +159,7 @@ function SettingsPage() {
                 </span>
               </SettingRow>
               <SettingRow
+                className="py-4 first:pt-0 last:pb-0 sm:items-start"
                 description="Where keenpix fetches originals from."
                 label="Origin"
               >
@@ -214,6 +199,7 @@ function SettingsPage() {
             </CardHeader>
             <CardContent className="divide-y">
               <SettingRow
+                className="py-4 first:pt-0 last:pb-0 sm:items-start"
                 description="keenpix only fetches from origins on this list. An empty list blocks every request."
                 label="Allowed hosts"
               >
