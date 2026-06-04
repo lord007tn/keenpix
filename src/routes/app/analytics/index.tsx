@@ -29,7 +29,7 @@ import {
 } from '@/features/analytics/charts'
 import { getAnalyticsFn } from '@/functions/analytics'
 import { appPageHead } from '@/lib/seo'
-import { fmtBytes, fmtNum } from '@/shared/format'
+import { compactNumber, humanBytes } from '@/shared/format'
 import {
   type AnalyticsRange,
   isAnalyticsRange,
@@ -108,14 +108,6 @@ const STATUS_LABELS: Record<string, string> = {
   '504': '504 Timeout',
 }
 
-function formatLabel(value: string): string {
-  return FORMAT_LABELS[value] ?? value.toUpperCase()
-}
-
-function statusLabel(value: string): string {
-  return STATUS_LABELS[value] ?? value
-}
-
 // Build the filter fields from the values actually present in the window (plus
 // any currently-selected value, so a stale selection stays removable). A field
 // with no values is omitted rather than opening an empty, broken-looking menu.
@@ -132,7 +124,10 @@ function buildFields(
     fields.push({
       key: 'format',
       label: 'Format',
-      options: formatValues.map((v) => ({ value: v, label: formatLabel(v) })),
+      options: formatValues.map((v) => ({
+        value: v,
+        label: FORMAT_LABELS[v] ?? v.toUpperCase(),
+      })),
     })
   }
   const statusValues = [
@@ -142,7 +137,10 @@ function buildFields(
     fields.push({
       key: 'status',
       label: 'Status',
-      options: statusValues.map((v) => ({ value: v, label: statusLabel(v) })),
+      options: statusValues.map((v) => ({
+        value: v,
+        label: STATUS_LABELS[v] ?? v,
+      })),
     })
   }
   return fields
@@ -203,10 +201,10 @@ function ProjectBreakdown({
                 >
                   <TableCell className="font-medium">{r.name}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {fmtNum(r.requests)}
+                    {compactNumber(r.requests)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {fmtBytes(r.bandwidthSaved, 1)}
+                    {humanBytes(r.bandwidthSaved, 1)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {r.hitRate.toFixed(1)}%
@@ -232,9 +230,10 @@ function AnalyticsPage() {
     [data.available, format, status],
   )
 
-  const [savedVal, savedUnit] = fmtBytes(data.summary.bandwidthSaved, 1).split(
-    ' ',
-  )
+  const [savedVal, savedUnit] = humanBytes(
+    data.summary.bandwidthSaved,
+    1,
+  ).split(' ')
   const cachedCount = Math.round(
     (data.summary.totalRequests * data.summary.hitRate) / 100,
   )
@@ -301,7 +300,7 @@ function AnalyticsPage() {
           label="Total images"
           sub={`last ${range}`}
           unit="requests"
-          value={fmtNum(data.summary.totalRequests, 1)}
+          value={compactNumber(data.summary.totalRequests, 1)}
         />
         <StatCard
           label="Cache hit rate"
@@ -352,7 +351,8 @@ function AnalyticsPage() {
           <CardHeader>
             <CardTitle>Format distribution</CardTitle>
             <CardDescription>
-              {fmtNum(data.summary.totalRequests)} requests · last {range}
+              {compactNumber(data.summary.totalRequests)} requests · last{' '}
+              {range}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -374,9 +374,9 @@ function AnalyticsPage() {
             </div>
             <Progress value={data.summary.hitRate} />
             <div className="flex justify-between text-muted-foreground text-xs">
-              <span>{fmtNum(cachedCount)} hits</span>
+              <span>{compactNumber(cachedCount)} hits</span>
               <span>
-                {fmtNum(data.summary.totalRequests - cachedCount)} misses
+                {compactNumber(data.summary.totalRequests - cachedCount)} misses
               </span>
             </div>
           </CardContent>
@@ -419,7 +419,7 @@ function AnalyticsPage() {
           <BarList
             barColor="var(--chart-1)"
             data={data.topImages}
-            valueFormat={(v) => `${fmtNum(v)} req`}
+            valueFormat={(v) => `${compactNumber(v)} req`}
           />
         </CardContent>
       </Card>
