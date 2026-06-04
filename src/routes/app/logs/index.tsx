@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table'
 import { listLogsFn } from '@/functions/logs'
 import { appPageHead } from '@/lib/seo'
-import { fmtBytes } from '@/shared/format'
+import { humanBytes } from '@/shared/format'
 import type { LogRow } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
 
@@ -247,7 +247,7 @@ function LogsPage() {
                   {l.latency}ms
                 </TableCell>
                 <TableCell className="text-right">
-                  {fmtBytes(l.bytesOut, 0)}
+                  {humanBytes(l.bytesOut, 0)}
                 </TableCell>
               </TableRow>
             ))}

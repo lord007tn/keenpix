@@ -1,4 +1,4 @@
-export function fmtBytes(bytes: number, decimals = 1): string {
+export function humanBytes(bytes: number, decimals = 1) {
   if (!Number.isFinite(bytes) || bytes <= 0) {
     return '0 B'
   }
@@ -11,7 +11,7 @@ export function fmtBytes(bytes: number, decimals = 1): string {
   return `${value.toFixed(i === 0 ? 0 : decimals)} ${units[i]}`
 }
 
-export function fmtNum(n: number, decimals = 1): string {
+export function compactNumber(n: number, decimals = 1) {
   if (!Number.isFinite(n)) {
     return '0'
   }

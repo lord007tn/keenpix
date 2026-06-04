@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { fmtBytes, fmtNum } from '@/shared/format'
+import { compactNumber, humanBytes } from '@/shared/format'
 import type { DashboardKpis, KpiValue } from '@/shared/types'
 
 // Relative change vs the previous window; null means there is no baseline.
@@ -60,7 +60,7 @@ export function SectionCards({ kpis }: { kpis: DashboardKpis }) {
         <CardHeader>
           <CardDescription>Total requests</CardDescription>
           <CardTitle className="font-semibold @[250px]/card:text-3xl text-2xl tabular-nums">
-            {fmtNum(kpis.requests.value)}
+            {compactNumber(kpis.requests.value)}
           </CardTitle>
           <CardAction>
             <TrendBadge delta={reqDelta} />
@@ -80,7 +80,7 @@ export function SectionCards({ kpis }: { kpis: DashboardKpis }) {
         <CardHeader>
           <CardDescription>Bandwidth saved</CardDescription>
           <CardTitle className="font-semibold @[250px]/card:text-3xl text-2xl tabular-nums">
-            {fmtBytes(kpis.bandwidthSaved.value, 1)}
+            {humanBytes(kpis.bandwidthSaved.value, 1)}
           </CardTitle>
           <CardAction>
             <TrendBadge delta={bwDelta} />

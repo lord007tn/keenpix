@@ -1,4 +1,5 @@
 import { useForm } from '@tanstack/react-form'
+import dayjs from 'dayjs'
 import {
   ClipboardCopyIcon,
   MailIcon,
@@ -47,19 +48,10 @@ function roleLabel(role: string) {
   return ROLE_LABELS[role] ?? role
 }
 
-const invitationDateFormatter = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: '2-digit',
-  year: 'numeric',
-})
 const DEFAULT_INVITE_VALUES: CreateInvitationInput = {
   email: '',
   role: 'staff',
   sendEmail: false,
-}
-
-function fmtDate(value: string) {
-  return invitationDateFormatter.format(new Date(value))
 }
 
 async function copy(text: string) {
@@ -330,7 +322,8 @@ export function StaffManagement() {
                       {invitation.email}
                     </div>
                     <div className="text-muted-foreground text-xs">
-                      Expires {fmtDate(invitation.expiresAt)}
+                      Expires{' '}
+                      {dayjs(invitation.expiresAt).format('MMM DD, YYYY')}
                     </div>
                   </div>
                   <Badge
