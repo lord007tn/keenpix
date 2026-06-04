@@ -118,9 +118,11 @@ model RequestLog {
   bytesOut  Int
   region    String?
   country   String?
+  sourceHost String?
 
   @@index([projectId, ts])
   @@index([orgId, ts])
+  @@index([projectId, sourceHost])
 }
 
 // better-auth tables. Keep these names aligned with the auth adapter config.

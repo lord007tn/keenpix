@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
+import { PageHeader } from '@/components/app/page-header'
 import { ProjectsDataTable } from '@/components/app/projects-data-table'
 import { SectionCards } from '@/components/app/section-cards'
 import {
@@ -40,7 +41,7 @@ function DashboardPage() {
   const { projects, stats, kpis, series } = Route.useLoaderData()
   const { range } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
-  const { currentProject, setProject } = useProject()
+  const { currentProject, isAll, setProject } = useProject()
 
   if (projects.length === 0) {
     return (
@@ -67,6 +68,11 @@ function DashboardPage() {
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
+      <PageHeader
+        eyebrow={isAll ? 'All projects' : currentProject?.name}
+        subtitle="Project health, request trends, and cache performance."
+        title="Dashboard"
+      />
       <SectionCards kpis={kpis} />
       <ChartAreaInteractive
         data={series}
@@ -75,12 +81,14 @@ function DashboardPage() {
         }
         range={range}
       />
-      <ProjectsDataTable
-        activeId={currentProject?.id}
-        onSelect={(id) => setProject(id)}
-        projects={projects}
-        stats={stats}
-      />
+      {isAll ? (
+        <ProjectsDataTable
+          activeId={currentProject?.id}
+          onSelect={(id) => setProject(id)}
+          projects={projects}
+          stats={stats}
+        />
+      ) : null}
     </div>
   )
 }

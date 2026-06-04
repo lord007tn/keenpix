@@ -6,6 +6,7 @@ import {
 } from './common'
 
 export const analyticsInputSchema = z.object({
+  domain: stringArrayParamSchema,
   format: stringArrayParamSchema,
   project: optionalNonEmptyParamSchema,
   range: analyticsRangeSchema.catch('24h'),
