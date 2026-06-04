@@ -14,6 +14,44 @@ export function pageTitle(title: string) {
   return `${title} - ${SITE_NAME}`
 }
 
+// Builds the shared title/description/Open Graph/Twitter meta set so every page
+// emits a complete, consistent card. Pass page-specific values to override the
+// site defaults; the deepest route's tags win via head deduplication.
+export function seo({
+  title,
+  description = SITE_DESCRIPTION,
+  keywords,
+  image,
+  url,
+  type = 'website',
+}: {
+  title: string
+  description?: string
+  keywords?: string
+  image?: string
+  url?: string
+  type?: 'website' | 'article'
+}) {
+  const imageUrl = image ?? absoluteUrl(BRAND_IMAGE_PATH)
+  return [
+    { title },
+    { name: 'description', content: description },
+    ...(keywords ? [{ name: 'keywords', content: keywords }] : []),
+    { property: 'og:type', content: type },
+    { property: 'og:title', content: title },
+    { property: 'og:description', content: description },
+    ...(url ? [{ property: 'og:url', content: url }] : []),
+    { property: 'og:image', content: imageUrl },
+    { property: 'og:image:width', content: '1200' },
+    { property: 'og:image:height', content: '630' },
+    { property: 'og:image:alt', content: `${SITE_NAME} modular image mark` },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: title },
+    { name: 'twitter:description', content: description },
+    { name: 'twitter:image', content: imageUrl },
+  ]
+}
+
 export function appPageHead(title: string, description: string) {
   return {
     meta: [

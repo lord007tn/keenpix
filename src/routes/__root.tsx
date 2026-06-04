@@ -12,11 +12,11 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import Devtools from '@/devtools/devtools'
 import {
   absoluteUrl,
-  BRAND_IMAGE_PATH,
   SITE_DESCRIPTION,
   SITE_KEYWORDS,
   SITE_NAME,
   SITE_TITLE,
+  seo,
 } from '@/lib/seo'
 import appCss from '../styles.css?url'
 
@@ -29,28 +29,15 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: SITE_TITLE },
       { name: 'application-name', content: SITE_NAME },
-      {
-        name: 'description',
-        content: SITE_DESCRIPTION,
-      },
-      { name: 'keywords', content: SITE_KEYWORDS },
       { name: 'theme-color', content: '#06101f' },
       { property: 'og:site_name', content: SITE_NAME },
-      { property: 'og:type', content: 'website' },
-      { property: 'og:title', content: SITE_TITLE },
-      { property: 'og:description', content: SITE_DESCRIPTION },
-      { property: 'og:url', content: absoluteUrl('/') },
-      {
-        property: 'og:image',
-        content: absoluteUrl(BRAND_IMAGE_PATH),
-      },
-      { property: 'og:image:alt', content: 'Keenpix modular image mark' },
-      { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: SITE_TITLE },
-      { name: 'twitter:description', content: SITE_DESCRIPTION },
-      { name: 'twitter:image', content: absoluteUrl(BRAND_IMAGE_PATH) },
+      ...seo({
+        title: SITE_TITLE,
+        description: SITE_DESCRIPTION,
+        keywords: SITE_KEYWORDS,
+        url: absoluteUrl('/'),
+      }),
     ],
     links: [
       { rel: 'stylesheet', href: appCss },

@@ -77,6 +77,7 @@ function LogsPage() {
   const formats = filterValues.format ?? []
   const statuses = filterValues.status ?? []
   const cacheStates = filterValues.cache ?? []
+  const domains = isAll ? [] : (filterValues.domain ?? [])
 
   useEffect(() => {
     if (!live) {
@@ -99,6 +100,14 @@ function LogsPage() {
         .map((v) => ({ value: v, label: v })),
     [logs],
   )
+  const domainOptions = useMemo(
+    () =>
+      uniq(logs.map((l) => l.sourceHost ?? ''))
+        .filter(Boolean)
+        .sort()
+        .map((v) => ({ value: v, label: v })),
+    [logs],
+  )
   const filtered = logs.filter((l) => {
     if (filter && !l.path.toLowerCase().includes(filter.toLowerCase())) {
       return false
@@ -115,6 +124,9 @@ function LogsPage() {
     ) {
       return false
     }
+    if (domains.length > 0 && !domains.includes(l.sourceHost ?? '')) {
+      return false
+    }
     return true
   })
 
@@ -124,8 +136,13 @@ function LogsPage() {
       { key: 'status', label: 'Status', options: statusOptions },
       { key: 'cache', label: 'Cache', options: CACHE_OPTIONS },
     ]
+    // Source-domain filter is per-project; options are the hosts actually seen
+    // in this window (subdomains included), not the bare allowlist.
+    if (!isAll && domainOptions.length > 0) {
+      f.push({ key: 'domain', label: 'Domain', options: domainOptions })
+    }
     return f
-  }, [formatOptions, statusOptions])
+  }, [formatOptions, statusOptions, domainOptions, isAll])
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -154,7 +171,11 @@ function LogsPage() {
           </>
         }
         eyebrow={isAll ? 'All projects' : currentProject?.name}
-        subtitle="Every request that hit keenpix — newest first, auto-refreshing."
+        subtitle={
+          isAll
+            ? 'Every request that hit keenpix — newest first, auto-refreshing.'
+            : `Every request for ${currentProject?.name ?? 'this project'} — newest first, auto-refreshing.`
+        }
         title="Live logs"
       />
 
@@ -208,6 +229,7 @@ function LogsPage() {
             <TableRow>
               <TableHead>Timestamp</TableHead>
               {isAll ? <TableHead>Project</TableHead> : null}
+              {isAll ? null : <TableHead>Domain</TableHead>}
               <TableHead className="w-full">Path</TableHead>
               <TableHead className="text-right">Width</TableHead>
               <TableHead>Format</TableHead>
@@ -226,6 +248,11 @@ function LogsPage() {
                     {projectName.get(l.projectId) ?? l.projectId}
                   </TableCell>
                 ) : null}
+                {isAll ? null : (
+                  <TableCell className="text-foreground">
+                    {l.sourceHost ?? '—'}
+                  </TableCell>
+                )}
                 <TableCell className="w-full max-w-0 truncate">
                   {l.path}
                 </TableCell>
@@ -255,7 +282,7 @@ function LogsPage() {
               <TableRow>
                 <TableCell
                   className="py-14 text-center text-muted-foreground"
-                  colSpan={isAll ? 9 : 8}
+                  colSpan={9}
                 >
                   No requests match these filters.
                 </TableCell>
