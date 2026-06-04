@@ -16,7 +16,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
-import { fmtBytes, fmtNum } from '@/shared/format'
+import { compactNumber, humanBytes } from '@/shared/format'
 import type { FormatSlice, LatencyBin, TimePoint } from '@/shared/types'
 
 export type AreaView = 'requests' | 'bandwidth' | 'cache'
@@ -39,7 +39,7 @@ function buildArea(data: TimePoint[], view: AreaView): AreaBuild {
       } satisfies ChartConfig,
       keys: ['bandwidthIn', 'bandwidthOut'],
       chartData: data,
-      yFormat: (v: number) => fmtBytes(v, 0),
+      yFormat: (v: number) => humanBytes(v, 0),
     }
   }
   if (view === 'cache') {
@@ -62,7 +62,7 @@ function buildArea(data: TimePoint[], view: AreaView): AreaBuild {
     } satisfies ChartConfig,
     keys: ['cached', 'optimized'],
     chartData: data,
-    yFormat: (v: number) => fmtNum(v, 0),
+    yFormat: (v: number) => compactNumber(v, 0),
   }
 }
 

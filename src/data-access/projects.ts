@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { prisma } from '@/db'
 import { isProjectEnv, type Project, type ProjectEnv } from '@/shared/types'
 
@@ -20,11 +21,7 @@ export async function listProjects(orgId = DEFAULT_ORG): Promise<Project[]> {
     autoFormat: project.autoFormat,
     stripMetadata: project.stripMetadata,
     defaultQuality: project.defaultQuality,
-    createdAt: project.createdAt.toLocaleDateString('en-US', {
-      month: 'short',
-      day: '2-digit',
-      year: 'numeric',
-    }),
+    createdAt: dayjs(project.createdAt).format('MMM DD, YYYY'),
   }))
 }
 
@@ -46,11 +43,7 @@ export async function getProject(
         autoFormat: p.autoFormat,
         stripMetadata: p.stripMetadata,
         defaultQuality: p.defaultQuality,
-        createdAt: p.createdAt.toLocaleDateString('en-US', {
-          month: 'short',
-          day: '2-digit',
-          year: 'numeric',
-        }),
+        createdAt: dayjs(p.createdAt).format('MMM DD, YYYY'),
       }
     : undefined
 }
@@ -99,11 +92,7 @@ export async function createProject(input: NewProjectInput): Promise<Project> {
     autoFormat: created.autoFormat,
     stripMetadata: created.stripMetadata,
     defaultQuality: created.defaultQuality,
-    createdAt: created.createdAt.toLocaleDateString('en-US', {
-      month: 'short',
-      day: '2-digit',
-      year: 'numeric',
-    }),
+    createdAt: dayjs(created.createdAt).format('MMM DD, YYYY'),
   }
 }
 
@@ -137,11 +126,7 @@ export async function addAllowedOrigin(
       autoFormat: p.autoFormat,
       stripMetadata: p.stripMetadata,
       defaultQuality: p.defaultQuality,
-      createdAt: p.createdAt.toLocaleDateString('en-US', {
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric',
-      }),
+      createdAt: dayjs(p.createdAt).format('MMM DD, YYYY'),
     }
   }
   const updated = await prisma.project.update({
@@ -160,11 +145,7 @@ export async function addAllowedOrigin(
     autoFormat: updated.autoFormat,
     stripMetadata: updated.stripMetadata,
     defaultQuality: updated.defaultQuality,
-    createdAt: updated.createdAt.toLocaleDateString('en-US', {
-      month: 'short',
-      day: '2-digit',
-      year: 'numeric',
-    }),
+    createdAt: dayjs(updated.createdAt).format('MMM DD, YYYY'),
   }
 }
 
@@ -202,11 +183,7 @@ export async function removeAllowedOrigin(
         autoFormat: updated.autoFormat,
         stripMetadata: updated.stripMetadata,
         defaultQuality: updated.defaultQuality,
-        createdAt: updated.createdAt.toLocaleDateString('en-US', {
-          month: 'short',
-          day: '2-digit',
-          year: 'numeric',
-        }),
+        createdAt: dayjs(updated.createdAt).format('MMM DD, YYYY'),
       }
     : undefined
 }
@@ -246,10 +223,6 @@ export async function updateProjectSettings(
     autoFormat: updated.autoFormat,
     stripMetadata: updated.stripMetadata,
     defaultQuality: updated.defaultQuality,
-    createdAt: updated.createdAt.toLocaleDateString('en-US', {
-      month: 'short',
-      day: '2-digit',
-      year: 'numeric',
-    }),
+    createdAt: dayjs(updated.createdAt).format('MMM DD, YYYY'),
   }
 }
