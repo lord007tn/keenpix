@@ -6,6 +6,7 @@ import {
   disableApiKey,
   getAdminWorkspace,
   getInvitation,
+  getOperationsHealth,
   listApiKeyActivitiesPage,
   revokeInvitation,
   sendTestEmail,
@@ -36,6 +37,13 @@ export const getApiKeyActivitiesFn = createServerFn({ method: 'GET' })
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     return listApiKeyActivitiesPage(data.page)
+  })
+
+export const getOperationsHealthFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(({ context }) => {
+    requireSuperAdmin(context)
+    return getOperationsHealth()
   })
 
 export const createApiKeyFn = createServerFn({ method: 'POST' })

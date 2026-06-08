@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { KeyRoundIcon, MailIcon, UsersIcon } from 'lucide-react'
+import { ActivityIcon, KeyRoundIcon, MailIcon, UsersIcon } from 'lucide-react'
 import { PageHeader } from '@/components/app/page-header'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -11,16 +11,22 @@ import {
 } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApiKeyManagement } from '@/features/admin/api-key-management'
+import { OperationsHealth } from '@/features/admin/operations-health'
 import { SmtpSettingsPanel } from '@/features/admin/smtp-settings'
 import { StaffManagement } from '@/features/admin/staff-management'
 import { appPageHead } from '@/lib/seo'
 
-const WORKSPACE_TABS = ['staff', 'email', 'api-keys'] as const
+const WORKSPACE_TABS = ['staff', 'email', 'api-keys', 'operations'] as const
 
 type WorkspaceTab = (typeof WORKSPACE_TABS)[number]
 
 function isWorkspaceTab(value: unknown): value is WorkspaceTab {
-  return value === 'staff' || value === 'email' || value === 'api-keys'
+  return (
+    value === 'staff' ||
+    value === 'email' ||
+    value === 'api-keys' ||
+    value === 'operations'
+  )
 }
 
 // Workspace = instance-wide settings (staff + mailing). These are global, not
@@ -75,6 +81,10 @@ function WorkspacePage() {
             <KeyRoundIcon data-icon="inline-start" />
             API Keys
           </TabsTrigger>
+          <TabsTrigger value="operations">
+            <ActivityIcon data-icon="inline-start" />
+            Operations
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent className="pt-6" value="staff">
@@ -117,6 +127,21 @@ function WorkspacePage() {
             </CardHeader>
             <CardContent>
               <ApiKeyManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent className="pt-6" value="operations">
+          <Card>
+            <CardHeader>
+              <CardTitle>Operations health</CardTitle>
+              <CardDescription>
+                Cache storage and transform queue pressure for this running
+                instance.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <OperationsHealth />
             </CardContent>
           </Card>
         </TabsContent>
