@@ -8,21 +8,17 @@ Future analytics to support, as todos. Builds on what's **already real** today
 - ✅ Latency p50 / p95 / p99 + histogram (computed from real `latencyMs`)
 - ✅ Top images by request count
 - ✅ Per-project 24h rollup on the dashboard cards
+- ✅ Dashboard KPI deltas against the previous equal-length window
+- ✅ Source-domain capture, filtering, and per-project breakdowns via `sourceHost`
 
-> Removed in the trust pass because they were **fixtures**: "vs previous" deltas,
-> L1-memory cache fill, variant count, geographic map, top source domains, $ cost.
+> Removed in the trust pass because they were **fixtures**: L1-memory cache fill,
+> variant count, geographic map, and $ cost.
 > The Tier-1 items below are about bringing those back as **real** data.
 
 ---
 
 ## Tier 1 — make the removed fixtures real (highest value)
 
-- [ ] **Real "vs previous window" deltas.** Re-aggregate the previous equal-length
-      window and show ▲/▼ on each stat card. *Code:* `getAnalyticsSummary` returns
-      a `previous` summary or per-stat deltas; bind in `analytics/index.tsx`. *Effort: M.*
-- [ ] **Top source domains.** *Data:* add `sourceHost String?` to `RequestLog`,
-      populate in `handle-transform.ts` (`new URL(src).hostname`). *Code:*
-      `getTopDomains(range, projectId)` via `groupBy(sourceHost)`. Restores the card. *Effort: M.*
 - [ ] **Geographic distribution.** *Data:* populate `RequestLog.country/region`
       (currently always null) from a CDN/proxy header (`CF-IPCountry`,
       `X-Vercel-IP-Country`) or a GeoIP lookup. *Code:* `getGeoDistribution` by country.
@@ -57,6 +53,6 @@ Future analytics to support, as todos. Builds on what's **already real** today
 ## Cross-cutting data-model prerequisites
 
 Several Tier-1/2 items need richer capture at write time in `insertRequestLog`
-(`handle-transform.ts`): add **`sourceHost`**, populate **`country`/`region`**, and
-consider capturing **`referer`** (hotlink analytics) and **`userAgent`**. Add these as
-a single Prisma migration before building the dependent charts.
+(`handle-transform.ts`): populate **`country`/`region`**, and consider capturing
+**`referer`** (hotlink analytics) and **`userAgent`**. Add these as a single
+Prisma migration before building the dependent charts.

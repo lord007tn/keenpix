@@ -1,15 +1,16 @@
 import type { KnipConfig } from 'knip'
 
 const config: KnipConfig = {
+  compilers: {
+    mdx: true,
+  },
   entry: [
     'src/router.tsx',
     'src/routes/**/*.{ts,tsx}',
     'src/functions/**/*.ts',
     'src/actions/**/*.ts',
     'src/lib/**/*.ts',
-    'prisma/seed.ts',
-    'vite.config.ts',
-    'vitest.config.ts',
+    'content/**/*.mdx',
   ],
   project: [
     'src/**/*.{ts,tsx}',
@@ -18,15 +19,10 @@ const config: KnipConfig = {
     '*.{ts,tsx}',
   ],
   ignore: [
-    'src/routeTree.gen.ts',
-    'src/generated/**',
     'prisma/schema.prisma',
     'source.config.ts',
     'src/components/mdx.tsx',
     'src/components/ui/**',
-    '.output/**',
-    '.source/**',
-    '.tanstack/**',
   ],
   ignoreDependencies: [
     '@fontsource-variable/inter',
@@ -35,7 +31,6 @@ const config: KnipConfig = {
     'tw-animate-css',
     'web-vitals',
   ],
-  ignoreBinaries: ['changelogithub'],
   vitest: {
     config: ['vitest.config.ts'],
     entry: ['src/**/*.{test,spec}.ts'],
