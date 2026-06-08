@@ -8,7 +8,6 @@ roadmap task.
 
 - Geo distribution from trusted proxy headers such as `CF-IPCountry` or an
   explicit GeoIP integration.
-- Cache storage stats from disk plus the new memory LRU layer.
 - Error-rate and status-code trends over time.
 - Latency percentiles per time bucket instead of only whole-window percentiles.
 - Top images by delivered bytes and by cache hit rate.
@@ -18,8 +17,6 @@ roadmap task.
 ## Platform
 
 - S3/R2-compatible object storage cache backend for multi-node self-hosting.
-- Admin-visible queue/cache health with current transform concurrency, pending
-  jobs, memory cache size, and disk cache size.
 - Per-project quotas and soft-limit alerts for SaaS readiness.
 - Webhook or SSE stream for live logs instead of dashboard polling.
 - Optional ClickHouse sink for high-volume analytics.
