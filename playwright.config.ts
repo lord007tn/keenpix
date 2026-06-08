@@ -19,7 +19,7 @@ export default defineConfig({
       BETTER_AUTH_URL: BASE_URL,
       VITE_BETTER_AUTH_URL: BASE_URL,
     },
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === '1',
     timeout: 120_000,
     url: BASE_URL,
   },
