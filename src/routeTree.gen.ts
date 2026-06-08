@@ -30,6 +30,7 @@ import { Route as AppAccountIndexRouteImport } from './routes/app/account/index'
 import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
 import { Route as ApiSdkSplatRouteImport } from './routes/api/sdk/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiInternalLogsStreamRouteImport } from './routes/api/internal/logs/stream'
 
 const Char123llmFileChar125DottxtRoute =
   Char123llmFileChar125DottxtRouteImport.update({
@@ -137,6 +138,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalLogsStreamRoute = ApiInternalLogsStreamRouteImport.update({
+  id: '/api/internal/logs/stream',
+  path: '/api/internal/logs/stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/app/logs/': typeof AppLogsIndexRoute
   '/app/settings/': typeof AppSettingsIndexRoute
   '/app/workspace/': typeof AppWorkspaceIndexRoute
+  '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -182,6 +189,7 @@ export interface FileRoutesByTo {
   '/app/logs': typeof AppLogsIndexRoute
   '/app/settings': typeof AppSettingsIndexRoute
   '/app/workspace': typeof AppWorkspaceIndexRoute
+  '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -206,6 +214,7 @@ export interface FileRoutesById {
   '/app/logs/': typeof AppLogsIndexRoute
   '/app/settings/': typeof AppSettingsIndexRoute
   '/app/workspace/': typeof AppWorkspaceIndexRoute
+  '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -231,6 +240,7 @@ export interface FileRouteTypes {
     | '/app/logs/'
     | '/app/settings/'
     | '/app/workspace/'
+    | '/api/internal/logs/stream'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -253,6 +263,7 @@ export interface FileRouteTypes {
     | '/app/logs'
     | '/app/settings'
     | '/app/workspace'
+    | '/api/internal/logs/stream'
   id:
     | '__root__'
     | '/'
@@ -276,6 +287,7 @@ export interface FileRouteTypes {
     | '/app/logs/'
     | '/app/settings/'
     | '/app/workspace/'
+    | '/api/internal/logs/stream'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -293,6 +305,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiSdkSplatRoute: typeof ApiSdkSplatRoute
   OgDocsSplatRoute: typeof OgDocsSplatRoute
+  ApiInternalLogsStreamRoute: typeof ApiInternalLogsStreamRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -444,6 +457,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/logs/stream': {
+      id: '/api/internal/logs/stream'
+      path: '/api/internal/logs/stream'
+      fullPath: '/api/internal/logs/stream'
+      preLoaderRoute: typeof ApiInternalLogsStreamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -486,6 +506,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiSdkSplatRoute: ApiSdkSplatRoute,
   OgDocsSplatRoute: OgDocsSplatRoute,
+  ApiInternalLogsStreamRoute: ApiInternalLogsStreamRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

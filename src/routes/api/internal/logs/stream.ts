@@ -1,0 +1,78 @@
+import { createFileRoute } from '@tanstack/react-router'
+import { listLogs } from '@/actions/logs'
+import { auth } from '@/lib/auth/server'
+
+const STREAM_INTERVAL_MS = 2500
+const MAX_SEEN_IDS = 500
+
+export const Route = createFileRoute('/api/internal/logs/stream')({
+  server: {
+    handlers: {
+      GET: ({ request }: { request: Request }) => handleLogStream(request),
+    },
+  },
+})
+
+async function handleLogStream(request: Request) {
+  const session = await auth.api
+    .getSession({ headers: request.headers })
+    .catch(() => null)
+  if (!session?.user) {
+    return new Response('Unauthorized', { status: 401 })
+  }
+
+  const url = new URL(request.url)
+  const project =
+    url.searchParams.get('project')?.trim() ||
+    url.searchParams.get('projectId')?.trim() ||
+    undefined
+  const encoder = new TextEncoder()
+  const seen = new Set<string>()
+
+  const stream = new ReadableStream({
+    start(controller) {
+      async function writeRows() {
+        try {
+          const rows = await listLogs(project)
+          const next = rows.filter((row) => !seen.has(row.id))
+          for (const row of rows) {
+            seen.add(row.id)
+          }
+          if (seen.size > MAX_SEEN_IDS) {
+            for (const id of seen) {
+              seen.delete(id)
+              if (seen.size <= MAX_SEEN_IDS) {
+                break
+              }
+            }
+          }
+          if (next.length > 0) {
+            controller.enqueue(
+              encoder.encode(`event: logs\ndata: ${JSON.stringify(next)}\n\n`),
+            )
+            return
+          }
+          controller.enqueue(encoder.encode(': ping\n\n'))
+        } catch {
+          controller.enqueue(encoder.encode(': retry\n\n'))
+        }
+      }
+
+      writeRows()
+      const id = setInterval(writeRows, STREAM_INTERVAL_MS)
+      request.signal.addEventListener('abort', () => {
+        clearInterval(id)
+        controller.close()
+      })
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'cache-control': 'no-store',
+      connection: 'keep-alive',
+      'content-type': 'text/event-stream',
+      'x-accel-buffering': 'no',
+    },
+  })
+}

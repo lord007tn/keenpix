@@ -18,7 +18,7 @@ roadmap task.
 
 - S3/R2-compatible object storage cache backend for multi-node self-hosting.
 - Per-project quotas and soft-limit alerts for SaaS readiness.
-- Webhook or SSE stream for live logs instead of dashboard polling.
+- Webhook delivery for log events and operational alerts.
 - Optional ClickHouse sink for high-volume analytics.
 
 ## Developer Experience

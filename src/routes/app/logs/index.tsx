@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { DownloadIcon, SearchIcon, XIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { DataFilters, type FilterField } from '@/components/app/data-filters'
@@ -34,8 +34,6 @@ export const Route = createFileRoute('/app/logs/')({
   component: LogsPage,
 })
 
-const REFRESH_MS = 5000
-
 const CACHE_OPTIONS = [
   { value: 'hit', label: 'Cache hit' },
   { value: 'miss', label: 'Cache miss' },
@@ -67,10 +65,11 @@ function exportNdjson(rows: LogRow[]) {
 }
 
 function LogsPage() {
-  const logs = Route.useLoaderData()
-  const router = useRouter()
+  const initialLogs = Route.useLoaderData()
+  const { project } = Route.useSearch()
   const { currentProject, isAll, projects } = useProject()
   const projectName = new Map(projects.map((p) => [p.id, p.name]))
+  const [logs, setLogs] = useState(initialLogs)
   const [live, setLive] = useState(true)
   const [filter, setFilter] = useState('')
   const [filterValues, setFilterValues] = useState<Record<string, string[]>>({})
@@ -80,14 +79,42 @@ function LogsPage() {
   const domains = isAll ? [] : (filterValues.domain ?? [])
 
   useEffect(() => {
+    setLogs(initialLogs)
+  }, [initialLogs])
+
+  useEffect(() => {
     if (!live) {
       return
     }
-    const id = setInterval(() => {
-      router.invalidate()
-    }, REFRESH_MS)
-    return () => clearInterval(id)
-  }, [live, router])
+    const params = new URLSearchParams()
+    if (project) {
+      params.set('project', project)
+    }
+    const source = new EventSource(
+      `/api/internal/logs/stream${params.size ? `?${params}` : ''}`,
+    )
+    source.addEventListener('logs', (event) => {
+      const rows = JSON.parse((event as MessageEvent).data) as LogRow[]
+      if (rows.length === 0) {
+        return
+      }
+      setLogs((current) => {
+        const known = new Set(current.map((row) => row.id))
+        const next = rows.filter((row) => !known.has(row.id)).reverse()
+        return [...next, ...current].slice(0, 100)
+      })
+    })
+    return () => source.close()
+  }, [live, project])
+
+  useEffect(() => {
+    if (!live) {
+      return
+    }
+    setFilterValues((values) =>
+      isAll && values.domain ? { ...values, domain: [] } : values,
+    )
+  }, [isAll, live])
 
   const formatOptions = useMemo(
     () => uniq(logs.map((l) => l.format)).map((v) => ({ value: v, label: v })),
@@ -173,8 +200,8 @@ function LogsPage() {
         eyebrow={isAll ? 'All projects' : currentProject?.name}
         subtitle={
           isAll
-            ? 'Every request that hit keenpix — newest first, auto-refreshing.'
-            : `Every request for ${currentProject?.name ?? 'this project'} — newest first, auto-refreshing.`
+            ? 'Every request that hit keenpix — newest first, streamed from the server.'
+            : `Every request for ${currentProject?.name ?? 'this project'} — newest first, streamed from the server.`
         }
         title="Live logs"
       />
