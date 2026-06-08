@@ -18,6 +18,8 @@ todos.json
 .keenpix-cache-*/
 .agents
 .playwright-mcp
+playwright-report
+test-results
 dogfood-output
 *.log
 .claude/launch.json

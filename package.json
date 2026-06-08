@@ -30,6 +30,7 @@
     "start": "node .output/server/index.mjs",
     "preview": "vite preview",
     "test": "vitest run",
+    "smoke": "playwright test",
     "lint": "biome check",
     "check": "biome check",
     "format": "biome format --write",
@@ -112,6 +113,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
+    "@playwright/test": "^1.60.0",
     "@tanstack/devtools-vite": "^0.6.0",
     "@types/mdx": "^2.0.13",
     "@types/node": "^22.19.15",
