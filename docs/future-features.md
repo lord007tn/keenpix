@@ -6,7 +6,6 @@ roadmap task.
 
 ## Analytics
 
-- Real source-domain analytics by storing `sourceHost` on request logs.
 - Geo distribution from trusted proxy headers such as `CF-IPCountry` or an
   explicit GeoIP integration.
 - Cache storage stats from disk plus the new memory LRU layer.
