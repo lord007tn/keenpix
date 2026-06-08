@@ -10,6 +10,7 @@ Future analytics to support, as todos. Builds on what's **already real** today
 - ✅ Per-project 24h rollup on the dashboard cards
 - ✅ Dashboard KPI deltas against the previous equal-length window
 - ✅ Source-domain capture, filtering, and per-project breakdowns via `sourceHost`
+- ✅ Real disk and memory cache storage stats in Workspace operations
 
 > Removed in the trust pass because they were **fixtures**: L1-memory cache fill,
 > variant count, geographic map, and $ cost.
@@ -23,10 +24,6 @@ Future analytics to support, as todos. Builds on what's **already real** today
       (currently always null) from a CDN/proxy header (`CF-IPCountry`,
       `X-Vercel-IP-Country`) or a GeoIP lookup. *Code:* `getGeoDistribution` by country.
       Restores the geo card with honest data. *Effort: M.*
-- [ ] **Real cache storage stats.** Replace the faked "L1 memory / L2 disk / variants"
-      with a `getCacheStats()` that stats `KEENPIX_CACHE_DIR` (on-disk bytes + file count)
-      via `src/lib/cdn/cache.ts`. *Effort: S.*
-
 ## Tier 2 — new dimensions
 
 - [ ] **Latency trend over time** — p50/p95/p99 per time-bucket (not just the window total). *Effort: M.*
