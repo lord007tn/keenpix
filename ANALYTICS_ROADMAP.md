@@ -11,6 +11,7 @@ Future analytics to support, as todos. Builds on what's **already real** today
 - ✅ Dashboard KPI deltas against the previous equal-length window
 - ✅ Source-domain capture, filtering, and per-project breakdowns via `sourceHost`
 - ✅ Real disk and memory cache storage stats in Workspace operations
+- ✅ SSE-backed Live Logs updates without client-side polling
 
 > Removed in the trust pass because they were **fixtures**: L1-memory cache fill,
 > variant count, geographic map, and $ cost.
@@ -38,8 +39,6 @@ Future analytics to support, as todos. Builds on what's **already real** today
 
 - [ ] **ClickHouse for analytics (PLAN Phase 9)** — move `request_logs` ingestion +
       aggregation to ClickHouse once Postgres `groupBy` over the log table gets slow. *Effort: L.*
-- [ ] **Real-time log streaming (SSE)** — replace the 5s `router.invalidate` poll on
-      `/app/logs` with a Server-Sent-Events route handler over the live insert stream. *Effort: M.*
 - [ ] **Retention + pre-aggregated rollups** — daily/monthly summary tables; prune raw
       logs after N days (keeps the table — and aggregations — fast). *Effort: M.*
 - [ ] **Scheduled exports / reports** — CSV alongside the existing NDJSON export; optional
