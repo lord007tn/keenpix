@@ -19,6 +19,8 @@ import {
 } from '@/data-access/admin'
 import { listProjects } from '@/data-access/projects'
 import { auth } from '@/lib/auth/server'
+import { getCacheStorageStats } from '@/lib/cdn/cache'
+import { getQueueStats } from '@/lib/concurrency'
 import { sendSmtpMail, verifySmtp } from '@/lib/email/smtp'
 import type {
   acceptInvitationSchema,
@@ -152,4 +154,18 @@ export async function sendTestEmail(to: string) {
     html: '<p>SMTP is configured correctly for this Keenpix instance.</p>',
   })
   return { ok: true }
+}
+
+export async function getOperationsHealth() {
+  const [cache, projects] = await Promise.all([
+    getCacheStorageStats(),
+    listProjects(DEFAULT_ORG),
+  ])
+  return {
+    cache,
+    generatedAt: new Date().toISOString(),
+    projectCount: projects.length,
+    transformQueue: getQueueStats(),
+    uptimeSeconds: Math.round(process.uptime()),
+  }
 }

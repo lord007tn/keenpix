@@ -77,6 +77,36 @@ export class DiskCacheStore implements CacheStore {
     }
   }
 
+  async inspect() {
+    let names: string[]
+    try {
+      names = await readdir(this.cacheDir)
+    } catch {
+      return {
+        diskFileCount: 0,
+        diskMaxBytes: this.maxBytes,
+        diskSizeBytes: 0,
+      }
+    }
+
+    const entries = await Promise.all(
+      names.map(async (name) => {
+        try {
+          const s = await stat(path.join(this.cacheDir, name))
+          return s.isFile() ? s.size : null
+        } catch {
+          return null
+        }
+      }),
+    )
+    const sizes = entries.filter((size): size is number => size !== null)
+    return {
+      diskFileCount: sizes.length,
+      diskMaxBytes: this.maxBytes,
+      diskSizeBytes: sizes.reduce((total, size) => total + size, 0),
+    }
+  }
+
   private pathFor(key: string, fmt: string) {
     return path.join(this.cacheDir, `${key}.${EXT[fmt] ?? 'bin'}`)
   }

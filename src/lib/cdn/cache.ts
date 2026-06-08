@@ -65,3 +65,10 @@ export function getCacheRuntimeStats() {
     ...memoryCache.stats(),
   }
 }
+
+export async function getCacheStorageStats() {
+  return {
+    ...(await diskCache.inspect()),
+    ...memoryCache.stats(),
+  }
+}
