@@ -8,7 +8,7 @@ It is built for operators who want the important parts kept visible: project all
 
 ## What Keenpix ships
 
-- **Transform API** - `GET /img/https://origin.example/photo.jpg?project=...&w=...&fmt=...` resizes, re-encodes, blurs, negotiates modern formats, and returns immutable cache headers.
+- **Transform API** - `GET /img/https://origin.example/photo.jpg?project=...&w=...&fmt=...` resizes, crops, filters, re-encodes, negotiates modern formats, and returns immutable cache headers.
 - **No public API keys** - access is gated by each project's domain allowlist. An empty allowlist fails closed with 403, so a fresh project is never an open proxy.
 - **Internal API keys** - trusted backend systems can manage projects, domains, and pipeline settings through authenticated JSON endpoints.
 - **Projects and origins** - each project owns its source host rules, settings, request logs, and analytics.
@@ -125,7 +125,7 @@ All via environment variables (see `.env.example`):
 ## Transform API
 
 ```
-GET /img/<origin-url>?project=<id>&w=&h=&q=&fmt=&fit=&dpr=&blur=
+GET /img/<origin-url>?project=<id>&w=&h=&q=&fmt=&fit=&dpr=&blur=&...
 ```
 
 **No authentication header.** Access is controlled by the project's allowlist — the request only succeeds if the source URL's host is listed under that project's **Allowed hosts**.
@@ -134,18 +134,53 @@ GET /img/<origin-url>?project=<id>&w=&h=&q=&fmt=&fit=&dpr=&blur=
 |---|---|
 | `project` | Project id (copy it from **Settings → Project ID**). Its allowlist is the gate. |
 | path source | Source image URL after `/img/` — its host must be on the project allowlist. |
-| `w` / `h` | Target width/height (1–5000, never upscaled). |
+| `w` / `h`, `resize` / `s` | Target width/height (1–5000). `resize`/`s` accept `WIDTHxHEIGHT`, `WIDTH`, or `xHEIGHT`. |
 | `q` | Quality 30–100 (default 75). |
-| `fmt` | `auto` (Accept-negotiated), `avif`, `webp`, `jpeg`, `png`. |
-| `fit` | `cover` / `contain` / `fill` / `inside`. |
+| `fmt` | `auto` (Accept-negotiated), `avif`, `webp`, `jpeg`, `png`, `gif`, `heif`, `tiff`. |
+| `fit` | `cover` / `contain` / `fill` / `inside` / `outside`. |
+| `position` / `pos` / `gravity` | Crop anchor for `cover`/`contain`: edges, corners, compass gravity, `entropy`, or `attention`. |
 | `dpr` | Device pixel ratio 1–3. |
-| `blur` | Gaussian blur sigma. |
+| `enlarge` | Allows upscaling when set to `1`/`true`; omitted requests do not upscale. |
+| `kernel` | Resize kernel: `nearest`, `linear`, `cubic`, `mitchell`, `lanczos2`, `lanczos3`, `mks2013`, `mks2021`. |
+| `background` / `bg`, `flatten` | Fill color and alpha flattening controls. |
+| `extract` / `crop`, `trim`, `extend`, `extendWith` | Exact crop rectangle, edge trim, and output padding controls. |
+| `rotate` / `r`, `flip`, `flop` | Arbitrary rotation and vertical/horizontal mirroring. |
+| `blur`, `sharpen`, `median`, `gamma`, `negate`, `normalize`, `threshold` | Pixel filters and corrections. |
+| `brightness`, `saturation`, `hue`, `lightness`, `tint`, `grayscale` / `greyscale` | Color adjustment controls. |
+| `animated` / `a` | Preserve animated GIF/WebP frames when output supports them. |
 
 Simple source URLs can be written directly in the path. If the source URL contains its own `?` or `#`, URL-encode the source before appending Keenpix transform parameters.
 
 Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`, so a CDN can cache each image variant once you configure it to cache `/img/*` with the full query string. The source URL lives in the path so Cloudflare and other CDNs can still see the source file extension; use omitted `fmt` / `fmt=auto` only when your CDN can cache separate `Accept` variants, and use explicit `fmt` values when you intentionally want a fixed output format.
 
 Framework image components usually map their `format` prop directly to `fmt`. Leave that prop unset for browser-based AVIF/WebP negotiation; `format="avif"` or `format="webp"` forces that format.
+
+### IPX modifier comparison
+
+Keenpix is remote-origin and project-allowlist oriented rather than a storage-provider router, but its Sharp modifier surface now covers the practical IPX-style image operations.
+
+| IPX-style capability | Keenpix support | Notes |
+|---|---|---|
+| `w`, `h`, `q`, `fmt`, `fit`, `dpr`, `blur` | Supported | Original focused surface. |
+| `position` / `pos` / `gravity` | Supported | Includes edges, corners, compass gravity, `entropy`, and `attention`. |
+| `background` | Supported | Used by `contain`, `flatten`, `extend`, and arbitrary rotate. |
+| `flatten` | Supported | Merges alpha onto the configured background. |
+| `fit=outside` | Supported | Sharp `outside` fit mode. |
+| `resize` / `s=WxH` | Supported | Compact aliases; explicit `w`/`h` take priority. |
+| `enlarge` | Supported, opt-in | Default remains no-upscale. |
+| `kernel` | Supported | Sharp resize kernels. |
+| `extract` / `crop` | Supported | `left,top,width,height`. |
+| `trim` | Supported | Boolean or threshold. |
+| `extend` | Supported | CSS-like one, two, or four-value padding. |
+| arbitrary `rotate` | Supported | EXIF auto-orient still runs first. |
+| `flip` / `flop` | Supported | Vertical / horizontal mirror. |
+| `sharpen`, `median`, `gamma` | Supported | Conservative numeric ranges. |
+| `negate`, `normalize`, `threshold` | Supported | Boolean and threshold controls. |
+| `modulate`, `tint`, `grayscale` | Supported | Brightness/saturation/hue/lightness, tint, grayscale. |
+| `animated` / `a` | Supported | Enables Sharp animated decoding. |
+| Extra formats | Supported | Adds `gif`, `heif`, and `tiff` alongside `avif`, `webp`, `jpeg`, `png`. |
+| SVGO/SVG optimization | Not a Keenpix transform mode | SVG inputs can still rasterize through Sharp; SVG pass-through/SVGO is a separate delivery decision. |
+| Local/storage providers | Product-scope difference | Keenpix intentionally uses remote origins gated by project allowlists instead of filesystem/Unstorage providers. |
 
 **Failure modes:**
 
@@ -224,7 +259,14 @@ Response shape:
       "defaultQuality": 75,
       "stripMetadata": true
     },
-    "supportedParameters": ["project", "url", "w", "h", "q", "fmt", "fit", "dpr", "blur"]
+    "supportedParameters": [
+      "project", "url", "w", "h", "q", "fmt", "fit", "dpr", "blur",
+      "position", "pos", "gravity", "background", "flatten", "resize", "s",
+      "enlarge", "kernel", "extract", "crop", "trim", "extend", "rotate",
+      "flip", "flop", "sharpen", "median", "gamma", "negate", "normalize",
+      "threshold", "brightness", "saturation", "hue", "lightness", "tint",
+      "grayscale", "animated"
+    ]
   }
 }
 ```

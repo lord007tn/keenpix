@@ -110,11 +110,11 @@ export async function optimizeProjectImage({
     throw new TransformError('Unknown project', 404)
   }
 
-  const { width, height, quality, dpr, blur, fit, format } =
-    parseTransformParams(searchParams, accept, {
-      autoFormat: project.autoFormat,
-      defaultQuality: project.defaultQuality,
-    })
+  const transformOptions = parseTransformParams(searchParams, accept, {
+    autoFormat: project.autoFormat,
+    defaultQuality: project.defaultQuality,
+  })
+  const { width, quality, format } = transformOptions
 
   let status = 200
   let cached = false
@@ -126,13 +126,10 @@ export async function optimizeProjectImage({
     const cacheKey = buildCacheKey({
       projectId: project.id,
       url: src,
-      w: width,
-      h: height,
-      q: quality,
-      fmt: format,
-      fit,
-      dpr,
-      blur,
+      transformOptions: {
+        ...transformOptions,
+        stripMetadata: project.stripMetadata,
+      },
     })
 
     const result = await readOrCreateTransform({
@@ -141,13 +138,7 @@ export async function optimizeProjectImage({
       format,
       origin,
       transformOptions: {
-        width,
-        height,
-        dpr,
-        quality,
-        format,
-        fit,
-        blur,
+        ...transformOptions,
         stripMetadata: project.stripMetadata,
       },
     })
