@@ -146,5 +146,5 @@ The same rules apply to any proxy or CDN:
 - Respect `Vary: Accept` if you use `fmt=auto`; otherwise generate explicit `fmt` values.
 - Keep dashboard, auth, docs, and `/api/health` uncached.
 
-If the CDN cannot vary by `Accept`, use explicit `fmt=avif`, `fmt=webp`, `fmt=jpeg`, or
-`fmt=png` in generated image URLs.
+If the CDN cannot vary by `Accept`, use explicit `fmt=avif`, `fmt=webp`, `fmt=jpeg`,
+`fmt=png`, or `fmt=svg` in generated image URLs.

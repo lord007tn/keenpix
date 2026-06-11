@@ -201,6 +201,7 @@ function isOutputFormat(value: string): value is OutputFormat {
     value === 'heif' ||
     value === 'jpeg' ||
     value === 'png' ||
+    value === 'svg' ||
     value === 'tiff' ||
     value === 'webp'
   )

@@ -21,9 +21,10 @@ string **is** the API.
    │        ▼
    │ 4. Fetch the original from your origin (size-capped, IP-pinned)
    │ 5. Transform with sharp: decode → geometry → effects → re-encode
+   │    or optimize SVG directly when fmt=svg
    │ 6. Write the result to the disk cache, then stream it
    ▼
- Response: image/avif|webp|jpeg  +  Cache-Control: public, max-age=31536000, immutable
+ Response: image/avif|webp|jpeg|svg+xml  +  Cache-Control: public, max-age=31536000, immutable
 ```
 
 Every request is also written to a log that powers the [analytics](/docs/concepts/analytics).
@@ -49,6 +50,9 @@ serves **AVIF → WebP → JPEG** in order of support, and sets `Vary: Accept`. 
 otherwise generate explicit `fmt=avif|webp|jpeg|png` URLs. A project can turn
 auto-format off (then `fmt=auto` serves JPEG); an explicit format is always honoured.
 That means `fmt=avif` never falls back to WebP; it is a fixed-format request.
+
+`fmt=svg` is not auto-negotiated. It only accepts SVG origins, optimizes them with
+SVGO, strips active content, and skips the raster Sharp pipeline.
 
 ## Per-project defaults
 
