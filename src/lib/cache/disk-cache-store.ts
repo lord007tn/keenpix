@@ -20,6 +20,7 @@ const EXT: Record<OutputFormat, string> = {
   heif: 'heif',
   jpeg: 'jpg',
   png: 'png',
+  svg: 'svg',
   tiff: 'tiff',
   webp: 'webp',
 }

@@ -136,7 +136,7 @@ GET /img/<origin-url>?project=<id>&w=&h=&q=&fmt=&fit=&dpr=&blur=&...
 | path source | Source image URL after `/img/` — its host must be on the project allowlist. |
 | `w` / `h`, `resize` / `s` | Target width/height (1–5000). `resize`/`s` accept `WIDTHxHEIGHT`, `WIDTH`, or `xHEIGHT`. |
 | `q` | Quality 30–100 (default 75). |
-| `fmt` | `auto` (Accept-negotiated), `avif`, `webp`, `jpeg`, `png`, `gif`, `heif`, `tiff`. |
+| `fmt` | `auto` (Accept-negotiated), `avif`, `webp`, `jpeg`, `png`, `gif`, `heif`, `tiff`, `svg`. |
 | `fit` | `cover` / `contain` / `fill` / `inside` / `outside`. |
 | `position` / `pos` / `gravity` | Crop anchor for `cover`/`contain`: edges, corners, compass gravity, `entropy`, or `attention`. |
 | `dpr` | Device pixel ratio 1–3. |
@@ -154,6 +154,8 @@ Simple source URLs can be written directly in the path. If the source URL contai
 Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`, so a CDN can cache each image variant once you configure it to cache `/img/*` with the full query string. The source URL lives in the path so Cloudflare and other CDNs can still see the source file extension; use omitted `fmt` / `fmt=auto` only when your CDN can cache separate `Accept` variants, and use explicit `fmt` values when you intentionally want a fixed output format.
 
 Framework image components usually map their `format` prop directly to `fmt`. Leave that prop unset for browser-based AVIF/WebP negotiation; `format="avif"` or `format="webp"` forces that format.
+
+`fmt=svg` is explicit only. It serves SVG origins through SVGO optimization and active-content stripping; raster transform modifiers do not apply to SVG output.
 
 ### IPX modifier comparison
 
@@ -178,8 +180,8 @@ Keenpix is remote-origin and project-allowlist oriented rather than a storage-pr
 | `negate`, `normalize`, `threshold` | Supported | Boolean and threshold controls. |
 | `modulate`, `tint`, `grayscale` | Supported | Brightness/saturation/hue/lightness, tint, grayscale. |
 | `animated` / `a` | Supported | Enables Sharp animated decoding. |
-| Extra formats | Supported | Adds `gif`, `heif`, and `tiff` alongside `avif`, `webp`, `jpeg`, `png`. |
-| SVGO/SVG optimization | Not a Keenpix transform mode | SVG inputs can still rasterize through Sharp; SVG pass-through/SVGO is a separate delivery decision. |
+| Extra formats | Supported | Adds `gif`, `heif`, `tiff`, and explicit `svg` alongside `avif`, `webp`, `jpeg`, `png`. |
+| SVGO/SVG optimization | Supported | `fmt=svg` optimizes SVG origins with SVGO and strips active content. |
 | Local/storage providers | Product-scope difference | Keenpix intentionally uses remote origins gated by project allowlists instead of filesystem/Unstorage providers. |
 
 **Failure modes:**

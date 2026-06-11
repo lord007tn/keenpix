@@ -12,7 +12,7 @@ All transform parameters are optional; out-of-range values are clamped, not reje
 | `w` / `h` | int | 1–5000 | bounded original | Target width/height (px) |
 | `resize` / `s` | string | `WIDTHxHEIGHT`, `WIDTH`, `xHEIGHT` | — | Compact size alias; explicit `w`/`h` win |
 | `q` | int | 30–100 | project default | Output quality |
-| `fmt` | enum | `auto` `avif` `webp` `jpeg` `png` `gif` `heif` `tiff` | `auto` | Output format (`auto` negotiates AVIF/WebP/JPEG) |
+| `fmt` | enum | `auto` `avif` `webp` `jpeg` `png` `gif` `heif` `tiff` `svg` | `auto` | Output format (`auto` negotiates AVIF/WebP/JPEG) |
 | `fit` | enum | `cover` `contain` `fill` `inside` `outside` | `cover` | How to fit the `w`×`h` box |
 | `position` / `pos` / `gravity` | enum | edges, corners, compass gravities, `entropy`, `attention` | `centre` | Crop anchor for `cover`/`contain` |
 | `dpr` | int | 1–3 | `1` | Device pixel ratio (multiplies `w`/`h`) |
@@ -54,4 +54,6 @@ All transform parameters are optional; out-of-range values are clamped, not reje
 - **Framework format props.** Image frameworks often map `format="avif"` or
   `format="webp"` directly to `fmt=avif` or `fmt=webp`. Leave those props unset when
   you want Keenpix to return AVIF or WebP based on browser support.
+- **`fmt=svg`** is explicit only. It serves SVG origins through SVGO optimization and
+  active-content stripping; raster transform modifiers do not apply to SVG output.
 - **`q`** defaults to the project's *Default quality* (**Settings → Pipeline**).

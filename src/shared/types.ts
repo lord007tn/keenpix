@@ -1,3 +1,5 @@
+import type { OutputFormat } from './transform'
+
 export type ProjectEnv = 'production' | 'staging' | 'development'
 
 export function isProjectEnv(value: unknown): value is ProjectEnv {
@@ -60,11 +62,18 @@ export interface LatencyBin {
 
 export type LogStatus = number
 
-export type LogFormat = 'avif' | 'webp' | 'jpeg' | 'png'
+export type LogFormat = OutputFormat
 
 export function isLogFormat(value: unknown): value is LogFormat {
   return (
-    value === 'avif' || value === 'webp' || value === 'jpeg' || value === 'png'
+    value === 'avif' ||
+    value === 'gif' ||
+    value === 'heif' ||
+    value === 'jpeg' ||
+    value === 'png' ||
+    value === 'svg' ||
+    value === 'tiff' ||
+    value === 'webp'
   )
 }
 
