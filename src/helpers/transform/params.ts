@@ -1,4 +1,4 @@
-import type { Fit, OutputFormat } from '@/lib/sharp/transform'
+import type { Fit, OutputFormat } from '@/shared/transform'
 
 function clampInt(value: string | null, min: number, max: number) {
   if (!value) {

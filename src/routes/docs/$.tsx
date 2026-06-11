@@ -12,16 +12,16 @@ import {
 import { RootProvider } from 'fumadocs-ui/provider/tanstack'
 import { Suspense } from 'react'
 import { getMDXComponents } from '@/components/mdx'
-import { getAppUrl, isSelfHosted } from '@/lib/deployment'
+import { docsSlugsSchema } from '@/schemas/docs'
+import { getAppUrl, isSelfHosted } from '@/server/deployment'
+import { source } from '@/shared/docs-source'
 import {
   absoluteUrl,
   BRAND_IMAGE_PATH,
   docsJsonLd,
   SITE_NAME,
   seo,
-} from '@/lib/seo'
-import { source } from '@/lib/source'
-import { docsSlugsSchema } from '@/schemas/docs'
+} from '@/shared/seo'
 import docsCss from '@/styles/docs.css?url'
 
 interface DocsLoaderData {

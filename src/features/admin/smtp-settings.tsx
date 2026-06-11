@@ -23,8 +23,8 @@ import {
   sendTestEmailFn,
   updateSmtpSettingsFn,
 } from '@/functions/admin'
-import { getFieldError } from '@/lib/form-errors'
 import { sendTestEmailSchema, smtpSettingsSchema } from '@/schemas/admin'
+import { getFieldError } from '@/utils/validation/form-errors'
 
 interface SmtpFormMeta {
   passwordSet: boolean

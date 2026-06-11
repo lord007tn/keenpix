@@ -1,18 +1,21 @@
 import { createServerFn } from '@tanstack/react-start'
 import {
-  acceptInvitation,
   createApiKey,
-  createInvitation,
   disableApiKey,
-  getAdminWorkspace,
-  getInvitation,
-  getOperationsHealth,
   listApiKeyActivitiesPage,
+} from '@/actions/admin/api-keys'
+import {
+  acceptInvitation,
+  createInvitation,
+  getInvitation,
   revokeInvitation,
+} from '@/actions/admin/invitations'
+import {
+  getOperationsHealth,
   runCacheMaintenance,
-  sendTestEmail,
-  updateSmtpSettings,
-} from '@/actions/admin'
+} from '@/actions/admin/operations'
+import { sendTestEmail, updateSmtpSettings } from '@/actions/admin/smtp'
+import { getAdminWorkspace } from '@/actions/admin/workspace'
 import { authMiddleware, requireSuperAdmin } from '@/lib/auth/guards'
 import {
   acceptInvitationSchema,

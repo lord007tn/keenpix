@@ -14,4 +14,4 @@ export const authClient = createAuthClient({
   plugins: [apiKeyClient(), adminClient()],
 })
 
-export const { signIn, signOut, useSession } = authClient
+export const { signOut } = authClient

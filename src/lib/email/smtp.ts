@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer'
 import type SMTPTransport from 'nodemailer/lib/smtp-transport'
-import type { EffectiveSmtpSettings } from '@/data-access/admin'
+import type { EffectiveSmtpSettings } from '@/data-access/admin/smtp'
 
 type SmtpTransportOptions = SMTPTransport.Options & {
   allowInternalNetworkInterfaces?: boolean

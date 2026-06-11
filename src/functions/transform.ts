@@ -3,8 +3,8 @@ import {
   getPublicTransformErrorMessage,
   getTransformErrorStatus,
 } from '@/errors/transform'
-import { cacheControl } from '@/lib/cdn/cache'
-import { contentTypeFor } from '@/lib/sharp/transform'
+import { cacheControl } from '@/lib/cache/cache'
+import { getContentType } from '@/shared/transform'
 
 const LEADING_SLASHES_RE = /^\/+/
 
@@ -14,7 +14,7 @@ export async function handleTransformRequest(
   request: Request,
   pathSource?: string,
 ) {
-  const startedAt = Date.now()
+  const startedAt = performance.now()
   const searchParams = new URL(request.url).searchParams
   const src = pathSource
     ? decodeSourcePath(pathSource)
@@ -41,7 +41,7 @@ export async function handleTransformRequest(
     return new Response(new Uint8Array(result.body), {
       status: 200,
       headers: {
-        'content-type': contentTypeFor(result.format),
+        'content-type': getContentType(result.format),
         'cache-control': cacheControl(),
         vary: 'Accept',
       },

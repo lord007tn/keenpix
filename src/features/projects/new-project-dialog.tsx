@@ -23,9 +23,9 @@ import {
 } from '@/components/ui/select'
 import { getErrorMessage } from '@/errors/common'
 import { createProjectFn } from '@/functions/projects'
-import { getFieldError } from '@/lib/form-errors'
 import { createProjectSchema } from '@/schemas/projects'
 import { isProjectEnv, type ProjectEnv } from '@/shared/types'
+import { getFieldError } from '@/utils/validation/form-errors'
 
 const ENVS: ProjectEnv[] = ['production', 'staging', 'development']
 const DEFAULT_VALUES: { name: string; origin: string; env: ProjectEnv } = {

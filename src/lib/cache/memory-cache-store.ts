@@ -1,8 +1,9 @@
 import { LRUCache } from 'lru-cache'
+import type { OutputFormat } from '@/shared/transform'
 import type { CacheStore } from './cache-store'
 
-function memoryKey(key: string, fmt: string) {
-  return `${key}.${fmt}`
+function memoryKey(key: string, format: OutputFormat) {
+  return `${key}.${format}`
 }
 
 export class MemoryCacheStore implements CacheStore {
@@ -20,12 +21,12 @@ export class MemoryCacheStore implements CacheStore {
         : null
   }
 
-  get(key: string, fmt: string) {
-    return this.cache?.get(memoryKey(key, fmt)) ?? null
+  get(key: string, format: OutputFormat) {
+    return this.cache?.get(memoryKey(key, format)) ?? null
   }
 
-  set(key: string, fmt: string, data: Buffer) {
-    this.cache?.set(memoryKey(key, fmt), data)
+  set(key: string, format: OutputFormat, data: Buffer) {
+    this.cache?.set(memoryKey(key, format), data)
   }
 
   clear() {

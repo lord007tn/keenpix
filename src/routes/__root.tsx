@@ -17,7 +17,7 @@ import {
   SITE_NAME,
   SITE_TITLE,
   seo,
-} from '@/lib/seo'
+} from '@/shared/seo'
 import appCss from '../styles.css?url'
 
 interface RouterContext {

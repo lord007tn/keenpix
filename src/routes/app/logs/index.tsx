@@ -21,8 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { listLogsFn } from '@/functions/logs'
-import { appPageHead } from '@/lib/seo'
 import { humanBytes } from '@/shared/format'
+import { appPageHead } from '@/shared/seo'
 import type { LogRow } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
 

@@ -13,7 +13,7 @@ const base = {
   fmt: 'webp',
   fit: 'cover',
   q: 75,
-}
+} as const
 
 describe('buildCacheKey', () => {
   it('is a stable 64-char hex digest', () => {

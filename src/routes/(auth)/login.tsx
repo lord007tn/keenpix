@@ -10,9 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authClient } from '@/lib/auth/client'
-import { getFieldError } from '@/lib/form-errors'
-import { noIndexPageHead } from '@/lib/seo'
 import { loginSchema } from '@/schemas/auth'
+import { noIndexPageHead } from '@/shared/seo'
+import { getFieldError } from '@/utils/validation/form-errors'
 
 export const Route = createFileRoute('/(auth)/login')({
   head: () =>
