@@ -231,6 +231,9 @@ const FORMAT_COLORS: Record<string, string> = {
   jpeg: 'var(--chart-4)',
   png: 'var(--chart-3)',
   gif: 'var(--muted-foreground)',
+  heif: 'var(--chart-5)',
+  svg: 'var(--accent-foreground)',
+  tiff: 'var(--secondary-foreground)',
 }
 
 export async function getFormatDistribution(

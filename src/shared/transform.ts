@@ -4,6 +4,7 @@ export type OutputFormat =
   | 'heif'
   | 'jpeg'
   | 'png'
+  | 'svg'
   | 'tiff'
   | 'webp'
 export type Fit = 'cover' | 'contain' | 'fill' | 'inside' | 'outside'
@@ -72,6 +73,7 @@ const CONTENT_TYPE: Record<OutputFormat, string> = {
   heif: 'image/heif',
   jpeg: 'image/jpeg',
   png: 'image/png',
+  svg: 'image/svg+xml',
   tiff: 'image/tiff',
   webp: 'image/webp',
 }

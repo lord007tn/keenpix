@@ -17,6 +17,8 @@ export function encodeFormat(pipeline: sharp.Sharp, opts: TransformOptions) {
       return pipeline.tiff({ quality: opts.quality })
     case 'webp':
       return pipeline.webp({ quality: opts.quality })
+    case 'svg':
+      throw new Error('SVG output bypasses Sharp')
     default:
       return pipeline.jpeg({ quality: opts.quality, progressive: true })
   }

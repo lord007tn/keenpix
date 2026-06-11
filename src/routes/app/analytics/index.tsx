@@ -88,6 +88,9 @@ const FORMAT_LABELS: Record<string, string> = {
   jpg: 'JPEG',
   png: 'PNG',
   gif: 'GIF',
+  heif: 'HEIF',
+  svg: 'SVG',
+  tiff: 'TIFF',
 }
 
 const STATUS_LABELS: Record<string, string> = {
