@@ -10,10 +10,12 @@ const SHA256_HEX = /^[0-9a-f]{64}$/
 const base = {
   projectId: 'store',
   url: 'https://cdn.example.com/a.png',
-  fmt: 'webp',
-  fit: 'cover',
-  q: 75,
-} as const
+  transformOptions: {
+    fit: 'cover' as const,
+    format: 'webp' as const,
+    quality: 75,
+  },
+}
 
 describe('buildCacheKey', () => {
   it('is a stable 64-char hex digest', () => {
@@ -24,10 +26,35 @@ describe('buildCacheKey', () => {
 
   it('changes when any transform parameter changes', () => {
     const key = buildCacheKey(base)
-    expect(buildCacheKey({ ...base, w: 400 })).not.toBe(key)
-    expect(buildCacheKey({ ...base, fmt: 'avif' })).not.toBe(key)
+    expect(
+      buildCacheKey({
+        ...base,
+        transformOptions: { ...base.transformOptions, width: 400 },
+      }),
+    ).not.toBe(key)
+    expect(
+      buildCacheKey({
+        ...base,
+        transformOptions: { ...base.transformOptions, format: 'avif' },
+      }),
+    ).not.toBe(key)
     expect(buildCacheKey({ ...base, projectId: 'blog' })).not.toBe(key)
-    expect(buildCacheKey({ ...base, q: 80 })).not.toBe(key)
+    expect(
+      buildCacheKey({
+        ...base,
+        transformOptions: { ...base.transformOptions, quality: 80 },
+      }),
+    ).not.toBe(key)
+    expect(
+      buildCacheKey({
+        ...base,
+        transformOptions: {
+          ...base.transformOptions,
+          background: '#ffffff',
+          flatten: true,
+        },
+      }),
+    ).not.toBe(key)
     expect(
       buildCacheKey({ ...base, url: 'https://cdn.example.com/b.png' }),
     ).not.toBe(key)

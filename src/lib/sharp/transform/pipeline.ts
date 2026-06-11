@@ -7,8 +7,11 @@ import { env } from '@/env/server'
  */
 const MAX_INPUT_PIXELS = env.KEENPIX_MAX_INPUT_PIXELS
 
-export function createPipeline(input: Buffer) {
+import type { TransformOptions } from '@/shared/transform'
+
+export function createPipeline(input: Buffer, opts: TransformOptions) {
   return sharp(input, {
+    animated: opts.animated,
     failOn: 'truncated',
     limitInputPixels: MAX_INPUT_PIXELS,
   }).rotate()

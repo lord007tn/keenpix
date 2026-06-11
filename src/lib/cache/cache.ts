@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { env } from '@/env/server'
-import type { Fit, OutputFormat } from '@/shared/transform'
+import type { OutputFormat, TransformOptions } from '@/shared/transform'
 import { DiskCacheStore } from './disk-cache-store'
 import { MemoryCacheStore } from './memory-cache-store'
 
@@ -12,19 +12,13 @@ const memoryCache = new MemoryCacheStore(MEMORY_MAX_BYTES)
 const diskCache = new DiskCacheStore(CACHE_DIR, MAX_BYTES)
 
 export interface TransformKeyInput {
-  blur?: number
-  dpr?: number
-  fit: Fit
-  fmt: OutputFormat
-  h?: number
   projectId: string
-  q: number
+  transformOptions: TransformOptions
   url: string
-  w?: number
 }
 
 // Content-addressed cache key. The negotiated format is included so CDN/disk
-// entries never collide across AVIF/WebP/JPEG/PNG variants.
+// entries never collide across transform variants.
 export function buildCacheKey(input: TransformKeyInput): string {
   return createHash('sha256').update(JSON.stringify(input)).digest('hex')
 }
