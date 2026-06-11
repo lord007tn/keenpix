@@ -9,7 +9,6 @@ const config: KnipConfig = {
     'src/routes/**/*.{ts,tsx}',
     'src/functions/**/*.ts',
     'src/actions/**/*.ts',
-    'src/lib/**/*.ts',
     'content/**/*.mdx',
   ],
   project: [

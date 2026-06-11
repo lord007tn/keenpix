@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/card'
 import { NameEditor } from '@/features/account/name-editor'
 import { ThemeControl } from '@/features/account/theme-control'
-import { appPageHead } from '@/lib/seo'
+import { appPageHead } from '@/shared/seo'
 
 export const Route = createFileRoute('/app/account/')({
   head: () =>

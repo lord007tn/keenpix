@@ -70,7 +70,7 @@ const columns: ColumnDef<ProjectRow>[] = [
       <SortHeader
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       >
-        24h requests
+        Requests
       </SortHeader>
     ),
     cell: ({ row }) => (

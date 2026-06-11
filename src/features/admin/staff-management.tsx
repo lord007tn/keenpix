@@ -28,11 +28,11 @@ import {
   getAdminWorkspaceFn,
   revokeInvitationFn,
 } from '@/functions/admin'
-import { getFieldError } from '@/lib/form-errors'
 import {
   type CreateInvitationInput,
   createInvitationSchema,
 } from '@/schemas/admin'
+import { getFieldError } from '@/utils/validation/form-errors'
 
 function isStaffRole(value: unknown): value is CreateInvitationInput['role'] {
   return value === 'admin' || value === 'staff'

@@ -40,7 +40,8 @@ is not enough for every dynamic-looking path.
 
 `Vary: Accept` keeps per-format variants correct under `fmt=auto` only when your CDN
 supports caching separate variants by `Accept`. On CDNs that do not, prefer explicit
-`fmt=avif`, `fmt=webp`, `fmt=jpeg`, or `fmt=png` URLs.
+`fmt=avif`, `fmt=webp`, `fmt=jpeg`, or `fmt=png` URLs. Explicit formats improve cache
+predictability, but they also disable browser-based AVIF/WebP negotiation for that URL.
 
 ## Where it's stored
 

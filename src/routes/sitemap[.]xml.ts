@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getAppUrl, isSelfHosted } from '@/lib/deployment'
-import { source } from '@/lib/source'
+import { getAppUrl, isSelfHosted } from '@/server/deployment'
+import { source } from '@/shared/docs-source'
 
 export const Route = createFileRoute('/sitemap.xml')({
   server: {

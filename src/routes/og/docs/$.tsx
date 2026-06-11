@@ -1,6 +1,6 @@
 import ImageResponse from '@takumi-rs/image-response'
 import { createFileRoute } from '@tanstack/react-router'
-import { source } from '@/lib/source'
+import { source } from '@/shared/docs-source'
 
 const IMAGE_EXTENSION = /\.(png|webp|jpg|jpeg)$/i
 

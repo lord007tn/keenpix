@@ -4,49 +4,19 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import mdx from 'fumadocs-mdx/vite'
 import { nitro } from 'nitro/vite'
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig } from 'vite'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 import packageJson from './package.json' with { type: 'json' }
-
-/**
- * Dev-only: stop the dev static-asset handler from shadowing the transform
- * route. It classifies a request as a static file — and 404s `/img/...` — when
- * the URL ends in an image extension (e.g. `/img/https://.../photo.jpg`) OR when
- * the browser sends `Sec-Fetch-Dest: image` (which every `<img src="/img/...">`
- * does). We neutralize both signals before the request reaches the handler.
- * Production (Nitro node-server) routes by pathname and is unaffected, so this
- * only restores dev↔prod parity.
- */
-const ASSET_EXT = /\.[a-z0-9]{1,5}$/i
-
-function keenpixDevApiPassthrough(): Plugin {
-  return {
-    name: 'keenpix-dev-api-passthrough',
-    apply: 'serve',
-    configureServer(server) {
-      server.middlewares.use((req, _res, next) => {
-        const url = req.url
-        if (url?.startsWith('/img/')) {
-          if (req.headers['sec-fetch-dest'] === 'image') {
-            req.headers['sec-fetch-dest'] = 'empty'
-          }
-          if (ASSET_EXT.test(url)) {
-            req.url = `${url}${url.includes('?') ? '&' : '?'}_keenpix_pad=1`
-          }
-        }
-        next()
-      })
-    },
-  }
-}
 
 const config = defineConfig({
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(packageJson.version),
   },
+  server: {
+    port: 3000,
+  },
   plugins: [
     mdx(),
-    keenpixDevApiPassthrough(),
     devtools(),
     nitro(),
     viteTsConfigPaths({

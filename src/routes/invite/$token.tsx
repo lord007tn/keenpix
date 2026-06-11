@@ -1,5 +1,6 @@
 import { useForm } from '@tanstack/react-form'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import dayjs from 'dayjs'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
@@ -17,9 +18,9 @@ import { Label } from '@/components/ui/label'
 import { getErrorMessage } from '@/errors/common'
 import { acceptInvitationFn, getInvitationFn } from '@/functions/admin'
 import { authClient } from '@/lib/auth/client'
-import { getFieldError } from '@/lib/form-errors'
-import { noIndexPageHead } from '@/lib/seo'
 import { acceptInvitationSchema } from '@/schemas/admin'
+import { noIndexPageHead } from '@/shared/seo'
+import { getFieldError } from '@/utils/validation/form-errors'
 
 export const Route = createFileRoute('/invite/$token')({
   loader: ({ params }) => getInvitationFn({ data: { token: params.token } }),
@@ -65,7 +66,7 @@ function InvitePage() {
   const inactive =
     !invitation ||
     invitation.status !== 'pending' ||
-    new Date(invitation.expiresAt).getTime() < Date.now()
+    dayjs(invitation.expiresAt).isBefore(dayjs())
 
   return (
     <main

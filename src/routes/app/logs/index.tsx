@@ -1,6 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { DownloadIcon, SearchIcon, XIcon } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  DownloadIcon,
+  SearchIcon,
+  XIcon,
+} from 'lucide-react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { DataFilters, type FilterField } from '@/components/app/data-filters'
 import { PageHeader } from '@/components/app/page-header'
 import { Button } from '@/components/ui/button'
@@ -15,8 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { listLogsFn } from '@/functions/logs'
-import { appPageHead } from '@/lib/seo'
 import { humanBytes } from '@/shared/format'
+import { appPageHead } from '@/shared/seo'
 import type { LogRow } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
 
@@ -71,6 +77,7 @@ function LogsPage() {
   const projectName = new Map(projects.map((p) => [p.id, p.name]))
   const [logs, setLogs] = useState(initialLogs)
   const [live, setLive] = useState(true)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [filter, setFilter] = useState('')
   const [filterValues, setFilterValues] = useState<Record<string, string[]>>({})
   const formats = filterValues.format ?? []
@@ -101,7 +108,7 @@ function LogsPage() {
       setLogs((current) => {
         const known = new Set(current.map((row) => row.id))
         const next = rows.filter((row) => !known.has(row.id)).reverse()
-        return [...next, ...current].slice(0, 100)
+        return [...next, ...current].slice(0, 500)
       })
     })
     return () => source.close()
@@ -170,6 +177,22 @@ function LogsPage() {
     }
     return f
   }, [formatOptions, statusOptions, domainOptions, isAll])
+
+  function toggleExpanded(id: string) {
+    setExpanded((current) => {
+      const next = new Set(current)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  // chevron + timestamp + (project|domain) + path + width + format + status +
+  // cache + latency + bytes — exactly one of project/domain renders.
+  const columnCount = 10
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -251,12 +274,16 @@ function LogsPage() {
       </Card>
 
       <Card className="overflow-hidden p-0">
-        <Table>
-          <TableHeader>
+        <Table containerClassName="max-h-[calc(100vh-22rem)] min-h-64 overflow-auto">
+          <TableHeader className="sticky top-0 z-10 bg-card [&_th]:bg-card">
             <TableRow>
+              <TableHead className="w-8" />
               <TableHead>Timestamp</TableHead>
-              {isAll ? <TableHead>Project</TableHead> : null}
-              {isAll ? null : <TableHead>Domain</TableHead>}
+              {isAll ? (
+                <TableHead>Project</TableHead>
+              ) : (
+                <TableHead>Domain</TableHead>
+              )}
               <TableHead className="w-full">Path</TableHead>
               <TableHead className="text-right">Width</TableHead>
               <TableHead>Format</TableHead>
@@ -267,49 +294,127 @@ function LogsPage() {
             </TableRow>
           </TableHeader>
           <TableBody className="font-mono text-xs">
-            {filtered.map((l) => (
-              <TableRow key={l.id}>
-                <TableCell className="text-muted-foreground">{l.ts}</TableCell>
-                {isAll ? (
-                  <TableCell className="text-foreground">
-                    {projectName.get(l.projectId) ?? l.projectId}
-                  </TableCell>
-                ) : null}
-                {isAll ? null : (
-                  <TableCell className="text-foreground">
-                    {l.sourceHost ?? '—'}
-                  </TableCell>
-                )}
-                <TableCell className="w-full max-w-0 truncate">
-                  {l.path}
-                </TableCell>
-                <TableCell className="text-right text-muted-foreground">
-                  {l.w}
-                </TableCell>
-                <TableCell className="text-foreground">{l.format}</TableCell>
-                <TableCell
-                  className={`text-right ${l.status === 200 ? 'text-success-text' : 'text-destructive-text'}`}
-                >
-                  {l.status}
-                </TableCell>
-                <TableCell
-                  className={l.cached ? 'text-success-text' : 'text-primary'}
-                >
-                  {l.cached ? 'HIT' : 'MISS'}
-                </TableCell>
-                <TableCell className={`text-right ${latencyClass(l.latency)}`}>
-                  {l.latency}ms
-                </TableCell>
-                <TableCell className="text-right">
-                  {humanBytes(l.bytesOut, 0)}
-                </TableCell>
-              </TableRow>
-            ))}
+            {filtered.map((l) => {
+              const isOpen = expanded.has(l.id)
+              return (
+                <Fragment key={l.id}>
+                  <TableRow
+                    aria-expanded={isOpen}
+                    className="cursor-pointer aria-expanded:bg-muted/50"
+                    onClick={() => toggleExpanded(l.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        toggleExpanded(l.id)
+                      }
+                    }}
+                    tabIndex={0}
+                  >
+                    <TableCell className="text-muted-foreground">
+                      {isOpen ? (
+                        <ChevronDownIcon className="size-3.5" />
+                      ) : (
+                        <ChevronRightIcon className="size-3.5" />
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {l.ts}
+                    </TableCell>
+                    {isAll ? (
+                      <TableCell className="text-foreground">
+                        {projectName.get(l.projectId) ?? l.projectId}
+                      </TableCell>
+                    ) : (
+                      <TableCell className="text-foreground">
+                        {l.sourceHost ?? '—'}
+                      </TableCell>
+                    )}
+                    <TableCell className="w-full max-w-0 truncate">
+                      {l.path}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {l.w}
+                    </TableCell>
+                    <TableCell className="text-foreground">
+                      {l.format}
+                    </TableCell>
+                    <TableCell
+                      className={`text-right ${l.status === 200 ? 'text-success-text' : 'text-destructive-text'}`}
+                    >
+                      {l.status}
+                    </TableCell>
+                    <TableCell
+                      className={
+                        l.cached ? 'text-success-text' : 'text-primary'
+                      }
+                    >
+                      {l.cached ? 'HIT' : 'MISS'}
+                    </TableCell>
+                    <TableCell
+                      className={`text-right ${latencyClass(l.latency)}`}
+                    >
+                      {l.latency}ms
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {humanBytes(l.bytesOut, 0)}
+                    </TableCell>
+                  </TableRow>
+                  {isOpen ? (
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell
+                        className="bg-muted/30 p-0"
+                        colSpan={columnCount}
+                      >
+                        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 px-4 py-4 sm:grid-cols-3 lg:grid-cols-4">
+                          {[
+                            { full: true, label: 'Path', value: l.path },
+                            { label: 'Request ID', value: l.id },
+                            {
+                              label: 'Project',
+                              value:
+                                projectName.get(l.projectId) ?? l.projectId,
+                            },
+                            { label: 'Domain', value: l.sourceHost ?? '—' },
+                            { label: 'Timestamp', value: l.ts },
+                            { label: 'Status', value: String(l.status) },
+                            { label: 'Format', value: l.format },
+                            { label: 'Width', value: `${l.w}px` },
+                            { label: 'Quality', value: String(l.q) },
+                            {
+                              label: 'Cache',
+                              value: l.cached ? 'HIT' : 'MISS',
+                            },
+                            { label: 'Latency', value: `${l.latency}ms` },
+                            { label: 'Bytes in', value: humanBytes(l.bytesIn) },
+                            {
+                              label: 'Bytes out',
+                              value: humanBytes(l.bytesOut),
+                            },
+                          ].map((d) => (
+                            <div
+                              className={d.full ? 'col-span-full' : ''}
+                              key={d.label}
+                            >
+                              <dt className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                                {d.label}
+                              </dt>
+                              <dd className="mt-0.5 break-all text-foreground">
+                                {d.value}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </Fragment>
+              )
+            })}
             {filtered.length === 0 ? (
               <TableRow>
                 <TableCell
                   className="py-14 text-center text-muted-foreground"
-                  colSpan={9}
+                  colSpan={columnCount}
                 >
                   No requests match these filters.
                 </TableCell>

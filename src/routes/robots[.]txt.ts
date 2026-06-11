@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getAppUrl, isSelfHosted } from '@/lib/deployment'
+import { getAppUrl, isSelfHosted } from '@/server/deployment'
 
 export const Route = createFileRoute('/robots.txt')({
   server: {

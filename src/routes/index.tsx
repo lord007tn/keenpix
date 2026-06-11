@@ -10,7 +10,7 @@ import {
   seo,
   softwareApplicationJsonLd,
   webSiteJsonLd,
-} from '@/lib/seo'
+} from '@/shared/seo'
 
 export const Route = createFileRoute('/')({
   loader: () => getPublicConfigFn(),

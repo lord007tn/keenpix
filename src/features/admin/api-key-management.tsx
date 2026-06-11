@@ -40,9 +40,9 @@ import {
   getAdminWorkspaceFn,
   getApiKeyActivitiesFn,
 } from '@/functions/admin'
-import { getFieldError } from '@/lib/form-errors'
 import { ACTIVITY_PAGE_SIZE } from '@/schemas/admin'
 import { createApiKeySchema } from '@/schemas/api-keys'
+import { getFieldError } from '@/utils/validation/form-errors'
 
 const ALL_PROJECTS_SCOPE = '__all_projects__'
 

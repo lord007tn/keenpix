@@ -11,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,9 +23,9 @@ import {
 } from '@/components/ui/select'
 import { getErrorMessage } from '@/errors/common'
 import { createProjectFn } from '@/functions/projects'
-import { getFieldError } from '@/lib/form-errors'
 import { createProjectSchema } from '@/schemas/projects'
 import { isProjectEnv, type ProjectEnv } from '@/shared/types'
+import { getFieldError } from '@/utils/validation/form-errors'
 
 const ENVS: ProjectEnv[] = ['production', 'staging', 'development']
 const DEFAULT_VALUES: { name: string; origin: string; env: ProjectEnv } = {
@@ -81,10 +80,10 @@ export function NewProjectDialog({
   return (
     <Dialog onOpenChange={setOpen} open={open}>
       {isControlled ? null : (
-        <DialogTrigger render={<Button size="sm" />}>
+        <Button onClick={() => setOpen(true)} size="sm" type="button">
           <PlusIcon data-icon="inline-start" />
           New project
-        </DialogTrigger>
+        </Button>
       )}
       <DialogContent>
         <DialogHeader>
