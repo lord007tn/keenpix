@@ -48,12 +48,14 @@ All transform parameters are optional; out-of-range values are clamped, not reje
   `/img/https://cdn.example.com/hero.jpg?project=ID&w=1200`.
 - **`dpr`** multiplies the target dimensions — `w=400&dpr=2` renders at 800px.
 - **`fmt=auto`** depends on the project's *Auto-format* setting; when off, `auto` serves
-  JPEG. Omitting `fmt` is treated as `auto`. An explicit `fmt` is always honoured and
-  disables browser negotiation for that request. Use explicit `fmt` values when your CDN
-  cannot cache separate variants by `Accept`.
+  JPEG. Omitting `fmt` is treated as `auto`. It is raster negotiation only: SVG origins
+  are rasterized and returned as AVIF, WebP, or JPEG rather than preserved as SVG. An
+  explicit `fmt` is always honoured and disables browser negotiation for that request.
+  Use explicit `fmt` values when your CDN cannot cache separate variants by `Accept`.
 - **Framework format props.** Image frameworks often map `format="avif"` or
   `format="webp"` directly to `fmt=avif` or `fmt=webp`. Leave those props unset when
   you want Keenpix to return AVIF or WebP based on browser support.
-- **`fmt=svg`** is explicit only. It serves SVG origins through SVGO optimization and
-  active-content stripping; raster transform modifiers do not apply to SVG output.
+- **`fmt=svg`** is explicit only. It returns `image/svg+xml` only for SVG origins,
+  optimizes them through SVGO, and strips active content. Raster transform modifiers do
+  not apply to SVG output.
 - **`q`** defaults to the project's *Default quality* (**Settings → Pipeline**).

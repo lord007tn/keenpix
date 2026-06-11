@@ -24,7 +24,8 @@ string **is** the API.
    │    or optimize SVG directly when fmt=svg
    │ 6. Write the result to the disk cache, then stream it
    ▼
- Response: image/avif|webp|jpeg|svg+xml  +  Cache-Control: public, max-age=31536000, immutable
+ Response: image/avif|webp|jpeg  (+ image/svg+xml only for fmt=svg)
+           + Cache-Control: public, max-age=31536000, immutable
 ```
 
 Every request is also written to a log that powers the [analytics](/docs/concepts/analytics).
@@ -51,8 +52,10 @@ otherwise generate explicit `fmt=avif|webp|jpeg|png` URLs. A project can turn
 auto-format off (then `fmt=auto` serves JPEG); an explicit format is always honoured.
 That means `fmt=avif` never falls back to WebP; it is a fixed-format request.
 
-`fmt=svg` is not auto-negotiated. It only accepts SVG origins, optimizes them with
-SVGO, strips active content, and skips the raster Sharp pipeline.
+SVG is not part of auto-negotiation. If the origin is SVG and the request uses
+`fmt=auto`, Keenpix rasterizes it and returns AVIF, WebP, or JPEG like any other raster
+request. Only explicit `fmt=svg` returns SVG bytes; it accepts SVG origins, optimizes
+them with SVGO, strips active content, and skips the raster Sharp pipeline.
 
 ## Per-project defaults
 

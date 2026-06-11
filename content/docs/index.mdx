@@ -6,9 +6,9 @@ icon: Sparkles
 
 Keenpix is a self-hosted image-optimization service — an open-source alternative to
 ImageKit, imgix, and Cloudinary. It's a single HTTP endpoint that fetches an image from
-your origin, transforms it with [sharp](https://sharp.pixelplumbing.com) (resize +
-re-encode to AVIF / WebP / JPEG), caches the result on disk, and serves it behind a
-long-lived, immutable `Cache-Control`.
+your origin, transforms it with [sharp](https://sharp.pixelplumbing.com) (resize,
+crop, filter, and re-encode), optimizes SVG explicitly with `fmt=svg`, caches the
+result on disk, and serves it behind a long-lived, immutable `Cache-Control`.
 
 There's no SDK to install and no API key in your image URLs — **a request is just a URL**:
 

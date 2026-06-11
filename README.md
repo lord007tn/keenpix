@@ -155,7 +155,7 @@ Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Ac
 
 Framework image components usually map their `format` prop directly to `fmt`. Leave that prop unset for browser-based AVIF/WebP negotiation; `format="avif"` or `format="webp"` forces that format.
 
-`fmt=svg` is explicit only. It serves SVG origins through SVGO optimization and active-content stripping; raster transform modifiers do not apply to SVG output.
+`fmt=auto` is raster negotiation only, even for SVG origins: Keenpix rasterizes through Sharp and returns AVIF, WebP, or JPEG from the `Accept` header. Only explicit `fmt=svg` returns `image/svg+xml`; it serves SVG origins through SVGO optimization and active-content stripping, and raster transform modifiers do not apply to SVG output.
 
 ### IPX modifier comparison
 
@@ -181,7 +181,7 @@ Keenpix is remote-origin and project-allowlist oriented rather than a storage-pr
 | `modulate`, `tint`, `grayscale` | Supported | Brightness/saturation/hue/lightness, tint, grayscale. |
 | `animated` / `a` | Supported | Enables Sharp animated decoding. |
 | Extra formats | Supported | Adds `gif`, `heif`, `tiff`, and explicit `svg` alongside `avif`, `webp`, `jpeg`, `png`. |
-| SVGO/SVG optimization | Supported | `fmt=svg` optimizes SVG origins with SVGO and strips active content. |
+| SVGO/SVG optimization | Supported | `fmt=svg` optimizes SVG origins with SVGO and strips active content; `fmt=auto` still returns a negotiated raster format. |
 | Local/storage providers | Product-scope difference | Keenpix intentionally uses remote origins gated by project allowlists instead of filesystem/Unstorage providers. |
 
 **Failure modes:**
