@@ -6,20 +6,44 @@ icon: SlidersHorizontal
 
 All transform parameters are optional; out-of-range values are clamped, not rejected.
 
-| Param     | Type     | Range / values                          | Default            | Description                                   |
-| --------- | -------- | --------------------------------------- | ------------------ | --------------------------------------------- |
-| `project` | string   | —                                       | **required**       | Project id (allowlist gates access)           |
-| `w`       | int      | 1–5000                                  | bounded original   | Target width (px)                             |
-| `h`       | int      | 1–5000                                  | —                  | Target height (px); combine with `fit`        |
-| `q`       | int      | 30–100                                  | project default    | Output quality                                |
-| `fmt`     | enum     | `auto` `avif` `webp` `jpeg` `png`       | `auto`             | Output format (`auto` negotiates from Accept) |
-| `fit`     | enum     | `cover` `contain` `fill` `inside`       | `cover`            | How to fit the `w`×`h` box                    |
-| `dpr`     | int      | 1–3                                     | `1`                | Device pixel ratio (multiplies `w`/`h`)       |
-| `blur`    | int      | 0–1000                                  | `0`                | Gaussian blur sigma                           |
+| Param | Type | Range / values | Default | Description |
+| --- | --- | --- | --- | --- |
+| `project` | string | — | **required** | Project id (allowlist gates access) |
+| `w` / `h` | int | 1–5000 | bounded original | Target width/height (px) |
+| `resize` / `s` | string | `WIDTHxHEIGHT`, `WIDTH`, `xHEIGHT` | — | Compact size alias; explicit `w`/`h` win |
+| `q` | int | 30–100 | project default | Output quality |
+| `fmt` | enum | `auto` `avif` `webp` `jpeg` `png` `gif` `heif` `tiff` | `auto` | Output format (`auto` negotiates AVIF/WebP/JPEG) |
+| `fit` | enum | `cover` `contain` `fill` `inside` `outside` | `cover` | How to fit the `w`×`h` box |
+| `position` / `pos` / `gravity` | enum | edges, corners, compass gravities, `entropy`, `attention` | `centre` | Crop anchor for `cover`/`contain` |
+| `dpr` | int | 1–3 | `1` | Device pixel ratio (multiplies `w`/`h`) |
+| `enlarge` | bool | `1` `true` `yes` `on` | `false` | Allow upscaling past source dimensions |
+| `kernel` | enum | `nearest` `linear` `cubic` `mitchell` `lanczos2` `lanczos3` `mks2013` `mks2021` | `lanczos3` | Resize kernel |
+| `background` / `bg` | color | Sharp color string | — | Fill color for `contain`, `flatten`, `extend`, and arbitrary rotate |
+| `flatten` | bool | `1` `true` `yes` `on` | `false` | Merge alpha onto `background` |
+| `extract` / `crop` | string | `left,top,width,height` | — | Crop an exact source rectangle before resize |
+| `trim` | bool/int | `true` or 0–255 | `false` | Trim matching edges; number is threshold |
+| `extend` | string | `all`, `y,x`, `top,right,bottom,left` | — | Add output padding after resize |
+| `extendWith` | enum | `background` `copy` `repeat` `mirror` | `background` | Fill mode for `extend` |
+| `rotate` / `r` | float | -360–360 | — | Rotate by degrees after EXIF auto-orient |
+| `flip` / `flop` | bool | `1` `true` `yes` `on` | `false` | Vertical / horizontal mirror |
+| `blur` | int | 0–1000 | `0` | Gaussian blur sigma |
+| `sharpen` | bool/float | `true` or 0.000001–10 | `false` | Apply mild or sigma-based sharpening |
+| `median` | int | 1–25 | — | Median filter size |
+| `gamma` / `gammaOut` | float | 1–3 | — | Gamma correction |
+| `negate` | bool | `1` `true` `yes` `on` | `false` | Invert colors |
+| `normalize` / `normalise` | bool | `1` `true` `yes` `on` | `false` | Contrast normalization |
+| `threshold` | int | 0–255 | — | Convert to black/white threshold |
+| `brightness` / `saturation` | float | 0–10 | — | Modulate brightness/saturation |
+| `hue` | int | -360–360 | — | Hue rotation |
+| `lightness` | float | -100–100 | — | Lightness adjustment |
+| `tint` | color | Sharp color string | — | Apply a tint |
+| `grayscale` / `greyscale` | bool | `1` `true` `yes` `on` | `false` | Convert to grayscale |
+| `animated` / `a` | bool | `1` `true` `yes` `on` | `false` | Preserve animated GIF/WebP frames when output supports it |
 
 ## Notes
 
-- **No upscaling.** Keenpix never enlarges past the source resolution.
+- **No upscaling by default.** Keenpix never enlarges past the source resolution unless
+  `enlarge=1` is set.
 - **Source URL.** Put the absolute source URL after `/img/`, for example
   `/img/https://cdn.example.com/hero.jpg?project=ID&w=1200`.
 - **`dpr`** multiplies the target dimensions — `w=400&dpr=2` renders at 800px.

@@ -16,9 +16,12 @@ import type { CacheStore } from './cache-store'
 
 const EXT: Record<OutputFormat, string> = {
   avif: 'avif',
-  webp: 'webp',
+  gif: 'gif',
+  heif: 'heif',
   jpeg: 'jpg',
   png: 'png',
+  tiff: 'tiff',
+  webp: 'webp',
 }
 
 const EVICTION_PROBE_EVERY = 50

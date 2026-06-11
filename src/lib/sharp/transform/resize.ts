@@ -12,18 +12,22 @@ export function applyResize(pipeline: sharp.Sharp, opts: TransformOptions) {
   const dpr = opts.dpr && opts.dpr > 1 ? opts.dpr : 1
   const width = opts.width ? Math.round(opts.width * dpr) : undefined
   const height = opts.height ? Math.round(opts.height * dpr) : undefined
+  const withoutEnlargement = opts.enlarge !== true
   if (!(width || height)) {
     return pipeline.resize({
       width: MAX_DIMENSION,
       height: MAX_DIMENSION,
       fit: 'inside',
-      withoutEnlargement: true,
+      withoutEnlargement,
     })
   }
   return pipeline.resize({
     width,
     height,
+    background: opts.background,
     fit: opts.fit,
-    withoutEnlargement: true,
+    kernel: opts.kernel,
+    position: opts.position,
+    withoutEnlargement,
   })
 }

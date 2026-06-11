@@ -15,7 +15,7 @@ GET /img/SOURCE_URL?project=PROJECT_ID&w=…&fmt=…
 | ---------- | -------- | ----------------------------------------------------------- |
 | path source| yes      | Absolute source URL after `/img/`. Host must be allowlisted. Missing → `400`. |
 | `project`  | yes      | Project id; its allowlist gates access. Missing → `400`.    |
-| transforms | no       | `w`, `h`, `q`, `fmt`, `fit`, `dpr`, `blur` — see [Parameters](/docs/reference/parameters). |
+| transforms | no       | `w`, `h`, `q`, `fmt`, `fit`, `dpr`, `blur`, Sharp/IPX-style modifiers — see [Parameters](/docs/reference/parameters). |
 
 Simple source URLs can be written directly in the path. If the source URL contains its
 own `?` or `#`, URL-encode the source before appending Keenpix transform parameters.
