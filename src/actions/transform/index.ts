@@ -8,6 +8,7 @@ import { fetchOriginImage } from '@/lib/origin/fetch-image'
 import { assertSafeOrigin, type SafeOrigin } from '@/lib/origin/safe-origin'
 import { runQueuedJob } from '@/lib/queue/transform-queue'
 import { transformImage } from '@/lib/sharp/transform'
+import { optimizeSvgImage } from '@/lib/svg/optimize'
 import type { OutputFormat, TransformOptions } from '@/shared/transform'
 
 export interface OptimizeProjectImageInput {
@@ -71,9 +72,12 @@ async function readOrCreateTransform({
     const input = await fetchOriginImage(origin, allowedOrigins)
     producedBytesIn = input.byteLength
 
-    let result: Awaited<ReturnType<typeof transformImage>>
+    let output: Buffer
     try {
-      result = await transformImage(input, transformOptions)
+      output =
+        format === 'svg'
+          ? optimizeSvgImage(input)
+          : (await transformImage(input, transformOptions)).data
     } catch (error) {
       if (error instanceof TransformError) {
         throw error
@@ -81,11 +85,11 @@ async function readOrCreateTransform({
       throw new TransformError('Origin is not a valid image', 502)
     }
 
-    await writeCache(cacheKey, format, result.data).catch((error) => {
+    await writeCache(cacheKey, format, output).catch((error) => {
       logger.warn(errorContext(error), 'Cache write failed')
     })
 
-    return result.data
+    return output
   })
 
   inflightTransforms.set(cacheKey, work)

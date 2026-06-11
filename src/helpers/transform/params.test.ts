@@ -72,4 +72,10 @@ describe('parseTransformParams', () => {
       tint: 'red',
     })
   })
+
+  it('accepts explicit SVG output', () => {
+    expect(parse('fmt=svg')).toMatchObject({
+      format: 'svg',
+    })
+  })
 })
