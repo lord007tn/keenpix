@@ -63,7 +63,7 @@ test('dashboard is auth-gated and accepts seeded admin credentials', async ({
   await expect(
     page
       .getByRole('heading', { name: 'Dashboard' })
-      .or(page.getByRole('heading', { name: 'Create your first project' })),
+      .or(page.getByText('Create your first project')),
   ).toBeVisible()
 })
 

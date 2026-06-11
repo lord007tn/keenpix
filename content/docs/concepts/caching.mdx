@@ -12,11 +12,12 @@ transform on disk and is built to sit behind a CDN.
 A result is keyed by everything that affects the output:
 
 ```text
-project + url + w + h + q + fmt + fit + dpr + blur
+project + url + full transform option object
 ```
 
-Two requests with identical parameters share one cached file. Requests that arrive while
-the first identical transform is still running share that same in-flight work too.
+Two requests with identical effective parameters share one cached file. Requests that
+arrive while the first identical transform is still running share that same in-flight
+work too.
 
 <Callout title="In-flight coalescing">
   If many identical requests arrive during a cold cache (e.g. a popular image after a
