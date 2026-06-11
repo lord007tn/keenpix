@@ -143,7 +143,9 @@ GET /img/<origin-url>?project=<id>&w=&h=&q=&fmt=&fit=&dpr=&blur=
 
 Simple source URLs can be written directly in the path. If the source URL contains its own `?` or `#`, URL-encode the source before appending Keenpix transform parameters.
 
-Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`, so a CDN can cache each image variant once you configure it to cache `/img/*` with the full query string. The source URL lives in the path so Cloudflare and other CDNs can still see the source file extension; use explicit `fmt` values unless your CDN can cache separate `Accept` variants.
+Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`, so a CDN can cache each image variant once you configure it to cache `/img/*` with the full query string. The source URL lives in the path so Cloudflare and other CDNs can still see the source file extension; use omitted `fmt` / `fmt=auto` only when your CDN can cache separate `Accept` variants, and use explicit `fmt` values when you intentionally want a fixed output format.
+
+Framework image components usually map their `format` prop directly to `fmt`. Leave that prop unset for browser-based AVIF/WebP negotiation; `format="avif"` or `format="webp"` forces that format.
 
 **Failure modes:**
 

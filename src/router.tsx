@@ -3,7 +3,7 @@ import { RouteError } from '@/components/app/route-error'
 import {
   getQueryContext,
   QueryProvider,
-} from '@/integrations/tanstack-query/root-provider'
+} from '@/lib/tanstack-query/root-provider'
 import { routeTree } from './routeTree.gen'
 
 export function getRouter() {

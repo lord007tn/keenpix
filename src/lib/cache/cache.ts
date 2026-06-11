@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { env } from '@/env/server'
+import type { Fit, OutputFormat } from '@/shared/transform'
 import { DiskCacheStore } from './disk-cache-store'
 import { MemoryCacheStore } from './memory-cache-store'
 
@@ -13,8 +14,8 @@ const diskCache = new DiskCacheStore(CACHE_DIR, MAX_BYTES)
 export interface TransformKeyInput {
   blur?: number
   dpr?: number
-  fit: string
-  fmt: string
+  fit: Fit
+  fmt: OutputFormat
   h?: number
   projectId: string
   q: number
@@ -33,30 +34,27 @@ export function cacheControl(): string {
   return 'public, max-age=31536000, immutable'
 }
 
-export async function readCache(
-  key: string,
-  fmt: string,
-): Promise<Buffer | null> {
-  const hot = await memoryCache.get(key, fmt)
+export async function readCache(key: string, format: OutputFormat) {
+  const hot = await memoryCache.get(key, format)
   if (hot) {
     return hot
   }
 
-  const buf = await diskCache.get(key, fmt)
+  const buf = await diskCache.get(key, format)
   if (!buf) {
     return null
   }
-  await memoryCache.set(key, fmt, buf)
+  await memoryCache.set(key, format, buf)
   return buf
 }
 
 export async function writeCache(
   key: string,
-  fmt: string,
+  format: OutputFormat,
   data: Buffer,
-): Promise<void> {
-  await diskCache.set(key, fmt, data)
-  await memoryCache.set(key, fmt, data)
+) {
+  await diskCache.set(key, format, data)
+  await memoryCache.set(key, format, data)
 }
 
 export function getCacheRuntimeStats() {
@@ -70,5 +68,26 @@ export async function getCacheStorageStats() {
   return {
     ...(await diskCache.inspect()),
     ...memoryCache.stats(),
+  }
+}
+
+export async function clearCacheStorage(target: 'all' | 'disk' | 'memory') {
+  const before = await getCacheStorageStats()
+  const disk =
+    target === 'disk' || target === 'all'
+      ? await diskCache.clear()
+      : { deletedBytes: 0, deletedFiles: 0 }
+
+  if (target === 'memory' || target === 'all') {
+    memoryCache.clear()
+  }
+
+  const after = await getCacheStorageStats()
+  return {
+    after,
+    before,
+    deletedDiskBytes: disk.deletedBytes,
+    deletedDiskFiles: disk.deletedFiles,
+    target,
   }
 }

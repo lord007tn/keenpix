@@ -10,9 +10,11 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import path from 'node:path'
+import dayjs from 'dayjs'
+import type { OutputFormat } from '@/shared/transform'
 import type { CacheStore } from './cache-store'
 
-const EXT: Record<string, string> = {
+const EXT: Record<OutputFormat, string> = {
   avif: 'avif',
   webp: 'webp',
   jpeg: 'jpg',
@@ -34,15 +36,15 @@ export class DiskCacheStore implements CacheStore {
     this.targetBytes = Math.floor(maxBytes * 0.9)
   }
 
-  async get(key: string, fmt: string) {
-    const file = this.pathFor(key, fmt)
+  async get(key: string, format: OutputFormat) {
+    const file = this.pathFor(key, format)
     try {
       const buf = await readFile(file)
       if (buf.length === 0) {
         return null
       }
       // Bump mtime so the LRU sweep treats this as recently used.
-      const now = new Date()
+      const now = dayjs().toDate()
       utimes(file, now, now).catch(noop)
       return buf
     } catch {
@@ -50,9 +52,9 @@ export class DiskCacheStore implements CacheStore {
     }
   }
 
-  async set(key: string, fmt: string, data: Buffer) {
+  async set(key: string, format: OutputFormat, data: Buffer) {
     await mkdir(this.cacheDir, { recursive: true })
-    const final = this.pathFor(key, fmt)
+    const final = this.pathFor(key, format)
     // Write to a unique temp file then atomically rename into place. A crash or
     // racing writers can't leave a torn image to be cached downstream forever.
     const tmp = `${final}.${randomUUID()}.tmp`
@@ -107,8 +109,38 @@ export class DiskCacheStore implements CacheStore {
     }
   }
 
-  private pathFor(key: string, fmt: string) {
-    return path.join(this.cacheDir, `${key}.${EXT[fmt] ?? 'bin'}`)
+  async clear() {
+    let names: string[]
+    try {
+      names = await readdir(this.cacheDir)
+    } catch {
+      return { deletedFiles: 0, deletedBytes: 0 }
+    }
+
+    const entries = await Promise.all(
+      names.map(async (name) => {
+        const file = path.join(this.cacheDir, name)
+        try {
+          const s = await stat(file)
+          if (!s.isFile()) {
+            return null
+          }
+          await unlink(file)
+          return s.size
+        } catch {
+          return null
+        }
+      }),
+    )
+    const sizes = entries.filter((size): size is number => size !== null)
+    return {
+      deletedBytes: sizes.reduce((total, size) => total + size, 0),
+      deletedFiles: sizes.length,
+    }
+  }
+
+  private pathFor(key: string, format: OutputFormat) {
+    return path.join(this.cacheDir, `${key}.${EXT[format]}`)
   }
 
   /**

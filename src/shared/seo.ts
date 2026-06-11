@@ -1,4 +1,4 @@
-import { getAppUrl, getRepositoryUrl } from '@/lib/deployment'
+import { getAppUrl, getRepositoryUrl } from '@/server/deployment'
 
 export const SITE_NAME = 'Keenpix'
 export const SITE_TITLE = 'Keenpix - self-hosted image optimization'
@@ -7,10 +7,10 @@ export const SITE_DESCRIPTION =
 export const SITE_KEYWORDS =
   'Keenpix, self-hosted image optimization, open-source image CDN, sharp image transforms, image proxy, WebP, AVIF, Docker image optimizer'
 export const BRAND_IMAGE_PATH = '/brand/keenpix-og.png'
-export const BRAND_ICON_PATH = '/logo512.png'
+const BRAND_ICON_PATH = '/logo512.png'
 export const APP_VERSION = import.meta.env.VITE_APP_VERSION
 
-export function pageTitle(title: string) {
+function pageTitle(title: string) {
   return `${title} - ${SITE_NAME}`
 }
 

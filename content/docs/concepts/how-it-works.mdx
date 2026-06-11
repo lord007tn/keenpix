@@ -47,6 +47,7 @@ serves **AVIF → WebP → JPEG** in order of support, and sets `Vary: Accept`. 
 `fmt=auto` behind a CDN only when that CDN can cache separate variants by `Accept`;
 otherwise generate explicit `fmt=avif|webp|jpeg|png` URLs. A project can turn
 auto-format off (then `fmt=auto` serves JPEG); an explicit format is always honoured.
+That means `fmt=avif` never falls back to WebP; it is a fixed-format request.
 
 ## Per-project defaults
 

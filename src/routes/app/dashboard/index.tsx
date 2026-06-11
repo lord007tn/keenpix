@@ -10,11 +10,19 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from '@/components/ui/empty'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { getDashboardFn } from '@/functions/dashboard'
-import { appPageHead } from '@/lib/seo'
+import { appPageHead } from '@/shared/seo'
 import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
+
+const RANGES: { value: AnalyticsRange; label: string }[] = [
+  { value: '90d', label: '90 days' },
+  { value: '30d', label: '30 days' },
+  { value: '7d', label: '7 days' },
+  { value: '24h', label: '24 hours' },
+]
 
 export const Route = createFileRoute('/app/dashboard/')({
   head: () =>
@@ -69,18 +77,31 @@ function DashboardPage() {
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
       <PageHeader
+        actions={
+          <ToggleGroup
+            onValueChange={(v: string[]) => {
+              const next = v[0]
+              if (isAnalyticsRange(next)) {
+                navigate({ search: (prev) => ({ ...prev, range: next }) })
+              }
+            }}
+            size="sm"
+            value={[range]}
+            variant="outline"
+          >
+            {RANGES.map((r) => (
+              <ToggleGroupItem key={r.value} value={r.value}>
+                {r.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        }
         eyebrow={isAll ? 'All projects' : currentProject?.name}
         subtitle="Project health, request trends, and cache performance."
         title="Dashboard"
       />
       <SectionCards kpis={kpis} />
-      <ChartAreaInteractive
-        data={series}
-        onRangeChange={(r) =>
-          navigate({ search: (prev) => ({ ...prev, range: r }) })
-        }
-        range={range}
-      />
+      <ChartAreaInteractive data={series} />
       {isAll ? (
         <ProjectsDataTable
           activeId={currentProject?.id}

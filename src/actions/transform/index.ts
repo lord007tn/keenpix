@@ -1,17 +1,14 @@
 import { getProject } from '@/data-access/projects'
 import { createRequestLog } from '@/data-access/request-logs'
 import { getTransformErrorStatus, TransformError } from '@/errors/transform'
-import { buildCacheKey, readCache, writeCache } from '@/lib/cdn/cache'
-import { runQueuedJob } from '@/lib/concurrency'
-import { errorContext, logger } from '@/lib/logger'
-import {
-  type OutputFormat,
-  type TransformOptions,
-  transformImage,
-} from '@/lib/sharp/transform'
-import { fetchOriginImage } from '@/lib/transform/origin-fetch'
-import { parseTransformParams } from '@/lib/transform/params'
-import { assertSafeOrigin } from '@/lib/transform/safe-origin'
+import { parseTransformParams } from '@/helpers/transform/params'
+import { buildCacheKey, readCache, writeCache } from '@/lib/cache/cache'
+import { errorContext, logger } from '@/lib/logger/logger'
+import { fetchOriginImage } from '@/lib/origin/fetch-image'
+import { assertSafeOrigin, type SafeOrigin } from '@/lib/origin/safe-origin'
+import { runQueuedJob } from '@/lib/queue/transform-queue'
+import { transformImage } from '@/lib/sharp/transform'
+import type { OutputFormat, TransformOptions } from '@/shared/transform'
 
 export interface OptimizeProjectImageInput {
   accept: string
@@ -26,13 +23,11 @@ export interface OptimizedProjectImage {
   format: OutputFormat
 }
 
-type ValidatedOrigin = Awaited<ReturnType<typeof assertSafeOrigin>>
-
 interface CachedTransformInput {
   allowedOrigins: string[]
   cacheKey: string
   format: OutputFormat
-  origin: ValidatedOrigin
+  origin: SafeOrigin
   transformOptions: TransformOptions
 }
 
@@ -108,7 +103,7 @@ export async function optimizeProjectImage({
   projectId,
   searchParams,
   src,
-  startedAt = Date.now(),
+  startedAt = performance.now(),
 }: OptimizeProjectImageInput): Promise<OptimizedProjectImage> {
   const project = await getProject(projectId)
   if (!project) {
@@ -185,7 +180,7 @@ export async function optimizeProjectImage({
       format,
       status,
       cached,
-      latencyMs: Date.now() - startedAt,
+      latencyMs: Math.round(performance.now() - startedAt),
       bytesIn,
       bytesOut,
     }).catch(() => {

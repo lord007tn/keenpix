@@ -4,6 +4,9 @@ import { auth } from '@/lib/auth/server'
 
 const STREAM_INTERVAL_MS = 2500
 const MAX_SEEN_IDS = 500
+// Each poll only needs the most recent rows to detect new arrivals; the initial
+// page load fetches a deeper window for scrolling.
+const STREAM_FETCH_LIMIT = 60
 
 export const Route = createFileRoute('/api/internal/logs/stream')({
   server: {
@@ -33,7 +36,7 @@ async function handleLogStream(request: Request) {
     start(controller) {
       async function writeRows() {
         try {
-          const rows = await listLogs(project)
+          const rows = await listLogs(project, STREAM_FETCH_LIMIT)
           const next = rows.filter((row) => !seen.has(row.id))
           for (const row of rows) {
             seen.add(row.id)

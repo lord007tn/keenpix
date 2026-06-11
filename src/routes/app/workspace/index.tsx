@@ -14,7 +14,7 @@ import { ApiKeyManagement } from '@/features/admin/api-key-management'
 import { OperationsHealth } from '@/features/admin/operations-health'
 import { SmtpSettingsPanel } from '@/features/admin/smtp-settings'
 import { StaffManagement } from '@/features/admin/staff-management'
-import { appPageHead } from '@/lib/seo'
+import { appPageHead } from '@/shared/seo'
 
 const WORKSPACE_TABS = ['staff', 'email', 'api-keys', 'operations'] as const
 

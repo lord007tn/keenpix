@@ -6,7 +6,7 @@ import { RouteError } from '@/components/app/route-error'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { getSessionFn } from '@/functions/auth'
 import { listProjectsFn } from '@/functions/projects'
-import { appPageHead } from '@/lib/seo'
+import { appPageHead } from '@/shared/seo'
 import { ProjectProvider } from '@/stores/project-context'
 
 const sidebarStyle: CSSProperties & {

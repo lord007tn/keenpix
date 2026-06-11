@@ -41,7 +41,7 @@ Then render a fully responsive, auto-format image with native HTML:
 
 ```html
 <img
-  src="${keenpix('/hero.jpg', { w: 1280, fmt: 'auto' })}"
+  src="${keenpix('/hero.jpg', { w: 1280 })}"
   srcset="${keenpixSrcSet('/hero.jpg', [640, 960, 1280, 1920])}"
   sizes="100vw"
   loading="lazy"
@@ -49,6 +49,10 @@ Then render a fully responsive, auto-format image with native HTML:
   alt="Hero"
 />
 ```
+
+Omitting `fmt` is the same as `fmt=auto`: Keenpix negotiates from the request's
+`Accept` header. Add `fmt: 'webp'` or `fmt: 'avif'` only when you want a fixed output
+format.
 
 <Callout>
   Tip: read `HOST` and `PROJECT` from environment variables so you can swap instances per

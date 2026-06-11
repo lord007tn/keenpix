@@ -1,3 +1,4 @@
+import dayjs, { type Dayjs } from 'dayjs'
 import { prisma } from '@/db'
 import { Prisma } from '@/generated/prisma/client'
 import type {
@@ -17,7 +18,7 @@ import { listProjects } from './projects'
 // Real aggregations over request_logs. Every query is scoped to one project when
 // projectId is supplied, otherwise it stays org-wide.
 interface RangeMeta {
-  label: (d: Date, i: number) => string
+  label: (d: Dayjs, i: number) => string
   ms: number
   n: number
 }
@@ -31,14 +32,13 @@ function rangeMeta(range: AnalyticsRange): RangeMeta {
       return {
         n: 7,
         ms: DAY,
-        label: (d) =>
-          ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()],
+        label: (d) => d.format('ddd'),
       }
     case '30d':
       return {
         n: 30,
         ms: DAY,
-        label: (d) => `${d.getMonth() + 1}/${d.getDate()}`,
+        label: (d) => d.format('M/D'),
       }
     case '90d':
       return { n: 12, ms: 7 * DAY, label: (_d, i) => `W${i + 1}` }
@@ -46,14 +46,16 @@ function rangeMeta(range: AnalyticsRange): RangeMeta {
       return {
         n: 24,
         ms: HOUR,
-        label: (d) => `${String(d.getHours()).padStart(2, '0')}:00`,
+        label: (d) => d.format('HH:00'),
       }
   }
 }
 
 function sinceFor(range: AnalyticsRange): Date {
   const { n, ms } = rangeMeta(range)
-  return new Date(Date.now() - n * ms)
+  return dayjs()
+    .subtract(n * ms, 'millisecond')
+    .toDate()
 }
 
 export interface AnalyticsFilters {
@@ -189,14 +191,15 @@ export async function getTimeSeries(
   filters?: AnalyticsFilters,
 ): Promise<TimePoint[]> {
   const meta = rangeMeta(range)
-  const since = new Date(Date.now() - meta.n * meta.ms)
+  const sinceAt = dayjs().subtract(meta.n * meta.ms, 'millisecond')
+  const since = sinceAt.toDate()
   const logs = await prisma.requestLog.findMany({
     where: scope(since, projectId, filters),
     select: { ts: true, cached: true, bytesIn: true, bytesOut: true },
   })
 
   const buckets: TimePoint[] = Array.from({ length: meta.n }, (_, i) => ({
-    label: meta.label(new Date(since.getTime() + i * meta.ms), i),
+    label: meta.label(sinceAt.add(i * meta.ms, 'millisecond'), i),
     requests: 0,
     cached: 0,
     optimized: 0,
@@ -207,7 +210,7 @@ export async function getTimeSeries(
   for (const l of logs) {
     const idx = Math.min(
       meta.n - 1,
-      Math.max(0, Math.floor((l.ts.getTime() - since.getTime()) / meta.ms)),
+      Math.max(0, Math.floor((l.ts.getTime() - sinceAt.valueOf()) / meta.ms)),
     )
     const b = buckets[idx]
     b.requests += 1
@@ -347,8 +350,10 @@ export async function getLatencyBins(
   return bins
 }
 
-export async function getProjectStats(): Promise<Record<string, ProjectStat>> {
-  const since = new Date(Date.now() - DAY)
+export async function getProjectStats(
+  range: AnalyticsRange = '24h',
+): Promise<Record<string, ProjectStat>> {
+  const since = sinceFor(range)
   const [byProject, hitsByProject] = await Promise.all([
     prisma.requestLog.groupBy({
       by: ['projectId'],
@@ -521,13 +526,13 @@ export async function getDashboardKpis(
 ): Promise<DashboardKpis> {
   const { n, ms } = rangeMeta(range)
   const windowMs = n * ms
-  const now = Date.now()
+  const now = dayjs()
   const [cur, prev] = await Promise.all([
-    windowStats(projectId, new Date(now - windowMs)),
+    windowStats(projectId, now.subtract(windowMs, 'millisecond').toDate()),
     windowStats(
       projectId,
-      new Date(now - 2 * windowMs),
-      new Date(now - windowMs),
+      now.subtract(2 * windowMs, 'millisecond').toDate(),
+      now.subtract(windowMs, 'millisecond').toDate(),
     ),
   ])
   return {
