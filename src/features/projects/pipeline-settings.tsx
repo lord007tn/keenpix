@@ -98,7 +98,7 @@ export function PipelineSettings({ project }: { project: Project }) {
   return (
     <div className="divide-y">
       <Row
-        description="Detect Accept and serve AVIF/WebP. Use with an Accept-aware CDN cache, or prefer explicit fmt values."
+        description="Detect Accept and serve AVIF/WebP/JPEG. SVG output still requires explicit fmt=svg."
         label="Auto-format"
       >
         <Switch

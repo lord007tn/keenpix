@@ -62,6 +62,9 @@ different output formats. In Nuxt Image or JoodCMS-style integrations, leaving t
 image component's `format` prop unset produces this auto-negotiated URL; setting
 `format="avif"` or `format="webp"` forces a single variant.
 
+SVG is fixed-format only. If you want optimized SVG bytes, request `fmt=svg`; `fmt=auto`
+rasterizes SVG origins and varies the raster response by `Accept`.
+
 ## Nginx
 
 Nginx can be the caching layer in front of Keenpix. Cache only `/img/`, and put the
