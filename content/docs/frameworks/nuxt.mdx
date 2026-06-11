@@ -57,8 +57,9 @@ export default defineNuxtConfig({
 
 Leaving `format` unset means the generated Keenpix URL has no `fmt` parameter, so
 Keenpix uses the browser's `Accept` header and serves AVIF, WebP, or JPEG based on
-support. Passing `format="avif"` or `format="webp"` intentionally forces that output
-format.
+support, including for SVG sources. Passing `format="avif"` or `format="webp"`
+intentionally forces that output format; passing `format="svg"` is required when you
+want an SVG origin returned as optimized SVG.
 
 <Callout title="Nuxt Image format props">
   In `@nuxt/image`, the `format` prop maps to Keenpix's `fmt` query parameter. Do not

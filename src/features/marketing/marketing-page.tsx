@@ -21,7 +21,7 @@ const FEATURES = [
   {
     icon: ImageIcon,
     title: 'Modern formats from one URL',
-    body: 'Generate AVIF, WebP, JPEG, and PNG variants with width, height, quality, fit, DPR, and blur controls.',
+    body: 'Generate AVIF, WebP, JPEG, PNG, GIF, HEIF, TIFF, and explicit SVG output with Sharp/IPX-style controls.',
   },
   {
     icon: ChartColumnIcon,
@@ -52,7 +52,7 @@ const FEATURES = [
 
 const METRICS = [
   ['0 keys', 'source access is gated by allowlisted hosts'],
-  ['4 formats', 'AVIF, WebP, JPEG, and PNG output'],
+  ['8 formats', 'raster output plus explicit SVG optimization'],
   ['1 path', '/img/<source>?project=<id>&w=600'],
 ]
 

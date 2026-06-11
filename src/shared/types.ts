@@ -10,7 +10,7 @@ export function isProjectEnv(value: unknown): value is ProjectEnv {
 
 export interface Project {
   allowedOrigins: string[]
-  // Auto-negotiate AVIF/WebP from Accept when fmt=auto is requested.
+  // Auto-negotiate raster AVIF/WebP/JPEG from Accept when fmt=auto is requested.
   autoFormat: boolean
   color1: string
   color2: string

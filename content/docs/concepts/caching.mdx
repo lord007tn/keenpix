@@ -43,6 +43,7 @@ is not enough for every dynamic-looking path.
 supports caching separate variants by `Accept`. On CDNs that do not, prefer explicit
 `fmt=avif`, `fmt=webp`, `fmt=jpeg`, `fmt=png`, or `fmt=svg` URLs. Explicit formats improve cache
 predictability, but they also disable browser-based AVIF/WebP negotiation for that URL.
+`fmt=svg` is one of those explicit formats; `fmt=auto` never preserves SVG output.
 
 ## Where it's stored
 

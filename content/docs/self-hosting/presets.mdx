@@ -99,4 +99,6 @@ does not cache. Caching `/app` or `/api/auth` breaks sign-in.
 - Use omitted `fmt` / `fmt=auto` only when the CDN can vary by `Accept`. Otherwise,
   prefer explicit `fmt=webp` / `fmt=avif` in generated URLs to maximize edge hit rate,
   knowing that an explicit format will not fall back for unsupported browsers.
+- Use explicit `fmt=svg` for optimized SVG delivery. Omitted `fmt` / `fmt=auto`
+  rasterizes SVG origins instead of preserving SVG output.
 - A smaller origin disk cache is fine because the CDN serves the repeat requests.
