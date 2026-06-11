@@ -58,7 +58,9 @@ https://images.example.com/img/https://cdn.example.com/hero.jpg?project=store&w=
 
 Use `fmt=auto` only when your CDN can cache separate variants by `Accept` or has image
 variant support enabled. Otherwise, two browsers can ask for the same URL but need
-different output formats.
+different output formats. In Nuxt Image or JoodCMS-style integrations, leaving the
+image component's `format` prop unset produces this auto-negotiated URL; setting
+`format="avif"` or `format="webp"` forces a single variant.
 
 ## Nginx
 

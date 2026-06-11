@@ -10,8 +10,8 @@ const APP_DASHBOARD_RE = /\/app\/dashboard/
 const LOGIN_RE = /\/login/
 const TITLE_RE = /Keenpix|Self-hosted Keenpix/
 const ORG_ID = 'org_default'
-const ORIGIN_HOST = 'httpbin.org'
-const ORIGIN_IMAGE = 'https://httpbin.org/image/png'
+const ORIGIN_HOST = 'placehold.co'
+const ORIGIN_IMAGE = 'https://placehold.co/32x32'
 
 function makePrisma() {
   if (!DATABASE_URL) {
@@ -60,32 +60,60 @@ test('dashboard is auth-gated and accepts seeded admin credentials', async ({
 
   await page.goto('/app/dashboard?range=30d')
   await expect(page).toHaveURL(APP_DASHBOARD_RE)
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+  await expect(
+    page
+      .getByRole('heading', { name: 'Dashboard' })
+      .or(page.getByRole('heading', { name: 'Create your first project' })),
+  ).toBeVisible()
 })
 
-test('transform endpoint rejects private origins and serves allowlisted public origins', async ({
+test('project setup creates an allowlisted transform flow', async ({
+  page,
   request,
 }) => {
-  const prisma = makePrisma()
-  const projectId = `smoke_${Date.now()}`
+  if (!(ADMIN_EMAIL && ADMIN_PASSWORD)) {
+    test.skip(
+      true,
+      'Set KEENPIX_SUPER_ADMIN_EMAIL and KEENPIX_SUPER_ADMIN_PASSWORD.',
+    )
+    return
+  }
 
-  await prisma.org.upsert({
-    where: { id: ORG_ID },
-    update: {},
-    create: { id: ORG_ID, name: 'Keenpix' },
+  const prisma = makePrisma()
+  const projectName = `Smoke project ${Date.now()}`
+  let projectId = ''
+
+  const login = await page.request.post('/api/auth/sign-in/email', {
+    data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
   })
-  await prisma.project.create({
-    data: {
-      id: projectId,
-      orgId: ORG_ID,
-      name: 'Smoke test',
-      origin: `https://${ORIGIN_HOST}`,
-      env: 'test',
-      allowedOrigins: [ORIGIN_HOST],
-    },
-  })
+  expect(login.ok()).toBe(true)
 
   try {
+    await page.goto('/app/dashboard?range=30d')
+    // The dashboard SSRs before React handlers are attached; this dev-only
+    // control appears after the client runtime is interactive.
+    await page
+      .getByRole('button', { name: 'Open TanStack Devtools' })
+      .waitFor({ state: 'visible' })
+    await page.getByRole('button', { name: 'New project' }).click()
+    await expect(
+      page.getByRole('heading', { name: 'New project' }),
+    ).toBeVisible()
+
+    await page.getByLabel('Name').fill(projectName)
+    await page.getByLabel('Origin URL').fill(`https://${ORIGIN_HOST}`)
+    await page.getByRole('button', { name: 'Create project' }).click()
+    await expect(page.getByText(projectName)).toBeVisible({ timeout: 15_000 })
+
+    const project = await prisma.project.findFirst({
+      where: { name: projectName, orgId: ORG_ID },
+    })
+    if (!project) {
+      throw new Error('Created smoke project was not found.')
+    }
+    projectId = project.id
+    expect(project.allowedOrigins).toContain(ORIGIN_HOST)
+
     const blockedSource = 'https://example.com/not-allowed'
     const blocked = await request.get(
       `/img/${blockedSource}?project=${projectId}&w=32&fmt=webp`,
@@ -99,9 +127,13 @@ test('transform endpoint rejects private origins and serves allowlisted public o
     expect(optimized.headers()['content-type']).toContain('image/webp')
     expect((await optimized.body()).byteLength).toBeGreaterThan(0)
   } finally {
-    await prisma.project
-      .delete({ where: { id: projectId } })
-      .catch(() => undefined)
+    if (projectId) {
+      await prisma.project
+        .delete({ where: { id: projectId } })
+        .catch(() => undefined)
+    } else {
+      await prisma.project.deleteMany({ where: { name: projectName } })
+    }
     await prisma.$disconnect()
   }
 })

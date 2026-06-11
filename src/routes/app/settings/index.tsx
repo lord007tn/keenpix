@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AllowedHosts } from '@/features/projects/allowed-hosts'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { PipelineSettings } from '@/features/projects/pipeline-settings'
-import { appPageHead } from '@/lib/seo'
+import { appPageHead } from '@/shared/seo'
 import { useProject } from '@/stores/project-context'
 
 export const Route = createFileRoute('/app/settings/')({

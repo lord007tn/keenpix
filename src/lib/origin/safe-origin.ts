@@ -12,6 +12,12 @@ const HEX_MAPPED_V4_RE = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/
 // fe80::/10 link-local + fec0::/10 site-local (deprecated but still routed).
 const LINK_SITE_LOCAL_RE = /^fe[89a-f]/
 
+export interface SafeOrigin {
+  family: 4 | 6
+  ip: string
+  url: URL
+}
+
 export function isPrivateIp(ip: string) {
   // Normalize: drop brackets + IPv6 zone id, lowercase.
   let addr = ip
@@ -67,7 +73,7 @@ export function isPrivateIp(ip: string) {
 export async function assertSafeOrigin(
   rawUrl: string,
   allowedOrigins: string[],
-) {
+): Promise<SafeOrigin> {
   let url: URL
   try {
     url = new URL(rawUrl)

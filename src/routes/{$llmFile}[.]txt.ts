@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { llms } from 'fumadocs-core/source'
-import { getAppUrl, isSelfHosted } from '@/lib/deployment'
-import { source } from '@/lib/source'
+import { getAppUrl, isSelfHosted } from '@/server/deployment'
+import { source } from '@/shared/docs-source'
 
 interface MarkdownPageData {
   _markdown?: string

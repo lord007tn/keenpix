@@ -1,7 +1,6 @@
 import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -13,34 +12,14 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import {
-  type AnalyticsRange,
-  isAnalyticsRange,
-  type TimePoint,
-} from '@/shared/types'
+import type { TimePoint } from '@/shared/types'
 
 const chartConfig = {
   cached: { label: 'Cache hits', color: 'var(--chart-2)' },
   optimized: { label: 'Optimized', color: 'var(--chart-1)' },
 } satisfies ChartConfig
 
-const RANGES: { value: AnalyticsRange; label: string }[] = [
-  { value: '90d', label: '90 days' },
-  { value: '30d', label: '30 days' },
-  { value: '7d', label: '7 days' },
-  { value: '24h', label: '24 hours' },
-]
-
-export function ChartAreaInteractive({
-  data,
-  range,
-  onRangeChange,
-}: {
-  data: TimePoint[]
-  range: AnalyticsRange
-  onRangeChange: (range: AnalyticsRange) => void
-}) {
+export function ChartAreaInteractive({ data }: { data: TimePoint[] }) {
   return (
     <Card className="@container/card">
       <CardHeader>
@@ -48,25 +27,6 @@ export function ChartAreaInteractive({
         <CardDescription>
           Cache hits vs live-optimized, this window
         </CardDescription>
-        <CardAction>
-          <ToggleGroup
-            onValueChange={(v: string[]) => {
-              const next = v[0]
-              if (isAnalyticsRange(next)) {
-                onRangeChange(next)
-              }
-            }}
-            size="sm"
-            value={[range]}
-            variant="outline"
-          >
-            {RANGES.map((r) => (
-              <ToggleGroupItem key={r.value} value={r.value}>
-                {r.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </CardAction>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
         {data.every((d) => d.requests === 0) ? (

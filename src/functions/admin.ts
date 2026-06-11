@@ -1,21 +1,26 @@
 import { createServerFn } from '@tanstack/react-start'
 import {
-  acceptInvitation,
   createApiKey,
-  createInvitation,
   disableApiKey,
-  getAdminWorkspace,
-  getInvitation,
-  getOperationsHealth,
   listApiKeyActivitiesPage,
+} from '@/actions/admin/api-keys'
+import {
+  acceptInvitation,
+  createInvitation,
+  getInvitation,
   revokeInvitation,
-  sendTestEmail,
-  updateSmtpSettings,
-} from '@/actions/admin'
+} from '@/actions/admin/invitations'
+import {
+  getOperationsHealth,
+  runCacheMaintenance,
+} from '@/actions/admin/operations'
+import { sendTestEmail, updateSmtpSettings } from '@/actions/admin/smtp'
+import { getAdminWorkspace } from '@/actions/admin/workspace'
 import { authMiddleware, requireSuperAdmin } from '@/lib/auth/guards'
 import {
   acceptInvitationSchema,
   apiActivityPageSchema,
+  cacheMaintenanceSchema,
   createInvitationSchema,
   invitationTokenSchema,
   revokeInvitationSchema,
@@ -44,6 +49,14 @@ export const getOperationsHealthFn = createServerFn({ method: 'GET' })
   .handler(({ context }) => {
     requireSuperAdmin(context)
     return getOperationsHealth()
+  })
+
+export const runCacheMaintenanceFn = createServerFn({ method: 'POST' })
+  .inputValidator(cacheMaintenanceSchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return runCacheMaintenance(data)
   })
 
 export const createApiKeyFn = createServerFn({ method: 'POST' })

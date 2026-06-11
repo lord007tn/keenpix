@@ -2,7 +2,7 @@ interface FieldMeta {
   errors: unknown[]
 }
 
-export function getValidationErrorMessage(error: unknown): string | undefined {
+function getValidationErrorMessage(error: unknown): string | undefined {
   if (!error) {
     return
   }

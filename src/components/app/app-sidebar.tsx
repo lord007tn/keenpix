@@ -21,8 +21,8 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar'
 import type { SessionUser } from '@/functions/auth'
-import { APP_VERSION } from '@/lib/seo'
 import { RELEASES_URL } from '@/shared/repository'
+import { APP_VERSION } from '@/shared/seo'
 import { useProject } from '@/stores/project-context'
 
 const PROJECT_NAV = [

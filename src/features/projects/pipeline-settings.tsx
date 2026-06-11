@@ -8,9 +8,9 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { getErrorMessage } from '@/errors/common'
 import { updateProjectSettingsFn } from '@/functions/projects'
-import { getFieldError } from '@/lib/form-errors'
 import { projectQualitySchema } from '@/schemas/projects'
 import type { Project } from '@/shared/types'
+import { getFieldError } from '@/utils/validation/form-errors'
 
 interface Patch {
   autoFormat?: boolean

@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getErrorMessage } from '@/errors/common'
 import { addAllowedHostFn, removeAllowedHostFn } from '@/functions/projects'
-import { getFieldError } from '@/lib/form-errors'
 import { allowedHostSchema } from '@/schemas/projects'
+import { getFieldError } from '@/utils/validation/form-errors'
 
 export function AllowedHosts({
   projectId,
