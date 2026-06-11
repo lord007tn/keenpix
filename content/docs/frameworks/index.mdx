@@ -51,8 +51,9 @@ Then render a fully responsive, auto-format image with native HTML:
 ```
 
 Omitting `fmt` is the same as `fmt=auto`: Keenpix negotiates from the request's
-`Accept` header. Add `fmt: 'webp'` or `fmt: 'avif'` only when you want a fixed output
-format.
+`Accept` header and returns AVIF, WebP, or JPEG. Add `fmt: 'webp'`, `fmt: 'avif'`, or
+`fmt: 'svg'` only when you want a fixed output format. SVG output is explicit; an SVG
+origin with `fmt=auto` is rasterized instead of returned as SVG.
 
 <Callout>
   Tip: read `HOST` and `PROJECT` from environment variables so you can swap instances per

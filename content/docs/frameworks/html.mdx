@@ -23,6 +23,9 @@ With no `fmt` parameter, Keenpix negotiates the output from the browser's `Accep
 header. Add `fmt=avif`, `fmt=webp`, `fmt=jpeg`, `fmt=png`, or `fmt=svg` only when you want to
 force one format.
 
+`fmt=svg` is explicit SVG delivery. If the source is SVG and `fmt` is omitted or set to
+`auto`, Keenpix returns a negotiated raster format instead.
+
 ## Responsive with `srcset`
 
 ```html
