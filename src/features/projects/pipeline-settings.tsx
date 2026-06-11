@@ -64,7 +64,7 @@ export function PipelineSettings({ project }: { project: Project }) {
     },
   })
 
-  async function persist(patch: Patch): Promise<boolean> {
+  async function persist(patch: Patch) {
     setPending(true)
     try {
       await updateProjectSettingsFn({

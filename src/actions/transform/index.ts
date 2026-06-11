@@ -2,10 +2,10 @@ import { getProject } from '@/data-access/projects'
 import { createRequestLog } from '@/data-access/request-logs'
 import { getTransformErrorStatus, TransformError } from '@/errors/transform'
 import { parseTransformParams } from '@/helpers/transform/params'
-import { buildCacheKey, readCache, writeCache } from '@/lib/cache/cache'
+import { buildCacheKey, readCacheEntry, writeCache } from '@/lib/cache/cache'
 import { errorContext, logger } from '@/lib/logger/logger'
 import { fetchOriginImage } from '@/lib/origin/fetch-image'
-import { assertSafeOrigin, type SafeOrigin } from '@/lib/origin/safe-origin'
+import { assertAllowedOrigin, assertSafeOrigin } from '@/lib/origin/safe-origin'
 import { runQueuedJob } from '@/lib/queue/transform-queue'
 import { transformImage } from '@/lib/sharp/transform'
 import { optimizeSvgImage } from '@/lib/svg/optimize'
@@ -14,21 +14,27 @@ import type { OutputFormat, TransformOptions } from '@/shared/transform'
 export interface OptimizeProjectImageInput {
   accept: string
   projectId: string
+  recordLog?: boolean
   searchParams: URLSearchParams
   src: string
   startedAt?: number
 }
 
-export interface OptimizedProjectImage {
-  body: Buffer
-  format: OutputFormat
+export interface PrewarmProjectImagesInput {
+  dpr?: number
+  fit?: TransformOptions['fit']
+  formats: Array<OutputFormat | 'auto'>
+  projectId: string
+  quality?: number
+  sources: string[]
+  widths: number[]
 }
 
 interface CachedTransformInput {
   allowedOrigins: string[]
   cacheKey: string
   format: OutputFormat
-  origin: SafeOrigin
+  src: string
   transformOptions: TransformOptions
 }
 
@@ -54,12 +60,26 @@ async function readOrCreateTransform({
   allowedOrigins,
   cacheKey,
   format,
-  origin,
+  src,
   transformOptions,
 }: CachedTransformInput) {
-  const cachedOut = await readCache(cacheKey, format)
-  if (cachedOut) {
-    return { out: cachedOut, cached: true, bytesIn: 0 }
+  const cached = await readCacheEntry(cacheKey, format)
+  if (cached) {
+    if (cached.stale && !inflightTransforms.has(cacheKey)) {
+      startTransformRefresh({
+        allowedOrigins,
+        cacheKey,
+        format,
+        src,
+        transformOptions,
+      }).catch((error) => {
+        logger.warn(
+          { ...errorContext(error), path: logPath(src) },
+          'Stale image refresh failed',
+        )
+      })
+    }
+    return { out: cached.data, cached: true, bytesIn: 0 }
   }
 
   const existing = inflightTransforms.get(cacheKey)
@@ -67,17 +87,34 @@ async function readOrCreateTransform({
     return { out: await existing, cached: false, bytesIn: 0 }
   }
 
-  let producedBytesIn = 0
+  const work = startTransformRefresh({
+    allowedOrigins,
+    cacheKey,
+    format,
+    src,
+    transformOptions,
+  })
+  try {
+    const result = await work
+    return { out: result.out, cached: false, bytesIn: result.bytesIn }
+  } finally {
+    inflightTransforms.delete(cacheKey)
+  }
+}
+
+function startTransformRefresh(input: CachedTransformInput) {
   const work = runQueuedJob(async () => {
-    const input = await fetchOriginImage(origin, allowedOrigins)
-    producedBytesIn = input.byteLength
+    const { allowedOrigins, cacheKey, format, src, transformOptions } = input
+    const origin = await assertSafeOrigin(src, allowedOrigins)
+    const originBytes = await fetchOriginImage(origin, allowedOrigins)
+    const bytesIn = originBytes.byteLength
 
     let output: Buffer
     try {
       output =
         format === 'svg'
-          ? optimizeSvgImage(input)
-          : (await transformImage(input, transformOptions)).data
+          ? optimizeSvgImage(originBytes)
+          : (await transformImage(originBytes, transformOptions)).data
     } catch (error) {
       if (error instanceof TransformError) {
         throw error
@@ -89,15 +126,18 @@ async function readOrCreateTransform({
       logger.warn(errorContext(error), 'Cache write failed')
     })
 
-    return output
+    return { bytesIn, out: output }
   })
 
-  inflightTransforms.set(cacheKey, work)
-  try {
-    return { out: await work, cached: false, bytesIn: producedBytesIn }
-  } finally {
-    inflightTransforms.delete(cacheKey)
-  }
+  inflightTransforms.set(
+    input.cacheKey,
+    work.then((result) => result.out),
+  )
+  work.then(
+    () => inflightTransforms.delete(input.cacheKey),
+    () => inflightTransforms.delete(input.cacheKey),
+  )
+  return work
 }
 
 // Use case for the transform pipeline: resolve project settings, validate the
@@ -105,10 +145,11 @@ async function readOrCreateTransform({
 export async function optimizeProjectImage({
   accept,
   projectId,
+  recordLog = true,
   searchParams,
   src,
   startedAt = performance.now(),
-}: OptimizeProjectImageInput): Promise<OptimizedProjectImage> {
+}: OptimizeProjectImageInput) {
   const project = await getProject(projectId)
   if (!project) {
     throw new TransformError('Unknown project', 404)
@@ -126,7 +167,7 @@ export async function optimizeProjectImage({
   let bytesOut = 0
 
   try {
-    const origin = await assertSafeOrigin(src, project.allowedOrigins)
+    assertAllowedOrigin(src, project.allowedOrigins)
     const cacheKey = buildCacheKey({
       projectId: project.id,
       url: src,
@@ -140,7 +181,7 @@ export async function optimizeProjectImage({
       allowedOrigins: project.allowedOrigins,
       cacheKey,
       format,
-      origin,
+      src,
       transformOptions: {
         ...transformOptions,
         stripMetadata: project.stripMetadata,
@@ -165,21 +206,73 @@ export async function optimizeProjectImage({
     }
     throw error
   } finally {
-    createRequestLog({
-      orgId: project.orgId,
-      projectId: project.id,
-      path: logPath(src),
-      sourceHost: logHost(src),
-      width,
-      quality,
-      format,
-      status,
-      cached,
-      latencyMs: Math.round(performance.now() - startedAt),
-      bytesIn,
-      bytesOut,
-    }).catch(() => {
-      // Request logging is telemetry, not part of the transform response path.
-    })
+    if (recordLog) {
+      createRequestLog({
+        orgId: project.orgId,
+        projectId: project.id,
+        path: logPath(src),
+        sourceHost: logHost(src),
+        width,
+        quality,
+        format,
+        status,
+        cached,
+        latencyMs: Math.round(performance.now() - startedAt),
+        bytesIn,
+        bytesOut,
+      }).catch(() => {
+        // Request logging is telemetry, not part of the transform response path.
+      })
+    }
   }
+}
+
+export function prewarmProjectImages({
+  dpr,
+  fit,
+  formats,
+  projectId,
+  quality,
+  sources,
+  widths,
+}: PrewarmProjectImagesInput) {
+  const jobs = sources.flatMap((src) =>
+    widths.flatMap((width) =>
+      formats.map((format) => {
+        const searchParams = new URLSearchParams({
+          fmt: format,
+          project: projectId,
+          w: String(width),
+        })
+        if (quality) {
+          searchParams.set('q', String(quality))
+        }
+        if (fit) {
+          searchParams.set('fit', fit)
+        }
+        if (dpr) {
+          searchParams.set('dpr', String(dpr))
+        }
+        return optimizeProjectImage({
+          accept: format === 'auto' ? 'image/avif,image/webp,image/*' : '',
+          projectId,
+          recordLog: false,
+          searchParams,
+          src,
+        })
+      }),
+    ),
+  )
+
+  Promise.allSettled(jobs).then((results) => {
+    const failed = results.filter((result) => result.status === 'rejected')
+    if (failed.length > 0) {
+      logger.warn(
+        { failed: failed.length, total: results.length },
+        'Image prewarm completed with failures',
+      )
+    }
+  })
+
+  return { variantCount: jobs.length }
 }

@@ -10,7 +10,6 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import path from 'node:path'
-import dayjs from 'dayjs'
 import type { OutputFormat } from '@/shared/transform'
 import type { CacheStore } from './cache-store'
 
@@ -41,16 +40,22 @@ export class DiskCacheStore implements CacheStore {
   }
 
   async get(key: string, format: OutputFormat) {
+    return (await this.getEntry(key, format))?.data ?? null
+  }
+
+  async getEntry(key: string, format: OutputFormat) {
     const file = this.pathFor(key, format)
     try {
       const buf = await readFile(file)
       if (buf.length === 0) {
         return null
       }
-      // Bump mtime so the LRU sweep treats this as recently used.
-      const now = dayjs().toDate()
-      utimes(file, now, now).catch(noop)
-      return buf
+      const s = await stat(file)
+      // Bump atime so the LRU sweep treats this as recently used while keeping
+      // mtime as the variant refresh timestamp for stale-while-revalidate.
+      const now = new Date()
+      utimes(file, now, s.mtime).catch(noop)
+      return { createdAt: s.mtimeMs, data: buf }
     } catch {
       return null
     }
@@ -149,17 +154,17 @@ export class DiskCacheStore implements CacheStore {
 
   /**
    * If the cache directory exceeds maxBytes, delete the least-recently-used
-   * files (mtime ascending) until back under 90% of the cap.
+   * files (atime ascending) until back under 90% of the cap.
    */
   private async maybeEvict() {
-    let entries: Array<{ file: string; size: number; mtime: number }>
+    let entries: Array<{ atime: number; file: string; size: number }>
     try {
       const names = await readdir(this.cacheDir)
       entries = await Promise.all(
         names.map(async (name) => {
           const file = path.join(this.cacheDir, name)
           const s = await stat(file)
-          return { file, size: s.size, mtime: s.mtimeMs }
+          return { atime: s.atimeMs, file, size: s.size }
         }),
       )
     } catch {
@@ -170,7 +175,7 @@ export class DiskCacheStore implements CacheStore {
     if (total <= this.maxBytes) {
       return
     }
-    entries.sort((a, b) => a.mtime - b.mtime)
+    entries.sort((a, b) => a.atime - b.atime)
     for (const e of entries) {
       if (total <= this.targetBytes) {
         break
