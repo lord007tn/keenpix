@@ -51,9 +51,21 @@ export default defineNuxtConfig({
 
 ```vue
 <template>
-  <NuxtImg provider="keenpix" src="/hero.jpg" width="1200" sizes="100vw" format="avif" />
+  <NuxtImg provider="keenpix" src="/hero.jpg" width="1200" sizes="100vw" />
 </template>
 ```
+
+Leaving `format` unset means the generated Keenpix URL has no `fmt` parameter, so
+Keenpix uses the browser's `Accept` header and serves AVIF, WebP, or JPEG based on
+support. Passing `format="avif"` or `format="webp"` intentionally forces that output
+format.
+
+<Callout title="Nuxt Image format props">
+  In `@nuxt/image`, the `format` prop maps to Keenpix's `fmt` query parameter. Do not
+  pass a helper that always returns `avif` unless you want to force AVIF for every
+  client. For JoodCMS-style wrappers, keep the wrapper's default `format` value
+  undefined and only pass a format for deliberate fixed-format URLs.
+</Callout>
 
 <Callout title="Simpler option">
   If you don't need `@nuxt/image`'s responsive machinery, skip the provider and bind a

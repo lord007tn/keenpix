@@ -54,6 +54,10 @@ export const sendTestEmailSchema = z.object({
   to: z.email('Enter a valid recipient email.'),
 })
 
+export const cacheMaintenanceSchema = z.object({
+  target: z.enum(['all', 'disk', 'memory']),
+})
+
 export const ACTIVITY_PAGE_SIZE = 10
 
 export const apiActivityPageSchema = z.object({
@@ -63,3 +67,4 @@ export const apiActivityPageSchema = z.object({
 export type CreateInvitationInput = z.input<typeof createInvitationSchema>
 export type SmtpSettingsInput = z.input<typeof smtpSettingsSchema>
 export type SendTestEmailInput = z.input<typeof sendTestEmailSchema>
+export type CacheMaintenanceInput = z.input<typeof cacheMaintenanceSchema>

@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -67,6 +67,19 @@ describe('MemoryCacheStore', () => {
       memorySizeBytes: 0,
     })
   })
+
+  it('clears stored entries', async () => {
+    const store = new MemoryCacheStore(1024)
+    await store.set('key', 'webp', Buffer.from('image-bytes'))
+
+    store.clear()
+
+    expect(await store.get('key', 'webp')).toBeNull()
+    expect(store.stats()).toMatchObject({
+      memoryItemCount: 0,
+      memorySizeBytes: 0,
+    })
+  })
 })
 
 describe('DiskCacheStore', () => {
@@ -81,6 +94,27 @@ describe('DiskCacheStore', () => {
       expect(await store.get('key', 'webp')).toEqual(data)
       expect(await store.get('key', 'avif')).toBeNull()
       expect(store.stats()).toEqual({ diskMaxBytes: 1024 })
+    } finally {
+      await rm(dir, { force: true, recursive: true })
+    }
+  })
+
+  it('clears cache files and reports deleted bytes', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'keenpix-cache-'))
+    const store = new DiskCacheStore(dir, 1024)
+    const data = Buffer.from('image-bytes')
+
+    try {
+      await store.set('key', 'webp', data)
+
+      const result = await store.clear()
+
+      expect(result).toEqual({
+        deletedBytes: data.byteLength,
+        deletedFiles: 1,
+      })
+      expect(await readdir(dir)).toEqual([])
+      expect(await store.get('key', 'webp')).toBeNull()
     } finally {
       await rm(dir, { force: true, recursive: true })
     }

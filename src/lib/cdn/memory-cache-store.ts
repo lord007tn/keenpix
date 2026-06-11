@@ -28,6 +28,10 @@ export class MemoryCacheStore implements CacheStore {
     this.cache?.set(memoryKey(key, fmt), data)
   }
 
+  clear() {
+    this.cache?.clear()
+  }
+
   stats() {
     return {
       memoryItemCount: this.cache?.size ?? 0,

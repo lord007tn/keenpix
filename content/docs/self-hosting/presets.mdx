@@ -96,6 +96,7 @@ Scope the CDN's cache rule to `/img/*` only, or keep the dashboard on a host the
 does not cache. Caching `/app` or `/api/auth` breaks sign-in.
 </Callout>
 
-- Prefer explicit `fmt=webp` / `fmt=avif` in generated URLs unless the CDN can vary by
-  `Accept` — it maximizes the edge hit rate.
+- Use omitted `fmt` / `fmt=auto` only when the CDN can vary by `Accept`. Otherwise,
+  prefer explicit `fmt=webp` / `fmt=avif` in generated URLs to maximize edge hit rate,
+  knowing that an explicit format will not fall back for unsupported browsers.
 - A smaller origin disk cache is fine because the CDN serves the repeat requests.

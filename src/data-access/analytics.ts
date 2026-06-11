@@ -347,8 +347,10 @@ export async function getLatencyBins(
   return bins
 }
 
-export async function getProjectStats(): Promise<Record<string, ProjectStat>> {
-  const since = new Date(Date.now() - DAY)
+export async function getProjectStats(
+  range: AnalyticsRange = '24h',
+): Promise<Record<string, ProjectStat>> {
+  const since = sinceFor(range)
   const [byProject, hitsByProject] = await Promise.all([
     prisma.requestLog.groupBy({
       by: ['projectId'],

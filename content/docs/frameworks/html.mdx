@@ -11,13 +11,17 @@ server-side language (PHP, Ruby, Python, Go, …). Build the URL and render an `
 
 ```html
 <img
-  src="https://keenpix.example.com/img/https://cdn.example.com/hero.jpg?project=YOUR_ID&w=1280&fmt=avif"
+  src="https://keenpix.example.com/img/https://cdn.example.com/hero.jpg?project=YOUR_ID&w=1280"
   sizes="100vw"
   loading="lazy"
   decoding="async"
   alt="Hero"
 />
 ```
+
+With no `fmt` parameter, Keenpix negotiates the output from the browser's `Accept`
+header. Add `fmt=avif`, `fmt=webp`, `fmt=jpeg`, or `fmt=png` only when you want to
+force one format.
 
 ## Responsive with `srcset`
 

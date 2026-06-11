@@ -72,3 +72,24 @@ export async function getCacheStorageStats() {
     ...memoryCache.stats(),
   }
 }
+
+export async function clearCacheStorage(target: 'all' | 'disk' | 'memory') {
+  const before = await getCacheStorageStats()
+  const disk =
+    target === 'disk' || target === 'all'
+      ? await diskCache.clear()
+      : { deletedBytes: 0, deletedFiles: 0 }
+
+  if (target === 'memory' || target === 'all') {
+    memoryCache.clear()
+  }
+
+  const after = await getCacheStorageStats()
+  return {
+    after,
+    before,
+    deletedDiskBytes: disk.deletedBytes,
+    deletedDiskFiles: disk.deletedFiles,
+    target,
+  }
+}

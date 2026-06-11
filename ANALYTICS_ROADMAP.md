@@ -1,7 +1,12 @@
 # Analytics roadmap
 
-Future analytics to support, as todos. Builds on what's **already real** today
-(all project-scoped via `?project=` + time-windowed):
+Future analytics to support after the ClickHouse phase. Keep the current
+Postgres-backed analytics focused on operational essentials and avoid adding
+more high-cardinality or expensive aggregations until the ingestion/storage
+model changes.
+
+What is **already real** today (all project-scoped via `?project=` +
+time-windowed):
 
 - ✅ Requests, bandwidth saved + savings %, cache hit-rate
 - ✅ Format distribution (AVIF/WebP/JPEG/PNG)
@@ -15,18 +20,16 @@ Future analytics to support, as todos. Builds on what's **already real** today
 
 > Removed in the trust pass because they were **fixtures**: L1-memory cache fill,
 > variant count, geographic map, and $ cost.
-> The Tier-1 items below are about bringing those back as **real** data.
+> Bringing those back should wait until the ClickHouse-backed analytics pass.
 
 ---
 
-## Tier 1 — make the removed fixtures real (highest value)
+## Deferred until ClickHouse
 
 - [ ] **Geographic distribution.** *Data:* populate `RequestLog.country/region`
       (currently always null) from a CDN/proxy header (`CF-IPCountry`,
       `X-Vercel-IP-Country`) or a GeoIP lookup. *Code:* `getGeoDistribution` by country.
       Restores the geo card with honest data. *Effort: M.*
-## Tier 2 — new dimensions
-
 - [ ] **Latency trend over time** — p50/p95/p99 per time-bucket (not just the window total). *Effort: M.*
 - [ ] **Status / error breakdown** — 2xx/4xx/5xx rate over time; surface 403/404/502
       spikes (abuse / misconfig signal). *Effort: M.*
@@ -34,9 +37,6 @@ Future analytics to support, as todos. Builds on what's **already real** today
 - [ ] **Bandwidth-saved over time** + cumulative, and a per-format savings breakdown. *Effort: M.*
 - [ ] **Cache efficiency by image** — hit-rate per path; flag never-cached / thrashing paths. *Effort: M.*
 - [ ] **Requested size/DPR distribution** — which widths/dprs are hit (informs srcset pre-warming). *Effort: S.*
-
-## Tier 3 — scale & ops
-
 - [ ] **ClickHouse for analytics (PLAN Phase 9)** — move `request_logs` ingestion +
       aggregation to ClickHouse once Postgres `groupBy` over the log table gets slow. *Effort: L.*
 - [ ] **Retention + pre-aggregated rollups** — daily/monthly summary tables; prune raw
@@ -48,7 +48,8 @@ Future analytics to support, as todos. Builds on what's **already real** today
 
 ## Cross-cutting data-model prerequisites
 
-Several Tier-1/2 items need richer capture at write time in `insertRequestLog`
+Several deferred items need richer capture at write time in `insertRequestLog`
 (`handle-transform.ts`): populate **`country`/`region`**, and consider capturing
 **`referer`** (hotlink analytics) and **`userAgent`**. Add these as a single
-Prisma migration before building the dependent charts.
+Prisma migration as part of the ClickHouse analytics phase before building the
+dependent charts.

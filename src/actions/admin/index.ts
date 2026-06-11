@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import type { z } from 'zod'
 import {
   acceptInvitation as acceptInvitationInDb,
@@ -19,11 +20,12 @@ import {
 } from '@/data-access/admin'
 import { listProjects } from '@/data-access/projects'
 import { auth } from '@/lib/auth/server'
-import { getCacheStorageStats } from '@/lib/cdn/cache'
+import { clearCacheStorage, getCacheStorageStats } from '@/lib/cdn/cache'
 import { getQueueStats } from '@/lib/concurrency'
 import { sendSmtpMail, verifySmtp } from '@/lib/email/smtp'
 import type {
   acceptInvitationSchema,
+  cacheMaintenanceSchema,
   createInvitationSchema,
 } from '@/schemas/admin'
 import { ACTIVITY_PAGE_SIZE } from '@/schemas/admin'
@@ -163,9 +165,15 @@ export async function getOperationsHealth() {
   ])
   return {
     cache,
-    generatedAt: new Date().toISOString(),
+    generatedAt: dayjs().toISOString(),
     projectCount: projects.length,
     transformQueue: getQueueStats(),
     uptimeSeconds: Math.round(process.uptime()),
   }
+}
+
+export function runCacheMaintenance(
+  input: z.output<typeof cacheMaintenanceSchema>,
+) {
+  return clearCacheStorage(input.target)
 }

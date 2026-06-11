@@ -11,10 +11,10 @@ export function BarList({
 }) {
   const max = Math.max(...data.map((d) => d.value), 1)
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       {data.map((d) => (
         <div
-          className="relative flex items-center justify-between gap-3 overflow-hidden rounded-md px-2 py-1.5"
+          className="relative flex min-w-0 items-center justify-between gap-3 overflow-hidden rounded-md px-2 py-1.5"
           key={d.label}
         >
           <div
@@ -24,7 +24,9 @@ export function BarList({
               background: `color-mix(in oklab, ${barColor} 16%, transparent)`,
             }}
           />
-          <span className="relative truncate font-mono text-xs">{d.label}</span>
+          <span className="relative min-w-0 flex-1 truncate font-mono text-xs">
+            {d.label}
+          </span>
           <span className="relative shrink-0 text-muted-foreground text-xs tabular-nums">
             {valueFormat(d.value)}
           </span>

@@ -9,6 +9,7 @@ import {
   getOperationsHealth,
   listApiKeyActivitiesPage,
   revokeInvitation,
+  runCacheMaintenance,
   sendTestEmail,
   updateSmtpSettings,
 } from '@/actions/admin'
@@ -16,6 +17,7 @@ import { authMiddleware, requireSuperAdmin } from '@/lib/auth/guards'
 import {
   acceptInvitationSchema,
   apiActivityPageSchema,
+  cacheMaintenanceSchema,
   createInvitationSchema,
   invitationTokenSchema,
   revokeInvitationSchema,
@@ -44,6 +46,14 @@ export const getOperationsHealthFn = createServerFn({ method: 'GET' })
   .handler(({ context }) => {
     requireSuperAdmin(context)
     return getOperationsHealth()
+  })
+
+export const runCacheMaintenanceFn = createServerFn({ method: 'POST' })
+  .inputValidator(cacheMaintenanceSchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return runCacheMaintenance(data)
   })
 
 export const createApiKeyFn = createServerFn({ method: 'POST' })

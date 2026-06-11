@@ -21,6 +21,6 @@ export async function getDashboard(
     getDashboardKpis(input.range, project),
     getTimeSeries(input.range, project),
   ])
-  const stats = project ? {} : await getProjectStats()
+  const stats = project ? {} : await getProjectStats(input.range)
   return { range: input.range, projects, stats, kpis, series }
 }

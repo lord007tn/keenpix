@@ -107,6 +107,36 @@ export class DiskCacheStore implements CacheStore {
     }
   }
 
+  async clear() {
+    let names: string[]
+    try {
+      names = await readdir(this.cacheDir)
+    } catch {
+      return { deletedFiles: 0, deletedBytes: 0 }
+    }
+
+    const entries = await Promise.all(
+      names.map(async (name) => {
+        const file = path.join(this.cacheDir, name)
+        try {
+          const s = await stat(file)
+          if (!s.isFile()) {
+            return null
+          }
+          await unlink(file)
+          return s.size
+        } catch {
+          return null
+        }
+      }),
+    )
+    const sizes = entries.filter((size): size is number => size !== null)
+    return {
+      deletedBytes: sizes.reduce((total, size) => total + size, 0),
+      deletedFiles: sizes.length,
+    }
+  }
+
   private pathFor(key: string, fmt: string) {
     return path.join(this.cacheDir, `${key}.${EXT[fmt] ?? 'bin'}`)
   }
