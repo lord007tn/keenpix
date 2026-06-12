@@ -1,12 +1,14 @@
 import { createHash } from 'node:crypto'
 import { env } from '@/env/server'
 import type { OutputFormat, TransformOptions } from '@/shared/transform'
+import type { CacheEntry } from './cache-store'
 import { DiskCacheStore } from './disk-cache-store'
 import { MemoryCacheStore } from './memory-cache-store'
 
 const CACHE_DIR = env.KEENPIX_CACHE_DIR
 const MAX_BYTES = env.KEENPIX_CACHE_MAX_BYTES
 const MEMORY_MAX_BYTES = env.KEENPIX_MEMORY_CACHE_MAX_BYTES
+const STALE_MS = env.KEENPIX_CACHE_STALE_MS
 
 const memoryCache = new MemoryCacheStore(MEMORY_MAX_BYTES)
 const diskCache = new DiskCacheStore(CACHE_DIR, MAX_BYTES)
@@ -28,18 +30,18 @@ export function cacheControl(): string {
   return 'public, max-age=31536000, immutable'
 }
 
-export async function readCache(key: string, format: OutputFormat) {
-  const hot = await memoryCache.get(key, format)
+export async function readCacheEntry(key: string, format: OutputFormat) {
+  const hot = await memoryCache.getEntry(key, format)
   if (hot) {
-    return hot
+    return { ...hot, stale: isCacheEntryStale(hot) }
   }
 
-  const buf = await diskCache.get(key, format)
-  if (!buf) {
+  const entry = await diskCache.getEntry(key, format)
+  if (!entry) {
     return null
   }
-  await memoryCache.set(key, format, buf)
-  return buf
+  memoryCache.setEntry(key, format, entry)
+  return { ...entry, stale: isCacheEntryStale(entry) }
 }
 
 export async function writeCache(
@@ -49,6 +51,10 @@ export async function writeCache(
 ) {
   await diskCache.set(key, format, data)
   await memoryCache.set(key, format, data)
+}
+
+function isCacheEntryStale(entry: CacheEntry) {
+  return STALE_MS > 0 && Date.now() - entry.createdAt >= STALE_MS
 }
 
 export function getCacheRuntimeStats() {

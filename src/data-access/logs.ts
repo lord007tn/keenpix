@@ -1,10 +1,7 @@
 import { prisma } from '@/db'
-import { isLogFormat, type LogRow } from '@/shared/types'
+import { isLogFormat } from '@/shared/types'
 
-export async function listLogs(
-  limit = 36,
-  projectId?: string,
-): Promise<LogRow[]> {
+export async function listLogs(limit = 36, projectId?: string) {
   const rows = await prisma.requestLog.findMany({
     where: projectId ? { projectId } : undefined,
     orderBy: { ts: 'desc' },

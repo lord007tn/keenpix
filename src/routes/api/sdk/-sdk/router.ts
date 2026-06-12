@@ -6,6 +6,7 @@ import {
   getProjectConfiguration,
   getProjectResource,
   listProjectResources,
+  prewarmProjectImagesResource,
   removeProjectDomain,
   updateProjectSettingsResource,
 } from './projects'
@@ -82,6 +83,12 @@ function routeSdkRequest(
   if (segments.length === 3 && segments[2] === 'settings') {
     return method === 'PATCH'
       ? updateProjectSettingsResource(request, segments[1], activity)
+      : jsonError('Not found', 404)
+  }
+
+  if (segments.length === 3 && segments[2] === 'prewarm') {
+    return method === 'POST'
+      ? prewarmProjectImagesResource(request, segments[1], activity)
       : jsonError('Not found', 404)
   }
 

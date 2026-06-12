@@ -7,10 +7,12 @@ import {
   removeAllowedHost,
   updateProjectSettings,
 } from '@/actions/projects'
+import { prewarmProjectImages } from '@/actions/transform'
 import {
   allowedHostValueSchema,
   internalCreateProjectSchema,
   internalProjectSettingsPatchSchema,
+  projectPrewarmSchema,
 } from '@/schemas/projects'
 import type { SdkApiActivityContext } from './activity'
 import { verifySdkApiKey } from './auth'
@@ -141,6 +143,35 @@ export async function updateProjectSettingsResource(
   )
   const project = await updateProjectSettings(projectId, patch)
   return project ? json({ project }) : jsonError('Project not found', 404)
+}
+
+export async function prewarmProjectImagesResource(
+  request: Request,
+  projectId: string,
+  activity: SdkApiActivityContext,
+) {
+  await verifySdkApiKey(request, 'write', projectId, activity)
+  const input = projectPrewarmSchema.parse(await readJson(request))
+  const sources = [...(input.sources ?? []), ...(input.src ? [input.src] : [])]
+  const result = prewarmProjectImages({
+    dpr: input.dpr,
+    fit: input.fit,
+    formats: input.formats,
+    projectId,
+    quality: input.quality,
+    sources: [...new Set(sources)],
+    widths: [...new Set(input.widths)],
+  })
+  return json(
+    {
+      prewarm: {
+        accepted: true,
+        sourceCount: new Set(sources).size,
+        variantCount: result.variantCount,
+      },
+    },
+    { status: 202 },
+  )
 }
 
 export async function addProjectDomain(

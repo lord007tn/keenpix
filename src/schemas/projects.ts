@@ -5,6 +5,7 @@ const HOST_RE = /^[a-z0-9.-]+\.[a-z]{2,}$/
 const SCHEME_RE = /^https?:\/\//
 const PATH_RE = /\/.*$/
 const PORT_RE = /:\d+$/
+const PREWARM_MAX_VARIANTS = 200
 
 const normalizeAllowedHost = (input: string) =>
   input
@@ -100,6 +101,36 @@ export const internalProjectSettingsPatchSchema = projectSettingsSchema
       value.stripMetadata !== undefined ||
       value.defaultQuality !== undefined,
     { message: 'Send at least one setting to update.' },
+  )
+
+export const projectPrewarmSchema = z
+  .object({
+    dpr: z.coerce.number().int().min(1).max(3).optional(),
+    fit: z.enum(['cover', 'contain', 'fill', 'inside']).optional(),
+    formats: z
+      .array(z.enum(['auto', 'avif', 'webp', 'jpeg', 'png']))
+      .min(1)
+      .max(5)
+      .default(['avif', 'webp']),
+    quality: z.coerce.number().int().min(30).max(100).optional(),
+    sources: z.array(z.url()).min(1).max(20).optional(),
+    src: z.url().optional(),
+    widths: z
+      .array(z.coerce.number().int().min(1).max(5000))
+      .min(1)
+      .max(10)
+      .default([320, 640, 768, 960, 1280]),
+  })
+  .refine((value) => value.src || value.sources?.length, {
+    message: 'Send src or sources.',
+  })
+  .refine(
+    (value) =>
+      ((value.sources?.length ?? 0) + (value.src ? 1 : 0)) *
+        value.widths.length *
+        value.formats.length <=
+      PREWARM_MAX_VARIANTS,
+    { message: `Prewarm at most ${PREWARM_MAX_VARIANTS} variants.` },
   )
 
 export type CreateProjectInput = z.input<typeof createProjectSchema>

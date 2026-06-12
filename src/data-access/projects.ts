@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import { prisma } from '@/db'
-import { isProjectEnv, type Project, type ProjectEnv } from '@/shared/types'
+import { isProjectEnv, type ProjectEnv } from '@/shared/types'
 
 const DEFAULT_ORG = 'org_default'
 
@@ -10,7 +10,7 @@ const DEFAULT_ORG = 'org_default'
 export async function resolveProjectId(
   id: string | undefined,
   orgId = DEFAULT_ORG,
-): Promise<string | undefined> {
+) {
   if (!id) {
     return
   }
@@ -21,7 +21,7 @@ export async function resolveProjectId(
   return found?.id
 }
 
-export async function listProjects(orgId = DEFAULT_ORG): Promise<Project[]> {
+export async function listProjects(orgId = DEFAULT_ORG) {
   const rows = await prisma.project.findMany({
     where: { orgId },
     orderBy: { createdAt: 'asc' },
@@ -42,10 +42,7 @@ export async function listProjects(orgId = DEFAULT_ORG): Promise<Project[]> {
   }))
 }
 
-export async function getProject(
-  id: string,
-  orgId = DEFAULT_ORG,
-): Promise<Project | undefined> {
+export async function getProject(id: string, orgId = DEFAULT_ORG) {
   const p = await prisma.project.findFirst({ where: { id, orgId } })
   return p
     ? {
@@ -82,7 +79,7 @@ export interface NewProjectInput {
   origin: string
 }
 
-export async function createProject(input: NewProjectInput): Promise<Project> {
+export async function createProject(input: NewProjectInput) {
   const count = await prisma.project.count({ where: { orgId: input.orgId } })
   const palette = COLOR_PRESETS[count % COLOR_PRESETS.length]
   const created = await prisma.project.create({
@@ -125,7 +122,7 @@ export async function addAllowedOrigin(
   projectId: string,
   host: string,
   orgId = DEFAULT_ORG,
-): Promise<Project | undefined> {
+) {
   const p = await prisma.project.findFirst({ where: { id: projectId, orgId } })
   if (!p) {
     return
@@ -170,7 +167,7 @@ export async function removeAllowedOrigin(
   projectId: string,
   host: string,
   orgId = DEFAULT_ORG,
-): Promise<Project | undefined> {
+) {
   // Read-modify-write inside a transaction so a concurrent add/remove isn't lost
   // (Prisma has no atomic array-remove the way `push` is atomic for the add).
   const updated = await prisma.$transaction(async (tx) => {
@@ -215,7 +212,7 @@ export async function updateProjectSettings(
   projectId: string,
   patch: ProjectSettingsPatch,
   orgId = DEFAULT_ORG,
-): Promise<Project | undefined> {
+) {
   const p = await prisma.project.findFirst({ where: { id: projectId, orgId } })
   if (!p) {
     return
