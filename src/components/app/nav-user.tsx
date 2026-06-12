@@ -5,6 +5,7 @@ import {
   LogOutIcon,
   MoonIcon,
   SunIcon,
+  TagIcon,
   UserIcon,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
@@ -22,6 +23,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import type { SessionUser } from '@/functions/auth'
 import { signOut } from '@/lib/auth/client'
+import { RELEASES_URL } from '@/shared/repository'
+import { APP_VERSION } from '@/shared/seo'
 
 const NAME_SPLIT_RE = /[\s@._-]+/
 
@@ -94,6 +97,18 @@ export function NavUser({ user }: { user: SessionUser }) {
           >
             <BookOpenIcon />
             Documentation
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            render={
+              // biome-ignore lint/a11y/useAnchorContent: the icon + version label are merged into the anchor by Base UI's render prop
+              <a href={RELEASES_URL} rel="noreferrer" target="_blank" />
+            }
+          >
+            <TagIcon />
+            Version v{APP_VERSION}
+            <span className="ml-auto text-muted-foreground text-xs">
+              Releases
+            </span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
