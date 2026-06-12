@@ -2,8 +2,6 @@ import { z } from 'zod'
 
 export const analyticsRangeSchema = z.enum(['24h', '7d', '30d', '90d'])
 
-export const projectEnvSchema = z.enum(['production', 'staging', 'development'])
-
 export const optionalUrlSchema = z.url().optional()
 
 export const nonEmptyStringSchema = (message = 'This field is required.') =>

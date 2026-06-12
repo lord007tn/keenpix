@@ -7,18 +7,32 @@ function memoryKey(key: string, format: OutputFormat) {
 }
 
 export class MemoryCacheStore implements CacheStore {
-  private readonly cache
-  private readonly maxBytes
+  private cache
+  private maxBytes
 
   constructor(maxBytes: number) {
     this.maxBytes = maxBytes
-    this.cache =
-      maxBytes > 0
-        ? new LRUCache<string, CacheEntry>({
-            maxSize: maxBytes,
-            sizeCalculation: (value) => value.data.byteLength,
-          })
-        : null
+    this.cache = MemoryCacheStore.build(maxBytes)
+  }
+
+  private static build(maxBytes: number) {
+    return maxBytes > 0
+      ? new LRUCache<string, CacheEntry>({
+          maxSize: maxBytes,
+          sizeCalculation: (value) => value.data.byteLength,
+        })
+      : null
+  }
+
+  getMaxBytes() {
+    return this.maxBytes
+  }
+
+  // LRU maxSize is fixed at construction, so a new cap rebuilds the store. Hot
+  // items are dropped — acceptable for a cache and infrequent (admin action).
+  setMaxBytes(bytes: number) {
+    this.maxBytes = bytes
+    this.cache = MemoryCacheStore.build(bytes)
   }
 
   get(key: string, format: OutputFormat) {

@@ -5,13 +5,13 @@ import {
   KeyRoundIcon,
   type LucideIcon,
   MailIcon,
+  ServerIcon,
   ShieldIcon,
   UsersIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/app/page-header'
 import { SettingRow } from '@/components/app/setting-row'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { ApiKeyManagement } from '@/features/admin/api-key-management'
+import { OperationsConfig } from '@/features/admin/operations-config'
 import { SmtpSettingsPanel } from '@/features/admin/smtp-settings'
 import { StaffManagement } from '@/features/admin/staff-management'
 import { AllowedHosts } from '@/features/projects/allowed-hosts'
@@ -34,6 +35,7 @@ const SECTIONS = [
   'general',
   'pipeline',
   'security',
+  'config',
   'api-keys',
   'staff',
   'email',
@@ -49,6 +51,7 @@ const SECTION_META: Record<Section, { label: string; icon: LucideIcon }> = {
   general: { label: 'General', icon: InfoIcon },
   pipeline: { label: 'Pipeline', icon: ImageIcon },
   security: { label: 'Security', icon: ShieldIcon },
+  config: { label: 'Configuration', icon: ServerIcon },
   'api-keys': { label: 'API keys', icon: KeyRoundIcon },
   staff: { label: 'Staff', icon: UsersIcon },
   email: { label: 'Email', icon: MailIcon },
@@ -117,7 +120,7 @@ function SettingsPage() {
     ? ['general', 'pipeline', 'security']
     : []
   const globalSections: Section[] = isSuperAdmin
-    ? ['api-keys', 'staff', 'email']
+    ? ['config', 'api-keys', 'staff', 'email']
     : []
   const available = [...projectSections, ...globalSections]
   const active = section && available.includes(section) ? section : available[0]
@@ -169,12 +172,6 @@ function SettingsPage() {
                       {p.origin}
                     </span>
                   </span>
-                  <Badge
-                    className="ml-auto"
-                    variant={p.env === 'production' ? 'success' : 'warning'}
-                  >
-                    {p.env}
-                  </Badge>
                 </button>
               ))
             )}
@@ -302,26 +299,35 @@ function SettingsPage() {
           {active === 'security' && currentProject ? (
             <Card>
               <CardHeader>
-                <CardTitle>Security</CardTitle>
+                <CardTitle>Allowed hosts</CardTitle>
                 <CardDescription>
-                  No API key is required for transform URLs — access to the
-                  image endpoint is controlled entirely by the allowlist:
-                  keenpix only transforms images whose source host is listed
-                  here.
+                  keenpix only fetches from origins on this list — an empty list
+                  blocks every request, and no API key is needed for transform
+                  URLs. Per-host figures cover the last 30 days.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="divide-y">
-                <SettingRow
-                  className="py-4 first:pt-0 last:pb-0 sm:items-start"
-                  description="keenpix only fetches from origins on this list. An empty list blocks every request."
-                  label="Allowed hosts"
-                >
-                  <AllowedHosts
-                    initial={currentProject.allowedOrigins ?? []}
-                    key={currentProject.id}
-                    projectId={currentProject.id}
-                  />
-                </SettingRow>
+              <CardContent>
+                <AllowedHosts
+                  initial={currentProject.allowedOrigins ?? []}
+                  key={currentProject.id}
+                  projectId={currentProject.id}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {active === 'config' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Operations configuration</CardTitle>
+                <CardDescription>
+                  Instance-wide cache and transform limits. Cache caps apply to
+                  this running instance immediately; concurrency and queue depth
+                  are environment-configured.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <OperationsConfig />
               </CardContent>
             </Card>
           ) : null}

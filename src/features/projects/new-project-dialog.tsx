@@ -14,24 +14,14 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { getErrorMessage } from '@/errors/common'
 import { createProjectFn } from '@/functions/projects'
 import { createProjectSchema } from '@/schemas/projects'
-import { isProjectEnv, type ProjectEnv } from '@/shared/types'
 import { getFieldError } from '@/utils/validation/form-errors'
 
-const ENVS: ProjectEnv[] = ['production', 'staging', 'development']
-const DEFAULT_VALUES: { name: string; origin: string; env: ProjectEnv } = {
+const DEFAULT_VALUES = {
   name: '',
   origin: '',
-  env: 'production',
 }
 
 export function NewProjectDialog({
@@ -167,32 +157,6 @@ export function NewProjectDialog({
                 </div>
               )
             }}
-          </form.Field>
-          <form.Field name="env">
-            {(field) => (
-              <div className="flex flex-col gap-1.5">
-                <Label>Environment</Label>
-                <Select
-                  onValueChange={(v) => {
-                    if (isProjectEnv(v)) {
-                      field.handleChange(v)
-                    }
-                  }}
-                  value={field.state.value}
-                >
-                  <SelectTrigger aria-label="Environment">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ENVS.map((e) => (
-                      <SelectItem key={e} value={e}>
-                        {e}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </form.Field>
           <DialogFooter>
             <Button

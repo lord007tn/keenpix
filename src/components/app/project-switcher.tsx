@@ -5,7 +5,6 @@ import {
   PlusIcon,
 } from 'lucide-react'
 import { useState } from 'react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -89,14 +88,7 @@ export function ProjectSwitcher() {
                     <span className="truncate">{p.name}</span>
                     {projectId === p.id ? (
                       <CheckIcon className="ml-auto size-4" />
-                    ) : (
-                      <Badge
-                        className="ml-auto"
-                        variant={p.env === 'production' ? 'success' : 'warning'}
-                      >
-                        {p.env}
-                      </Badge>
-                    )}
+                    ) : null}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuGroup>
