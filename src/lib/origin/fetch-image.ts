@@ -1,5 +1,8 @@
+import { Agent as HttpAgent } from 'node:http'
+import { Agent as HttpsAgent } from 'node:https'
 import type { Response } from 'got'
 import got from 'got'
+import { LRUCache } from 'lru-cache'
 import { env } from '@/env/server'
 import { TransformError } from '@/errors/transform'
 import { assertSafeOrigin, type SafeOrigin } from './safe-origin'
@@ -10,6 +13,18 @@ const MAX_ORIGIN_BYTES = env.KEENPIX_MAX_ORIGIN_BYTES
 /** Per-attempt origin fetch timeout. A slow/unresponsive origin yields a 504
  * (gateway timeout), not a generic 500. Override with KEENPIX_ORIGIN_TIMEOUT_MS. */
 const ORIGIN_TIMEOUT_MS = env.KEENPIX_ORIGIN_TIMEOUT_MS
+const ORIGIN_AGENT_CACHE_MAX = 64
+
+const originAgents = new LRUCache<
+  string,
+  { http: HttpAgent; https: HttpsAgent }
+>({
+  max: ORIGIN_AGENT_CACHE_MAX,
+  dispose: (agents) => {
+    agents.http.destroy()
+    agents.https.destroy()
+  },
+})
 
 /**
  * Map a network-level failure talking to the origin to the right gateway status
@@ -45,8 +60,33 @@ function pinnedLookup(origin: SafeOrigin) {
   }
 }
 
+function agentKey(origin: SafeOrigin) {
+  return [
+    origin.url.protocol,
+    origin.url.hostname,
+    origin.url.port,
+    origin.ip,
+    origin.family,
+  ].join('|')
+}
+
+function getPinnedAgents(origin: SafeOrigin) {
+  const key = agentKey(origin)
+  const agents = originAgents.get(key)
+  if (agents) {
+    return agents
+  }
+  const next = {
+    http: new HttpAgent({ keepAlive: true, lookup: pinnedLookup(origin) }),
+    https: new HttpsAgent({ keepAlive: true, lookup: pinnedLookup(origin) }),
+  }
+  originAgents.set(key, next)
+  return next
+}
+
 function requestOrigin(origin: SafeOrigin) {
   return got.stream(origin.url, {
+    agent: getPinnedAgents(origin),
     dnsLookup: pinnedLookup(origin),
     followRedirect: false,
     headers: { 'user-agent': 'keenpix/0.1' },

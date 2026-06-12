@@ -113,6 +113,7 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_RUN_MIGRATIONS` / `KEENPIX_RUN_SEED` | – | Docker entrypoint controls for running migrations and bootstrap seed before app start. Defaults to `true`. |
 | `KEENPIX_CACHE_DIR` | – | Disk cache location (default `./.keenpix-cache`). |
 | `KEENPIX_CACHE_MAX_BYTES` | – | LRU eviction cap (default 2 GB). |
+| `KEENPIX_CACHE_STALE_MS` | – | Serve cached variants immediately after this age and refresh them in the background; `0` disables internal stale refresh (default 24h). |
 | `KEENPIX_MEMORY_CACHE_MAX_BYTES` | – | In-process hot variant LRU cap; set `0` to disable (default 64 MB). |
 | `KEENPIX_MAX_ORIGIN_BYTES` | – | Reject origin responses larger than this (default 50 MB). |
 | `KEENPIX_MAX_INPUT_PIXELS` | – | Decompression-bomb ceiling (default ~50 MP). |
@@ -152,6 +153,12 @@ GET /img/<origin-url>?project=<id>&w=&h=&q=&fmt=&fit=&dpr=&blur=&...
 Simple source URLs can be written directly in the path. If the source URL contains its own `?` or `#`, URL-encode the source before appending Keenpix transform parameters.
 
 Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`, so a CDN can cache each image variant once you configure it to cache `/img/*` with the full query string. The source URL lives in the path so Cloudflare and other CDNs can still see the source file extension; use omitted `fmt` / `fmt=auto` only when your CDN can cache separate `Accept` variants, and use explicit `fmt` values when you intentionally want a fixed output format.
+
+Keenpix also supports internal stale-while-revalidate for the disk cache. After `KEENPIX_CACHE_STALE_MS`, a cached variant is still served immediately and a refresh is queued in the background. This keeps user-facing p95 low while allowing long-lived variants to be refreshed from the origin.
+
+For good cache hit rates, keep frontend widths normalized. Instead of generating arbitrary widths from every viewport value, choose a small shared ladder such as `320`, `480`, `640`, `768`, `960`, and `1280`, then reuse those values across your CMS and frontend. Each unique `src + project + w + h + q + fmt + fit + dpr + blur` combination is a separate variant.
+
+For Cloudflare, create a Cache Rule for `keenpix.joodlab.com/img/*` that marks responses eligible for cache and keeps all query string parameters in the cache key. If using `fmt=auto`, the cache key also needs to vary by `Accept`; otherwise prefer explicit `fmt=avif` / `fmt=webp` URLs from integrations.
 
 Framework image components usually map their `format` prop directly to `fmt`. Leave that prop unset for browser-based AVIF/WebP negotiation; `format="avif"` or `format="webp"` forces that format.
 
@@ -221,6 +228,7 @@ All SDK endpoints live under `/api/sdk`, return JSON, and use `Cache-Control: no
 | `GET` | `/api/sdk/projects/<projectId>` | Fetch one project. |
 | `GET` | `/api/sdk/projects/<projectId>/configuration` | Fetch integration-safe image configuration for clients such as JoodCMS. |
 | `PATCH` | `/api/sdk/projects/<projectId>/settings` | Update transform defaults. Body may include `autoFormat`, `stripMetadata`, and/or `defaultQuality`. |
+| `POST` | `/api/sdk/projects/<projectId>/prewarm` | Queue cache prewarming for uploaded or newly published source images. |
 | `POST` | `/api/sdk/projects/<projectId>/domains` | Add an allowed source host. Body: `{ "host": "cdn.example.com" }`. Use a hostname, not a URL. |
 | `DELETE` | `/api/sdk/projects/<projectId>/domains?host=<host>` | Remove an allowed source host. A JSON body `{ "host": "cdn.example.com" }` is also accepted. |
 
@@ -288,6 +296,23 @@ curl -X PATCH "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/settings
   -H "Content-Type: application/json" \
   -d '{ "autoFormat": true, "defaultQuality": 82, "stripMetadata": true }'
 ```
+
+Prewarm uploaded images from a trusted integration. This endpoint returns `202` after queuing work; it does not wait for every transform and does not write user-delivery latency rows.
+
+```bash
+curl -X POST "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/prewarm" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sources": ["https://cdn.example.com/uploads/photo.jpg"],
+    "widths": [320, 640, 768, 960, 1280],
+    "formats": ["avif", "webp"],
+    "quality": 75,
+    "fit": "cover"
+  }'
+```
+
+If `widths` or `formats` are omitted, Keenpix prewarms the default width ladder `320, 640, 768, 960, 1280` for `avif` and `webp`. A single request is capped at 200 variants.
 
 Failure modes:
 

@@ -42,6 +42,7 @@ export async function handleTransformRequest(
       status: 200,
       headers: {
         'content-type': getContentType(result.format),
+        'content-length': String(result.body.byteLength),
         'cache-control': cacheControl(),
         vary: 'Accept',
       },

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { TransformError } from '@/errors/transform'
-import { assertSafeOrigin, isPrivateIp } from './safe-origin'
+import {
+  assertAllowedOrigin,
+  assertSafeOrigin,
+  isPrivateIp,
+} from './safe-origin'
 
 describe('isPrivateIp', () => {
   it('flags loopback, private, link-local, CGNAT and multicast/reserved', () => {
@@ -62,7 +66,7 @@ describe('isPrivateIp', () => {
 })
 
 describe('assertSafeOrigin — pre-DNS validation', () => {
-  async function statusOf(p: Promise<unknown>): Promise<number | string> {
+  async function statusOf(p: Promise<unknown>) {
     try {
       await p
       return 'no-throw'
@@ -92,5 +96,36 @@ describe('assertSafeOrigin — pre-DNS validation', () => {
     expect(await statusOf(assertSafeOrigin('http://anything.com/x', []))).toBe(
       403,
     )
+  })
+})
+
+describe('assertAllowedOrigin', () => {
+  function statusOf(fn: () => unknown) {
+    try {
+      fn()
+      return 'no-throw'
+    } catch (e) {
+      return e instanceof TransformError ? e.status : 'other-error'
+    }
+  }
+
+  it('allows exact and subdomain matches without resolving DNS', () => {
+    expect(
+      assertAllowedOrigin('https://cdn.good.com/photo.jpg', ['good.com']).url
+        .hostname,
+    ).toBe('cdn.good.com')
+    expect(
+      assertAllowedOrigin('https://good.com/photo.jpg', ['good.com']).url
+        .hostname,
+    ).toBe('good.com')
+  })
+
+  it('rejects invalid or unlisted origins before cache lookup', () => {
+    expect(() => assertAllowedOrigin('not a url', ['good.com'])).toThrow(
+      TransformError,
+    )
+    expect(
+      statusOf(() => assertAllowedOrigin('https://evil.com/x', ['good.com'])),
+    ).toBe(403)
   })
 })

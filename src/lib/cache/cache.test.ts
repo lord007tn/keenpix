@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, rm } from 'node:fs/promises'
+import { mkdtemp, readdir, rm, stat, utimes } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -121,6 +121,31 @@ describe('DiskCacheStore', () => {
       expect(await store.get('key', 'webp')).toEqual(data)
       expect(await store.get('key', 'avif')).toBeNull()
       expect(store.stats()).toEqual({ diskMaxBytes: 1024 })
+    } finally {
+      await rm(dir, { force: true, recursive: true })
+    }
+  })
+
+  it('preserves mtime as the refresh timestamp when reading', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'keenpix-cache-'))
+    const store = new DiskCacheStore(dir, 1024)
+    const data = Buffer.from('image-bytes')
+
+    try {
+      await store.set('key', 'webp', data)
+      const file = path.join(dir, 'key.webp')
+      const written = new Date(Date.now() - 60_000)
+      await utimes(file, written, written)
+
+      const entry = await store.getEntry('key', 'webp')
+      const after = await stat(file)
+
+      expect(entry?.data).toEqual(data)
+      expect(Math.round(entry?.createdAt ?? 0)).toBe(
+        Math.round(written.getTime()),
+      )
+      expect(Math.round(after.mtimeMs)).toBe(Math.round(written.getTime()))
+      expect(after.atimeMs).toBeGreaterThan(written.getTime())
     } finally {
       await rm(dir, { force: true, recursive: true })
     }

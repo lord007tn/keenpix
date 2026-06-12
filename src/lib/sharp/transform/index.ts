@@ -26,14 +26,6 @@ import type { TransformStep } from './types'
 // threads so N concurrent transforms don't spawn N×CPU threads and thrash.
 sharp.concurrency(1)
 
-export interface TransformResult {
-  data: Buffer
-  format: string
-  height: number
-  size: number
-  width: number
-}
-
 function getTransformSteps(opts: TransformOptions) {
   const steps: TransformStep[] = []
 
@@ -107,10 +99,7 @@ function getTransformSteps(opts: TransformOptions) {
   return steps
 }
 
-export async function transformImage(
-  input: Buffer,
-  opts: TransformOptions,
-): Promise<TransformResult> {
+export async function transformImage(input: Buffer, opts: TransformOptions) {
   let pipeline = createPipeline(input, opts)
   for (const step of getTransformSteps(opts)) {
     pipeline = step(pipeline, opts)

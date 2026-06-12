@@ -1,6 +1,6 @@
 # Agent Notes
 
-- Prefer TypeScript inference. Do not force types with casts, explicit generics, or return annotations unless the boundary genuinely needs it and narrowing cannot express the type.
+- Prefer TypeScript inference across product code. Avoid explicit return annotations, variable annotations, explicit generic arguments, and casts unless the boundary genuinely needs it, a third-party API cannot infer it, or narrowing cannot express the type. Keep required boundary types close to the boundary and do not add explicit types by habit.
 - Use verb names that describe the operation exactly: `getProject` gets one project by an identifier such as id or slug; `listProjects` gets a collection; use clear verbs such as `create`, `update`, `delete`, `verify`, `enable`, `disable`, `add`, and `remove` for mutations and checks.
 - Keep layer responsibilities strict:
   - `data-access/` talks directly to the database and returns deterministic results for the requested DB operation. It should not orchestrate cross-domain workflows, send email, call external APIs, perform auth checks, or route requests.

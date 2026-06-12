@@ -21,6 +21,11 @@ export const serverEnvSchema = {
     .int()
     .positive()
     .default(DEFAULT_CACHE_MAX_BYTES),
+  KEENPIX_CACHE_STALE_MS: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .default(24 * 60 * 60 * 1000),
   KEENPIX_MEMORY_CACHE_MAX_BYTES: z.coerce
     .number()
     .int()

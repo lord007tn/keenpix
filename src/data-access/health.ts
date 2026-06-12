@@ -1,11 +1,6 @@
 import { prisma } from '@/db'
 
-export interface DatabaseHealth {
-  latencyMs: number
-  ok: boolean
-}
-
-export async function checkDatabaseHealth(): Promise<DatabaseHealth> {
+export async function checkDatabaseHealth() {
   const start = performance.now()
   await prisma.$queryRaw`SELECT 1`
 
