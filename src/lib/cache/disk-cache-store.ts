@@ -45,8 +45,8 @@ interface ScannedFile {
 
 export class DiskCacheStore implements CacheStore {
   private readonly cacheDir
-  private readonly maxBytes
-  private readonly targetBytes
+  private maxBytes
+  private targetBytes
   // In-memory index of every cached file keyed by `${key}.${ext}`. It lets us
   // evict and report stats without scanning the directory, and removes the
   // dependency on filesystem atime for LRU ordering.
@@ -67,6 +67,17 @@ export class DiskCacheStore implements CacheStore {
     // Learn the on-disk state once at startup, then trim if we booted over the
     // cap (e.g. the byte limit was lowered between runs).
     this.ready = this.buildIndex()
+  }
+
+  getMaxBytes() {
+    return this.maxBytes
+  }
+
+  // Hot-apply a new disk cap; trims immediately if now over the limit.
+  setMaxBytes(bytes: number) {
+    this.maxBytes = bytes
+    this.targetBytes = Math.floor(bytes * 0.9)
+    return this.maybeEvict()
   }
 
   async get(key: string, format: OutputFormat) {

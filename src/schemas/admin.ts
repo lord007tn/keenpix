@@ -58,6 +58,19 @@ export const cacheMaintenanceSchema = z.object({
   target: z.enum(['all', 'disk', 'memory']),
 })
 
+export const operationsConfigSchema = z.object({
+  diskCacheMaxMb: z.coerce
+    .number()
+    .int('Use a whole number.')
+    .min(16, 'Use at least 16 MB.')
+    .max(1_048_576, 'Use 1048576 MB (1 TB) or fewer.'),
+  memoryCacheMaxMb: z.coerce
+    .number()
+    .int('Use a whole number.')
+    .min(0, 'Use 0 or more (0 disables the memory cache).')
+    .max(65_536, 'Use 65536 MB (64 GB) or fewer.'),
+})
+
 export const ACTIVITY_PAGE_SIZE = 10
 
 export const apiActivityPageSchema = z.object({

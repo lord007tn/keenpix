@@ -87,7 +87,6 @@ model Project {
   org            Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
   name           String
   origin         String
-  env            String       @default("production")
   allowedOrigins String[]
   color1         String       @default("#FF6B2C")
   color2         String       @default("#FFA76B")
@@ -95,10 +94,28 @@ model Project {
   autoFormat     Boolean      @default(true)
   stripMetadata  Boolean      @default(true)
   defaultQuality Int          @default(75)
+  // Optional per-project pipeline policy. maxWidth caps the requested width
+  // (0/null = no cap); defaultFit/defaultDpr apply when the request omits them.
+  maxWidth       Int?
+  defaultFit     String       @default("cover")
+  defaultDpr     Int          @default(1)
   createdAt      DateTime     @default(now())
   requestLogs    RequestLog[]
 
   @@index([orgId])
+}
+
+// Instance-wide operations configuration (one row). Null fields fall back to
+// the KEENPIX_* environment defaults. Mirrors the SmtpSettings single-row
+// pattern. Disk cache cap is hot-applied; the others take effect on restart.
+model OperationsSettings {
+  id                   String   @id @default("default")
+  diskCacheMaxMb       Int?
+  memoryCacheMaxMb     Int?
+  transformConcurrency Int?
+  maxQueueDepth        Int?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model RequestLog {

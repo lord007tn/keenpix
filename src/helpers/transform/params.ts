@@ -217,24 +217,41 @@ function isFit(value: string): value is Fit {
   )
 }
 
+// Clamp the requested width to the project's max-width policy (0/null = no cap).
+function capWidth(width: number | undefined, maxWidth: number | null) {
+  if (width === undefined || !maxWidth || maxWidth <= 0) {
+    return width
+  }
+  return Math.min(width, maxWidth)
+}
+
 export function parseTransformParams(
   sp: URLSearchParams,
   accept: string,
-  defaults: { autoFormat: boolean; defaultQuality: number },
+  defaults: {
+    autoFormat: boolean
+    defaultDpr: number
+    defaultFit: Fit
+    defaultQuality: number
+    maxWidth: number | null
+  },
 ) {
-  const fitParam = sp.get('fit') ?? 'cover'
+  const fitParam = sp.get('fit')
   const size = parseSize(sp.get('resize') ?? sp.get('s'))
   const extend = parseExtend(sp.get('extend'))
   const gamma = clampFloat(sp.get('gamma'), 1, 3)
   return {
     animated: parseBoolean(sp.get('animated') ?? sp.get('a')),
     background: parseColor(sp.get('background') ?? sp.get('bg')),
-    width: clampInt(sp.get('w'), 1, 5000) ?? size.width,
+    width: capWidth(
+      clampInt(sp.get('w'), 1, 5000) ?? size.width,
+      defaults.maxWidth,
+    ),
     height: clampInt(sp.get('h'), 1, 5000) ?? size.height,
     quality:
       clampInt(sp.get('q'), 30, 100) ??
       Math.min(100, Math.max(30, Math.round(defaults.defaultQuality))),
-    dpr: clampInt(sp.get('dpr'), 1, 3) ?? 1,
+    dpr: clampInt(sp.get('dpr'), 1, 3) ?? defaults.defaultDpr,
     blur: clampInt(sp.get('blur'), 0, 1000),
     enlarge: parseBoolean(sp.get('enlarge')),
     extend: extend
@@ -244,7 +261,7 @@ export function parseTransformParams(
         }
       : undefined,
     extract: parseExtract(sp.get('extract') ?? sp.get('crop')),
-    fit: isFit(fitParam) ? fitParam : 'cover',
+    fit: fitParam && isFit(fitParam) ? fitParam : defaults.defaultFit,
     flatten: parseBoolean(sp.get('flatten')),
     flip: parseBoolean(sp.get('flip')),
     flop: parseBoolean(sp.get('flop')),

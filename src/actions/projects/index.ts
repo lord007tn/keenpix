@@ -29,7 +29,6 @@ export function createProject(
     orgId: DEFAULT_ORG,
     name: input.name,
     origin: input.origin,
-    env: input.env,
     allowedOrigins: input.allowedOrigins,
   })
 }
