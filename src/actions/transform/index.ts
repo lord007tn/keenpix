@@ -158,6 +158,9 @@ export async function optimizeProjectImage({
   const transformOptions = parseTransformParams(searchParams, accept, {
     autoFormat: project.autoFormat,
     defaultQuality: project.defaultQuality,
+    defaultDpr: project.defaultDpr,
+    defaultFit: project.defaultFit,
+    maxWidth: project.maxWidth,
   })
   const { width, quality, format } = transformOptions
 

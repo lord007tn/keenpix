@@ -1,8 +1,31 @@
 import dayjs from 'dayjs'
 import { prisma } from '@/db'
-import { isProjectEnv, type ProjectEnv } from '@/shared/types'
+import type { Project, ProjectFit } from '@/shared/types'
 
 const DEFAULT_ORG = 'org_default'
+
+// Single source of truth for shaping a Prisma project row into the domain
+// Project. Writes validate defaultFit, so the cast holds at the boundary.
+function toProject(
+  p: NonNullable<Awaited<ReturnType<typeof prisma.project.findFirst>>>,
+): Project {
+  return {
+    id: p.id,
+    orgId: p.orgId,
+    name: p.name,
+    origin: p.origin,
+    allowedOrigins: p.allowedOrigins,
+    color1: p.color1,
+    color2: p.color2,
+    autoFormat: p.autoFormat,
+    stripMetadata: p.stripMetadata,
+    defaultQuality: p.defaultQuality,
+    maxWidth: p.maxWidth,
+    defaultFit: p.defaultFit as ProjectFit,
+    defaultDpr: p.defaultDpr,
+    createdAt: dayjs(p.createdAt).format('MMM DD, YYYY'),
+  }
+}
 
 // Returns the id only when it belongs to a real project in the org, so an
 // unknown/stale ?project= id consistently collapses to "all projects" for both
@@ -26,40 +49,12 @@ export async function listProjects(orgId = DEFAULT_ORG) {
     where: { orgId },
     orderBy: { createdAt: 'asc' },
   })
-  return rows.map((project) => ({
-    id: project.id,
-    orgId: project.orgId,
-    name: project.name,
-    origin: project.origin,
-    env: isProjectEnv(project.env) ? project.env : 'production',
-    allowedOrigins: project.allowedOrigins,
-    color1: project.color1,
-    color2: project.color2,
-    autoFormat: project.autoFormat,
-    stripMetadata: project.stripMetadata,
-    defaultQuality: project.defaultQuality,
-    createdAt: dayjs(project.createdAt).format('MMM DD, YYYY'),
-  }))
+  return rows.map(toProject)
 }
 
 export async function getProject(id: string, orgId = DEFAULT_ORG) {
   const p = await prisma.project.findFirst({ where: { id, orgId } })
-  return p
-    ? {
-        id: p.id,
-        orgId: p.orgId,
-        name: p.name,
-        origin: p.origin,
-        env: isProjectEnv(p.env) ? p.env : 'production',
-        allowedOrigins: p.allowedOrigins,
-        color1: p.color1,
-        color2: p.color2,
-        autoFormat: p.autoFormat,
-        stripMetadata: p.stripMetadata,
-        defaultQuality: p.defaultQuality,
-        createdAt: dayjs(p.createdAt).format('MMM DD, YYYY'),
-      }
-    : undefined
+  return p ? toProject(p) : undefined
 }
 
 const COLOR_PRESETS = [
@@ -73,7 +68,6 @@ const COLOR_PRESETS = [
 
 export interface NewProjectInput {
   allowedOrigins?: string[]
-  env?: ProjectEnv
   name: string
   orgId: string
   origin: string
@@ -87,27 +81,13 @@ export async function createProject(input: NewProjectInput) {
       orgId: input.orgId,
       name: input.name,
       origin: input.origin,
-      env: input.env ?? 'production',
       allowedOrigins:
         input.allowedOrigins ?? deriveAllowedOriginsFromUrl(input.origin),
       color1: palette.color1,
       color2: palette.color2,
     },
   })
-  return {
-    id: created.id,
-    orgId: created.orgId,
-    name: created.name,
-    origin: created.origin,
-    env: isProjectEnv(created.env) ? created.env : 'production',
-    allowedOrigins: created.allowedOrigins,
-    color1: created.color1,
-    color2: created.color2,
-    autoFormat: created.autoFormat,
-    stripMetadata: created.stripMetadata,
-    defaultQuality: created.defaultQuality,
-    createdAt: dayjs(created.createdAt).format('MMM DD, YYYY'),
-  }
+  return toProject(created)
 }
 
 function deriveAllowedOriginsFromUrl(originUrl: string): string[] {
@@ -128,39 +108,13 @@ export async function addAllowedOrigin(
     return
   }
   if (p.allowedOrigins.includes(host)) {
-    return {
-      id: p.id,
-      orgId: p.orgId,
-      name: p.name,
-      origin: p.origin,
-      env: isProjectEnv(p.env) ? p.env : 'production',
-      allowedOrigins: p.allowedOrigins,
-      color1: p.color1,
-      color2: p.color2,
-      autoFormat: p.autoFormat,
-      stripMetadata: p.stripMetadata,
-      defaultQuality: p.defaultQuality,
-      createdAt: dayjs(p.createdAt).format('MMM DD, YYYY'),
-    }
+    return toProject(p)
   }
   const updated = await prisma.project.update({
     where: { id: projectId },
     data: { allowedOrigins: { push: host } },
   })
-  return {
-    id: updated.id,
-    orgId: updated.orgId,
-    name: updated.name,
-    origin: updated.origin,
-    env: isProjectEnv(updated.env) ? updated.env : 'production',
-    allowedOrigins: updated.allowedOrigins,
-    color1: updated.color1,
-    color2: updated.color2,
-    autoFormat: updated.autoFormat,
-    stripMetadata: updated.stripMetadata,
-    defaultQuality: updated.defaultQuality,
-    createdAt: dayjs(updated.createdAt).format('MMM DD, YYYY'),
-  }
+  return toProject(updated)
 }
 
 export async function removeAllowedOrigin(
@@ -184,27 +138,15 @@ export async function removeAllowedOrigin(
       },
     })
   })
-  return updated
-    ? {
-        id: updated.id,
-        orgId: updated.orgId,
-        name: updated.name,
-        origin: updated.origin,
-        env: isProjectEnv(updated.env) ? updated.env : 'production',
-        allowedOrigins: updated.allowedOrigins,
-        color1: updated.color1,
-        color2: updated.color2,
-        autoFormat: updated.autoFormat,
-        stripMetadata: updated.stripMetadata,
-        defaultQuality: updated.defaultQuality,
-        createdAt: dayjs(updated.createdAt).format('MMM DD, YYYY'),
-      }
-    : undefined
+  return updated ? toProject(updated) : undefined
 }
 
 export interface ProjectSettingsPatch {
   autoFormat?: boolean
+  defaultDpr?: number
+  defaultFit?: ProjectFit
   defaultQuality?: number
+  maxWidth?: number
   stripMetadata?: boolean
 }
 
@@ -217,26 +159,21 @@ export async function updateProjectSettings(
   if (!p) {
     return
   }
+  // maxWidth === 0 clears the cap; undefined leaves it unchanged.
+  let maxWidth = p.maxWidth
+  if (patch.maxWidth !== undefined) {
+    maxWidth = patch.maxWidth === 0 ? null : patch.maxWidth
+  }
   const updated = await prisma.project.update({
     where: { id: projectId },
     data: {
       autoFormat: patch.autoFormat ?? p.autoFormat,
       stripMetadata: patch.stripMetadata ?? p.stripMetadata,
       defaultQuality: patch.defaultQuality ?? p.defaultQuality,
+      defaultFit: patch.defaultFit ?? p.defaultFit,
+      defaultDpr: patch.defaultDpr ?? p.defaultDpr,
+      maxWidth,
     },
   })
-  return {
-    id: updated.id,
-    orgId: updated.orgId,
-    name: updated.name,
-    origin: updated.origin,
-    env: isProjectEnv(updated.env) ? updated.env : 'production',
-    allowedOrigins: updated.allowedOrigins,
-    color1: updated.color1,
-    color2: updated.color2,
-    autoFormat: updated.autoFormat,
-    stripMetadata: updated.stripMetadata,
-    defaultQuality: updated.defaultQuality,
-    createdAt: dayjs(updated.createdAt).format('MMM DD, YYYY'),
-  }
+  return toProject(updated)
 }

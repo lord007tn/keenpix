@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import {
   analyticsRangeSchema,
+  nonEmptyStringSchema,
   optionalNonEmptyParamSchema,
   stringArrayParamSchema,
 } from './common'
@@ -15,6 +16,11 @@ export const analyticsInputSchema = z.object({
 
 export const dashboardInputSchema = z.object({
   project: optionalNonEmptyParamSchema,
+  range: analyticsRangeSchema.catch('30d'),
+})
+
+export const allowedHostStatsSchema = z.object({
+  projectId: nonEmptyStringSchema(),
   range: analyticsRangeSchema.catch('30d'),
 })
 

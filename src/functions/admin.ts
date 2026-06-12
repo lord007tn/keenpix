@@ -11,8 +11,10 @@ import {
   revokeInvitation,
 } from '@/actions/admin/invitations'
 import {
+  getOperationsConfig,
   getOperationsHealth,
   runCacheMaintenance,
+  updateOperationsConfig,
 } from '@/actions/admin/operations'
 import { sendTestEmail, updateSmtpSettings } from '@/actions/admin/smtp'
 import { getAdminWorkspace } from '@/actions/admin/workspace'
@@ -23,6 +25,7 @@ import {
   cacheMaintenanceSchema,
   createInvitationSchema,
   invitationTokenSchema,
+  operationsConfigSchema,
   revokeInvitationSchema,
   sendTestEmailSchema,
   smtpSettingsSchema,
@@ -57,6 +60,24 @@ export const runCacheMaintenanceFn = createServerFn({ method: 'POST' })
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     return runCacheMaintenance(data)
+  })
+
+export const getOperationsConfigFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(({ context }) => {
+    requireSuperAdmin(context)
+    return getOperationsConfig()
+  })
+
+export const updateOperationsConfigFn = createServerFn({ method: 'POST' })
+  .inputValidator(operationsConfigSchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return updateOperationsConfig({
+      diskCacheMaxMb: data.diskCacheMaxMb,
+      memoryCacheMaxMb: data.memoryCacheMaxMb,
+    })
   })
 
 export const createApiKeyFn = createServerFn({ method: 'POST' })

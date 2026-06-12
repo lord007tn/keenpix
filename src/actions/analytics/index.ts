@@ -4,13 +4,15 @@ import {
   getAvailableFilters,
   getDomainBreakdown,
   getFormatDistribution,
+  getHostTraffic,
   getLatencyBins,
   getProjectBreakdown,
   getTimeSeries,
   getTopImages,
 } from '@/data-access/analytics'
-import { resolveProjectId } from '@/data-access/projects'
+import { getProject, resolveProjectId } from '@/data-access/projects'
 import type { analyticsInputSchema } from '@/schemas/analytics'
+import type { AllowedHostStat, AnalyticsRange } from '@/shared/types'
 
 export async function getAnalytics(
   input: z.output<typeof analyticsInputSchema>,
@@ -50,4 +52,36 @@ export async function getAnalytics(
     domainBreakdown,
     available,
   }
+}
+
+// Per-allowed-host stats for the project Settings → Security table. Joins the
+// project's allowlist with observed traffic so allowed-but-idle hosts show
+// zeroes and seen-but-unlisted hosts surface for review.
+export async function getAllowedHostStats(
+  projectId: string,
+  range: AnalyticsRange,
+): Promise<AllowedHostStat[]> {
+  const [project, traffic] = await Promise.all([
+    getProject(projectId),
+    getHostTraffic(range, projectId),
+  ])
+  const allowed = project?.allowedOrigins ?? []
+  const allowedSet = new Set(allowed)
+  const rows: AllowedHostStat[] = allowed.map((host) => {
+    const s = traffic.get(host)
+    return {
+      host,
+      allowed: true,
+      requests: s?.requests ?? 0,
+      hitRate: s?.hitRate ?? 0,
+      bandwidthSaved: s?.bandwidthSaved ?? 0,
+      lastSeen: s?.lastSeen ?? null,
+    }
+  })
+  for (const [host, s] of traffic) {
+    if (!allowedSet.has(host)) {
+      rows.push({ host, allowed: false, ...s })
+    }
+  }
+  return rows
 }
