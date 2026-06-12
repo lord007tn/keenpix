@@ -1,23 +1,50 @@
+# Dependency and package-manager caches
 node_modules
+.pnpm-store
+.yarn
+.npm
+
+# Build output and generated files
 .output
 .nitro
 .tanstack
 .vinxi
-.git
-.env
-.keenpix-cache
-.keenpix-cache-*/
-.agents
-.playwright-mcp
-dogfood-output
-src/generated
 dist
 dist-ssr
-extracted
-*.md
+src/generated
+
+# Local environment, data, and logs
+.env
+.env.*
+!.env.example
+*.log
+.keenpix-cache
+.keenpix-cache-*/
+
+# Git, CI, and agent/editor state
+.git
+.github
+.agents
+.claude
+.playwright-mcp
+.source
+
+# Tests, reports, and local validation artifacts
+tests
+dogfood-output
+test-results
+playwright-report
+coverage
+src/**/*.test.ts
+src/**/*.test.tsx
+src/**/*.spec.ts
+src/**/*.spec.tsx
 body*.txt
 *-validation-*.png
 clean-db-dashboard.png
+
+# Project docs that are not runtime MDX content
+*.md
+docs
+extracted
 skills-lock.json
-test-results
-playwright-report
