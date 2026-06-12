@@ -1,21 +1,10 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
-import type { CSSProperties } from 'react'
-import { AppSidebar } from '@/components/app/app-sidebar'
-import { AppTopbar } from '@/components/app/app-topbar'
+import { AppTopnav } from '@/components/app/app-topnav'
 import { RouteError } from '@/components/app/route-error'
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { getSessionFn } from '@/functions/auth'
 import { listProjectsFn } from '@/functions/projects'
 import { appPageHead } from '@/shared/seo'
 import { ProjectProvider } from '@/stores/project-context'
-
-const sidebarStyle: CSSProperties & {
-  '--header-height': string
-  '--sidebar-width': string
-} = {
-  '--sidebar-width': 'calc(var(--spacing) * 72)',
-  '--header-height': 'calc(var(--spacing) * 12)',
-}
 
 const APP_ROUTE_HEAD = appPageHead(
   'App',
@@ -50,15 +39,12 @@ function AppLayout() {
   const { user } = Route.useRouteContext()
   return (
     <ProjectProvider projects={projects}>
-      <SidebarProvider style={sidebarStyle}>
-        <AppSidebar user={user} />
-        <SidebarInset id="main-content">
-          <AppTopbar />
-          <div className="flex flex-1 flex-col overflow-auto">
-            <Outlet />
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
+      <div className="flex min-h-svh flex-col bg-background">
+        <AppTopnav user={user} />
+        <main className="flex flex-1 flex-col overflow-auto" id="main-content">
+          <Outlet />
+        </main>
+      </div>
     </ProjectProvider>
   )
 }
