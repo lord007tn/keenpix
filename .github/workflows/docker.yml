@@ -5,8 +5,18 @@ on:
     branches: [master]
     tags:
       - "v*"
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
   pull_request:
     branches: [master]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
 
 permissions:
   contents: read
@@ -58,10 +68,13 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: ./Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VERSION=${{ steps.meta.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=gha,scope=keenpix-image
+          cache-to: |
+            type=gha,mode=max,scope=keenpix-image,ignore-error=true

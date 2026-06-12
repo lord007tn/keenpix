@@ -3,11 +3,24 @@ name: CI
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
   pull_request:
     branches: [master]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
 
 permissions:
   contents: read
+
+env:
+  CI: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -29,9 +42,10 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0 --prefer-offline
 
       - name: Generate Prisma client
         run: pnpm exec prisma generate

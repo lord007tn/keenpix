@@ -4,30 +4,39 @@
 # Debian slim matches sharp's prebuilt Linux binaries cleanly.
 FROM node:22-slim AS base
 ENV PNPM_HOME=/pnpm
+ENV PNPM_STORE_DIR=/pnpm/store
 ENV PATH=$PNPM_HOME:$PATH
+WORKDIR /app
+
+FROM base AS runtime-deps
 # openssl keeps Prisma engine detection quiet at migrate time; curl powers the
 # Compose healthcheck without running a Node one-liner inside the container.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends curl openssl \
-  && rm -rf /var/lib/apt/lists/* \
-  && corepack enable && corepack prepare pnpm@10.30.3 --activate
-WORKDIR /app
+  && rm -rf /var/lib/apt/lists/*
 
-FROM base AS deps
-COPY package.json pnpm-lock.yaml ./
+FROM runtime-deps AS package-manager
+RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
+
+FROM package-manager AS deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-  pnpm install --frozen-lockfile --config.minimumReleaseAge=0 --store-dir=/pnpm/store
+  pnpm install --frozen-lockfile --config.minimumReleaseAge=0 --store-dir=$PNPM_STORE_DIR
 
-FROM base AS build
+FROM package-manager AS prod-deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+  pnpm install --prod --frozen-lockfile --config.minimumReleaseAge=0 --store-dir=$PNPM_STORE_DIR
+
+FROM deps AS build
 ARG VITE_KEENPIX_PUBLIC_URL
 ARG VERSION=0.1.0
 ENV VITE_KEENPIX_PUBLIC_URL=$VITE_KEENPIX_PUBLIC_URL
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm exec prisma generate
 RUN pnpm build
 
-FROM base AS runner
+FROM runtime-deps AS runner
 ARG VERSION=0.1.0
 ENV NODE_ENV=production
 ENV PORT=3000
@@ -42,7 +51,7 @@ LABEL org.opencontainers.image.title="Keenpix" \
   org.opencontainers.image.source="https://github.com/lord007tn/keenpix" \
   org.opencontainers.image.version=$VERSION
 COPY --from=build /app/.output ./.output
-COPY --from=build /app/node_modules ./node_modules
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/src/generated ./src/generated
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts ./prisma.config.ts
