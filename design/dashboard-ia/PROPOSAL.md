@@ -99,16 +99,32 @@ one hub with a left sub-nav that splits **Project** (General/Pipeline/Security) 
   section count grows.
 - **Best for:** leaning into the "analytics product" identity.
 
-## 5. Recommendation
+## 5. Recommendation & decision
 
-**Ship Approach B now; treat Approach A as the target.**
+The initial analysis offered **B** as the lowest-risk evolution and **A** as the
+long-term target. **After review, the selected direction is Approach C — Command
+center.** The reasoning: the global scope (all projects vs one) is the spine of this
+product, so making it a first-class **scope rail** — a filter, not a per-page mode — is
+the clearest way to serve both the bird's-eye and per-project data, and it gives the
+widest canvas for the dense charts and log tables Keenpix leans on.
 
-B is a small, safe refactor of the existing sidebar that already fixes every pain in
-§2 — and the route/loader work it needs (a real Fleet overview, surfacing the Workspace
-tabs as an Instance group, an inline project picker) is exactly the groundwork A
-needs too. If we later find power users juggling many projects, promoting the Project
-group into A's drill-down mode is then an incremental step, not a rewrite. C is the
-fallback if we decide to commit to a wider analytics-product layout.
+C has since been **refined so the all-projects ↔ per-project flow is explicit**:
+
+- A persistent **scope rail** puts *All projects* and each project on one axis. Picking
+  a project is a **filter** that the data tabs follow — not a separate navigation mode.
+- The **Overview reframes in place**: choose a project (from the rail *or* by clicking a
+  row in the comparison table) and the same tab swaps the fleet KPIs + comparison table
+  for that project's KPIs, chart, format mix and top images — with a one-click
+  "← All projects" way back.
+- **Analytics and Logs follow the same scope.** Logs swaps its **Project ↔ Domain**
+  column and filters rows to the active project (mirroring the real app today), with a
+  graceful empty state for projects that had no traffic in the window.
+- **Settings** stays a single hub that cleanly separates **Project**
+  (General/Pipeline/Security) from **Instance** (Product, API keys, Staff, Email) and
+  Account.
+
+B and A remain documented above as alternatives; B is still the cheapest path if scope
+ever needs to retreat to a simpler sidebar.
 
 ## 6. Mapping to the current code (if we proceed)
 
