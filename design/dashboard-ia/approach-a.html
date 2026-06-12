@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Keenpix · Dashboard IA — Approach A · Drill-down workspace</title>
+  <link rel="stylesheet" href="assets/keenpix.css" />
+  <style>
+    /* ---- approach-a layout glue (reuses tokens only) ---- */
+    .ribbon {
+      display: flex; align-items: center; gap: 16px;
+      padding: 10px 20px; border-bottom: 1px solid var(--border);
+      background: var(--background); position: sticky; top: 0; z-index: 40;
+    }
+    .ribbon__brand { font-size: 12px; color: var(--muted-foreground); white-space: nowrap; }
+    .ribbon__name { font-weight: 700; font-size: 13.5px; letter-spacing: -0.01em; }
+    .ribbon__tag { font-size: 12.5px; color: var(--muted-foreground); }
+    .ribbon__sep { width: 1px; height: 18px; background: var(--border); }
+    .ribbon__link { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted-foreground); padding: 5px 9px; border-radius: var(--radius-md); }
+    .ribbon__link:hover { background: var(--accent); color: var(--foreground); }
+
+    /* sidebar mode swap — the core of approach A */
+    .app:not(.in-project) #sb-project { display: none; }
+    .app.in-project #sb-fleet { display: none; }
+
+    /* fleet table sparkline tint */
+    .spark--up path { stroke: var(--success); }
+    .spark--down path { stroke: var(--warning); }
+
+    /* segmented control as buttons inside chart card */
+    .seg-btn { cursor: pointer; }
+
+    /* legend swatch helpers (token-based) */
+    .sw-1 { background: var(--chart-1); } .sw-2 { background: var(--chart-2); }
+    .sw-3 { background: var(--chart-3); } .sw-4 { background: var(--chart-4); }
+
+    /* removable host chip */
+    .chip--removable { padding-right: 6px; }
+    .chip__x { display: inline-flex; width: 16px; height: 16px; border-radius: 999px; align-items: center; justify-content: center; color: var(--muted-foreground); }
+    .chip__x:hover { background: var(--border); color: var(--foreground); }
+
+    .switcher__meta { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+    .switcher__title { font-weight: 600; font-size: 13.5px; }
+    .switcher__sub { font-size: 11.5px; color: var(--muted-foreground); }
+
+    .user-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: var(--radius-md); }
+    .user-row:hover { background: var(--sidebar-accent); }
+    .user-row__meta { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+
+    /* dense KPI footnote alignment */
+    .kpi__foot .delta { margin-left: 0; }
+
+    /* donut + legend row */
+    .donut-row { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+
+    /* logs table niceties */
+    .logs-table td, .logs-table th { padding: 7px 10px; }
+    .logs-table .mono { font-size: 11.5px; }
+
+    /* small chart segmented hover */
+    .segmented__item { cursor: pointer; }
+
+    @media (max-width: 720px) {
+      .ribbon__tag, .ribbon__brand { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== Ribbon (above app chrome) ===== -->
+  <div class="ribbon">
+    <span class="ribbon__brand">Keenpix · Dashboard IA</span>
+    <div class="ribbon__sep"></div>
+    <span class="ribbon__name">Approach A — Drill-down workspace</span>
+    <span class="ribbon__tag">Focus on one sphere at a time — the sidebar follows you in and out of a project.</span>
+    <div class="cluster" style="margin-left:auto;--gap:6px">
+      <a class="ribbon__link" href="index.html"><i data-icon="arrowLeft" class="icon icon-sm"></i> Gallery</a>
+      <button class="iconbtn" data-action="theme" title="Toggle theme">
+        <i data-icon="sun" class="icon"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== App shell ===== -->
+  <div class="app" data-app>
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar">
+
+      <!-- ---- FLEET MODE ---- -->
+      <div id="sb-fleet">
+        <div class="sidebar__header">
+          <button class="switcher to-project-switch">
+            <span class="scope-glyph"><i data-icon="layers" class="icon"></i></span>
+            <span class="switcher__meta fill">
+              <span class="switcher__title truncate">All projects</span>
+              <span class="switcher__sub">4 projects</span>
+            </span>
+            <i data-icon="selector" class="icon icon-sm muted"></i>
+          </button>
+        </div>
+
+        <div class="sidebar__body">
+          <div class="sidebar-group">
+            <div class="sidebar-group__label">Workspace</div>
+            <a class="navitem navitem--active" data-nav="fleet-overview" data-navgroup="fleet">
+              <i data-icon="overview" class="icon"></i> Overview
+            </a>
+            <a class="navitem" data-nav="fleet-projects" data-navgroup="fleet">
+              <i data-icon="projects" class="icon"></i> Projects
+              <span class="navitem__meta tnum">4</span>
+            </a>
+            <a class="navitem" data-nav="fleet-analytics" data-navgroup="fleet">
+              <i data-icon="chart" class="icon"></i> Analytics
+            </a>
+            <a class="navitem" data-nav="fleet-activity" data-navgroup="fleet">
+              <i data-icon="activity" class="icon"></i> Activity
+            </a>
+          </div>
+
+          <div class="sidebar-group">
+            <div class="sidebar-group__label">Instance</div>
+            <a class="navitem" data-nav="ops" data-navgroup="fleet">
+              <i data-icon="gauge" class="icon"></i> Operations
+              <span class="badge badge--warning">1</span>
+            </a>
+            <a class="navitem" data-nav="apikeys" data-navgroup="fleet">
+              <i data-icon="key" class="icon"></i> API keys
+            </a>
+            <a class="navitem" data-nav="staff" data-navgroup="fleet">
+              <i data-icon="users" class="icon"></i> Staff
+            </a>
+            <a class="navitem" data-nav="email" data-navgroup="fleet">
+              <i data-icon="mail" class="icon"></i> Email
+            </a>
+            <a class="navitem" data-nav="product-settings" data-navgroup="fleet">
+              <i data-icon="package" class="icon"></i> Product settings
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---- PROJECT MODE ---- -->
+      <div id="sb-project">
+        <div class="sidebar__header stack" style="--gap:6px">
+          <a class="backlink back-to-fleet">
+            <i data-icon="arrowLeft" class="icon icon-sm"></i> All projects
+          </a>
+          <button class="switcher">
+            <span class="proj-glyph" style="--c1:#FF6B2C;--c2:#FFA76B"></span>
+            <span class="switcher__meta fill">
+              <span class="switcher__title truncate">Demo Shop</span>
+              <span class="switcher__sub truncate">shop.demo.example</span>
+            </span>
+            <i data-icon="selector" class="icon icon-sm muted"></i>
+          </button>
+        </div>
+
+        <div class="sidebar__body">
+          <div class="sidebar-group">
+            <div class="sidebar-group__label">Project</div>
+            <a class="navitem navitem--active" data-nav="project-overview" data-navgroup="project">
+              <i data-icon="overview" class="icon"></i> Overview
+            </a>
+            <a class="navitem" data-nav="project-analytics" data-navgroup="project">
+              <i data-icon="chart" class="icon"></i> Analytics
+            </a>
+            <a class="navitem" data-nav="project-logs" data-navgroup="project">
+              <i data-icon="logs" class="icon"></i> Live logs
+              <span class="dot dot--live" style="margin-left:auto"></span>
+            </a>
+            <a class="navitem" data-nav="project-settings" data-navgroup="project">
+              <i data-icon="settings" class="icon"></i> Settings
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---- shared footer ---- -->
+      <div class="sidebar__footer stack" style="--gap:6px">
+        <a class="navitem" href="#" onclick="return false">
+          <i data-icon="docs" class="icon"></i> Documentation
+          <span class="navitem__meta">v0.1.5</span>
+        </a>
+        <div class="user-row">
+          <span class="avatar">A</span>
+          <span class="user-row__meta fill">
+            <span class="truncate semibold t-sm">Admin</span>
+            <span class="truncate t-xs muted">selfhost-admin@example.com</span>
+          </span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============ MAIN ============ -->
+    <div class="main">
+
+      <!-- topbar -->
+      <div class="topbar">
+        <button class="iconbtn" data-toggle-sidebar title="Toggle sidebar"><i data-icon="overview" class="icon"></i></button>
+        <nav class="breadcrumb">
+          <span class="crumb--muted" id="crumb-scope">All projects</span>
+          <i data-icon="chevronRight" class="icon icon-sm crumb-sep"></i>
+          <span id="crumb-section">Overview</span>
+        </nav>
+        <div class="cluster" style="margin-left:auto;--gap:8px">
+          <button class="btn btn--primary"><i data-icon="plus" class="icon icon-sm"></i> New project</button>
+          <button class="iconbtn" data-action="theme" title="Toggle theme"><i data-icon="moon" class="icon"></i></button>
+        </div>
+      </div>
+
+      <!-- ==================== FLEET: OVERVIEW (DEFAULT) ==================== -->
+      <section data-view="fleet-overview" class="is-active">
+        <div class="page">
+          <header class="page-header">
+            <div>
+              <div class="eyebrow"><i data-icon="layers" class="icon icon-sm"></i> All projects</div>
+              <h1 class="page-header__title">Fleet overview</h1>
+              <p class="page-header__subtitle">Bird's-eye view across every project on this Keenpix instance · last 30 days.</p>
+            </div>
+            <div class="cluster" style="--gap:8px">
+              <span class="segmented">
+                <span class="segmented__item">7d</span>
+                <span class="segmented__item segmented__item--active">30d</span>
+                <span class="segmented__item">90d</span>
+              </span>
+            </div>
+          </header>
+
+          <!-- fleet KPIs -->
+          <div class="stat-grid">
+            <div class="kpi">
+              <div class="kpi__label"><i data-icon="image" class="icon icon-sm"></i> Total images served</div>
+              <div class="kpi__value tnum">1.94<span class="u">M req</span></div>
+              <div class="kpi__foot"><span class="delta delta--up"><i data-icon="zap" class="icon icon-sm"></i> +12.4%</span> vs prev 30d</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi__label"><i data-icon="download" class="icon icon-sm"></i> Bandwidth saved</div>
+              <div class="kpi__value tnum">4.7<span class="u">TB</span></div>
+              <div class="kpi__foot"><span class="delta delta--up">+6.1%</span> savings 68.2%</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi__label"><i data-icon="database" class="icon icon-sm"></i> Cache hit rate</div>
+              <div class="kpi__value tnum">86.3<span class="u">%</span></div>
+              <div class="kpi__foot"><span class="delta delta--up">+1.8%</span> across 4 projects</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi__label"><i data-icon="gauge" class="icon icon-sm"></i> p95 latency</div>
+              <div class="kpi__value tnum">92<span class="u">ms</span></div>
+              <div class="kpi__foot"><span class="delta delta--up">7ms faster</span> p50 28ms</div>
+            </div>
+          </div>
+
+          <!-- requests area chart -->
+          <div class="card">
+            <div class="card__header between">
+              <div>
+                <div class="card__title">Traffic across the fleet</div>
+                <div class="card__desc">Combined requests for all projects, last 30 days</div>
+              </div>
+              <span class="segmented" data-chart-seg>
+                <span class="segmented__item segmented__item--active">Requests</span>
+                <span class="segmented__item">Bandwidth</span>
+                <span class="segmented__item">Cache</span>
+              </span>
+            </div>
+            <div class="card__body">
+              <div class="chart">
+                <svg viewBox="0 0 720 220" preserveAspectRatio="none">
+                  <line class="grid-line" x1="0" y1="40" x2="720" y2="40" />
+                  <line class="grid-line" x1="0" y1="110" x2="720" y2="110" />
+                  <line class="grid-line" x1="0" y1="180" x2="720" y2="180" />
+                  <polygon class="area-fill" points="0,170 60,160 120,168 180,140 240,148 300,118 360,128 420,96 480,104 540,72 600,80 660,52 720,46 720,220 0,220" />
+                  <polyline class="area-line" points="0,170 60,160 120,168 180,140 240,148 300,118 360,128 420,96 480,104 540,72 600,80 660,52 720,46" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- fleet project table -->
+          <div class="card card--flush">
+            <div class="card__header between">
+              <div>
+                <div class="card__title">Projects</div>
+                <div class="card__desc">Click a project to drill into its dedicated workspace</div>
+              </div>
+              <a class="btn btn--outline btn--sm" data-nav="fleet-projects" data-navgroup="fleet">View all</a>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Project</th>
+                    <th>Env</th>
+                    <th class="right">Requests 30d</th>
+                    <th class="right">Bandwidth saved</th>
+                    <th class="right">Hit rate</th>
+                    <th class="right">p95</th>
+                    <th>Trend</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="row-link to-project" data-nav="project-overview" data-navgroup="project">
+                    <td><span class="cluster" style="--gap:8px"><span class="proj-glyph proj-glyph--sm" style="--c1:#FF6B2C;--c2:#FFA76B"></span><span class="semibold">Demo Shop</span></span></td>
+                    <td><span class="badge badge--secondary">production</span></td>
+                    <td class="right tnum">642K</td>
+                    <td class="right tnum">1.3 TB</td>
+                    <td class="right tnum">88.1%</td>
+                    <td class="right tnum">78ms</td>
+                    <td><svg class="spark spark--up" viewBox="0 0 96 28"><path d="M0,22 12,20 24,21 36,15 48,17 60,11 72,12 84,6 96,5"/></svg></td>
+                    <td><span class="badge badge--success"><span class="dot"></span> Healthy</span></td>
+                  </tr>
+                  <tr class="row-link to-project" data-nav="project-overview" data-navgroup="project">
+                    <td><span class="cluster" style="--gap:8px"><span class="proj-glyph proj-glyph--sm" style="--c1:#7C5CFF;--c2:#B79CFF"></span><span class="semibold">Marketing Site</span></span></td>
+                    <td><span class="badge badge--secondary">production</span></td>
+                    <td class="right tnum">588K</td>
+                    <td class="right tnum">1.6 TB</td>
+                    <td class="right tnum">84.0%</td>
+                    <td class="right tnum">96ms</td>
+                    <td><svg class="spark spark--up" viewBox="0 0 96 28"><path d="M0,20 12,18 24,19 36,16 48,14 60,15 72,10 84,9 96,7"/></svg></td>
+                    <td><span class="badge badge--success"><span class="dot"></span> Healthy</span></td>
+                  </tr>
+                  <tr class="row-link to-project" data-nav="project-overview" data-navgroup="project">
+                    <td><span class="cluster" style="--gap:8px"><span class="proj-glyph proj-glyph--sm" style="--c1:#16B8A6;--c2:#6EE7D6"></span><span class="semibold">Mobile CDN</span></span></td>
+                    <td><span class="badge badge--secondary">production</span></td>
+                    <td class="right tnum">511K</td>
+                    <td class="right tnum">1.1 TB</td>
+                    <td class="right tnum">90.2%</td>
+                    <td class="right tnum">64ms</td>
+                    <td><svg class="spark spark--up" viewBox="0 0 96 28"><path d="M0,21 12,22 24,18 36,19 48,13 60,14 72,9 84,10 96,6"/></svg></td>
+                    <td><span class="badge badge--success"><span class="dot"></span> Healthy</span></td>
+                  </tr>
+                  <tr class="row-link to-project" data-nav="project-overview" data-navgroup="project">
+                    <td><span class="cluster" style="--gap:8px"><span class="proj-glyph proj-glyph--sm" style="--c1:#3A7BD5;--c2:#5DE3CE"></span><span class="semibold">Demo Blog</span></span></td>
+                    <td><span class="badge badge--outline">staging</span></td>
+                    <td class="right tnum">199K</td>
+                    <td class="right tnum">0.7 TB</td>
+                    <td class="right tnum">79.4%</td>
+                    <td class="right tnum">121ms</td>
+                    <td><svg class="spark spark--down" viewBox="0 0 96 28"><path d="M0,10 12,12 24,9 36,13 48,11 60,16 72,14 84,18 96,17"/></svg></td>
+                    <td><span class="badge badge--warning" title="elevated 5xx"><span class="dot"></span> Attention</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== FLEET: PROJECTS ==================== -->
+      <section data-view="fleet-projects">
+        <div class="page">
+          <header class="page-header">
+            <div>
+              <div class="eyebrow"><i data-icon="layers" class="icon icon-sm"></i> All projects</div>
+              <h1 class="page-header__title">Projects</h1>
+              <p class="page-header__subtitle">Every project served by this instance. Open one to enter its dedicated workspace.</p>
+            </div>
+            <button class="btn btn--primary"><i data-icon="plus" class="icon icon-sm"></i> New project</button>
+          </header>
+
+          <div class="card card--flush">
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Project</th>
+                    <th>Origin</th>
+                    <th>Env</th>
+                    <th class="right">Requests 30d</th>
+                    <th class="right">Bandwidth saved</th>
+                    <th class="right">Hit rate</th>
+                    <th class="right">p95</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="row-link to-project" data-nav="project-overview" data-navgroup="project">
+                    <td><span class="cluster" style="--gap:8px"><span class="proj-glyph proj-glyph--sm" style="--c1:#FF6B2C;--c2:#FFA76B"></span><span class="semibold">Demo Shop</span></span></td>
+                    <td class="mono t-xs muted">https://shop.demo.example</td>
+                    <td><span class="badge badge--secondary">production</span></td>
+                    <td class="right tnum">642K</td>
+                    <td class="right tnum">1.3 TB</td>
+                    <td class="right tnum">88.1%</td>
+                    <td class="right tnum">78ms</td>
+                    <td><span class="badge badge--success"><span class="dot"></span> Healthy</span></td>
+                    <td class="right"><i data-icon="chevronRight" class="icon icon-sm muted"></i></td>
+                  </tr>
+                  <tr class="row-link to-project" data-nav="project-overview" data-navgroup="project">
+                    <td><span class="cluster" style="--gap:8px"><span class="proj-glyph proj-glyph--sm" style="--c1:#7C5CFF;--c2:#B79CFF"></span><span class="semibold">Marketing Site</span></span></td>
+                    <td class="mono t-xs muted">https://www.acme.example</td>
+                    <td><span class="badge badge--secondary">production</span></td>
+                    <td class="right tnum">588K</td>
+                    <td class="right tnum">1.6 TB</td>
+                    <td class="right tnum">84.0%</td>
+                    <td class="right tnum">96ms</td>
+                    <td><span class="badge badge--success"><span class="dot"></span> Healthy</span></td>
+                    <td class="right"><i data-icon="chevronRight" class="icon icon-sm muted"></i></td>
+                  </tr>
+                  <tr class="row-link to-project" data-nav="project-overview" data-navgroup="project">
+                    <td><span class="cluster" style="--gap:8px"><span class="proj-glyph proj-glyph--sm" style="--c1:#16B8A6;--c2:#6EE7D6"></span><span class="semibold">Mobile CDN</span></span></td>
+                    <td class="mono t-xs muted">https://m.acme.example</td>
+                    <td><span class="badge badge--secondary">production</span></td>
+                    <td class="right tnum">511K</td>
+                    <td class="right tnum">1.1 TB</td>
+                    <td class="right tnum">90.2%</td>
+                    <td class="right tnum">64ms</td>
+                    <td><span class="badge badge--success"><span class="dot"></span> Healthy</span></td>
+                    <td class="right"><i data-icon="chevronRight" class="icon icon-sm muted"></i></td>
+                  </tr>
+                  <tr class="row-link to-project" data-nav="project-overview" data-navgroup="project">
+                    <td><span class="cluster" style="--gap:8px"><span class="proj-glyph proj-glyph--sm" style="--c1:#3A7BD5;--c2:#5DE3CE"></span><span class="semibold">Demo Blog</span></span></td>
+                    <td class="mono t-xs muted">https://blog.demo.example</td>
+                    <td><span class="badge badge--outline">staging</span></td>
+                    <td class="right tnum">199K</td>
+                    <td class="right tnum">0.7 TB</td>
+                    <td class="right tnum">79.4%</td>
+                    <td class="right tnum">121ms</td>
+                    <td><span class="badge badge--warning"><span class="dot"></span> Attention</span></td>
+                    <td class="right"><i data-icon="chevronRight" class="icon icon-sm muted"></i></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== FLEET: ANALYTICS ==================== -->
+      <section data-view="fleet-analytics">
+        <div class="page">
+          <header class="page-header">
+            <div>
+              <div class="eyebrow"><i data-icon="layers" class="icon icon-sm"></i> All projects</div>
+              <h1 class="page-header__title">Analytics</h1>
+              <p class="page-header__subtitle">Aggregate delivery analytics across every project · last 30 days.</p>
+            </div>
+            <span class="segmented">
+              <span class="segmented__item">7d</span>
+              <span class="segmented__item segmented__item--active">30d</span>
+              <span class="segmented__item">90d</span>
+            </span>
+          </header>
+
+          <div class="grid grid-12">
+            <div class="card col-8">
+              <div class="card__header between">
+                <div>
+                  <div class="card__title">Requests over time</div>
+                  <div class="card__desc">Fleet-wide, last 30 days</div>
+                </div>
+                <span class="segmented">
+                  <span class="segmented__item segmented__item--active">Requests</span>
+                  <span class="segmented__item">Bandwidth</span>
+                  <span class="segmented__item">Cache</span>
+                </span>
+              </div>
+              <div class="card__body">
+                <div class="chart">
+                  <svg viewBox="0 0 720 220" preserveAspectRatio="none">
+                    <line class="grid-line" x1="0" y1="40" x2="720" y2="40" />
+                    <line class="grid-line" x1="0" y1="110" x2="720" y2="110" />
+                    <line class="grid-line" x1="0" y1="180" x2="720" y2="180" />
+                    <polygon class="area-fill" points="0,170 60,160 120,168 180,140 240,148 300,118 360,128 420,96 480,104 540,72 600,80 660,52 720,46 720,220 0,220" />
+                    <polyline class="area-line" points="0,170 60,160 120,168 180,140 240,148 300,118 360,128 420,96 480,104 540,72 600,80 660,52 720,46" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div class="card col-4">
+              <div class="card__header">
+                <div class="card__title">Latency percentiles</div>
+                <div class="card__desc">Fleet aggregate</div>
+              </div>
+              <div class="card__body stack" style="--gap:14px">
+                <div class="stack" style="--gap:6px">
+                  <div class="between"><span class="t-sm muted">p50</span><span class="tnum semibold">28 ms</span></div>
+                  <div class="progress"><div class="progress__bar progress__bar--success" style="width:18%"></div></div>
+                </div>
+                <div class="stack" style="--gap:6px">
+                  <div class="between"><span class="t-sm muted">p95</span><span class="tnum semibold">92 ms</span></div>
+                  <div class="progress"><div class="progress__bar" style="width:55%"></div></div>
+                </div>
+                <div class="stack" style="--gap:6px">
+                  <div class="between"><span class="t-sm muted">p99</span><span class="tnum semibold">180 ms</span></div>
+                  <div class="progress"><div class="progress__bar progress__bar--warning" style="width:92%"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-2">
+            <div class="card">
+              <div class="card__header">
+                <div class="card__title">Format distribution</div>
+                <div class="card__desc">Output formats served across the fleet</div>
+              </div>
+              <div class="card__body">
+                <div class="donut-row">
+                  <div class="donut" style="background:conic-gradient(var(--chart-1) 0 46%, var(--chart-2) 46% 79%, var(--chart-4) 79% 93%, var(--chart-3) 93% 100%)">
+                    <div class="donut__center">
+                      <span class="t-lg semibold tnum">1.94M</span>
+                      <span class="t-xs muted">requests</span>
+                    </div>
+                  </div>
+                  <div class="legend fill">
+                    <div class="legend__row"><span class="legend__swatch sw-1"></span> AVIF <span class="fill right tnum muted">46%</span></div>
+                    <div class="legend__row"><span class="legend__swatch sw-2"></span> WebP <span class="fill right tnum muted">33%</span></div>
+                    <div class="legend__row"><span class="legend__swatch sw-4"></span> JPEG <span class="fill right tnum muted">14%</span></div>
+                    <div class="legend__row"><span class="legend__swatch sw-3"></span> PNG <span class="fill right tnum muted">7%</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card__header">
+                <div class="card__title">Top images</div>
+                <div class="card__desc">Most-requested across all projects</div>
+              </div>
+              <div class="card__body">
+                <div class="barlist">
+                  <div class="barlist__row"><span class="barlist__fill" style="width:100%"></span><span class="barlist__label">/products/hero.jpg</span><span class="barlist__value">84.2K</span></div>
+                  <div class="barlist__row"><span class="barlist__fill" style="width:72%"></span><span class="barlist__label">/products/gallery-1.jpg</span><span class="barlist__value">61.0K</span></div>
+                  <div class="barlist__row"><span class="barlist__fill" style="width:56%"></span><span class="barlist__label">/banners/spring-sale.png</span><span class="barlist__value">47.5K</span></div>
+                  <div class="barlist__row"><span class="barlist__fill" style="width:39%"></span><span class="barlist__label">/avatars/user-42.webp</span><span class="barlist__value">33.1K</span></div>
+                  <div class="barlist__row"><span class="barlist__fill" style="width:26%"></span><span class="barlist__label">/posts/cover.jpg</span><span class="barlist__value">21.8K</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== FLEET: ACTIVITY ==================== -->
+      <section data-view="fleet-activity">
+        <div class="page page--narrow">
+          <header class="page-header">
+            <div>
+              <div class="eyebrow"><i data-icon="layers" class="icon icon-sm"></i> All projects</div>
+              <h1 class="page-header__title">Activity</h1>
+              <p class="page-header__subtitle">Recent administrative and delivery events across the instance.</p>
+            </div>
+          </header>
+
+          <div class="card">
+            <div class="card__body--pad stack card-divide" style="--gap:0">
+              <div class="cluster" style="--gap:12px;padding:12px 0">
+                <span class="scope-glyph scope-glyph--muted"><i data-icon="zap" class="icon icon-sm"></i></span>
+                <div class="fill"><div class="semibold t-sm">Demo Blog flagged for attention</div><div class="t-xs muted">Elevated 5xx rate on staging origin</div></div>
+                <span class="t-xs muted cluster" style="--gap:4px"><i data-icon="clock" class="icon icon-sm"></i> 8m ago</span>
+              </div>
+              <div class="cluster" style="--gap:12px;padding:12px 0">
+                <span class="scope-glyph scope-glyph--muted"><i data-icon="key" class="icon icon-sm"></i></span>
+                <div class="fill"><div class="semibold t-sm">CI Pipeline key used</div><div class="t-xs muted">1,204 requests in the last hour</div></div>
+                <span class="t-xs muted cluster" style="--gap:4px"><i data-icon="clock" class="icon icon-sm"></i> 1h ago</span>
+              </div>
+              <div class="cluster" style="--gap:12px;padding:12px 0">
+                <span class="scope-glyph scope-glyph--muted"><i data-icon="disk" class="icon icon-sm"></i></span>
+                <div class="fill"><div class="semibold t-sm">Disk cache eviction</div><div class="t-xs muted">Evicted 1,204 files (3.1 GB) since boot</div></div>
+                <span class="t-xs muted cluster" style="--gap:4px"><i data-icon="clock" class="icon icon-sm"></i> 3h ago</span>
+              </div>
+              <div class="cluster" style="--gap:12px;padding:12px 0">
+                <span class="scope-glyph scope-glyph--muted"><i data-icon="users" class="icon icon-sm"></i></span>
+                <div class="fill"><div class="semibold t-sm">Teammate invited</div><div class="t-xs muted">devops@acme.example invited as staff</div></div>
+                <span class="t-xs muted cluster" style="--gap:4px"><i data-icon="clock" class="icon icon-sm"></i> 6h ago</span>
+              </div>
+              <div class="cluster" style="--gap:12px;padding:12px 0">
+                <span class="scope-glyph scope-glyph--muted"><i data-icon="package" class="icon icon-sm"></i></span>
+                <div class="fill"><div class="semibold t-sm">Instance booted</div><div class="t-xs muted">Keenpix v0.1.5 · served 1,940,233 requests since</div></div>
+                <span class="t-xs muted cluster" style="--gap:4px"><i data-icon="clock" class="icon icon-sm"></i> 14h ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== INSTANCE: OPERATIONS ==================== -->
+      <section data-view="ops">
+        <div class="page">
+          <header class="page-header">
+            <div>
+              <div class="eyebrow"><i data-icon="gauge" class="icon icon-sm"></i> Instance</div>
+              <h1 class="page-header__title">Operations</h1>
+              <p class="page-header__subtitle">Health of the self-hosted Keenpix instance — caches, queue, and workers.</p>
+            </div>
+            <div class="cluster" style="--gap:6px">
+              <span class="badge badge--secondary">4 projects</span>
+              <span class="badge badge--warning">1 active transform</span>
+              <span class="badge badge--success">86% cache hits</span>
+            </div>
+          </header>
+
+          <div class="grid grid-3">
+            <div class="card">
+              <div class="card__header between">
+                <div class="card__title cluster" style="--gap:8px"><i data-icon="disk" class="icon"></i> Disk cache</div>
+                <span class="badge badge--secondary tnum">62%</span>
+              </div>
+              <div class="card__body stack" style="--gap:12px">
+                <div>
+                  <div class="between"><span class="t-sm muted">6.2 GB <span class="muted">/ 10 GB</span></span><span class="t-xs muted tnum">18,432 files</span></div>
+                  <div class="progress" style="margin-top:8px"><div class="progress__bar" style="width:62%"></div></div>
+                </div>
+                <div class="t-xs muted">Evicted 1,204 files (3.1 GB) since boot.</div>
+                <button class="btn btn--outline btn--sm" style="align-self:flex-start"><i data-icon="disk" class="icon icon-sm"></i> Clear disk cache</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header between">
+                <div class="card__title cluster" style="--gap:8px"><i data-icon="database" class="icon"></i> Memory cache</div>
+                <span class="badge badge--secondary tnum">55%</span>
+              </div>
+              <div class="card__body stack" style="--gap:12px">
+                <div>
+                  <div class="between"><span class="t-sm muted">142 MB <span class="muted">/ 256 MB</span></span><span class="t-xs muted tnum">2,310 hot items</span></div>
+                  <div class="progress" style="margin-top:8px"><div class="progress__bar" style="width:55%"></div></div>
+                </div>
+                <div class="t-xs muted">In-memory LRU of the hottest transforms.</div>
+                <button class="btn btn--outline btn--sm" style="align-self:flex-start"><i data-icon="database" class="icon icon-sm"></i> Clear memory cache</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header between">
+                <div class="card__title cluster" style="--gap:8px"><i data-icon="server" class="icon"></i> Transform queue</div>
+                <span class="badge badge--success">healthy</span>
+              </div>
+              <div class="card__body stack" style="--gap:12px">
+                <div>
+                  <div class="between"><span class="t-sm muted">3 queued <span class="muted">/ 64 max</span></span><span class="t-xs muted tnum">8 workers</span></div>
+                  <div class="progress" style="margin-top:8px"><div class="progress__bar progress__bar--success" style="width:5%"></div></div>
+                </div>
+                <div class="t-xs muted">0 rejected since boot.</div>
+                <button class="btn btn--ghost btn--sm" style="align-self:flex-start"><i data-icon="activity" class="icon icon-sm"></i> View workers</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="alert">
+            <i data-icon="info" class="icon"></i>
+            <div>
+              <div class="alert__title">Instance uptime 14h 22m</div>
+              <div class="alert__desc muted">Served 1,940,233 requests since boot.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== INSTANCE: API KEYS ==================== -->
+      <section data-view="apikeys">
+        <div class="page">
+          <header class="page-header">
+            <div>
+              <div class="eyebrow"><i data-icon="key" class="icon icon-sm"></i> Instance</div>
+              <h1 class="page-header__title">API keys</h1>
+              <p class="page-header__subtitle">Internal keys for trusted backend integrations.</p>
+            </div>
+            <button class="btn btn--primary"><i data-icon="plus" class="icon icon-sm"></i> New key</button>
+          </header>
+
+          <div class="alert">
+            <i data-icon="shield" class="icon"></i>
+            <div>
+              <div class="alert__title">Internal keys only</div>
+              <div class="alert__desc muted">These keys are for trusted backend integrations — they are <strong>NOT</strong> used by the public image transform endpoint.</div>
+            </div>
+          </div>
+
+          <div class="card card--flush">
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr><th>Name</th><th>Prefix</th><th class="right">Requests</th><th>Last used</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="semibold">Demo Integration</td>
+                    <td><span class="code">kpx_demo…</span></td>
+                    <td class="right tnum">37</td>
+                    <td class="muted">2m ago</td>
+                    <td><span class="badge badge--success">Enabled</span></td>
+                    <td class="right"><button class="btn btn--ghost btn--sm"><i data-icon="copy" class="icon icon-sm"></i></button></td>
+                  </tr>
+                  <tr>
+                    <td class="semibold">CI Pipeline</td>
+                    <td><span class="code">kpx_ci…</span></td>
+                    <td class="right tnum">1,204</td>
+                    <td class="muted">1h ago</td>
+                    <td><span class="badge badge--success">Enabled</span></td>
+                    <td class="right"><button class="btn btn--ghost btn--sm"><i data-icon="copy" class="icon icon-sm"></i></button></td>
+                  </tr>
+                  <tr>
+                    <td class="semibold">Legacy Importer</td>
+                    <td><span class="code">kpx_leg…</span></td>
+                    <td class="right tnum">0</td>
+                    <td class="muted">never</td>
+                    <td><span class="badge badge--outline">Disabled</span></td>
+                    <td class="right"><button class="btn btn--ghost btn--sm"><i data-icon="copy" class="icon icon-sm"></i></button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== INSTANCE: STAFF ==================== -->
+      <section data-view="staff">
+        <div class="page">
+          <header class="page-header">
+            <div>
+              <div class="eyebrow"><i data-icon="users" class="icon icon-sm"></i> Instance</div>
+              <h1 class="page-header__title">Staff</h1>
+              <p class="page-header__subtitle">People with access to this Keenpix instance.</p>
+            </div>
+            <button class="btn btn--primary"><i data-icon="plus" class="icon icon-sm"></i> Invite teammate</button>
+          </header>
+
+          <div class="card card--flush">
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr><th>Member</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="cluster" style="--gap:8px"><span class="avatar" style="width:26px;height:26px;font-size:11px">A</span><span class="semibold">Admin <span class="muted t-xs">(you)</span></span></span></td>
+                    <td class="muted">selfhost-admin@example.com</td>
+                    <td><span class="badge badge--primary">super_admin</span></td>
+                    <td><span class="cluster t-sm" style="--gap:6px"><span class="dot" style="color:var(--success)"></span> Active</span></td>
+                    <td class="right"><i data-icon="chevronRight" class="icon icon-sm muted"></i></td>
+                  </tr>
+                  <tr>
+                    <td><span class="cluster" style="--gap:8px"><span class="avatar" style="width:26px;height:26px;font-size:11px;background:var(--chart-2)">M</span><span class="semibold">Maria Ortiz</span></span></td>
+                    <td class="muted">maria@acme.example</td>
+                    <td><span class="badge badge--secondary">staff</span></td>
+                    <td><span class="cluster t-sm" style="--gap:6px"><span class="dot" style="color:var(--success)"></span> Active</span></td>
+                    <td class="right"><i data-icon="chevronRight" class="icon icon-sm muted"></i></td>
+                  </tr>
+                  <tr>
+                    <td><span class="cluster" style="--gap:8px"><span class="avatar scope-glyph--muted" style="width:26px;height:26px;font-size:11px">?</span><span class="muted">(pending invite)</span></span></td>
+                    <td class="muted">devops@acme.example</td>
+                    <td><span class="badge badge--secondary">staff</span></td>
+                    <td><span class="badge badge--warning">Invited · expires in 6 days</span></td>
+                    <td class="right"><i data-icon="chevronRight" class="icon icon-sm muted"></i></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== INSTANCE: EMAIL ==================== -->
+      <section data-view="email">
+        <div class="page page--narrow">
+          <header class="page-header">
+            <div>
+              <div class="eyebrow"><i data-icon="mail" class="icon icon-sm"></i> Instance</div>
+              <h1 class="page-header__title">Email / SMTP</h1>
+              <p class="page-header__subtitle">Outbound mail for invites, alerts, and password resets.</p>
+            </div>
+          </header>
+
+          <div class="card">
+            <div class="card__body--pad stack card-divide" style="--gap:0">
+              <div class="setting">
+                <div><div class="setting__label">Enabled</div><div class="setting__desc">Allow this instance to send transactional email.</div></div>
+                <div class="setting__control"><button class="switch switch--on" data-toggle></button></div>
+              </div>
+              <div class="setting">
+                <div><div class="setting__label">Host</div><div class="setting__desc">SMTP server hostname.</div></div>
+                <div class="setting__control" style="width:240px"><input class="input mono" value="smtp.acme.example" /></div>
+              </div>
+              <div class="setting">
+                <div><div class="setting__label">Port</div><div class="setting__desc">Standard submission port.</div></div>
+                <div class="setting__control" style="width:120px"><input class="input tnum" value="587" /></div>
+              </div>
+              <div class="setting">
+                <div><div class="setting__label">Security</div><div class="setting__desc">Connection encryption.</div></div>
+                <div class="setting__control">
+                  <span class="segmented">
+                    <span class="segmented__item">None</span>
+                    <span class="segmented__item">SSL</span>
+                    <span class="segmented__item segmented__item--active">TLS</span>
+                  </span>
+                </div>
+              </div>
+              <div class="setting">
+                <div><div class="setting__label">From address</div><div class="setting__desc">Sender shown on outbound mail.</div></div>
+                <div class="setting__control" style="width:280px"><input class="input" value="Keenpix &lt;noreply@acme.example&gt;" /></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cluster" style="--gap:8px">
+            <button class="btn btn--primary"><i data-icon="check" class="icon icon-sm"></i> Save changes</button>
+            <button class="btn btn--outline"><i data-icon="mail" class="icon icon-sm"></i> Send test email</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== INSTANCE: PRODUCT SETTINGS ==================== -->
+      <section data-view="product-settings">
+        <div class="page page--narrow">
+          <header class="page-header">
+            <div>
+              <div class="eyebrow"><i data-icon="package" class="icon icon-sm"></i> Instance</div>
+              <h1 class="page-header__title">Product settings</h1>
+              <p class="page-header__subtitle">Global configuration applied to the whole instance — these are not per-project.</p>
+            </div>
+          </header>
+
+          <div class="card">
+            <div class="card__header"><div class="card__title">General</div></div>
+            <div class="card__body--pad stack card-divide" style="--gap:0;padding-top:0">
+              <div class="setting">
+                <div><div class="setting__label">Instance name</div><div class="setting__desc">Shown in the dashboard and outbound mail.</div></div>
+                <div class="setting__control" style="width:240px"><input class="input" value="Keenpix" /></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__header"><div class="card__title">Caching &amp; transforms</div></div>
+            <div class="card__body--pad stack card-divide" style="--gap:0;padding-top:0">
+              <div class="setting">
+                <div><div class="setting__label">Disk cache cap</div><div class="setting__desc">Maximum on-disk cache size before eviction.</div></div>
+                <div class="setting__control" style="width:140px"><input class="input tnum" value="10 GB" /></div>
+              </div>
+              <div class="setting">
+                <div><div class="setting__label">Memory cache cap</div><div class="setting__desc">Maximum in-memory LRU size.</div></div>
+                <div class="setting__control" style="width:140px"><input class="input tnum" value="256 MB" /></div>
+              </div>
+              <div class="setting">
+                <div><div class="setting__label">Transform concurrency</div><div class="setting__desc">Worker threads and queue depth.</div></div>
+                <div class="setting__control cluster" style="--gap:8px">
+                  <input class="input tnum" style="width:110px" value="8 workers" />
+                  <input class="input tnum" style="width:110px" value="Max queue 64" />
+                </div>
+              </div>
+              <div class="setting">
+                <div><div class="setting__label">Allowed output formats</div><div class="setting__desc">Formats the transform endpoint may emit.</div></div>
+                <div class="setting__control cluster" style="--gap:6px;max-width:280px;justify-content:flex-end">
+                  <span class="chip">AVIF</span><span class="chip">WebP</span><span class="chip">JPEG</span><span class="chip">PNG</span>
+                  <span class="chip">GIF</span><span class="chip">HEIF</span><span class="chip">TIFF</span><span class="chip">SVG</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__header"><div class="card__title">Security</div></div>
+            <div class="card__body--pad stack card-divide" style="--gap:0;padding-top:0">
+              <div class="setting">
+                <div><div class="setting__label">SSRF / private-network block</div><div class="setting__desc">Blocks requests to private IP ranges.</div></div>
+                <div class="setting__control"><button class="switch switch--on" data-toggle></button></div>
+              </div>
+              <div class="setting">
+                <div><div class="setting__label">Immutable cache headers</div><div class="setting__desc">Serve transformed images with long-lived immutable caching.</div></div>
+                <div class="setting__control"><button class="switch switch--on" data-toggle></button></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cluster"><button class="btn btn--primary"><i data-icon="check" class="icon icon-sm"></i> Save changes</button></div>
+        </div>
+      </section>
+
+      <!-- ==================== ACCOUNT ==================== -->
+      <section data-view="account">
+        <div class="page page--narrow">
+          <header class="page-header">
+            <div>
+              <div class="eyebrow"><i data-icon="users" class="icon icon-sm"></i> Account</div>
+              <h1 class="page-header__title">Your account</h1>
+              <p class="page-header__subtitle">Personal profile and appearance preferences.</p>
+            </div>
+          </header>
+
+          <div class="card">
+            <div class="card__header"><div class="card__title">Profile</div></div>
+            <div class="card__body--pad">
+              <div class="cluster" style="--gap:14px">
+                <span class="avatar avatar--lg">A</span>
+                <div class="fill">
+                  <div class="semibold t-lg">Admin</div>
+                  <div class="muted t-sm">selfhost-admin@example.com</div>
+                </div>
+                <span class="badge badge--secondary">Email &amp; password</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__header"><div class="card__title">Appearance</div></div>
+            <div class="card__body--pad">
+              <div class="setting" style="padding-top:0">
+                <div><div class="setting__label">Theme</div><div class="setting__desc">Match the dashboard to your preference.</div></div>
+                <div class="setting__control">
+                  <span class="segmented">
+                    <span class="segmented__item">Light</span>
+                    <span class="segmented__item">Dark</span>
+                    <span class="segmented__item segmented__item--active">System</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== PROJECT: OVERVIEW ==================== -->
+      <section data-view="project-overview">
+        <div class="page">
+          <header class="page-header">
+            <div>
+              <div class="eyebrow"><span class="proj-glyph proj-glyph--sm" style="--c1:#FF6B2C;--c2:#FFA76B;width:16px;height:16px"></span> Demo Shop <span class="badge badge--success">production</span></div>
+              <h1 class="page-header__title">Overview</h1>
+              <p class="page-header__subtitle">https://shop.demo.example · last 30 days</p>
+            </div>
+            <span class="segmented">
+              <span class="segmented__item">7d</span>
+              <span class="segmented__item segmented__item--active">30d</span>
+              <span class="segmented__item">90d</span>
+            </span>
+          </header>
+
+          <div class="stat-grid">
+            <div class="kpi">
+              <div class="kpi__label"><i data-icon="image" class="icon icon-sm"></i> Images served</div>
+              <div class="kpi__value tnum">642<span class="u">K</span></div>
+              <div class="kpi__foot"><span class="delta delta--up">+9.2%</span> vs prev 30d</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi__label"><i data-icon="download" class="icon icon-sm"></i> Bandwidth saved</div>
+              <div class="kpi__value tnum">1.3<span class="u">TB</span></div>
+              <div class="kpi__foot"><span class="delta delta--up">+4.4%</span> savings 71.0%</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi__label"><i data-icon="database" class="icon icon-sm"></i> Cache hit rate</div>
+              <div class="kpi__value tnum">88.1<span class="u">%</span></div>
+              <div class="kpi__foot"><span class="delta delta--up">+2.1%</span> last 30d</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi__label"><i data-icon="gauge" class="icon icon-sm"></i> p95 latency</div>
+              <div class="kpi__value tnum">78<span class="u">ms</span></div>
+              <div class="kpi__foot"><span class="delta delta--up">5ms faster</span> p50 28ms</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__header between">
+              <div>
+                <div class="card__title">Requests over time</div>
+                <div class="card__desc">Demo Shop, last 30 days</div>
+              </div>
+              <span class="segmented">
+                <span class="segmented__item segmented__item--active">Requests</span>
+                <span class="segmented__item">Bandwidth</span>
+                <span class="segmented__item">Cache</span>
+              </span>
+            </div>
+            <div class="card__body">
+              <div class="chart">
+                <svg viewBox="0 0 720 220" preserveAspectRatio="none">
+                  <line class="grid-line" x1="0" y1="40" x2="720" y2="40" />
+                  <line class="grid-line" x1="0" y1="110" x2="720" y2="110" />
+                  <line class="grid-line" x1="0" y1="180" x2="720" y2="180" />
+                  <polygon class="area-fill" points="0,175 60,165 120,170 180,150 240,156 300,128 360,138 420,108 480,116 540,86 600,94 660,66 720,58 720,220 0,220" />
+                  <polyline class="area-line" points="0,175 60,165 120,170 180,150 240,156 300,128 360,138 420,108 480,116 540,86 600,94 660,66 720,58" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-2">
+            <div class="card">
+              <div class="card__header">
+                <div class="card__title">Format distribution</div>
+                <div class="card__desc">Output formats served for Demo Shop</div>
+              </div>
+              <div class="card__body">
+                <div class="donut-row">
+                  <div class="donut" style="background:conic-gradient(var(--chart-1) 0 46%, var(--chart-2) 46% 79%, var(--chart-4) 79% 93%, var(--chart-3) 93% 100%)">
+                    <div class="donut__center">
+                      <span class="t-lg semibold tnum">642K</span>
+                      <span class="t-xs muted">requests</span>
+                    </div>
+                  </div>
+                  <div class="legend fill">
+                    <div class="legend__row"><span class="legend__swatch sw-1"></span> AVIF <span class="fill right tnum muted">46%</span></div>
+                    <div class="legend__row"><span class="legend__swatch sw-2"></span> WebP <span class="fill right tnum muted">33%</span></div>
+                    <div class="legend__row"><span class="legend__swatch sw-4"></span> JPEG <span class="fill right tnum muted">14%</span></div>
+                    <div class="legend__row"><span class="legend__swatch sw-3"></span> PNG <span class="fill right tnum muted">7%</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card__header">
+                <div class="card__title">Top images</div>
+                <div class="card__desc">Most-requested paths</div>
+              </div>
+              <div class="card__body">
+                <div class="barlist">
+                  <div class="barlist__row"><span class="barlist__fill" style="width:100%"></span><span class="barlist__label">/products/hero.jpg</span><span class="barlist__value">84.2K</span></div>
+                  <div class="barlist__row"><span class="barlist__fill" style="width:72%"></span><span class="barlist__label">/products/gallery-1.jpg</span><span class="barlist__value">61.0K</span></div>
+                  <div class="barlist__row"><span class="barlist__fill" style="width:56%"></span><span class="barlist__label">/banners/spring-sale.png</span><span class="barlist__value">47.5K</span></div>
+                  <div class="barlist__row"><span class="barlist__fill" style="width:39%"></span><span class="barlist__label">/avatars/user-42.webp</span><span class="barlist__value">33.1K</span></div>
+                  <div class="barlist__row"><span class="barlist__fill" style="width:26%"></span><span class="barlist__label">/posts/cover.jpg</span><span class="barlist__value">21.8K</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== PROJECT: ANALYTICS ==================== -->
+      <section data-view="project-analytics">
+        <div class="page">
+          <header class="page-header">
+            <div>
+              <div class="eyebrow"><span class="proj-glyph proj-glyph--sm" style="--c1:#FF6B2C;--c2:#FFA76B;width:16px;height:16px"></span> Demo Shop <span class="badge badge--success">production</span></div>
+              <h1 class="page-header__title">Analytics</h1>
+              <p class="page-header__subtitle">Delivery and latency breakdown · last 30 days.</p>
+            </div>
+            <span class="segmented">
+              <span class="segmented__item">7d</span>
+              <span class="segmented__item segmented__item--active">30d</span>
+              <span class="segmented__item">90d</span>
+            </span>
+          </header>
+
+          <div class="grid grid-12">
+            <div class="card col-8">
+              <div class="card__header between">
+                <div>
+                  <div class="card__title">Requests over time</div>
+                  <div class="card__desc">Demo Shop, last 30 days</div>
+                </div>
+                <span class="segmented">
+                  <span class="segmented__item segmented__item--active">Requests</span>
+                  <span class="segmented__item">Bandwidth</span>
+                  <span class="segmented__item">Cache</span>
+                </span>
+              </div>
+              <div class="card__body">
+                <div class="chart">
+                  <svg viewBox="0 0 720 220" preserveAspectRatio="none">
+                    <line class="grid-line" x1="0" y1="40" x2="720" y2="40" />
+                    <line class="grid-line" x1="0" y1="110" x2="720" y2="110" />
+                    <line class="grid-line" x1="0" y1="180" x2="720" y2="180" />
+                    <polygon class="area-fill" points="0,175 60,165 120,170 180,150 240,156 300,128 360,138 420,108 480,116 540,86 600,94 660,66 720,58 720,220 0,220" />
+                    <polyline class="area-line" points="0,175 60,165 120,170 180,150 240,156 300,128 360,138 420,108 480,116 540,86 600,94 660,66 720,58" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div class="card col-4">
+              <div class="card__header">
+                <div class="card__title">Latency percentiles</div>
+                <div class="card__desc">Demo Shop</div>
+              </div>
+              <div class="card__body stack" style="--gap:14px">
+                <div class="stack" style="--gap:6px">
+                  <div class="between"><span class="t-sm muted">p50</span><span class="tnum semibold">28 ms</span></div>
+                  <div class="progress"><div class="progress__bar progress__bar--success" style="width:16%"></div></div>
+                </div>
+                <div class="stack" style="--gap:6px">
+                  <div class="between"><span class="t-sm muted">p95</span><span class="tnum semibold">78 ms</span></div>
+                  <div class="progress"><div class="progress__bar" style="width:44%"></div></div>
+                </div>
+                <div class="stack" style="--gap:6px">
+                  <div class="between"><span class="t-sm muted">p99</span><span class="tnum semibold">180 ms</span></div>
+                  <div class="progress"><div class="progress__bar progress__bar--warning" style="width:92%"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-2">
+            <div class="card">
+              <div class="card__header">
+                <div class="card__title">Format distribution</div>
+              </div>
+              <div class="card__body">
+                <div class="donut-row">
+                  <div class="donut" style="background:conic-gradient(var(--chart-1) 0 46%, var(--chart-2) 46% 79%, var(--chart-4) 79% 93%, var(--chart-3) 93% 100%)">
+                    <div class="donut__center"><span class="t-lg semibold tnum">642K</span><span class="t-xs muted">requests</span></div>
+                  </div>
+                  <div class="legend fill">
+                    <div class="legend__row"><span class="legend__swatch sw-1"></span> AVIF <span class="fill right tnum muted">46%</span></div>
+                    <div class="legend__row"><span class="legend__swatch sw-2"></span> WebP <span class="fill right tnum muted">33%</span></div>
+                    <div class="legend__row"><span class="legend__swatch sw-4"></span> JPEG <span class="fill right tnum muted">14%</span></div>
+                    <div class="legend__row"><span class="legend__swatch sw-3"></span> PNG <span class="fill right tnum muted">7%</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card__header"><div class="card__title">Top images</div></div>
+              <div class="card__body">
+                <div class="barlist">
+                  <div class="barlist__row"><span class="barlist__fill" style="width:100%"></span><span class="barlist__label">/products/hero.jpg</span><span class="barlist__value">84.2K</span></div>
+                  <div class="barlist__row"><span class="barlist__fill" style="width:72%"></span><span class="barlist__label">/products/gallery-1.jpg</span><span class="barlist__value">61.0K</span></div>
+                  <div class="barlist__row"><span class="barlist__fill" style="width:56%"></span><span class="barlist__label">/banners/spring-sale.png</span><span class="barlist__value">47.5K</span></div>
+                  <div class="barlist__row"><span class="barlist__fill" style="width:39%"></span><span class="barlist__label">/avatars/user-42.webp</span><span class="barlist__value">33.1K</span></div>
+                  <div class="barlist__row"><span class="barlist__fill" style="width:26%"></span><span class="barlist__label">/posts/cover.jpg</span><span class="barlist__value">21.8K</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== PROJECT: LIVE LOGS ==================== -->
+      <section data-view="project-logs">
+        <div class="page">
+          <header class="page-header">
+            <div>
+              <div class="eyebrow"><span class="proj-glyph proj-glyph--sm" style="--c1:#FF6B2C;--c2:#FFA76B;width:16px;height:16px"></span> Demo Shop <span class="badge badge--success">production</span></div>
+              <h1 class="page-header__title">Live logs</h1>
+              <p class="page-header__subtitle">Real-time transform requests for this project.</p>
+            </div>
+            <div class="cluster" style="--gap:8px">
+              <button class="btn btn--success btn--sm"><span class="dot dot--live"></span> Live</button>
+              <button class="btn btn--outline btn--sm"><i data-icon="download" class="icon icon-sm"></i> NDJSON</button>
+            </div>
+          </header>
+
+          <div class="card card--flush">
+            <div class="card__header between" style="flex-wrap:wrap;gap:12px">
+              <div class="search" style="flex:1;min-width:200px;max-width:360px">
+                <i data-icon="search" class="icon icon-sm"></i>
+                <input class="input input--search" placeholder="Filter by path, domain, status…" />
+              </div>
+              <div class="cluster" style="--gap:6px">
+                <span class="chip"><i data-icon="filter" class="icon icon-sm"></i> Format</span>
+                <span class="chip"><i data-icon="filter" class="icon icon-sm"></i> Status</span>
+                <span class="chip"><i data-icon="filter" class="icon icon-sm"></i> Cache</span>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table logs-table">
+                <thead>
+                  <tr>
+                    <th>Time</th><th>Domain</th><th>Path</th><th class="right">W</th><th>Format</th>
+                    <th>Status</th><th>Cache</th><th class="right">Latency</th><th class="right">Bytes</th>
+                  </tr>
+                </thead>
+                <tbody class="mono">
+                  <tr>
+                    <td class="t-muted">17:42:09</td><td>cdn.shop.demo</td><td>/products/hero.jpg</td><td class="right tnum">1200</td><td>avif</td>
+                    <td class="t-ok">200</td><td class="t-ok">HIT</td><td class="right tnum">14ms</td><td class="right tnum">38 KB</td>
+                  </tr>
+                  <tr>
+                    <td class="t-muted">17:42:08</td><td>img.shop.demo</td><td>/products/gallery-1.jpg</td><td class="right tnum">800</td><td>webp</td>
+                    <td class="t-ok">200</td><td class="t-primary">MISS</td><td class="right tnum t-warn">142ms</td><td class="right tnum">64 KB</td>
+                  </tr>
+                  <tr>
+                    <td class="t-muted">17:42:06</td><td>assets.shop.demo</td><td>/banners/spring-sale.png</td><td class="right tnum">1600</td><td>avif</td>
+                    <td class="t-ok">200</td><td class="t-ok">HIT</td><td class="right tnum">11ms</td><td class="right tnum">41 KB</td>
+                  </tr>
+                  <tr>
+                    <td class="t-muted">17:42:03</td><td>media.blog.demo</td><td>/posts/cover.jpg</td><td class="right tnum">1024</td><td>webp</td>
+                    <td class="t-muted">304</td><td class="t-ok">HIT</td><td class="right tnum">6ms</td><td class="right tnum">0 B</td>
+                  </tr>
+                  <tr>
+                    <td class="t-muted">17:41:59</td><td>cdn.shop.demo</td><td>/avatars/user-42.webp</td><td class="right tnum">96</td><td>webp</td>
+                    <td class="t-ok">200</td><td class="t-ok">HIT</td><td class="right tnum">9ms</td><td class="right tnum">7 KB</td>
+                  </tr>
+                  <tr>
+                    <td class="t-muted">17:41:52</td><td>cdn.blog.demo</td><td>/posts/missing.jpg</td><td class="right tnum">800</td><td>jpeg</td>
+                    <td class="t-bad">404</td><td class="t-primary">MISS</td><td class="right tnum">38ms</td><td class="right tnum">0 B</td>
+                  </tr>
+                  <tr>
+                    <td class="t-muted">17:41:48</td><td>img.shop.demo</td><td>/products/hero.jpg</td><td class="right tnum">400</td><td>avif</td>
+                    <td class="t-ok">200</td><td class="t-ok">HIT</td><td class="right tnum">8ms</td><td class="right tnum">12 KB</td>
+                  </tr>
+                  <tr>
+                    <td class="t-muted">17:41:40</td><td>media.blog.demo</td><td>/posts/cover.jpg</td><td class="right tnum">2048</td><td>jpeg</td>
+                    <td class="t-bad">500</td><td class="t-primary">MISS</td><td class="right tnum t-warn">512ms</td><td class="right tnum">0 B</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== PROJECT: SETTINGS ==================== -->
+      <section data-view="project-settings">
+        <div class="page page--narrow">
+          <header class="page-header">
+            <div>
+              <div class="eyebrow"><span class="proj-glyph proj-glyph--sm" style="--c1:#FF6B2C;--c2:#FFA76B;width:16px;height:16px"></span> Demo Shop <span class="badge badge--success">production</span></div>
+              <h1 class="page-header__title">Settings</h1>
+              <p class="page-header__subtitle">Configuration that applies only to this project.</p>
+            </div>
+          </header>
+
+          <div data-tabs>
+            <div class="tabs">
+              <button class="tab tab--active" data-tab="general">General</button>
+              <button class="tab" data-tab="pipeline">Pipeline</button>
+              <button class="tab" data-tab="security">Security</button>
+            </div>
+
+            <!-- General -->
+            <div data-tabpanel="general" style="margin-top:16px">
+              <div class="card">
+                <div class="card__body--pad stack card-divide" style="--gap:0;padding-top:0;padding-bottom:0">
+                  <div class="setting">
+                    <div><div class="setting__label">Project ID</div><div class="setting__desc">Immutable identifier used in transform URLs.</div></div>
+                    <div class="setting__control cluster" style="--gap:8px"><span class="code">demo_shop</span><button class="btn btn--outline btn--sm"><i data-icon="copy" class="icon icon-sm"></i> Copy</button></div>
+                  </div>
+                  <div class="setting">
+                    <div><div class="setting__label">Project name</div><div class="setting__desc">Display name in the dashboard.</div></div>
+                    <div class="setting__control" style="width:240px"><input class="input" value="Demo Shop" /></div>
+                  </div>
+                  <div class="setting">
+                    <div><div class="setting__label">Origin</div><div class="setting__desc">Where Keenpix fetches source images from.</div></div>
+                    <div class="setting__control" style="width:280px"><input class="input mono t-xs" value="https://shop.demo.example" /></div>
+                  </div>
+                  <div class="setting">
+                    <div><div class="setting__label">Environment</div><div class="setting__desc">Affects alerting thresholds.</div></div>
+                    <div class="setting__control"><span class="badge badge--success">production</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="cluster" style="margin-top:16px"><button class="btn btn--primary"><i data-icon="check" class="icon icon-sm"></i> Save changes</button></div>
+            </div>
+
+            <!-- Pipeline -->
+            <div data-tabpanel="pipeline" style="margin-top:16px">
+              <div class="card">
+                <div class="card__body--pad stack card-divide" style="--gap:0;padding-top:0;padding-bottom:0">
+                  <div class="setting">
+                    <div><div class="setting__label">Auto-format</div><div class="setting__desc">Serve AVIF/WebP automatically based on Accept headers.</div></div>
+                    <div class="setting__control"><button class="switch switch--on" data-toggle></button></div>
+                  </div>
+                  <div class="setting">
+                    <div><div class="setting__label">Strip metadata</div><div class="setting__desc">Remove EXIF/IPTC from delivered images.</div></div>
+                    <div class="setting__control"><button class="switch switch--on" data-toggle></button></div>
+                  </div>
+                  <div class="setting">
+                    <div><div class="setting__label">Default quality</div><div class="setting__desc">Applied when no quality param is present.</div></div>
+                    <div class="setting__control cluster" style="--gap:8px"><input class="input tnum" style="width:80px" value="75" /></div>
+                  </div>
+                </div>
+              </div>
+              <div class="cluster" style="margin-top:16px"><button class="btn btn--primary"><i data-icon="check" class="icon icon-sm"></i> Save</button></div>
+            </div>
+
+            <!-- Security -->
+            <div data-tabpanel="security" style="margin-top:16px">
+              <div class="card">
+                <div class="card__header"><div class="card__title">Allowed hosts</div><div class="card__desc">Keenpix only fetches from origins on this list. No API key is needed for transform URLs.</div></div>
+                <div class="card__body--pad" style="padding-top:0">
+                  <div class="cluster" style="--gap:6px;margin-bottom:12px">
+                    <span class="chip chip--removable">cdn.shop.demo <button class="chip__x"><i data-icon="plus" class="icon icon-sm" style="transform:rotate(45deg)"></i></button></span>
+                    <span class="chip chip--removable">img.shop.demo <button class="chip__x"><i data-icon="plus" class="icon icon-sm" style="transform:rotate(45deg)"></i></button></span>
+                    <span class="chip chip--removable">assets.shop.demo <button class="chip__x"><i data-icon="plus" class="icon icon-sm" style="transform:rotate(45deg)"></i></button></span>
+                  </div>
+                  <div class="cluster" style="--gap:8px">
+                    <input class="input mono t-xs" style="flex:1" placeholder="add-a-host.example" />
+                    <button class="btn btn--outline"><i data-icon="plus" class="icon icon-sm"></i> Add host</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /main -->
+  </div><!-- /app -->
+
+  <script src="assets/icons.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    /* ---- Approach A: sidebar mode swap + breadcrumb sync ---- */
+    (function () {
+      const app = document.querySelector('[data-app]');
+      const crumbScope = document.getElementById('crumb-scope');
+      const crumbSection = document.getElementById('crumb-section');
+
+      // Section labels by view, for the breadcrumb.
+      const labels = {
+        'fleet-overview': 'Overview', 'fleet-projects': 'Projects',
+        'fleet-analytics': 'Analytics', 'fleet-activity': 'Activity',
+        'ops': 'Operations', 'apikeys': 'API keys', 'staff': 'Staff',
+        'email': 'Email', 'product-settings': 'Product settings', 'account': 'Account',
+        'project-overview': 'Overview', 'project-analytics': 'Analytics',
+        'project-logs': 'Live logs', 'project-settings': 'Settings',
+      };
+
+      function syncCrumb(view, inProject) {
+        crumbScope.textContent = inProject ? 'Demo Shop' : 'All projects';
+        if (labels[view]) crumbSection.textContent = labels[view];
+      }
+
+      // Enter project mode from any .to-project element (table rows) — these
+      // also carry data-nav, so app.js activates project-overview for us.
+      document.querySelectorAll('.to-project').forEach((el) => {
+        el.addEventListener('click', () => {
+          app.classList.add('in-project');
+          syncCrumb('project-overview', true);
+        });
+      });
+
+      // Scope switcher in fleet header → enter the (single demo) project.
+      const switchBtn = document.querySelector('.to-project-switch');
+      if (switchBtn) {
+        switchBtn.addEventListener('click', () => {
+          app.classList.add('in-project');
+          // activate project overview + its nav item
+          app.querySelectorAll('[data-view]').forEach((p) =>
+            p.classList.toggle('is-active', p.getAttribute('data-view') === 'project-overview'));
+          document.querySelectorAll('[data-navgroup="project"]').forEach((n) =>
+            n.classList.toggle('navitem--active', n.getAttribute('data-nav') === 'project-overview'));
+          syncCrumb('project-overview', true);
+          window.scrollTo({ top: 0 });
+        });
+      }
+
+      // Back to fleet.
+      const back = document.querySelector('.back-to-fleet');
+      if (back) {
+        back.addEventListener('click', () => {
+          app.classList.remove('in-project');
+          app.querySelectorAll('[data-view]').forEach((p) =>
+            p.classList.toggle('is-active', p.getAttribute('data-view') === 'fleet-overview'));
+          document.querySelectorAll('[data-navgroup="fleet"]').forEach((n) =>
+            n.classList.toggle('navitem--active', n.getAttribute('data-nav') === 'fleet-overview'));
+          syncCrumb('fleet-overview', false);
+          window.scrollTo({ top: 0 });
+        });
+      }
+
+      // Keep breadcrumb in sync for ordinary nav clicks within whichever mode.
+      document.addEventListener('click', (e) => {
+        const nav = e.target.closest('[data-nav]');
+        if (!nav) return;
+        const view = nav.getAttribute('data-nav');
+        const inProject = nav.getAttribute('data-navgroup') === 'project';
+        // .to-project handler already set in-project; ordinary fleet/project nav just updates crumb.
+        setTimeout(() => syncCrumb(view, app.classList.contains('in-project')), 0);
+      });
+
+      // Sidebar collapse toggle.
+      const sbToggle = document.querySelector('[data-toggle-sidebar]');
+      if (sbToggle) sbToggle.addEventListener('click', () => app.classList.toggle('collapsed'));
+    })();
+  </script>
+</body>
+</html>

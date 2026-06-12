@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Keenpix · Dashboard IA proposal</title>
+  <link rel="stylesheet" href="assets/keenpix.css" />
+  <style>
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 24px 64px; display: flex; flex-direction: column; gap: 28px; }
+    .ribbon { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: color-mix(in oklch, var(--background) 86%, transparent); backdrop-filter: blur(8px); z-index: 30; }
+    .hero h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+    .hero p { color: var(--muted-foreground); max-width: 70ch; margin-top: 8px; }
+    .spheres { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    @media (max-width: 720px) { .spheres { grid-template-columns: 1fr; } }
+    .sphere { display: flex; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); }
+    .sphere .n { width: 28px; height: 28px; border-radius: 8px; background: color-mix(in oklch, var(--primary) 18%, transparent); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; flex: none; }
+    .approach { border: 1px solid var(--border); border-radius: var(--radius-xl); overflow: hidden; background: var(--card); box-shadow: var(--shadow-sm); }
+    .approach__head { padding: 16px 18px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+    .approach__frame { position: relative; height: 380px; overflow: hidden; background: var(--accent); border-bottom: 1px solid var(--border); }
+    .approach__frame iframe { width: 166.6%; height: 633px; border: 0; transform: scale(0.6); transform-origin: top left; }
+    .approach__body { padding: 16px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 640px) { .approach__body { grid-template-columns: 1fr; } }
+    .plist { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+    .plist li { display: flex; gap: 8px; }
+    .plist .icon { margin-top: 2px; }
+    .rec { border-color: color-mix(in oklch, var(--primary) 50%, var(--border)); box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 30%, transparent); }
+  </style>
+</head>
+<body>
+  <div class="ribbon">
+    <span class="cluster" style="--gap:8px"><span class="scope-glyph" style="width:24px;height:24px"><i data-icon="layers" class="icon icon-sm"></i></span><strong>Keenpix</strong> <span class="muted t-sm">· Dashboard IA proposal</span></span>
+    <span class="fill"></span>
+    <a class="chip" href="PROPOSAL.md"><i data-icon="docs" class="icon icon-sm"></i> Read PROPOSAL.md</a>
+    <button class="iconbtn" data-action="theme" title="Toggle theme"><i data-icon="moon" class="icon"></i></button>
+  </div>
+
+  <div class="wrap">
+    <header class="hero">
+      <h1>Four spheres, one control plane</h1>
+      <p>The current <code class="code">/app</code> overloads a single sidebar with a scope toggle: Dashboard, Analytics, Logs and Settings each mean two different things depending on whether you've picked a project. These three prototypes each give the four concerns a real home. Same data, different navigation — that's the decision.</p>
+    </header>
+
+    <section class="stack" style="--gap:12px">
+      <div class="eyebrow">THE MODEL</div>
+      <div class="spheres">
+        <div class="sphere"><span class="n">1</span><div><div class="semibold">Fleet — bird's-eye</div><div class="muted t-sm">Aggregate KPIs + a project comparison table across every project.</div></div></div>
+        <div class="sphere"><span class="n">2</span><div><div class="semibold">Project — drill-down</div><div class="muted t-sm">One project's overview, analytics and live logs.</div></div></div>
+        <div class="sphere"><span class="n">3</span><div><div class="semibold">Instance / product</div><div class="muted t-sm">Operations, API keys, staff, email, and instance-wide pipeline defaults.</div></div></div>
+        <div class="sphere"><span class="n">4</span><div><div class="semibold">Project settings</div><div class="muted t-sm">Origin, pipeline defaults, and the host allowlist for that project.</div></div></div>
+      </div>
+    </section>
+
+    <section class="stack" style="--gap:18px">
+      <div class="eyebrow">THREE APPROACHES</div>
+
+      <article class="approach rec">
+        <div class="approach__head">
+          <span class="badge badge--primary">Recommended to ship</span>
+          <strong class="t-lg">B · Grouped single sidebar</strong>
+          <span class="muted t-sm fill">Lowest-risk evolution — three labelled groups, nothing hidden.</span>
+          <a class="btn btn--primary btn--sm" href="approach-b.html" target="_blank">Open <i data-icon="external" class="icon icon-sm"></i></a>
+        </div>
+        <div class="approach__frame"><iframe src="approach-b.html" loading="lazy" title="Approach B preview"></iframe></div>
+        <div class="approach__body">
+          <ul class="plist">
+            <li><i data-icon="check" class="icon icon-sm t-ok"></i> No modes — fleet, project and instance each get a group.</li>
+            <li><i data-icon="check" class="icon icon-sm t-ok"></i> Closest to today's code; cheapest to ship.</li>
+            <li><i data-icon="check" class="icon icon-sm t-ok"></i> Surfaces the hidden Workspace tabs as a first-class Instance group.</li>
+          </ul>
+          <ul class="plist">
+            <li><i data-icon="dot" class="icon icon-sm muted"></i> Denser sidebar.</li>
+            <li><i data-icon="dot" class="icon icon-sm muted"></i> "Current project" is a persistent global, not a place you enter.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="approach">
+        <div class="approach__head">
+          <span class="badge badge--secondary">Target long-term</span>
+          <strong class="t-lg">A · Drill-down workspace</strong>
+          <span class="muted t-sm fill">Vercel/Linear-style — the sidebar follows you into a project.</span>
+          <a class="btn btn--outline btn--sm" href="approach-a.html" target="_blank">Open <i data-icon="external" class="icon icon-sm"></i></a>
+        </div>
+        <div class="approach__frame"><iframe src="approach-a.html" loading="lazy" title="Approach A preview"></iframe></div>
+        <div class="approach__body">
+          <ul class="plist">
+            <li><i data-icon="check" class="icon icon-sm t-ok"></i> Cleanest scope separation — never unsure where you are.</li>
+            <li><i data-icon="check" class="icon icon-sm t-ok"></i> "Settings" only ever means project settings.</li>
+            <li><i data-icon="check" class="icon icon-sm t-ok"></i> Scales best with many projects.</li>
+          </ul>
+          <ul class="plist">
+            <li><i data-icon="dot" class="icon icon-sm muted"></i> A mode switch to learn.</li>
+            <li><i data-icon="dot" class="icon icon-sm muted"></i> Two clicks to hop between two projects.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="approach">
+        <div class="approach__head">
+          <span class="badge badge--secondary">If we go analytics-product</span>
+          <strong class="t-lg">C · Command center</strong>
+          <span class="muted t-sm fill">PostHog/Grafana-style — top tabs + a global project filter.</span>
+          <a class="btn btn--outline btn--sm" href="approach-c.html" target="_blank">Open <i data-icon="external" class="icon icon-sm"></i></a>
+        </div>
+        <div class="approach__frame"><iframe src="approach-c.html" loading="lazy" title="Approach C preview"></iframe></div>
+        <div class="approach__body">
+          <ul class="plist">
+            <li><i data-icon="check" class="icon icon-sm t-ok"></i> Maximum width for dense charts and log tables.</li>
+            <li><i data-icon="check" class="icon icon-sm t-ok"></i> Per-project is a filter, not a mode.</li>
+            <li><i data-icon="check" class="icon icon-sm t-ok"></i> Settings hub splits project vs instance on one screen.</li>
+          </ul>
+          <ul class="plist">
+            <li><i data-icon="dot" class="icon icon-sm muted"></i> Biggest departure from today.</li>
+            <li><i data-icon="dot" class="icon icon-sm muted"></i> Top-tabs scale worse than a sidebar as sections grow.</li>
+          </ul>
+        </div>
+      </article>
+    </section>
+
+    <footer class="muted t-sm">Static design prototypes · illustrative data · colours and components mirror <code class="code">src/styles.css</code>. Serve this folder over http (e.g. <code class="code">pnpm dlx serve design/dashboard-ia</code>) so the inline icons and previews load.</footer>
+  </div>
+
+  <script src="assets/icons.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
