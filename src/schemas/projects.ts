@@ -46,7 +46,7 @@ export const createProjectSchema = z.object({
   origin: originUrlSchema,
 })
 
-export const projectFitSchema = z.enum([
+const projectFitSchema = z.enum([
   'cover',
   'contain',
   'fill',
