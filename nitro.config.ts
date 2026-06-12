@@ -9,5 +9,12 @@ import { defineNitroConfig } from 'nitro/config'
  * place so the real package loads from node_modules at runtime.
  */
 export default defineNitroConfig({
-  rollupConfig: { external: ['undici'] },
+  rollupConfig: {
+    external: [
+      'undici',
+      'svgo',
+      'css-tree',
+      '@csstools/css-syntax-patches-for-csstree',
+    ],
+  },
 })
