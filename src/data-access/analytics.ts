@@ -385,6 +385,7 @@ export async function getProjectBreakdown(range: AnalyticsRange) {
         by: ['projectId'],
         where,
         _count: { _all: true },
+        _avg: { latencyMs: true },
       }),
       prisma.requestLog.groupBy({
         by: ['projectId'],
@@ -417,6 +418,7 @@ export async function getProjectBreakdown(range: AnalyticsRange) {
         requests,
         bandwidthSaved: b.in - b.out,
         hitRate: requests === 0 ? 0 : (cached / requests) * 100,
+        avgLatency: Math.round(g._avg.latencyMs ?? 0),
       }
     })
     .sort((a, b) => b.requests - a.requests)
@@ -435,6 +437,8 @@ export async function getDomainBreakdown(
       by: ['sourceHost'],
       where,
       _count: { _all: true },
+      _avg: { latencyMs: true },
+      _max: { ts: true },
     }),
     prisma.requestLog.groupBy({
       by: ['sourceHost'],
@@ -468,6 +472,8 @@ export async function getDomainBreakdown(
         requests,
         bandwidthSaved: b.in - b.out,
         hitRate: requests === 0 ? 0 : (cached / requests) * 100,
+        avgLatency: Math.round(g._avg.latencyMs ?? 0),
+        lastSeen: g._max.ts ? dayjs(g._max.ts).format('MMM D, HH:mm') : null,
       }
     })
     .filter((r): r is DomainBreakdownRow => r !== null)
