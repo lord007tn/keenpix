@@ -37,3 +37,14 @@ export async function createRequestLog(log: NewRequestLog) {
     },
   })
 }
+
+// Cache hit counts for an org since a point in time. Scoped by orgId so the
+// query rides the [orgId, ts] index rather than scanning by timestamp alone.
+export async function getCacheHitStats(orgId: string, since: Date) {
+  const where = { orgId, ts: { gte: since } }
+  const [totalRequests, cachedRequests] = await Promise.all([
+    prisma.requestLog.count({ where }),
+    prisma.requestLog.count({ where: { ...where, cached: true } }),
+  ])
+  return { cachedRequests, totalRequests }
+}

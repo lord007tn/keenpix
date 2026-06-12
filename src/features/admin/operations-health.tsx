@@ -89,6 +89,7 @@ export function OperationsHealth() {
   const queueHasBacklog = (health?.transformQueue.queued ?? 0) > 0
   const diskEvictedFiles = health?.cache.diskEvictedFiles ?? 0
   const diskEvictedBytes = health?.cache.diskEvictedBytes ?? 0
+  const cacheHitRate = health?.cacheHits.hitRate ?? null
   // The disk and memory caches are bounded LRUs that self-evict, so a high fill
   // is the healthy steady state — only queue backlog and load shedding signal
   // real operational pressure.
@@ -123,6 +124,19 @@ export function OperationsHealth() {
           >
             {health?.transformQueue.active ?? 0} active transforms
           </Badge>
+          {health ? (
+            <Badge
+              variant={
+                cacheHitRate !== null && cacheHitRate >= 80
+                  ? 'success'
+                  : 'secondary'
+              }
+            >
+              {cacheHitRate === null
+                ? 'No cache traffic yet'
+                : `${Math.round(cacheHitRate)}% cache hits`}
+            </Badge>
+          ) : null}
         </div>
         <Button
           disabled={pending}
@@ -264,6 +278,9 @@ export function OperationsHealth() {
       <p className="text-muted-foreground text-xs">
         Instance uptime: {health?.uptimeSeconds ?? 0}s. Snapshot generated at{' '}
         {health?.generatedAt ?? 'loading'}.
+        {health
+          ? ` Served ${health.cacheHits.totalRequests} requests since boot.`
+          : null}
       </p>
     </div>
   )
