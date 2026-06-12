@@ -26,19 +26,18 @@
     .scope-filter .proj-glyph { width: 18px; height: 18px; border-radius: 5px; background: linear-gradient(135deg, var(--scope-c1, var(--brand-1)), var(--scope-c2, var(--brand-2))); }
     .scope-filter .scope-filter__all { width: 18px; height: 18px; border-radius: 5px; background: var(--primary); color: var(--primary-foreground); display: inline-flex; align-items: center; justify-content: center; }
 
-    /* ---- THE SCOPE RAIL — the all-projects <-> per-project axis ---- */
-    .scope-rail { display: flex; align-items: center; gap: 8px; padding: 9px 20px; border-bottom: 1px solid var(--border); background: var(--card); position: sticky; top: 104px; z-index: 18; overflow-x: auto; }
-    .scope-rail__lead { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted-foreground); white-space: nowrap; margin-right: 2px; }
-    .scope-pill { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 7px; border: 1px solid var(--border); border-radius: 999px; background: var(--background); font-size: 12.5px; font-weight: 500; white-space: nowrap; color: var(--muted-foreground); }
-    .scope-pill:hover { background: var(--accent); color: var(--foreground); }
-    .scope-pill--active { border-color: var(--primary); color: var(--foreground); background: color-mix(in oklch, var(--primary) 10%, transparent); box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 30%, transparent); }
-    .scope-pill .proj-glyph--xs { width: 16px; height: 16px; border-radius: 4px; }
-    .scope-pill__all { width: 16px; height: 16px; border-radius: 4px; background: var(--primary); color: var(--primary-foreground); display: inline-flex; align-items: center; justify-content: center; }
-    .scope-pill__env { width: 5px; height: 5px; border-radius: 999px; }
-    .scope-rail__ctx { margin-left: auto; font-size: 12px; color: var(--muted-foreground); white-space: nowrap; padding-left: 12px; }
-    .scope-rail__ctx b { color: var(--foreground); font-weight: 600; }
-    .scope-rail__ctx a { color: var(--primary); font-weight: 500; }
-    @media (max-width: 900px) { .scope-rail__ctx { display: none; } }
+    /* ---- scope selector dropdown (top bar) — the single scope control ---- */
+    .scope-select { position: relative; }
+    .proj-glyph--xs { width: 18px; height: 18px; border-radius: 5px; }
+    .scope-menu { position: absolute; top: calc(100% + 6px); left: 0; min-width: 248px; background: var(--popover); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 6px; z-index: 40; }
+    .scope-menu[hidden] { display: none; }
+    .scope-menu__label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted-foreground); padding: 6px 8px 2px; }
+    .scope-menu__item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; color: var(--foreground); text-align: left; }
+    .scope-menu__item:hover { background: var(--accent); }
+    .scope-menu__item--active { background: var(--accent); }
+    .scope-menu__glyph--all { width: 18px; height: 18px; border-radius: 5px; background: var(--primary); color: var(--primary-foreground); display: inline-flex; align-items: center; justify-content: center; flex: none; }
+    .scope-menu__check { margin-left: auto; color: var(--primary); opacity: 0; }
+    .scope-menu__item--active .scope-menu__check { opacity: 1; }
 
     /* scope-conditional visibility (driven by data-scope on [data-app]) */
     [data-app][data-scope="all"] .scope-project-only { display: none !important; }
@@ -49,7 +48,7 @@
 
     /* settings two-pane hub */
     .hub { display: grid; grid-template-columns: 232px 1fr; gap: 24px; align-items: start; }
-    .hub__nav { position: sticky; top: 164px; }
+    .hub__nav { position: sticky; top: 116px; }
     @media (max-width: 900px) { .hub { grid-template-columns: 1fr; } .hub__nav { position: static; } }
 
     .chip--removable { padding-right: 6px; }
@@ -73,7 +72,7 @@
   <div class="ribbon">
     <span class="ribbon__tag">Keenpix · Dashboard IA</span>
     <span class="ribbon__name">Approach C — Command Center</span>
-    <span class="ribbon__tagline">One scope rail moves between all projects and a single project; the data tabs re-scope to follow.</span>
+    <span class="ribbon__tagline">A scope selector in the top bar moves between all projects and one; the data tabs re-scope to follow.</span>
     <div class="cluster" style="margin-left:auto; --gap:6px;">
       <a class="btn btn--ghost btn--sm" href="index.html"><i data-icon="arrowLeft" class="icon icon-sm"></i> Gallery</a>
       <button class="iconbtn" data-action="theme" aria-label="Toggle theme"><i data-icon="sun" class="icon"></i></button>
@@ -90,14 +89,25 @@
         <span class="topbar__brand-name">Keenpix</span>
       </div>
 
-      <!-- live scope read-out; clicking returns to All projects -->
-      <button class="scope-filter" style="margin: 0 8px;" data-scope-set="all" title="Current scope — click for all projects">
-        <span class="scope-filter__all scope-all-only"><i data-icon="layers" class="icon icon-sm"></i></span>
-        <span class="proj-glyph scope-project-only" data-scope-glyph></span>
-        <span data-scope-readout>All projects</span>
-        <span class="scope-filter__hint">scope</span>
-        <i data-icon="chevronDown" class="icon icon-sm"></i>
-      </button>
+      <!-- scope selector (top bar) — the single scope control -->
+      <div class="scope-select" style="margin: 0 8px;">
+        <button class="scope-filter" id="scopeBtn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="scope-filter__all scope-all-only"><i data-icon="layers" class="icon icon-sm"></i></span>
+          <span class="proj-glyph scope-project-only" data-scope-glyph></span>
+          <span data-scope-readout>All projects</span>
+          <span class="scope-filter__hint">scope</span>
+          <i data-icon="chevronDown" class="icon icon-sm"></i>
+        </button>
+        <div class="scope-menu" id="scopeMenu" hidden>
+          <div class="scope-menu__label">Scope</div>
+          <button class="scope-menu__item scope-menu__item--active" type="button" data-scope-set="all"><span class="scope-menu__glyph--all"><i data-icon="layers" class="icon icon-sm"></i></span> All projects <i data-icon="check" class="icon icon-sm scope-menu__check"></i></button>
+          <div class="scope-menu__label">Projects</div>
+          <button class="scope-menu__item" type="button" data-scope-set="demo_shop"><span class="proj-glyph proj-glyph--xs" style="--c1:#FF6B2C;--c2:#FFA76B"></span> Demo Shop <i data-icon="check" class="icon icon-sm scope-menu__check"></i></button>
+          <button class="scope-menu__item" type="button" data-scope-set="marketing"><span class="proj-glyph proj-glyph--xs" style="--c1:#7C5CFF;--c2:#B79CFF"></span> Marketing Site <i data-icon="check" class="icon icon-sm scope-menu__check"></i></button>
+          <button class="scope-menu__item" type="button" data-scope-set="mobile_cdn"><span class="proj-glyph proj-glyph--xs" style="--c1:#16B8A6;--c2:#6EE7D6"></span> Mobile CDN <i data-icon="check" class="icon icon-sm scope-menu__check"></i></button>
+          <button class="scope-menu__item" type="button" data-scope-set="demo_blog"><span class="proj-glyph proj-glyph--xs" style="--c1:#3A7BD5;--c2:#5DE3CE"></span> Demo Blog <i data-icon="check" class="icon icon-sm scope-menu__check"></i></button>
+        </div>
+      </div>
 
       <div class="search fill" style="max-width: 360px;">
         <i data-icon="search" class="icon"></i>
@@ -121,34 +131,6 @@
       <a class="topnav__item" data-nav="settings-hub" data-navgroup="top"><i data-icon="settings" class="icon"></i> Settings</a>
     </nav>
 
-    <!-- ---------- SCOPE RAIL (the all <-> one-project axis) ---------- -->
-    <div class="scope-rail">
-      <span class="scope-rail__lead">Scope</span>
-      <button class="scope-pill scope-pill--active" data-scope-set="all">
-        <span class="scope-pill__all"><i data-icon="layers" class="icon icon-sm"></i></span> All projects
-      </button>
-      <button class="scope-pill" data-scope-set="demo_shop">
-        <span class="proj-glyph proj-glyph--xs" style="--c1:#FF6B2C;--c2:#FFA76B"></span> Demo Shop
-        <span class="scope-pill__env" style="background:var(--success)"></span>
-      </button>
-      <button class="scope-pill" data-scope-set="marketing">
-        <span class="proj-glyph proj-glyph--xs" style="--c1:#7C5CFF;--c2:#B79CFF"></span> Marketing Site
-        <span class="scope-pill__env" style="background:var(--success)"></span>
-      </button>
-      <button class="scope-pill" data-scope-set="mobile_cdn">
-        <span class="proj-glyph proj-glyph--xs" style="--c1:#16B8A6;--c2:#6EE7D6"></span> Mobile CDN
-        <span class="scope-pill__env" style="background:var(--success)"></span>
-      </button>
-      <button class="scope-pill" data-scope-set="demo_blog">
-        <span class="proj-glyph proj-glyph--xs" style="--c1:#3A7BD5;--c2:#5DE3CE"></span> Demo Blog
-        <span class="scope-pill__env" style="background:var(--warning)"></span>
-      </button>
-      <span class="scope-rail__ctx">
-        <span class="scope-all-only">Viewing <b>all 4 projects</b></span>
-        <span class="scope-project-only">Viewing <b data-scope-name>Demo Shop</b> · <span data-scope-n>1</span> of 4 · <a data-scope-set="all">← All projects</a></span>
-      </span>
-    </div>
-
     <!-- ---------- MAIN ---------- -->
     <main class="main main--wide">
 
@@ -163,7 +145,7 @@
             <div>
               <div class="eyebrow"><i data-icon="overview" class="icon icon-sm"></i> Fleet overview</div>
               <h1 class="page-header__title">All projects</h1>
-              <p class="page-header__subtitle">Bird's-eye across the whole instance, last 30 days. Pick a project in the <strong>scope rail</strong> above — or click a row below — to drill in. Analytics and Logs follow the same scope.</p>
+              <p class="page-header__subtitle">Bird's-eye across the whole instance, last 30 days. Pick a project from the <strong>scope selector</strong> in the top bar — or click a row below — to drill in. Analytics and Logs follow the same scope.</p>
             </div>
             <div class="cluster">
               <div class="segmented"><span class="segmented__item">7d</span><span class="segmented__item segmented__item--active">30d</span><span class="segmented__item">90d</span></div>
@@ -238,7 +220,7 @@
                 <span data-scope-name>Demo Shop</span>
                 <span class="badge badge--success" data-scope-env>production</span>
               </h1>
-              <p class="page-header__subtitle"><span class="mono" data-scope-origin>shop.demo.example</span> · last 30 days · scoped from the rail. Switch projects up there to compare without leaving this view.</p>
+              <p class="page-header__subtitle"><span class="mono" data-scope-origin>shop.demo.example</span> · last 30 days · set from the top-bar scope selector. Switch projects up there to compare without leaving this view.</p>
             </div>
             <div class="cluster">
               <button class="btn btn--outline btn--sm" data-nav="analytics" data-navgroup="top"><i data-icon="chart" class="icon icon-sm"></i> Analytics</button>
@@ -346,8 +328,8 @@
               <span class="scope-project-only cluster" style="--gap:10px;"><span class="proj-glyph proj-glyph--sm glyph-scoped" data-scope-glyph></span><span data-scope-name>Demo Shop</span></span>
             </h1>
             <p class="page-header__subtitle">
-              <span class="scope-all-only">Aggregate across the fleet. Pick a project in the scope rail to drill into its analytics.</span>
-              <span class="scope-project-only">Scoped to <span data-scope-name>Demo Shop</span> via the scope rail · last 30 days.</span>
+              <span class="scope-all-only">Aggregate across the fleet. Pick a project from the scope selector to drill into its analytics.</span>
+              <span class="scope-project-only">Scoped to <span data-scope-name>Demo Shop</span> via the top-bar scope selector · last 30 days.</span>
             </p>
           </div>
           <div class="segmented"><span class="segmented__item">7d</span><span class="segmented__item segmented__item--active">30d</span><span class="segmented__item">90d</span></div>
@@ -370,7 +352,7 @@
               <div class="barlist__row" data-scope-set="demo_blog" data-scope-go="analytics" style="cursor:pointer"><span class="barlist__fill" style="width:31%"></span><span class="barlist__label">Demo Blog</span><span class="barlist__value tnum">199K</span></div>
             </div></div>
           </div>
-          <div class="alert"><i data-icon="info" class="icon"></i><div class="alert__desc">Click a project above (or use the scope rail) to switch this tab to that project's analytics.</div></div>
+          <div class="alert"><i data-icon="info" class="icon"></i><div class="alert__desc">Click a project above (or use the scope selector) to switch this tab to that project's analytics.</div></div>
         </div>
 
         <!-- PROJECT: per-project framing -->
@@ -518,7 +500,7 @@
       </section>
 
       <!-- ============================================================ -->
-      <!-- TAB: OPERATIONS (instance-wide — scope rail does not apply)  -->
+      <!-- TAB: OPERATIONS (instance-wide — scope does not apply)        -->
       <!-- ============================================================ -->
       <section class="page" data-view="ops">
         <div class="page-header">
@@ -535,7 +517,7 @@
           </div>
         </div>
 
-        <div class="alert" style="align-items:center;"><i data-icon="server" class="icon"></i><div class="alert__desc">Operations is <strong>instance-wide</strong> — it covers every project and isn't affected by the scope rail above.</div></div>
+        <div class="alert" style="align-items:center;"><i data-icon="server" class="icon"></i><div class="alert__desc">Operations is <strong>instance-wide</strong> — it covers every project and isn't affected by the scope selector.</div></div>
 
         <div class="grid grid-3">
           <div class="card"><div class="card__body--pad stack" style="--gap:12px;">
@@ -755,8 +737,18 @@
           });
           filterLogRows(id);
         }
-        document.querySelectorAll('.scope-pill').forEach(function (pill) {
-          pill.classList.toggle('scope-pill--active', pill.getAttribute('data-scope-set') === id);
+        document.querySelectorAll('.scope-menu__item').forEach(function (item) {
+          item.classList.toggle('scope-menu__item--active', item.getAttribute('data-scope-set') === id);
+        });
+      }
+      const scopeBtn = document.getElementById('scopeBtn');
+      const scopeMenu = document.getElementById('scopeMenu');
+      function closeScopeMenu() { if (scopeMenu) { scopeMenu.setAttribute('hidden', ''); scopeBtn.setAttribute('aria-expanded', 'false'); } }
+      if (scopeBtn) {
+        scopeBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          if (scopeMenu.hasAttribute('hidden')) { scopeMenu.removeAttribute('hidden'); scopeBtn.setAttribute('aria-expanded', 'true'); }
+          else closeScopeMenu();
         });
       }
       document.addEventListener('click', function (e) {
@@ -765,9 +757,13 @@
           setScope(sp.getAttribute('data-scope-set'));
           const go = sp.getAttribute('data-scope-go');
           if (go) activateView(go);
+          if (scopeMenu && scopeMenu.contains(sp)) closeScopeMenu();
         }
         const nav = e.target.closest('[data-nav]');
         if (nav) syncTopnav(nav.getAttribute('data-nav'));
+        if (scopeMenu && !scopeMenu.hasAttribute('hidden') && !scopeMenu.contains(e.target) && !scopeBtn.contains(e.target)) {
+          closeScopeMenu();
+        }
       });
     })();
   </script>

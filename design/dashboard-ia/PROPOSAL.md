@@ -104,16 +104,16 @@ one hub with a left sub-nav that splits **Project** (General/Pipeline/Security) 
 The initial analysis offered **B** as the lowest-risk evolution and **A** as the
 long-term target. **After review, the selected direction is Approach C — Command
 center.** The reasoning: the global scope (all projects vs one) is the spine of this
-product, so making it a first-class **scope rail** — a filter, not a per-page mode — is
-the clearest way to serve both the bird's-eye and per-project data, and it gives the
-widest canvas for the dense charts and log tables Keenpix leans on.
+product, so making it a first-class **scope selector** in the top bar — a filter, not a
+per-page mode — is the clearest way to serve both the bird's-eye and per-project data,
+and it gives the widest canvas for the dense charts and log tables Keenpix leans on.
 
 C has since been **refined so the all-projects ↔ per-project flow is explicit**:
 
-- A persistent **scope rail** puts *All projects* and each project on one axis. Picking
+- A **scope selector** in the top bar lists *All projects* and each project. Picking
   a project is a **filter** that the data tabs follow — not a separate navigation mode.
-- The **Overview reframes in place**: choose a project (from the rail *or* by clicking a
-  row in the comparison table) and the same tab swaps the fleet KPIs + comparison table
+- The **Overview reframes in place**: choose a project (from the selector *or* by clicking
+  a row in the comparison table) and the same tab swaps the fleet KPIs + comparison table
   for that project's KPIs, chart, format mix and top images — with a one-click
   "← All projects" way back.
 - **Analytics and Logs follow the same scope.** Logs swaps its **Project ↔ Domain**
