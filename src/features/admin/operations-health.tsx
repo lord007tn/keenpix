@@ -37,16 +37,6 @@ function queueTone(queued: number, maxQueue: number) {
   return 'warning'
 }
 
-function usageTone(value: number) {
-  if (value >= 90) {
-    return 'destructive'
-  }
-  if (value >= 75) {
-    return 'warning'
-  }
-  return 'success'
-}
-
 function Panel({
   title,
   icon: Icon,
@@ -97,8 +87,12 @@ export function OperationsHealth() {
     : 0
   const queueRejected = health?.transformQueue.rejected ?? 0
   const queueHasBacklog = (health?.transformQueue.queued ?? 0) > 0
-  const hasPressure =
-    diskUsed >= 75 || memoryUsed >= 75 || queueUsed >= 75 || queueRejected > 0
+  const diskEvictedFiles = health?.cache.diskEvictedFiles ?? 0
+  const diskEvictedBytes = health?.cache.diskEvictedBytes ?? 0
+  // The disk and memory caches are bounded LRUs that self-evict, so a high fill
+  // is the healthy steady state — only queue backlog and load shedding signal
+  // real operational pressure.
+  const hasPressure = queueUsed >= 75 || queueRejected > 0
 
   async function maintainCache(target: CacheMaintenanceTarget) {
     setMaintenanceTarget(target)
@@ -149,9 +143,9 @@ export function OperationsHealth() {
           <AlertTriangleIcon />
           <AlertTitle>Operational attention needed</AlertTitle>
           <AlertDescription>
-            {diskUsed >= 75 ? `Disk cache is ${diskUsed}% full. ` : null}
-            {memoryUsed >= 75 ? `Memory cache is ${memoryUsed}% full. ` : null}
-            {queueUsed >= 75 ? `Transform queue is ${queueUsed}% full. ` : null}
+            {queueUsed >= 75
+              ? `Transform queue is ${queueUsed}% full; requests may start shedding. `
+              : null}
             {queueRejected > 0
               ? `${queueRejected} transform requests were rejected since boot.`
               : null}
@@ -171,7 +165,7 @@ export function OperationsHealth() {
           </div>
           <Progress aria-label="Disk cache usage" value={diskUsed} />
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Badge variant={usageTone(diskUsed)}>
+            <Badge variant="secondary">
               {diskUsed}% of {humanBytes(health?.cache.diskMaxBytes ?? 0)}
             </Badge>
             <Button
@@ -184,6 +178,11 @@ export function OperationsHealth() {
               {maintenanceTarget === 'disk' ? 'Clearing...' : 'Clear disk'}
             </Button>
           </div>
+          <p className="text-muted-foreground text-xs">
+            {diskEvictedFiles > 0
+              ? `Bounded cache — evicted ${diskEvictedFiles} files (${humanBytes(diskEvictedBytes)}) since boot.`
+              : 'Bounded cache — no evictions since boot; current cap fits the working set.'}
+          </p>
         </Panel>
 
         <Panel icon={DatabaseIcon} title="Memory cache">
@@ -197,7 +196,7 @@ export function OperationsHealth() {
           </div>
           <Progress aria-label="Memory cache usage" value={memoryUsed} />
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Badge variant={usageTone(memoryUsed)}>
+            <Badge variant="secondary">
               {memoryUsed}% of {humanBytes(health?.cache.memoryMaxBytes ?? 0)}
             </Badge>
             <Button
