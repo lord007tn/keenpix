@@ -23,6 +23,7 @@ icon: ListChecks
 | `413`  | Origin image exceeds the size cap (`KEENPIX_MAX_ORIGIN_BYTES`)      |
 | `502`  | Origin fetch failed                                                 |
 | `503`  | Transform concurrency limit reached — retry shortly                 |
+| `504`  | Origin request timed out (`KEENPIX_ORIGIN_TIMEOUT_MS`)              |
 
 <Callout type="warn">
   A `403` almost always means the source host isn't on the project's allowlist. Add it

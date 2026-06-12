@@ -13,12 +13,28 @@ Set these in `.env` (or your orchestrator's secrets).
 | `DATABASE_URL`                   | yes           | —                  | Postgres connection string                                                                 |
 | `POSTGRES_PASSWORD`              | yes (compose) | —                  | Password for the bundled Compose Postgres service                                          |
 | `BETTER_AUTH_SECRET`             | yes (prod)    | —                  | Session secret; must be 32+ random chars                                                   |
+| `BETTER_AUTH_URL`                | no            | `http://localhost:3000` | Public base URL for auth callbacks and secure-cookie behavior                         |
+| `KEENPIX_APP_URL`                | no            | `BETTER_AUTH_URL`  | Canonical app URL for generated metadata, docs links, and OG URLs                          |
 | `KEENPIX_SUPER_ADMIN_EMAIL`      | yes           | —                  | Email for the bootstrapped super admin account                                             |
 | `KEENPIX_SUPER_ADMIN_PASSWORD`   | yes           | —                  | Password for the bootstrapped super admin account                                          |
 | `KEENPIX_ADMIN_EMAIL`            | legacy alias  | —                  | Backward-compatible alias for `KEENPIX_SUPER_ADMIN_EMAIL`                                  |
 | `KEENPIX_ADMIN_PASSWORD`         | legacy alias  | —                  | Backward-compatible alias for `KEENPIX_SUPER_ADMIN_PASSWORD`                               |
+| `KEENPIX_RUN_MIGRATIONS`         | no            | `true` in Docker   | Docker entrypoint switch for running migrations before start                               |
+| `KEENPIX_RUN_SEED`               | no            | `true` in Docker   | Docker entrypoint switch for seeding the default org and super admin before start          |
 | `KEENPIX_CACHE_DIR`              | no            | `./.keenpix-cache` | Where transformed images are cached on disk                                                |
 | `KEENPIX_SELF_HOST`              | no            | `false`            | `true` disables the marketing site — the landing page becomes a minimal self-hosted splash |
+| `LOG_LEVEL`                      | no            | `info`             | Server log level: `fatal`, `error`, `warn`, `info`, `debug`, `trace`, or `silent`          |
+
+## Browser public URLs
+
+These Vite variables are only needed when the browser bundle must call a non-default
+public app or auth URL.
+
+| Variable                    | Default | Purpose                                      |
+| --------------------------- | ------- | -------------------------------------------- |
+| `VITE_KEENPIX_PUBLIC_URL`   | —       | Browser-facing app URL                       |
+| `VITE_KEENPIX_AUTH_URL`     | —       | Backward-compatible auth URL alias           |
+| `VITE_BETTER_AUTH_URL`      | —       | Backward-compatible Better Auth URL alias    |
 
 ## SMTP
 
@@ -41,8 +57,12 @@ SMTP is disabled or incomplete.
 
 | Variable                   | Default        | Purpose                                          |
 | -------------------------- | -------------- | ------------------------------------------------ |
+| `KEENPIX_CACHE_MAX_BYTES` | `2147483648` (2GB) | Disk cache LRU cap                         |
+| `KEENPIX_CACHE_STALE_MS` | `86400000` (24h) | Serve stale disk entries immediately and refresh them in the background; `0` disables stale refresh |
+| `KEENPIX_MEMORY_CACHE_MAX_BYTES` | `67108864` (64MB) | In-process hot variant LRU cap; `0` disables memory caching |
 | `KEENPIX_MAX_ORIGIN_BYTES` | `52428800` (50MB) | Max bytes pulled from an origin before `413`  |
 | `KEENPIX_MAX_CONCURRENCY`  | CPU count      | Max simultaneous transforms before queueing      |
 | `KEENPIX_MAX_QUEUE`        | `100`          | Queue depth before shedding load with `503`      |
 | `KEENPIX_MAX_INPUT_PIXELS` | `50000000`     | Decode-time pixel ceiling (decompression-bomb guard) |
 | `KEENPIX_MAX_DIMENSION`    | `4096`         | Longest output side when a request gives no `w`/`h` |
+| `KEENPIX_ORIGIN_TIMEOUT_MS` | `10000`       | Per-attempt origin fetch timeout before `504`    |

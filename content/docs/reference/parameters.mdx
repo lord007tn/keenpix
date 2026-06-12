@@ -9,6 +9,7 @@ All transform parameters are optional; out-of-range values are clamped, not reje
 | Param | Type | Range / values | Default | Description |
 | --- | --- | --- | --- | --- |
 | `project` | string | — | **required** | Project id (allowlist gates access) |
+| `url` | URL | absolute `http`/`https` URL | — | Source image URL when not using the `/img/<source-url>` path form |
 | `w` / `h` | int | 1–5000 | bounded original | Target width/height (px) |
 | `resize` / `s` | string | `WIDTHxHEIGHT`, `WIDTH`, `xHEIGHT` | — | Compact size alias; explicit `w`/`h` win |
 | `q` | int | 30–100 | project default | Output quality |
@@ -45,7 +46,8 @@ All transform parameters are optional; out-of-range values are clamped, not reje
 - **No upscaling by default.** Keenpix never enlarges past the source resolution unless
   `enlarge=1` is set.
 - **Source URL.** Put the absolute source URL after `/img/`, for example
-  `/img/https://cdn.example.com/hero.jpg?project=ID&w=1200`.
+  `/img/https://cdn.example.com/hero.jpg?project=ID&w=1200`, or send it as
+  `/img/?url=https%3A%2F%2Fcdn.example.com%2Fhero.jpg&project=ID&w=1200`.
 - **`dpr`** multiplies the target dimensions — `w=400&dpr=2` renders at 800px.
 - **`fmt=auto`** depends on the project's *Auto-format* setting; when off, `auto` serves
   JPEG. Omitting `fmt` is treated as `auto`. It is raster negotiation only: SVG origins
