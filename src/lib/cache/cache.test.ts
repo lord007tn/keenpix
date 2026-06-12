@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, rm, stat, utimes } from 'node:fs/promises'
+import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -126,26 +126,63 @@ describe('DiskCacheStore', () => {
     }
   })
 
-  it('preserves mtime as the refresh timestamp when reading', async () => {
+  it('reports the write time as the entry createdAt', async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'keenpix-cache-'))
     const store = new DiskCacheStore(dir, 1024)
     const data = Buffer.from('image-bytes')
 
     try {
+      const before = Date.now()
       await store.set('key', 'webp', data)
-      const file = path.join(dir, 'key.webp')
-      const written = new Date(Date.now() - 60_000)
-      await utimes(file, written, written)
 
       const entry = await store.getEntry('key', 'webp')
-      const after = await stat(file)
-
       expect(entry?.data).toEqual(data)
-      expect(Math.round(entry?.createdAt ?? 0)).toBe(
-        Math.round(written.getTime()),
-      )
-      expect(Math.round(after.mtimeMs)).toBe(Math.round(written.getTime()))
-      expect(after.atimeMs).toBeGreaterThan(written.getTime())
+      expect(entry?.createdAt).toBeGreaterThanOrEqual(before)
+    } finally {
+      await rm(dir, { force: true, recursive: true })
+    }
+  })
+
+  it('rebuilds its index from files already on disk', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'keenpix-cache-'))
+    const data = Buffer.from('image-bytes')
+
+    try {
+      const first = new DiskCacheStore(dir, 1024)
+      await first.set('key', 'webp', data)
+
+      const second = new DiskCacheStore(dir, 1024)
+      expect(await second.get('key', 'webp')).toEqual(data)
+      expect(await second.inspect()).toMatchObject({
+        diskFileCount: 1,
+        diskSizeBytes: data.byteLength,
+      })
+    } finally {
+      await rm(dir, { force: true, recursive: true })
+    }
+  })
+
+  it('evicts the least-recently-used entries when over the cap', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'keenpix-cache-'))
+    const data = Buffer.alloc(100, 1)
+    // Cap fits two 100-byte entries; a third forces eviction back under 90%.
+    const store = new DiskCacheStore(dir, 250)
+
+    try {
+      await store.set('aa', 'webp', data)
+      await store.set('bb', 'webp', data)
+      // Touch 'aa' so 'bb' is the coldest entry when the cap is exceeded.
+      await store.get('aa', 'webp')
+      await store.set('cc', 'webp', data)
+
+      expect(await store.get('bb', 'webp')).toBeNull()
+      expect(await store.get('aa', 'webp')).toEqual(data)
+      expect(await store.get('cc', 'webp')).toEqual(data)
+      expect(await store.inspect()).toMatchObject({
+        diskEvictedBytes: 100,
+        diskEvictedFiles: 1,
+        diskFileCount: 2,
+      })
     } finally {
       await rm(dir, { force: true, recursive: true })
     }
