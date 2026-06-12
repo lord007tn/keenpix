@@ -9,5 +9,5 @@ export interface SessionUser {
 }
 
 export const getSessionFn = createServerFn({ method: 'GET' }).handler(
-  async (): Promise<SessionUser | null> => getSessionUser(),
+  async () => getSessionUser(),
 )

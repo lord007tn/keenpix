@@ -3,15 +3,10 @@ import { prisma } from '@/db'
 import { Prisma } from '@/generated/prisma/client'
 import type {
   AnalyticsRange,
-  AnalyticsSummary,
-  DashboardKpis,
   DomainBreakdownRow,
-  FormatSlice,
   LatencyBin,
-  ProjectBreakdownRow,
   ProjectStat,
   TimePoint,
-  TopItem,
 } from '@/shared/types'
 import { listProjects } from './projects'
 
@@ -132,7 +127,7 @@ async function latencyPercentiles(opts: {
   lt?: Date
   projectId?: string
   filters?: AnalyticsFilters
-}): Promise<{ p50: number; p95: number; p99: number }> {
+}) {
   const rows = await prisma.$queryRaw<
     Array<{ p50: number | null; p95: number | null; p99: number | null }>
   >`
@@ -155,7 +150,7 @@ export async function getAnalyticsSummary(
   range: AnalyticsRange,
   projectId?: string,
   filters?: AnalyticsFilters,
-): Promise<AnalyticsSummary> {
+) {
   const since = sinceFor(range)
   const where = scope(since, projectId, filters)
   const [agg, total, cachedCount, percentiles] = await Promise.all([
@@ -189,7 +184,7 @@ export async function getTimeSeries(
   range: AnalyticsRange,
   projectId?: string,
   filters?: AnalyticsFilters,
-): Promise<TimePoint[]> {
+) {
   const meta = rangeMeta(range)
   const sinceAt = dayjs().subtract(meta.n * meta.ms, 'millisecond')
   const since = sinceAt.toDate()
@@ -240,7 +235,7 @@ export async function getFormatDistribution(
   range: AnalyticsRange = '24h',
   projectId?: string,
   filters?: AnalyticsFilters,
-): Promise<FormatSlice[]> {
+) {
   const since = sinceFor(range)
   const grouped = await prisma.requestLog.groupBy({
     by: ['format'],
@@ -264,7 +259,7 @@ export async function getFormatDistribution(
 export async function getAvailableFilters(
   range: AnalyticsRange = '24h',
   projectId?: string,
-): Promise<{ formats: string[]; statuses: number[]; domains: string[] }> {
+) {
   const since = sinceFor(range)
   const where = scope(since, projectId)
   const [formatRows, statusRows, domainRows] = await Promise.all([
@@ -300,7 +295,7 @@ export async function getTopImages(
   range: AnalyticsRange = '24h',
   projectId?: string,
   filters?: AnalyticsFilters,
-): Promise<TopItem[]> {
+) {
   const since = sinceFor(range)
   const grouped = await prisma.requestLog.groupBy({
     by: ['path'],
@@ -316,7 +311,7 @@ export async function getLatencyBins(
   range: AnalyticsRange = '24h',
   projectId?: string,
   filters?: AnalyticsFilters,
-): Promise<LatencyBin[]> {
+) {
   const since = sinceFor(range)
   const rows = await prisma.requestLog.findMany({
     where: scope(since, projectId, filters),
@@ -353,9 +348,7 @@ export async function getLatencyBins(
   return bins
 }
 
-export async function getProjectStats(
-  range: AnalyticsRange = '24h',
-): Promise<Record<string, ProjectStat>> {
+export async function getProjectStats(range: AnalyticsRange = '24h') {
   const since = sinceFor(range)
   const [byProject, hitsByProject] = await Promise.all([
     prisma.requestLog.groupBy({
@@ -383,9 +376,7 @@ export async function getProjectStats(
 }
 
 // Per-project rollup for the org-wide analytics breakdown.
-export async function getProjectBreakdown(
-  range: AnalyticsRange,
-): Promise<ProjectBreakdownRow[]> {
+export async function getProjectBreakdown(range: AnalyticsRange) {
   const since = sinceFor(range)
   const where = { ts: { gte: since } }
   const [byProject, hitsByProject, bytesByProject, projects] =
@@ -436,7 +427,7 @@ export async function getProjectBreakdown(
 export async function getDomainBreakdown(
   range: AnalyticsRange,
   projectId: string,
-): Promise<DomainBreakdownRow[]> {
+) {
   const since = sinceFor(range)
   const where = scope(since, projectId)
   const [byDomain, hitsByDomain, bytesByDomain] = await Promise.all([
@@ -483,20 +474,11 @@ export async function getDomainBreakdown(
     .sort((a, b) => b.requests - a.requests)
 }
 
-interface WindowStats {
-  bandwidthIn: number
-  bandwidthOut: number
-  bandwidthSaved: number
-  hitRate: number
-  p95: number
-  requests: number
-}
-
 async function windowStats(
   projectId: string | undefined,
   gte: Date,
   lt?: Date,
-): Promise<WindowStats> {
+) {
   const where = {
     ...(projectId ? { projectId } : {}),
     ts: lt ? { gte, lt } : { gte },
@@ -526,7 +508,7 @@ async function windowStats(
 export async function getDashboardKpis(
   range: AnalyticsRange,
   projectId?: string,
-): Promise<DashboardKpis> {
+) {
   const { n, ms } = rangeMeta(range)
   const windowMs = n * ms
   const now = dayjs()

@@ -63,17 +63,11 @@ export function isPrivateIp(ip: string) {
 }
 
 /**
- * Validates a fetch target before we touch it:
+ * Validates an origin URL before serving cached bytes:
  * - http(s) only
- * - host must be on the project allowlist (if any)
- * - resolves DNS once, blocks private/loopback/link-local IPs,
- *   and returns the resolved IP so the caller can pin the fetch to that IP
- *   (closes the DNS-rebinding TOCTOU window).
+ * - host must be on the project allowlist
  */
-export async function assertSafeOrigin(
-  rawUrl: string,
-  allowedOrigins: string[],
-): Promise<SafeOrigin> {
+export function assertAllowedOrigin(rawUrl: string, allowedOrigins: string[]) {
   let url: URL
   try {
     url = new URL(rawUrl)
@@ -99,6 +93,23 @@ export async function assertSafeOrigin(
   if (!allowed) {
     throw new TransformError(`Origin ${url.hostname} is not allowed`, 403)
   }
+
+  return { url }
+}
+
+/**
+ * Validates a fetch target before we touch the origin:
+ * - http(s) only
+ * - host must be on the project allowlist
+ * - resolves DNS once, blocks private/loopback/link-local IPs,
+ *   and returns the resolved IP so the caller can pin the fetch to that IP
+ *   (closes the DNS-rebinding TOCTOU window).
+ */
+export async function assertSafeOrigin(
+  rawUrl: string,
+  allowedOrigins: string[],
+) {
+  const { url } = assertAllowedOrigin(rawUrl, allowedOrigins)
 
   // Prefer IPv4 (universally routable from most environments); fall back to
   // IPv6 only if the host has no A record.
