@@ -1,11 +1,11 @@
 ---
 title: Keenpix
-description: Self-hosted, drop-in image optimization. One endpoint, no SDK, no API key in your image URLs.
+description: Self-hosted, drop-in image optimization. One image endpoint, no SDK, no API key in your image URLs.
 icon: Sparkles
 ---
 
 Keenpix is a self-hosted image-optimization service — an open-source alternative to
-ImageKit, imgix, and Cloudinary. It's a single HTTP endpoint that fetches an image from
+ImageKit, imgix, and Cloudinary. Its public transform API is a single HTTP endpoint that fetches an image from
 your origin, transforms it with [sharp](https://sharp.pixelplumbing.com) (resize,
 crop, filter, and re-encode), optimizes SVG explicitly with `fmt=svg`, caches the
 result on disk, and serves it behind a long-lived, immutable `Cache-Control`.
@@ -24,7 +24,7 @@ There's no SDK to install and no API key in your image URLs — **a request is j
 - [**Quickstart**](/docs/getting-started/quickstart) — your first optimized image in two minutes.
 - [**How it works**](/docs/concepts/how-it-works) — the request lifecycle, caching, and security model.
 - [**Frameworks**](/docs/frameworks) — drop Keenpix into Next.js, Nuxt, TanStack Start, SvelteKit, Astro, and more.
-- [**API reference**](/docs/reference/endpoint) — every query parameter and response header.
+- [**API reference**](/docs/reference/endpoint) — transform parameters, response headers, and the authenticated SDK API.
 - [**Self-hosting**](/docs/self-hosting) — deploy with Docker in about a minute.
 
 ## Why Keenpix

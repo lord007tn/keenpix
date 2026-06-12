@@ -1,0 +1,265 @@
+---
+title: SDK API
+description: Authenticated JSON endpoints for trusted backend integrations.
+icon: KeyRound
+---
+
+The SDK API is for trusted backend systems and external integrations that need to
+manage Keenpix projects programmatically. It is separate from the public `/img/*`
+transform endpoint: image URLs stay keyless and are still protected by each
+project's allowed source hosts.
+
+Create an internal API key from **Workspace -> API Keys** as a super admin. Keys can
+be scoped to every project or to one project. Project-scoped keys can read and write
+only that project and cannot create new projects.
+
+Send the key with either header:
+
+```http
+Authorization: Bearer <KEY>
+X-Keenpix-Api-Key: <KEY>
+```
+
+All SDK responses are JSON and set `Cache-Control: no-store`. SDK requests are
+recorded under **Workspace -> API Keys -> API activity**.
+
+## Endpoints
+
+| Method | Path | Scope | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/sdk/projects` | read | List projects visible to the key. |
+| `POST` | `/api/sdk/projects` | all-project write | Create a project. |
+| `GET` | `/api/sdk/projects/<projectId>` | read | Fetch one project. |
+| `GET` | `/api/sdk/projects/<projectId>/configuration` | read | Fetch integration configuration for building image URLs. |
+| `PATCH` | `/api/sdk/projects/<projectId>/settings` | write | Update transform defaults. |
+| `POST` | `/api/sdk/projects/<projectId>/prewarm` | write | Queue cache prewarming for source images. |
+| `POST` | `/api/sdk/projects/<projectId>/domains` | write | Add an allowed source host. |
+| `DELETE` | `/api/sdk/projects/<projectId>/domains?host=<host>` | write | Remove an allowed source host. |
+
+## Projects
+
+Create a project with an all-project write key:
+
+```bash
+curl -X POST "https://keenpix.example.com/api/sdk/projects" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Storefront",
+    "origin": "https://cdn.example.com",
+    "env": "production",
+    "allowedOrigins": ["cdn.example.com"]
+  }'
+```
+
+Request body:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | yes | 1-80 characters. |
+| `origin` | URL | yes | `http` or `https` origin URL. |
+| `env` | string | yes | `production`, `staging`, or `development`. |
+| `allowedOrigins` | string[] | no | Hostnames to allow. URLs are normalized to hostnames. |
+
+List or fetch projects:
+
+```bash
+curl "https://keenpix.example.com/api/sdk/projects" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY"
+
+curl "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY"
+```
+
+Project responses include the project id, origin, environment, allowed origins,
+color fields, transform defaults, and `createdAt`.
+
+## Configuration
+
+Use the configuration endpoint when an external CMS or backend needs the canonical
+image base URL and the supported transform parameters.
+
+```bash
+curl "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/configuration" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY"
+```
+
+```json
+{
+  "configuration": {
+    "projectId": "cm...",
+    "projectName": "Storefront",
+    "origin": "https://cdn.example.com",
+    "allowedOrigins": ["cdn.example.com"],
+    "imageBaseUrl": "https://keenpix.example.com/img",
+    "transformUrlTemplate": "https://keenpix.example.com/img/<source-url>?project=cm...",
+    "defaults": {
+      "autoFormat": true,
+      "defaultQuality": 75,
+      "stripMetadata": true
+    },
+    "supportedParameters": [
+      "project",
+      "url",
+      "w",
+      "h",
+      "q",
+      "fmt",
+      "fit",
+      "dpr",
+      "blur",
+      "position",
+      "pos",
+      "gravity",
+      "background",
+      "bg",
+      "flatten",
+      "resize",
+      "s",
+      "enlarge",
+      "kernel",
+      "extract",
+      "crop",
+      "trim",
+      "extend",
+      "extendWith",
+      "rotate",
+      "r",
+      "flip",
+      "flop",
+      "sharpen",
+      "median",
+      "gamma",
+      "gammaOut",
+      "negate",
+      "normalize",
+      "normalise",
+      "threshold",
+      "brightness",
+      "saturation",
+      "hue",
+      "lightness",
+      "tint",
+      "grayscale",
+      "greyscale",
+      "animated",
+      "a"
+    ]
+  }
+}
+```
+
+`imageBaseUrl` and `transformUrlTemplate` are derived from proxy headers
+(`X-Forwarded-Host` and `X-Forwarded-Proto`) when present, then fall back to the
+request origin. Configure your reverse proxy to forward the public host and
+protocol so third-party integrations receive the external Keenpix URL.
+
+## Settings
+
+Patch one or more transform defaults:
+
+```bash
+curl -X PATCH "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/settings" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "autoFormat": true,
+    "defaultQuality": 82,
+    "stripMetadata": true
+  }'
+```
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `autoFormat` | boolean | Enables `fmt=auto` negotiation. |
+| `defaultQuality` | integer | `30` through `100`. |
+| `stripMetadata` | boolean | Removes image metadata from transformed output. |
+
+Send at least one field.
+
+## Domains
+
+Allowed source hosts control what `/img/*` may fetch. Add a host with JSON:
+
+```bash
+curl -X POST "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/domains" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "host": "assets.example.com" }'
+```
+
+Remove a host with a query string or JSON body:
+
+```bash
+curl -X DELETE "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/domains?host=assets.example.com" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY"
+```
+
+Hosts are normalized to lowercase hostnames. Schemes, paths, and ports are removed
+when possible.
+
+## Prewarm
+
+Use prewarm after a trusted integration uploads or publishes images. Keenpix queues
+the requested transform variants and returns immediately with `202`; it does not wait
+for every transform to finish and it does not create user-facing request-log rows.
+Source URLs still have to pass the project's allowed-host and SSRF checks when the
+queued work runs.
+
+```bash
+curl -X POST "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/prewarm" \
+  -H "Authorization: Bearer $KEENPIX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sources": ["https://cdn.example.com/uploads/photo.jpg"],
+    "widths": [320, 640, 768, 960, 1280],
+    "formats": ["avif", "webp"],
+    "quality": 75,
+    "fit": "cover",
+    "dpr": 1
+  }'
+```
+
+Request body:
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `src` | URL | - | One source URL. Use `src` or `sources`. |
+| `sources` | URL[] | - | 1-20 source URLs. Use `src` or `sources`. |
+| `widths` | integer[] | `[320, 640, 768, 960, 1280]` | 1-10 widths, each 1-5000. |
+| `formats` | string[] | `["avif", "webp"]` | `auto`, `avif`, `webp`, `jpeg`, or `png`. |
+| `quality` | integer | project default | `30` through `100`. |
+| `fit` | string | `cover` | `cover`, `contain`, `fill`, or `inside`. |
+| `dpr` | integer | `1` | `1` through `3`. |
+
+A single prewarm request can queue at most 200 variants:
+`unique sources * widths * formats <= 200`.
+
+Successful response:
+
+```json
+{
+  "prewarm": {
+    "accepted": true,
+    "sourceCount": 1,
+    "variantCount": 10
+  }
+}
+```
+
+## Errors
+
+SDK errors use this shape:
+
+```json
+{ "error": "Missing API key" }
+```
+
+| Status | When |
+| --- | --- |
+| `400` | Invalid JSON, invalid URL or host, invalid settings, or too many prewarm variants. |
+| `401` | Missing or invalid API key. |
+| `403` | Project-scoped key cannot access the requested project or operation. |
+| `404` | Unknown project or endpoint. |
+| `429` | API key rate limit exceeded. |
+| `500` | Unexpected SDK API failure. |

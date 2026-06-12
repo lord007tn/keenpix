@@ -1,0 +1,60 @@
+---
+title: Operations
+description: Runtime endpoints for deployment health and automation.
+icon: Activity
+---
+
+These endpoints are for operators and deployment platforms. They are separate from
+the public image transform endpoint and the authenticated SDK API.
+
+## Health
+
+```http
+GET /api/health
+```
+
+The health endpoint is unauthenticated so container platforms, reverse proxies, and
+uptime monitors can call it. It returns JSON with `Cache-Control: no-store`.
+
+| Status | Meaning |
+| --- | --- |
+| `200` | The app can reach the database and runtime checks completed. |
+| `503` | The database health check failed or the instance is degraded. |
+
+Example response:
+
+```json
+{
+  "ok": true,
+  "service": "keenpix",
+  "status": "ok",
+  "timestamp": "2026-06-12T02:30:00.000Z",
+  "uptimeSeconds": 123,
+  "checks": {
+    "cache": {
+      "diskSizeBytes": 1048576,
+      "diskMaxBytes": 2147483648,
+      "memorySizeBytes": 262144,
+      "memoryMaxBytes": 67108864
+    },
+    "database": {
+      "ok": true,
+      "latencyMs": 2
+    },
+    "transformQueue": {
+      "active": 0,
+      "queued": 0,
+      "concurrency": 4,
+      "maxQueue": 100,
+      "rejected": 0,
+      "status": "idle"
+    }
+  },
+  "latencyMs": 3
+}
+```
+
+The exact cache and queue fields may grow as the operations dashboard grows, so treat
+`ok`, `status`, `checks.database.ok`, and the HTTP status as the stable monitoring
+contract.
+
