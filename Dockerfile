@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.7
 
 # Node is the deploy target because sharp needs the native libvips runtime.
-# Debian slim matches sharp's prebuilt Linux binaries cleanly.
-FROM node:22-slim AS base
+# Alpine keeps the runtime smaller; sharp and Prisma both publish musl builds.
+FROM node:22-alpine AS base
 ENV PNPM_HOME=/pnpm
 ENV PNPM_STORE_DIR=/pnpm/store
 ENV PATH=$PNPM_HOME:$PATH
@@ -11,9 +11,7 @@ WORKDIR /app
 FROM base AS runtime-deps
 # openssl keeps Prisma engine detection quiet at migrate time; curl powers the
 # Compose healthcheck without running a Node one-liner inside the container.
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends curl openssl \
-  && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache curl openssl
 
 FROM runtime-deps AS package-manager
 RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
@@ -51,7 +49,7 @@ LABEL org.opencontainers.image.title="Keenpix" \
   org.opencontainers.image.source="https://github.com/lord007tn/keenpix" \
   org.opencontainers.image.version=$VERSION
 COPY --from=build /app/.output ./.output
-COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
 COPY --from=build /app/src/generated ./src/generated
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts ./prisma.config.ts
