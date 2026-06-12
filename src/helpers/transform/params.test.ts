@@ -5,6 +5,9 @@ function parse(query: string) {
   return parseTransformParams(new URLSearchParams(query), '', {
     autoFormat: true,
     defaultQuality: 75,
+    defaultDpr: 1,
+    defaultFit: 'cover',
+    maxWidth: null,
   })
 }
 
@@ -76,6 +79,31 @@ describe('parseTransformParams', () => {
   it('accepts explicit SVG output', () => {
     expect(parse('fmt=svg')).toMatchObject({
       format: 'svg',
+    })
+  })
+
+  it('applies project pipeline defaults and the max-width cap', () => {
+    const withDefaults = (query: string) =>
+      parseTransformParams(new URLSearchParams(query), '', {
+        autoFormat: true,
+        defaultQuality: 75,
+        defaultDpr: 2,
+        defaultFit: 'contain',
+        maxWidth: 800,
+      })
+    // Omitted fit/dpr fall back to the project defaults.
+    expect(withDefaults('w=400')).toMatchObject({
+      width: 400,
+      fit: 'contain',
+      dpr: 2,
+    })
+    // A width above the cap is clamped down.
+    expect(withDefaults('w=2000')).toMatchObject({ width: 800 })
+    // Explicit request params still win over the defaults.
+    expect(withDefaults('w=300&fit=cover&dpr=1')).toMatchObject({
+      width: 300,
+      fit: 'cover',
+      dpr: 1,
     })
   })
 })

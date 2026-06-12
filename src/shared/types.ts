@@ -1,12 +1,6 @@
 import type { OutputFormat } from './transform'
 
-export type ProjectEnv = 'production' | 'staging' | 'development'
-
-export function isProjectEnv(value: unknown): value is ProjectEnv {
-  return (
-    value === 'production' || value === 'staging' || value === 'development'
-  )
-}
+export type ProjectFit = 'cover' | 'contain' | 'fill' | 'inside' | 'outside'
 
 export interface Project {
   allowedOrigins: string[]
@@ -15,10 +9,14 @@ export interface Project {
   color1: string
   color2: string
   createdAt: string
+  defaultDpr: number
+  // Applied when a transform request omits ?fit= / ?dpr=.
+  defaultFit: ProjectFit
   // Applied when a transform request omits ?q=.
   defaultQuality: number
-  env: ProjectEnv
   id: string
+  // Optional cap on the requested width; null/0 means no maximum.
+  maxWidth: number | null
   name: string
   orgId: string
   origin: string
@@ -111,6 +109,7 @@ export interface ProjectStat {
 }
 
 export interface ProjectBreakdownRow {
+  avgLatency: number
   bandwidthSaved: number
   hitRate: number
   name: string
@@ -119,9 +118,21 @@ export interface ProjectBreakdownRow {
 }
 
 export interface DomainBreakdownRow {
+  avgLatency: number
   bandwidthSaved: number
   domain: string
   hitRate: number
+  lastSeen: string | null
+  requests: number
+}
+
+export interface AllowedHostStat {
+  // false = seen in request logs but not on the project's allowlist.
+  allowed: boolean
+  bandwidthSaved: number
+  hitRate: number
+  host: string
+  lastSeen: string | null
   requests: number
 }
 

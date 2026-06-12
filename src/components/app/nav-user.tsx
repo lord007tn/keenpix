@@ -1,16 +1,17 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import {
   BookOpenIcon,
-  Building2Icon,
-  ChevronsUpDownIcon,
+  ChevronDownIcon,
   LogOutIcon,
   MoonIcon,
   SunIcon,
+  TagIcon,
   UserIcon,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useState } from 'react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,14 +21,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from '@/components/ui/sidebar'
 import type { SessionUser } from '@/functions/auth'
 import { signOut } from '@/lib/auth/client'
+import { RELEASES_URL } from '@/shared/repository'
+import { APP_VERSION } from '@/shared/seo'
 
 const NAME_SPLIT_RE = /[\s@._-]+/
 
@@ -40,13 +37,11 @@ function initials(user: SessionUser): string {
 }
 
 export function NavUser({ user }: { user: SessionUser }) {
-  const { isMobile } = useSidebar()
   const navigate = useNavigate()
   const { resolvedTheme, setTheme } = useTheme()
   const [pending, setPending] = useState(false)
   const isDark = resolvedTheme === 'dark'
   const display = user.name?.trim() || user.email
-  const isSuperAdmin = user.role === 'super_admin'
 
   async function handleSignOut() {
     setPending(true)
@@ -58,97 +53,82 @@ export function NavUser({ user }: { user: SessionUser }) {
   }
 
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={<Button className="gap-1.5 pr-1.5 pl-1" variant="ghost" />}
+      >
+        <Avatar className="size-7">
+          <AvatarFallback className="text-xs">{initials(user)}</AvatarFallback>
+        </Avatar>
+        <span className="hidden max-w-32 truncate font-medium text-sm sm:inline">
+          {display}
+        </span>
+        <ChevronDownIcon className="text-muted-foreground" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-56" side="bottom">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="p-0 font-normal">
+            <div className="flex items-center gap-2 px-1 py-1.5">
+              <Avatar className="size-8">
+                <AvatarFallback>{initials(user)}</AvatarFallback>
+              </Avatar>
+              <div className="flex min-w-0 flex-col leading-none">
+                <span className="truncate font-medium text-foreground text-sm">
+                  {display}
+                </span>
+                <span className="truncate text-muted-foreground text-xs">
+                  {user.email}
+                </span>
+              </div>
+            </div>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem render={<Link to="/app/account" />}>
+            <UserIcon />
+            Account
+          </DropdownMenuItem>
+          <DropdownMenuItem
             render={
-              <SidebarMenuButton
-                className="aria-expanded:bg-sidebar-accent"
-                size="lg"
-              />
+              // biome-ignore lint/a11y/useAnchorContent: the icon + "Documentation" label are merged into the anchor by Base UI's render prop
+              <a href="/docs" />
             }
           >
-            <Avatar className="size-8">
-              <AvatarFallback>{initials(user)}</AvatarFallback>
-            </Avatar>
-            <div className="flex min-w-0 flex-col gap-0.5 leading-none">
-              <span className="truncate font-semibold">{display}</span>
-              <span className="truncate text-muted-foreground text-xs">
-                {user.email}
-              </span>
-            </div>
-            <ChevronsUpDownIcon className="ml-auto" data-icon="inline-end" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="min-w-56"
-            side={isMobile ? 'bottom' : 'right'}
-            sideOffset={4}
+            <BookOpenIcon />
+            Documentation
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            render={
+              // biome-ignore lint/a11y/useAnchorContent: the icon + version label are merged into the anchor by Base UI's render prop
+              <a href={RELEASES_URL} rel="noreferrer" target="_blank" />
+            }
           >
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="p-0 font-normal">
-                <div className="flex items-center gap-2 px-1 py-1.5">
-                  <Avatar className="size-8">
-                    <AvatarFallback>{initials(user)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex min-w-0 flex-col leading-none">
-                    <span className="truncate font-medium text-foreground text-sm">
-                      {display}
-                    </span>
-                    <span className="truncate text-muted-foreground text-xs">
-                      {user.email}
-                    </span>
-                  </div>
-                </div>
-              </DropdownMenuLabel>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem render={<Link to="/app/account" />}>
-                <UserIcon />
-                Account
-              </DropdownMenuItem>
-              {isSuperAdmin ? (
-                <DropdownMenuItem
-                  render={
-                    <Link search={{ tab: 'staff' }} to="/app/workspace" />
-                  }
-                >
-                  <Building2Icon />
-                  Workspace
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuItem
-                render={
-                  // biome-ignore lint/a11y/useAnchorContent: the icon + "Documentation" label are merged into the anchor by Base UI's render prop
-                  <a href="/docs" />
-                }
-              >
-                <BookOpenIcon />
-                Documentation
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              closeOnClick={false}
-              onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            >
-              {isDark ? <SunIcon /> : <MoonIcon />}
-              {isDark ? 'Light mode' : 'Dark mode'}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              disabled={pending}
-              onClick={handleSignOut}
-              variant="destructive"
-            >
-              <LogOutIcon />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
+            <TagIcon />
+            Version v{APP_VERSION}
+            <span className="ml-auto text-muted-foreground text-xs">
+              Releases
+            </span>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          closeOnClick={false}
+          onClick={() => setTheme(isDark ? 'light' : 'dark')}
+        >
+          {isDark ? <SunIcon /> : <MoonIcon />}
+          {isDark ? 'Light mode' : 'Dark mode'}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          disabled={pending}
+          onClick={handleSignOut}
+          variant="destructive"
+        >
+          <LogOutIcon />
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

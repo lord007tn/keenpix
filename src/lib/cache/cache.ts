@@ -64,6 +64,32 @@ export function getCacheRuntimeStats() {
   }
 }
 
+// Live cache caps for the running instance (bytes). Reflects any hot-applied
+// override, not just the boot-time env defaults.
+export function getCacheLimits() {
+  return {
+    diskMaxBytes: diskCache.getMaxBytes(),
+    memoryMaxBytes: memoryCache.getMaxBytes(),
+  }
+}
+
+// Hot-apply cache caps. No-ops a value that already matches so the memory LRU
+// is not rebuilt (which would drop the hot set) unless the cap actually changed.
+export function applyCacheLimits({
+  diskMaxBytes,
+  memoryMaxBytes,
+}: {
+  diskMaxBytes?: number
+  memoryMaxBytes?: number
+}) {
+  if (diskMaxBytes != null && diskMaxBytes !== diskCache.getMaxBytes()) {
+    diskCache.setMaxBytes(diskMaxBytes)
+  }
+  if (memoryMaxBytes != null && memoryMaxBytes !== memoryCache.getMaxBytes()) {
+    memoryCache.setMaxBytes(memoryMaxBytes)
+  }
+}
+
 export async function getCacheStorageStats() {
   return {
     ...(await diskCache.inspect()),
