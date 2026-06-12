@@ -109,6 +109,7 @@ export interface ProjectStat {
 }
 
 export interface ProjectBreakdownRow {
+  avgLatency: number
   bandwidthSaved: number
   hitRate: number
   name: string
@@ -117,9 +118,11 @@ export interface ProjectBreakdownRow {
 }
 
 export interface DomainBreakdownRow {
+  avgLatency: number
   bandwidthSaved: number
   domain: string
   hitRate: number
+  lastSeen: string | null
   requests: number
 }
 
