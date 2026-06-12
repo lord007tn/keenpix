@@ -23,7 +23,6 @@ const PROJECTS = [
     id: 'demo_shop',
     name: 'Demo Shop',
     origin: 'https://shop.demo.example',
-    env: 'production',
     color1: '#FF6B2C',
     color2: '#FFA76B',
     allowedOrigins: ['cdn.shop.demo', 'img.shop.demo', 'assets.shop.demo'],
@@ -32,7 +31,6 @@ const PROJECTS = [
     id: 'demo_blog',
     name: 'Demo Blog',
     origin: 'https://blog.demo.example',
-    env: 'staging',
     color1: '#3A7BD5',
     color2: '#5DE3CE',
     allowedOrigins: ['media.blog.demo', 'cdn.blog.demo'],
@@ -68,7 +66,6 @@ async function main() {
       update: {
         name: p.name,
         origin: p.origin,
-        env: p.env,
         allowedOrigins: p.allowedOrigins,
         color1: p.color1,
         color2: p.color2,

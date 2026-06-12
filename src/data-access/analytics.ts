@@ -385,6 +385,7 @@ export async function getProjectBreakdown(range: AnalyticsRange) {
         by: ['projectId'],
         where,
         _count: { _all: true },
+        _avg: { latencyMs: true },
       }),
       prisma.requestLog.groupBy({
         by: ['projectId'],
@@ -417,6 +418,7 @@ export async function getProjectBreakdown(range: AnalyticsRange) {
         requests,
         bandwidthSaved: b.in - b.out,
         hitRate: requests === 0 ? 0 : (cached / requests) * 100,
+        avgLatency: Math.round(g._avg.latencyMs ?? 0),
       }
     })
     .sort((a, b) => b.requests - a.requests)
@@ -435,6 +437,8 @@ export async function getDomainBreakdown(
       by: ['sourceHost'],
       where,
       _count: { _all: true },
+      _avg: { latencyMs: true },
+      _max: { ts: true },
     }),
     prisma.requestLog.groupBy({
       by: ['sourceHost'],
@@ -468,10 +472,74 @@ export async function getDomainBreakdown(
         requests,
         bandwidthSaved: b.in - b.out,
         hitRate: requests === 0 ? 0 : (cached / requests) * 100,
+        avgLatency: Math.round(g._avg.latencyMs ?? 0),
+        lastSeen: g._max.ts ? dayjs(g._max.ts).format('MMM D, HH:mm') : null,
       }
     })
     .filter((r): r is DomainBreakdownRow => r !== null)
     .sort((a, b) => b.requests - a.requests)
+}
+
+interface HostTraffic {
+  bandwidthSaved: number
+  hitRate: number
+  lastSeen: string | null
+  requests: number
+}
+
+// Per-source-host traffic for one project + window, keyed by host. The action
+// layer joins this with the project's allowlist to build the allowed-hosts
+// table (hosts seen here that are not on the list surface as "not allowed").
+export async function getHostTraffic(range: AnalyticsRange, projectId: string) {
+  const since = sinceFor(range)
+  const where = scope(since, projectId)
+  const [byHost, hitsByHost, bytesByHost, lastByHost] = await Promise.all([
+    prisma.requestLog.groupBy({
+      by: ['sourceHost'],
+      where,
+      _count: { _all: true },
+    }),
+    prisma.requestLog.groupBy({
+      by: ['sourceHost'],
+      where: { ...where, cached: true },
+      _count: { _all: true },
+    }),
+    prisma.requestLog.groupBy({
+      by: ['sourceHost'],
+      where,
+      _sum: { bytesIn: true, bytesOut: true },
+    }),
+    prisma.requestLog.groupBy({
+      by: ['sourceHost'],
+      where,
+      _max: { ts: true },
+    }),
+  ])
+  const hits = new Map(hitsByHost.map((g) => [g.sourceHost, g._count._all]))
+  const bytes = new Map(
+    bytesByHost.map((g) => [
+      g.sourceHost,
+      { in: g._sum.bytesIn ?? 0, out: g._sum.bytesOut ?? 0 },
+    ]),
+  )
+  const last = new Map(lastByHost.map((g) => [g.sourceHost, g._max.ts]))
+  const map = new Map<string, HostTraffic>()
+  for (const g of byHost) {
+    if (g.sourceHost === null) {
+      continue
+    }
+    const requests = g._count._all
+    const cached = hits.get(g.sourceHost) ?? 0
+    const b = bytes.get(g.sourceHost) ?? { in: 0, out: 0 }
+    const ts = last.get(g.sourceHost)
+    map.set(g.sourceHost, {
+      requests,
+      hitRate: requests === 0 ? 0 : (cached / requests) * 100,
+      bandwidthSaved: b.in - b.out,
+      lastSeen: ts ? dayjs(ts).format('MMM D, HH:mm') : null,
+    })
+  }
+  return map
 }
 
 async function windowStats(
