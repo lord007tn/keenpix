@@ -22,11 +22,13 @@ Do not cache the dashboard, auth routes, docs, or health checks.
 3. Create a Cache Rule matching only the image path:
 
    ```text
-   http.host eq "images.example.com" and starts_with(http.request.uri.path, "/img/")
+   http.host eq "keenpix.joodlab.com" and starts_with(http.request.uri.path, "/img/")
    ```
 
 4. Set the rule to **Eligible for cache**.
-5. Keep all query string parameters in the cache key. Do not use "Ignore Query String".
+5. Leave **Cache key** unset on non-Enterprise plans. Cloudflare's default/standard
+   cache key already includes the full request URI with its query string, so each
+   `?w=` / `?fmt=` variant is cached separately. Do not enable "Ignore query string".
    Enable query-string sorting if available.
 6. Let Cloudflare respect Keenpix's origin header, or set an edge TTL that matches the
    immutable image lifetime:
@@ -61,6 +63,9 @@ variant support enabled. Otherwise, two browsers can ask for the same URL but ne
 different output formats. In Nuxt Image or JoodCMS-style integrations, leaving the
 image component's `format` prop unset produces this auto-negotiated URL; setting
 `format="avif"` or `format="webp"` forces a single variant.
+
+On Cloudflare non-Enterprise plans, prefer explicit `fmt` values because custom cache
+key headers, including `Accept`, are Enterprise-only.
 
 SVG is fixed-format only. If you want optimized SVG bytes, request `fmt=svg`; `fmt=auto`
 rasterizes SVG origins and varies the raster response by `Accept`.
@@ -145,6 +150,8 @@ The same rules apply to any proxy or CDN:
 
 - Cache only paths that start with `/img/`.
 - Include the full path and full query string in the cache key.
+- On Cloudflare non-Enterprise plans, leave the Cache key section unset; the default
+  key already includes the query string.
 - Respect `Cache-Control` from Keenpix — do not shorten or strip it.
 - Respect `Vary: Accept` if you use `fmt=auto`; otherwise generate explicit `fmt` values.
 - Keep dashboard, auth, docs, and `/api/health` uncached.

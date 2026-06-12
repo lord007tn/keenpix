@@ -158,7 +158,7 @@ Keenpix also supports internal stale-while-revalidate for the disk cache. After 
 
 For good cache hit rates, keep frontend widths normalized. Instead of generating arbitrary widths from every viewport value, choose a small shared ladder such as `320`, `480`, `640`, `768`, `960`, and `1280`, then reuse those values across your CMS and frontend. Each unique `src + project + w + h + q + fmt + fit + dpr + blur` combination is a separate variant.
 
-For Cloudflare, create a Cache Rule for `keenpix.joodlab.com/img/*` that marks responses eligible for cache and keeps all query string parameters in the cache key. If using `fmt=auto`, the cache key also needs to vary by `Accept`; otherwise prefer explicit `fmt=avif` / `fmt=webp` URLs from integrations.
+For Cloudflare, create a Cache Rule matching `http.host eq "keenpix.joodlab.com" and starts_with(http.request.uri.path, "/img/")` that marks responses eligible for cache. On non-Enterprise plans, leave the Cache key section unset; Cloudflare's default/standard cache key already includes the full request URI with query string, so each `?w=` / `?fmt=` variant is cached separately. Do not enable "Ignore query string". If using `fmt=auto`, the cache key also needs to vary by `Accept`, which requires custom cache-key header support; otherwise prefer explicit `fmt=avif` / `fmt=webp` URLs from integrations.
 
 Framework image components usually map their `format` prop directly to `fmt`. Leave that prop unset for browser-based AVIF/WebP negotiation; `format="avif"` or `format="webp"` forces that format.
 
