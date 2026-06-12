@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { nonEmptyStringSchema, projectEnvSchema } from './common'
+import { nonEmptyStringSchema } from './common'
 
 const HOST_RE = /^[a-z0-9.-]+\.[a-z]{2,}$/
 const SCHEME_RE = /^https?:\/\//
@@ -44,8 +44,15 @@ export const createProjectSchema = z.object({
     'Use 80 characters or fewer.',
   ),
   origin: originUrlSchema,
-  env: projectEnvSchema,
 })
+
+export const projectFitSchema = z.enum([
+  'cover',
+  'contain',
+  'fill',
+  'inside',
+  'outside',
+])
 
 export const allowedHostValueSchema = nonEmptyStringSchema('Enter a host.')
   .max(255, 'Use 255 characters or fewer.')
@@ -68,6 +75,20 @@ export const projectSettingsSchema = z.object({
     .int('Use a whole number.')
     .min(30, 'Use a value from 30 to 100.')
     .max(100, 'Use a value from 30 to 100.')
+    .optional(),
+  // 0 clears the cap (no maximum width is enforced).
+  maxWidth: z.coerce
+    .number()
+    .int('Use a whole number.')
+    .min(0, 'Use 0 or a positive width.')
+    .max(10_000, 'Use 10000 or fewer.')
+    .optional(),
+  defaultFit: projectFitSchema.optional(),
+  defaultDpr: z.coerce
+    .number()
+    .int('Use a whole number.')
+    .min(1, 'Use a value from 1 to 3.')
+    .max(3, 'Use a value from 1 to 3.')
     .optional(),
 })
 
@@ -95,13 +116,9 @@ export const internalCreateProjectSchema = createProjectSchema.extend({
 
 export const internalProjectSettingsPatchSchema = projectSettingsSchema
   .omit({ projectId: true })
-  .refine(
-    (value) =>
-      value.autoFormat !== undefined ||
-      value.stripMetadata !== undefined ||
-      value.defaultQuality !== undefined,
-    { message: 'Send at least one setting to update.' },
-  )
+  .refine((value) => Object.values(value).some((v) => v !== undefined), {
+    message: 'Send at least one setting to update.',
+  })
 
 export const projectPrewarmSchema = z
   .object({

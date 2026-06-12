@@ -9,7 +9,6 @@ import {
 import { ReactTableDevtools } from '@tanstack/react-table-devtools'
 import { ArrowUpDownIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -20,7 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { compactNumber } from '@/shared/format'
 import type { Project, ProjectStat } from '@/shared/types'
@@ -29,8 +27,6 @@ interface ProjectRow extends Project {
   hitRate: number
   requests: number
 }
-
-const ENVS = ['all', 'production', 'staging', 'development']
 
 const columns: ColumnDef<ProjectRow>[] = [
   {
@@ -51,17 +47,6 @@ const columns: ColumnDef<ProjectRow>[] = [
           </span>
         </div>
       </div>
-    ),
-  },
-  {
-    accessorKey: 'env',
-    header: 'Environment',
-    cell: ({ row }) => (
-      <Badge
-        variant={row.original.env === 'production' ? 'success' : 'warning'}
-      >
-        {row.original.env}
-      </Badge>
     ),
   },
   {
@@ -121,7 +106,6 @@ export function ProjectsDataTable({
   onSelect: (id: string) => void
 }) {
   const [sorting, setSorting] = useState<SortingState>([])
-  const [env, setEnv] = useState('all')
 
   const rows = useMemo<ProjectRow[]>(
     () =>
@@ -132,13 +116,9 @@ export function ProjectsDataTable({
       })),
     [projects, stats],
   )
-  const data = useMemo(
-    () => (env === 'all' ? rows : rows.filter((r) => r.env === env)),
-    [rows, env],
-  )
 
   const table = useReactTable({
-    data,
+    data: rows,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
@@ -149,15 +129,7 @@ export function ProjectsDataTable({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Tabs onValueChange={setEnv} value={env}>
-          <TabsList>
-            {ENVS.map((e) => (
-              <TabsTrigger className="capitalize" key={e} value={e}>
-                {e === 'all' ? 'All projects' : e}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <h2 className="font-semibold text-sm">Projects</h2>
         <NewProjectDialog />
       </div>
 
@@ -200,7 +172,7 @@ export function ProjectsDataTable({
                   className="h-24 text-center text-muted-foreground"
                   colSpan={columns.length}
                 >
-                  No projects in this environment.
+                  No projects yet.
                 </TableCell>
               </TableRow>
             )}

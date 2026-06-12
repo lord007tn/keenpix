@@ -5,16 +5,29 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { getErrorMessage } from '@/errors/common'
 import { updateProjectSettingsFn } from '@/functions/projects'
 import { projectQualitySchema } from '@/schemas/projects'
-import type { Project } from '@/shared/types'
+import type { Project, ProjectFit } from '@/shared/types'
 import { getFieldError } from '@/utils/validation/form-errors'
+
+const FITS: ProjectFit[] = ['cover', 'contain', 'fill', 'inside', 'outside']
+const DPRS = ['1', '2', '3']
 
 interface Patch {
   autoFormat?: boolean
+  defaultDpr?: number
+  defaultFit?: ProjectFit
   defaultQuality?: number
+  maxWidth?: number
   stripMetadata?: boolean
 }
 
@@ -46,6 +59,11 @@ export function PipelineSettings({ project }: { project: Project }) {
   const router = useRouter()
   const [autoFormat, setAutoFormat] = useState(project.autoFormat)
   const [stripMetadata, setStripMetadata] = useState(project.stripMetadata)
+  const [defaultFit, setDefaultFit] = useState<ProjectFit>(project.defaultFit)
+  const [defaultDpr, setDefaultDpr] = useState(project.defaultDpr)
+  const [maxWidth, setMaxWidth] = useState(
+    project.maxWidth ? String(project.maxWidth) : '',
+  )
   const [pending, setPending] = useState(false)
   const qualityForm = useForm({
     defaultValues: {
@@ -94,6 +112,23 @@ export function PipelineSettings({ project }: { project: Project }) {
       setStripMetadata(!next)
     }
   }
+
+  async function changeFit(next: ProjectFit) {
+    setDefaultFit(next)
+    if (!(await persist({ defaultFit: next }))) {
+      setDefaultFit(project.defaultFit)
+    }
+  }
+
+  async function changeDpr(next: number) {
+    setDefaultDpr(next)
+    if (!(await persist({ defaultDpr: next }))) {
+      setDefaultDpr(project.defaultDpr)
+    }
+  }
+
+  const maxWidthValue = Number(maxWidth || 0)
+  const maxWidthChanged = maxWidthValue !== (project.maxWidth ?? 0)
 
   return (
     <div className="divide-y">
@@ -190,6 +225,85 @@ export function PipelineSettings({ project }: { project: Project }) {
             }}
           </qualityForm.Field>
         </form>
+      </Row>
+      <Row
+        description="Cap the requested ?w= width (0 = no cap). Wider requests are clamped down."
+        label="Max width"
+      >
+        <div className="flex items-center gap-2">
+          <Input
+            aria-label="Max width"
+            className="w-24 text-right font-mono tabular-nums"
+            inputMode="numeric"
+            max={10_000}
+            min={0}
+            onChange={(e) => setMaxWidth(e.target.value)}
+            placeholder="0"
+            type="number"
+            value={maxWidth}
+          />
+          <span className="text-muted-foreground text-xs">px</span>
+          <Button
+            disabled={pending || !maxWidthChanged}
+            onClick={() => persist({ maxWidth: maxWidthValue })}
+            size="sm"
+            variant="outline"
+          >
+            Save
+          </Button>
+        </div>
+      </Row>
+      <Row
+        description="Resize fit applied when a request omits ?fit=."
+        label="Default fit"
+      >
+        <Select
+          onValueChange={(v) => {
+            if (FITS.includes(v as ProjectFit)) {
+              changeFit(v as ProjectFit)
+            }
+          }}
+          value={defaultFit}
+        >
+          <SelectTrigger
+            aria-label="Default fit"
+            className="w-36 capitalize"
+            disabled={pending}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {FITS.map((f) => (
+              <SelectItem className="capitalize" key={f} value={f}>
+                {f}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Row>
+      <Row
+        description="Device pixel ratio multiplier (1–3) applied when a request omits ?dpr=."
+        label="Default DPR"
+      >
+        <Select
+          onValueChange={(v) => changeDpr(Number(v))}
+          value={String(defaultDpr)}
+        >
+          <SelectTrigger
+            aria-label="Default DPR"
+            className="w-24"
+            disabled={pending}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DPRS.map((d) => (
+              <SelectItem key={d} value={d}>
+                {d}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </Row>
     </div>
   )

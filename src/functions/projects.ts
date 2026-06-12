@@ -24,7 +24,6 @@ export const createProjectFn = createServerFn({ method: 'POST' })
     createProject({
       name: data.name,
       origin: data.origin,
-      env: data.env,
     }),
   )
 
@@ -58,6 +57,9 @@ export const updateProjectSettingsFn = createServerFn({ method: 'POST' })
       autoFormat: data.autoFormat,
       stripMetadata: data.stripMetadata,
       defaultQuality: data.defaultQuality,
+      maxWidth: data.maxWidth,
+      defaultFit: data.defaultFit,
+      defaultDpr: data.defaultDpr,
     })
     if (!project) {
       throw new Error('Project not found')
@@ -66,5 +68,8 @@ export const updateProjectSettingsFn = createServerFn({ method: 'POST' })
       autoFormat: project.autoFormat,
       stripMetadata: project.stripMetadata,
       defaultQuality: project.defaultQuality,
+      maxWidth: project.maxWidth,
+      defaultFit: project.defaultFit,
+      defaultDpr: project.defaultDpr,
     }
   })
