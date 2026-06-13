@@ -5,8 +5,9 @@ icon: ChartArea
 ---
 
 Analytics is built in, not bolted on. Every request to `/img/*` writes a log row
-(timestamp, project, path, width, format, status, cache hit/miss, latency, bytes in/out,
-region), and the dashboard reads real aggregates from it.
+(timestamp, project, source host, path, width, format, status, cache hit/miss,
+latency, bytes in/out) and updates an hourly Postgres rollup. Live Logs read the
+raw rows; dashboard analytics read the rollups.
 
 ## What you get
 
@@ -17,7 +18,9 @@ region), and the dashboard reads real aggregates from it.
 - **Response latency** — a p50/p95/p99 breakdown and a histogram.
 - **Top images** — the most-requested paths.
 - **Live logs** — every request, newest first, with faceted filters (format, status,
-  cache, region).
+  cache, and source domain when a single project is selected).
+- **Optional Cloudflare edge analytics** — edge hit-rate, edge requests, bytes served
+  from Cloudflare, and hourly edge hit/miss split for `/img/*`.
 
 ## Scope: all projects or one
 
@@ -26,6 +29,7 @@ totals plus a per-project breakdown; pick a single project to scope every chart,
 logs, and the KPIs to it.
 
 <Callout type="info">
-  Analytics are computed from the request log in Postgres. High-volume deployments can
-  move the log to ClickHouse later without changing the dashboard.
+  Origin-shield analytics are computed from Postgres rollups, with raw logs kept for
+  live/debug views. Cloudflare edge analytics are pulled separately from Cloudflare's
+  GraphQL Analytics API because edge hits never reach the Keenpix server.
 </Callout>

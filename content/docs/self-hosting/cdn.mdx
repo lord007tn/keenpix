@@ -55,9 +55,9 @@ and identify URLs that fragment the edge cache.
 
 ### Built-in edge analytics
 
-Keenpix can pull these figures for you and show an **Edge cache** card plus an
-hourly **Cloudflare edge cache** chart on `/app/analytics`, next to the
-origin-shield cache card. Go to **Settings → CDN cache** and add a Cloudflare API
+Keenpix can pull these figures for you and show source-split cards and hourly
+Cloudflare edge charts on Overview and `/app/analytics`, next to the
+origin-shield figures. Go to **Settings → CDN cache** and add a Cloudflare API
 token scoped to **Analytics → Read** plus your **Zone ID** (optionally a hostname
 to narrow `/img/*` traffic). Keenpix queries the Cloudflare GraphQL Analytics API
 (`httpRequestsAdaptiveGroups`) for edge hit-rate, edge requests, bytes served from
