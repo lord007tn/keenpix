@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { JsonLd } from '@/components/app/json-ld'
 import { MarketingPage } from '@/features/marketing/marketing-page'
 import { SelfHostHome } from '@/features/marketing/self-host-home'
 import { getPublicConfigFn } from '@/functions/config'
@@ -30,16 +31,6 @@ export const Route = createFileRoute('/')({
     }
 
     return {
-      headScripts: [
-        {
-          type: 'application/ld+json',
-          children: JSON.stringify([
-            softwareApplicationJsonLd(),
-            organizationJsonLd(),
-            webSiteJsonLd(),
-          ]),
-        },
-      ],
       links: [{ rel: 'canonical', href: absoluteUrl('/') }],
       meta: seo({
         title: SITE_TITLE,
@@ -53,5 +44,19 @@ export const Route = createFileRoute('/')({
 
 function Home() {
   const { selfHost } = Route.useLoaderData()
-  return selfHost ? <SelfHostHome /> : <MarketingPage />
+  if (selfHost) {
+    return <SelfHostHome />
+  }
+  return (
+    <>
+      <JsonLd
+        data={[
+          softwareApplicationJsonLd(),
+          organizationJsonLd(),
+          webSiteJsonLd(),
+        ]}
+      />
+      <MarketingPage />
+    </>
+  )
 }
