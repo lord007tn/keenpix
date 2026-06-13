@@ -1,5 +1,5 @@
 import { useForm } from '@tanstack/react-form'
-import { PlugZapIcon } from 'lucide-react'
+import { InfoIcon, PlugZapIcon } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -8,6 +8,11 @@ import { CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { getErrorMessage } from '@/errors/common'
 import {
   getAdminWorkspaceFn,
@@ -208,7 +213,25 @@ export function CloudflareSettingsPanel() {
             const error = getFieldError(field.state.meta)
             return (
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor={field.name}>Image hostname (optional)</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor={field.name}>Image hostname (optional)</Label>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <span className="inline-flex cursor-help text-muted-foreground" />
+                      }
+                    >
+                      <InfoIcon className="size-3.5" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      A Cloudflare zone can serve several subdomains, and edge
+                      analytics only filter by path (/img/*). Leave blank to
+                      count the whole zone, or set this app's hostname (e.g.
+                      keenpix.example.com) when the zone also hosts other sites
+                      that use a /img path.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   aria-describedby={error ? `${field.name}-error` : undefined}
                   aria-invalid={!!error}
