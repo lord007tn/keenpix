@@ -92,11 +92,14 @@ export interface LogRow {
 }
 
 export interface AnalyticsSummary {
+  avg: number
   bandwidthIn: number
   bandwidthOut: number
   bandwidthSaved: number
   hitRate: number
   p50: number
+  p75: number
+  p90: number
   p95: number
   p99: number
   savingsPct: number

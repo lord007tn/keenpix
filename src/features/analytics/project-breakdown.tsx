@@ -54,7 +54,7 @@ export function ProjectBreakdown({
             No requests in this window yet.
           </p>
         ) : (
-          <Table>
+          <Table className="[&_td]:px-3 [&_td]:py-3 [&_th]:px-3 [&_tr>*:first-child]:pl-6 [&_tr>*:last-child]:pr-6">
             <TableHeader>
               <TableRow>
                 <TableHead>Project</TableHead>

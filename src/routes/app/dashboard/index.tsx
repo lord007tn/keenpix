@@ -1,10 +1,12 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ServerIcon } from 'lucide-react'
+import {
+  createFileRoute,
+  useNavigate,
+  useRouteContext,
+} from '@tanstack/react-router'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
-import { EdgeCacheKpis } from '@/components/app/edge-cache-kpis'
 import { PageHeader } from '@/components/app/page-header'
 import { ProjectsDataTable } from '@/components/app/projects-data-table'
-import { SectionCards } from '@/components/app/section-cards'
+import { RecentActivity } from '@/components/app/recent-activity'
 import {
   Empty,
   EmptyContent,
@@ -13,6 +15,8 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { OperationsSummary } from '@/features/admin/operations-summary'
+import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { getDashboardFn } from '@/functions/dashboard'
 import { appPageHead } from '@/shared/seo'
@@ -26,11 +30,19 @@ const RANGES: { value: AnalyticsRange; label: string }[] = [
   { value: '24h', label: '24 hours' },
 ]
 
+// Relative change vs the previous window; null means there is no baseline.
+function relDelta(v: { prev: number; value: number }): number | null {
+  if (v.prev === 0) {
+    return v.value === 0 ? 0 : null
+  }
+  return ((v.value - v.prev) / v.prev) * 100
+}
+
 export const Route = createFileRoute('/app/dashboard/')({
   head: () =>
     appPageHead(
-      'Dashboard',
-      'Keenpix dashboard for project health, request trends, cache performance, and image optimization activity.',
+      'Overview',
+      'Keenpix overview — edge delivery, request trends, recent activity, and instance operations at a glance.',
     ),
   validateSearch: (
     search: Record<string, unknown>,
@@ -48,12 +60,44 @@ export const Route = createFileRoute('/app/dashboard/')({
 })
 
 function DashboardPage() {
-  const { projects, stats, kpis, series, edge, edgeConfigured } =
+  const { projects, stats, kpis, series, recentLogs, edge, edgeConfigured } =
     Route.useLoaderData()
   const { range } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
-  const rangeLabel = RANGES.find((r) => r.value === range)?.label ?? range
+  const { user } = useRouteContext({ from: '/app' })
+  const isSuperAdmin = user.role === 'super_admin'
+
+  // The KPI row is the same source-split cards as the analytics page, fed from
+  // the dashboard's KPI payload, so the two pages always show identical numbers.
+  // Trends attach only where the value is the origin metric (never an
+  // edge-inclusive total, where an origin trend would contradict it).
+  const cardSummary = {
+    bandwidthOut: kpis.bandwidthOut,
+    bandwidthSaved: kpis.bandwidthSaved.value,
+    totalRequests: kpis.requests.value,
+    hitRate: kpis.hitRate.value,
+  }
+  const edgeGated = edgeConfigured && edge !== null && isAll && range === '24h'
+  const edgeNotConfigured = !edgeConfigured
+  let edgeNote: string | undefined
+  if (!(edgeGated || edgeNotConfigured)) {
+    if (!edge) {
+      edgeNote =
+        "Couldn't load Cloudflare edge data — check the token in Settings → CDN cache."
+    } else if (isAll) {
+      edgeNote =
+        'Cloudflare edge is fixed to the last 24h — switch to 24h to see the source split.'
+    } else {
+      edgeNote =
+        'Cloudflare edge is whole-zone only — switch to All projects to see the source split.'
+    }
+  }
+  const deltas = {
+    requests: relDelta(kpis.requests),
+    hitRatePp: kpis.hitRate.value - kpis.hitRate.prev,
+    saved: relDelta(kpis.bandwidthSaved),
+  }
 
   if (projects.length === 0) {
     return (
@@ -101,23 +145,25 @@ function DashboardPage() {
           </ToggleGroup>
         }
         eyebrow={isAll ? 'All projects' : currentProject?.name}
-        subtitle="Project health, request trends, and cache performance."
-        title="Dashboard"
+        subtitle={
+          isAll
+            ? 'A bird’s-eye on every project — edge delivery, trends, activity, and instance health.'
+            : `${currentProject?.name ?? 'This project'} — trends and recent activity.`
+        }
+        title="Overview"
       />
-      {edgeConfigured && edge ? <EdgeCacheKpis edge={edge} /> : null}
-      <section className="flex flex-col gap-3">
-        {edgeConfigured ? (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <ServerIcon className="size-4" />
-            <h2 className="font-medium text-foreground text-sm">
-              keenpix origin
-            </h2>
-            <span className="text-xs">last {rangeLabel}</span>
-          </div>
-        ) : null}
-        <SectionCards kpis={kpis} />
-      </section>
+
+      <SourceSplitCards
+        connect={edgeNotConfigured}
+        deltas={deltas}
+        edge={edge}
+        gated={edgeGated}
+        note={edgeNote}
+        summary={cardSummary}
+      />
+
       <ChartAreaInteractive data={series} />
+
       {isAll ? (
         <ProjectsDataTable
           activeId={currentProject?.id}
@@ -126,6 +172,15 @@ function DashboardPage() {
           stats={stats}
         />
       ) : null}
+
+      {isAll && isSuperAdmin ? (
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+          <RecentActivity logs={recentLogs} />
+          <OperationsSummary />
+        </div>
+      ) : (
+        <RecentActivity logs={recentLogs} />
+      )}
     </div>
   )
 }

@@ -1,11 +1,14 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ServerIcon } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import {
+  CloudIcon,
+  GitCompareIcon,
+  LayersIcon,
+  type LucideIcon,
+} from 'lucide-react'
+import { type ReactNode, useMemo, useState } from 'react'
 import { BarList } from '@/components/app/bar-list'
 import { DataFilters, type FilterField } from '@/components/app/data-filters'
-import { EdgeCacheKpis } from '@/components/app/edge-cache-kpis'
 import { PageHeader } from '@/components/app/page-header'
-import { StatCard } from '@/components/app/stat-card'
 import {
   Card,
   CardContent,
@@ -13,7 +16,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   AnalyticsAreaChart,
@@ -21,12 +30,14 @@ import {
   EdgeCacheAreaChart,
   FormatDonut,
   LatencyHistogram,
+  SourceCompareChart,
 } from '@/features/analytics/charts'
 import { DomainBreakdown } from '@/features/analytics/domain-breakdown'
 import { PercentileStat } from '@/features/analytics/percentile-stat'
 import { ProjectBreakdown } from '@/features/analytics/project-breakdown'
+import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import { getAnalyticsFn } from '@/functions/analytics'
-import { compactNumber, humanBytes } from '@/shared/format'
+import { compactNumber } from '@/shared/format'
 import { appPageHead } from '@/shared/seo'
 import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
@@ -163,12 +174,27 @@ function isAreaView(value: unknown): value is AreaView {
   return value === 'requests' || value === 'bandwidth' || value === 'cache'
 }
 
+// The single "Traffic over time" chart shows the same edge+origin data through
+// three lenses: the stacked funnel, the edge-vs-keenpix overlay, or edge only.
+type ChartLens = 'funnel' | 'compare' | 'edge'
+
+const LENSES: { value: ChartLens; label: string; icon: LucideIcon }[] = [
+  { value: 'funnel', label: 'Funnel', icon: LayersIcon },
+  { value: 'compare', label: 'Compare', icon: GitCompareIcon },
+  { value: 'edge', label: 'Edge', icon: CloudIcon },
+]
+
+function isChartLens(value: unknown): value is ChartLens {
+  return value === 'funnel' || value === 'compare' || value === 'edge'
+}
+
 function AnalyticsPage() {
   const data = Route.useLoaderData()
   const { range, format, status, domain } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
   const [view, setView] = useState<AreaView>('requests')
+  const [lens, setLens] = useState<ChartLens>('funnel')
   const fields = useMemo(() => {
     const base = buildFields(data.available, format ?? [], status ?? [])
     if (isAll) {
@@ -192,13 +218,72 @@ function AnalyticsPage() {
     ]
   }, [data.available, format, status, domain, isAll])
 
-  const [savedVal, savedUnit] = humanBytes(
-    data.summary.bandwidthSaved,
-    1,
-  ).split(' ')
-  const cachedCount = Math.round(
-    (data.summary.totalRequests * data.summary.hitRate) / 100,
-  )
+  const hasDomainFilter = Boolean(domain && domain.length > 0)
+  // Edge and origin numbers only reconcile in the one window where both layers
+  // measure the same traffic: 24h, whole zone, unfiltered. Outside it the cards
+  // collapse to origin-only with a dash for the edge.
+  const edgeGated =
+    data.edgeConfigured &&
+    data.edge !== null &&
+    isAll &&
+    !hasDomainFilter &&
+    range === '24h'
+  // Not wired up at all gets a real connect CTA; the other reasons are just a
+  // muted "switch window/scope" hint.
+  const edgeNotConfigured = !data.edgeConfigured
+  let edgeNote: string | undefined
+  if (!(edgeGated || edgeNotConfigured)) {
+    if (!data.edge) {
+      edgeNote =
+        "Couldn't load Cloudflare edge data — check the token in Settings → CDN cache."
+    } else if (!isAll || hasDomainFilter) {
+      edgeNote =
+        'Cloudflare edge is whole-zone only — switch to All projects with no filters to see the source split.'
+    } else {
+      edgeNote =
+        'Cloudflare edge is fixed to the last 24h — switch to 24h to see the source split.'
+    }
+  }
+
+  // Compare needs both layers at the same 24h whole-zone window; Edge only needs
+  // edge to exist. Funnel always works (origin-only when edge is unavailable).
+  const lensAvailable: Record<ChartLens, boolean> = {
+    funnel: true,
+    compare: edgeGated,
+    edge: data.edgeConfigured && data.edge !== null,
+  }
+  const activeLens: ChartLens = lensAvailable[lens] ? lens : 'funnel'
+  let lensDescription: string
+  if (activeLens === 'compare') {
+    lensDescription = 'Cloudflare edge vs keenpix, overlaid · last 24h'
+  } else if (activeLens === 'edge') {
+    lensDescription = `Cloudflare edge, zone-wide · last ${data.edge?.windowHours ?? 24}h`
+  } else if (edgeGated) {
+    lensDescription = 'Cloudflare edge → keenpix cache → live · last 24h'
+  } else {
+    lensDescription = `keenpix origin · last ${range}`
+  }
+  let chartEl: ReactNode
+  if (activeLens === 'compare' && data.edge) {
+    chartEl = (
+      <SourceCompareChart
+        data={data.series}
+        edge={data.edge.series}
+        view={view}
+      />
+    )
+  } else if (activeLens === 'edge' && data.edge) {
+    chartEl = <EdgeCacheAreaChart data={data.edge.series} view={view} />
+  } else {
+    chartEl = (
+      <AnalyticsAreaChart
+        data={data.series}
+        edge={data.edge?.series}
+        funnel={edgeGated}
+        view={view}
+      />
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -255,65 +340,89 @@ function AnalyticsPage() {
         title="Analytics"
       />
 
-      {data.edgeConfigured && data.edge ? (
-        <EdgeCacheKpis edge={data.edge} />
-      ) : null}
-      {data.edgeConfigured && !data.edge ? (
-        <p className="text-muted-foreground text-sm">
-          Couldn't load Cloudflare edge data — check the token in Settings → CDN
-          cache.
-        </p>
-      ) : null}
-
       <section className="flex flex-col gap-3">
-        {data.edgeConfigured ? (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <ServerIcon className="size-4" />
-            <h2 className="font-medium text-foreground text-sm">
-              keenpix origin
-            </h2>
-            <span className="text-xs">last {range}</span>
-          </div>
-        ) : null}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            delta={`${data.summary.savingsPct.toFixed(1)}%`}
-            label="Bandwidth saved"
-            sub="vs origin"
-            tooltip={
-              <div className="flex flex-col gap-0.5">
-                <span>
-                  From origin: {humanBytes(data.summary.bandwidthIn, 1)}
-                </span>
-                <span>
-                  To clients: {humanBytes(data.summary.bandwidthOut, 1)}
-                </span>
-                <span>Saved: {humanBytes(data.summary.bandwidthSaved, 1)}</span>
-              </div>
-            }
-            unit={savedUnit}
-            value={savedVal}
-          />
-          <StatCard
-            label="Total images"
-            sub={`last ${range}`}
-            unit="requests"
-            value={compactNumber(data.summary.totalRequests, 1)}
-          />
-          <StatCard
-            label="Cache hit rate"
-            sub={`last ${range}`}
-            unit="%"
-            value={data.summary.hitRate.toFixed(1)}
-          />
-          <StatCard
-            label="p95 latency"
-            sub={`last ${range}`}
-            unit="ms"
-            value={String(data.summary.p95)}
-          />
-        </div>
+        <h2 className="font-medium text-foreground text-sm">This window</h2>
+        <SourceSplitCards
+          connect={edgeNotConfigured}
+          edge={data.edge}
+          gated={edgeGated}
+          note={edgeNote}
+          summary={data.summary}
+        />
       </section>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-1">
+            <CardTitle>{VIEW_TITLES[view]}</CardTitle>
+            <CardDescription>{lensDescription}</CardDescription>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                View
+              </span>
+              <Select
+                onValueChange={(v) => {
+                  if (isChartLens(v)) {
+                    setLens(v)
+                  }
+                }}
+                value={activeLens}
+              >
+                <SelectTrigger className="w-[8.5rem]" size="sm">
+                  <SelectValue>
+                    {(v) =>
+                      LENSES.find((l) => l.value === v)?.label ?? String(v)
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {LENSES.map((l) => (
+                    <SelectItem
+                      disabled={!lensAvailable[l.value]}
+                      key={l.value}
+                      value={l.value}
+                    >
+                      <l.icon className="size-3.5" />
+                      {l.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                Metric
+              </span>
+              <Select
+                onValueChange={(v) => {
+                  if (isAreaView(v)) {
+                    setView(v)
+                  }
+                }}
+                value={view}
+              >
+                <SelectTrigger className="w-[8.5rem]" size="sm">
+                  <SelectValue>
+                    {(v) =>
+                      AREA_VIEWS.find((o) => o.value === v)?.label ?? String(v)
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {AREA_VIEWS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>{chartEl}</CardContent>
+      </Card>
 
       {isAll ? (
         <ProjectBreakdown onPick={setProject} rows={data.breakdown} />
@@ -322,124 +431,83 @@ function AnalyticsPage() {
         <DomainBreakdown rows={data.domainBreakdown} />
       ) : null}
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{VIEW_TITLES[view]}</CardTitle>
-          <ToggleGroup
-            onValueChange={(v: string[]) => {
-              const next = v[0]
-              if (isAreaView(next)) {
-                setView(next)
-              }
-            }}
-            size="sm"
-            value={[view]}
-            variant="outline"
-          >
-            {AREA_VIEWS.map((o) => (
-              <ToggleGroupItem key={o.value} value={o.value}>
-                {o.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </CardHeader>
-        <CardContent>
-          <AnalyticsAreaChart data={data.series} view={view} />
-        </CardContent>
-      </Card>
+      <section className="flex flex-col gap-3">
+        <h2 className="font-medium text-foreground text-sm">
+          Optimization quality
+        </h2>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Format distribution</CardTitle>
+              <CardDescription>
+                {compactNumber(data.summary.totalRequests)} requests · last{' '}
+                {range}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormatDonut data={data.formats} />
+            </CardContent>
+          </Card>
 
-      {data.edgeConfigured && data.edge ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Response latency</CardTitle>
+              <CardDescription>Per-request distribution</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-wrap gap-x-6 gap-y-3">
+                <PercentileStat
+                  label="avg"
+                  tone="text-muted-foreground"
+                  value={String(data.summary.avg)}
+                />
+                <PercentileStat
+                  label="p50"
+                  tone="text-muted-foreground"
+                  value={String(data.summary.p50)}
+                />
+                <PercentileStat
+                  label="p75"
+                  tone=""
+                  value={String(data.summary.p75)}
+                />
+                <PercentileStat
+                  label="p90"
+                  tone="text-warning-text"
+                  value={String(data.summary.p90)}
+                />
+                <PercentileStat
+                  label="p95"
+                  tone="text-warning-text"
+                  value={String(data.summary.p95)}
+                />
+                <PercentileStat
+                  label="p99"
+                  tone="text-destructive-text"
+                  value={String(data.summary.p99)}
+                />
+              </div>
+              <LatencyHistogram data={data.latency} />
+            </CardContent>
+          </Card>
+        </div>
+
         <Card>
           <CardHeader>
-            <CardTitle>Cloudflare edge cache</CardTitle>
+            <CardTitle>Top images</CardTitle>
             <CardDescription>
-              Requests served at the edge vs. those that reached keenpix · last{' '}
-              {data.edge.windowHours}h
+              Most-requested paths, last {range}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <EdgeCacheAreaChart data={data.edge.series} />
+            <BarList
+              barColor="var(--chart-1)"
+              data={data.topImages}
+              valueFormat={(v) => `${compactNumber(v)} req`}
+            />
           </CardContent>
         </Card>
-      ) : null}
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Format distribution</CardTitle>
-            <CardDescription>
-              {compactNumber(data.summary.totalRequests)} requests · last{' '}
-              {range}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FormatDonut data={data.formats} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Cache performance</CardTitle>
-            <CardDescription>Disk-cache hits vs misses</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Hit rate</span>
-              <span className="font-medium tabular-nums">
-                {data.summary.hitRate.toFixed(1)}%
-              </span>
-            </div>
-            <Progress value={data.summary.hitRate} />
-            <div className="flex justify-between text-muted-foreground text-xs">
-              <span>{compactNumber(cachedCount)} hits</span>
-              <span>
-                {compactNumber(data.summary.totalRequests - cachedCount)} misses
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Response latency</CardTitle>
-            <CardDescription>Per-request distribution</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="flex gap-6">
-              <PercentileStat
-                label="p50"
-                tone="text-muted-foreground"
-                value={String(data.summary.p50)}
-              />
-              <PercentileStat
-                label="p95"
-                tone="text-warning-text"
-                value={String(data.summary.p95)}
-              />
-              <PercentileStat
-                label="p99"
-                tone="text-destructive-text"
-                value={String(data.summary.p99)}
-              />
-            </div>
-            <LatencyHistogram data={data.latency} />
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Top images</CardTitle>
-          <CardDescription>Most-requested paths, last {range}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <BarList
-            barColor="var(--chart-1)"
-            data={data.topImages}
-            valueFormat={(v) => `${compactNumber(v)} req`}
-          />
-        </CardContent>
-      </Card>
+      </section>
     </div>
   )
 }
