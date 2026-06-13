@@ -4,11 +4,9 @@ import {
   useRouteContext,
 } from '@tanstack/react-router'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
-import { EdgeSnapshot } from '@/components/app/edge-snapshot'
 import { PageHeader } from '@/components/app/page-header'
 import { ProjectsDataTable } from '@/components/app/projects-data-table'
 import { RecentActivity } from '@/components/app/recent-activity'
-import { SectionCards } from '@/components/app/section-cards'
 import {
   Empty,
   EmptyContent,
@@ -18,6 +16,7 @@ import {
 } from '@/components/ui/empty'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { OperationsSummary } from '@/features/admin/operations-summary'
+import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { getDashboardFn } from '@/functions/dashboard'
 import { appPageHead } from '@/shared/seo'
@@ -30,6 +29,14 @@ const RANGES: { value: AnalyticsRange; label: string }[] = [
   { value: '7d', label: '7 days' },
   { value: '24h', label: '24 hours' },
 ]
+
+// Relative change vs the previous window; null means there is no baseline.
+function relDelta(v: { prev: number; value: number }): number | null {
+  if (v.prev === 0) {
+    return v.value === 0 ? 0 : null
+  }
+  return ((v.value - v.prev) / v.prev) * 100
+}
 
 export const Route = createFileRoute('/app/dashboard/')({
   head: () =>
@@ -53,20 +60,44 @@ export const Route = createFileRoute('/app/dashboard/')({
 })
 
 function DashboardPage() {
-  const {
-    projects,
-    stats,
-    kpis,
-    series,
-    recentLogs,
-    edgeSnapshot,
-    edgeConfigured,
-  } = Route.useLoaderData()
+  const { projects, stats, kpis, series, recentLogs, edge, edgeConfigured } =
+    Route.useLoaderData()
   const { range } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
   const { user } = useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
+
+  // The KPI row is the same source-split cards as the analytics page, fed from
+  // the dashboard's KPI payload, so the two pages always show identical numbers.
+  // Trends attach only where the value is the origin metric (never an
+  // edge-inclusive total, where an origin trend would contradict it).
+  const cardSummary = {
+    bandwidthOut: kpis.bandwidthOut,
+    bandwidthSaved: kpis.bandwidthSaved.value,
+    totalRequests: kpis.requests.value,
+    hitRate: kpis.hitRate.value,
+  }
+  const edgeGated = edgeConfigured && edge !== null && isAll && range === '24h'
+  const edgeNotConfigured = !edgeConfigured
+  let edgeNote: string | undefined
+  if (!(edgeGated || edgeNotConfigured)) {
+    if (!edge) {
+      edgeNote =
+        "Couldn't load Cloudflare edge data — check the token in Settings → CDN cache."
+    } else if (isAll) {
+      edgeNote =
+        'Cloudflare edge is fixed to the last 24h — switch to 24h to see the source split.'
+    } else {
+      edgeNote =
+        'Cloudflare edge is whole-zone only — switch to All projects to see the source split.'
+    }
+  }
+  const deltas = {
+    requests: relDelta(kpis.requests),
+    hitRatePp: kpis.hitRate.value - kpis.hitRate.prev,
+    saved: relDelta(kpis.bandwidthSaved),
+  }
 
   if (projects.length === 0) {
     return (
@@ -122,11 +153,14 @@ function DashboardPage() {
         title="Overview"
       />
 
-      <SectionCards kpis={kpis} />
-
-      {isAll ? (
-        <EdgeSnapshot configured={edgeConfigured} data={edgeSnapshot} />
-      ) : null}
+      <SourceSplitCards
+        connect={edgeNotConfigured}
+        deltas={deltas}
+        edge={edge}
+        gated={edgeGated}
+        note={edgeNote}
+        summary={cardSummary}
+      />
 
       <ChartAreaInteractive data={series} />
 

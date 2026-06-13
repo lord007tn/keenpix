@@ -21,17 +21,30 @@ type CardSummary = Pick<
   'bandwidthOut' | 'bandwidthSaved' | 'totalRequests' | 'hitRate'
 >
 
+// Optional vs-previous-window trends (Overview only). They only attach to cards
+// whose displayed value is the origin metric — never to an edge-inclusive total,
+// where an origin trend would contradict the number above it.
+export interface CardDeltas {
+  hitRatePp: number | null
+  requests: number | null
+  saved: number | null
+}
+
 function ratio(part: number, whole: number) {
   return whole === 0 ? 0 : (part / whole) * 100
 }
 
-function savedCard(summary: CardSummary): SourceSplitCardProps {
+function savedCard(
+  summary: CardSummary,
+  delta?: number | null,
+): SourceSplitCardProps {
   // Compression saving is purely an origin act — the edge offloads egress, it
   // doesn't re-encode — so this never has an edge value, in any window.
   return {
     label: 'Bandwidth saved',
     value: humanBytes(summary.bandwidthSaved, 1),
     sub: 'compression · origin only',
+    delta,
     rows: [
       { source: 'none', label: 'Cloudflare edge', value: '—' },
       {
@@ -46,6 +59,7 @@ function savedCard(summary: CardSummary): SourceSplitCardProps {
 function reconciledCards(
   edge: EdgeCacheStats,
   summary: CardSummary,
+  deltas?: CardDeltas,
 ): SourceSplitCardProps[] {
   const deliveredTotal = edge.bytesFromEdge + summary.bandwidthOut
   const edgeBytesPct = ratio(edge.bytesFromEdge, deliveredTotal)
@@ -120,11 +134,14 @@ function reconciledCards(
         },
       ],
     },
-    savedCard(summary),
+    savedCard(summary, deltas?.saved),
   ]
 }
 
-function originOnlyCards(summary: CardSummary): SourceSplitCardProps[] {
+function originOnlyCards(
+  summary: CardSummary,
+  deltas?: CardDeltas,
+): SourceSplitCardProps[] {
   const dash = { source: 'none', label: 'Cloudflare edge', value: '—' } as const
   return [
     {
@@ -144,6 +161,7 @@ function originOnlyCards(summary: CardSummary): SourceSplitCardProps[] {
       label: 'Client requests',
       value: compactNumber(summary.totalRequests),
       sub: 'keenpix origin',
+      delta: deltas?.requests,
       rows: [
         dash,
         {
@@ -157,6 +175,8 @@ function originOnlyCards(summary: CardSummary): SourceSplitCardProps[] {
       label: 'Cache hit rate',
       value: `${summary.hitRate.toFixed(1)}%`,
       sub: 'keenpix disk',
+      delta: deltas?.hitRatePp,
+      deltaUnit: 'pp',
       rows: [
         dash,
         {
@@ -166,25 +186,29 @@ function originOnlyCards(summary: CardSummary): SourceSplitCardProps[] {
         },
       ],
     },
-    savedCard(summary),
+    savedCard(summary, deltas?.saved),
   ]
 }
 
 export function SourceSplitCards({
   connect,
+  deltas,
   edge,
   gated,
   note,
   summary,
 }: {
   connect?: boolean
+  deltas?: CardDeltas
   edge: EdgeCacheStats | null
   gated: boolean
   note?: string
   summary: CardSummary
 }) {
   const cards =
-    gated && edge ? reconciledCards(edge, summary) : originOnlyCards(summary)
+    gated && edge
+      ? reconciledCards(edge, summary, deltas)
+      : originOnlyCards(summary, deltas)
   return (
     <div className="flex flex-col gap-3">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

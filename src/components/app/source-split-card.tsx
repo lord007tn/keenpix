@@ -1,3 +1,5 @@
+import { ArrowDownIcon, ArrowUpIcon } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 
 // A KPI card whose headline is the combined total, with an inline
@@ -14,6 +16,9 @@ export interface SplitRow {
 
 export interface SourceSplitCardProps {
   bar?: Array<{ source: SplitSource; pct: number }>
+  // Trend vs the previous window; undefined hides the badge, null shows "New".
+  delta?: number | null
+  deltaUnit?: string
   label: string
   rows: SplitRow[]
   sub?: string
@@ -28,20 +33,43 @@ const SOURCE_COLOR: Record<SplitSource, string> = {
   none: 'var(--border)',
 }
 
+function Trend({ delta, unit }: { delta: number | null; unit: string }) {
+  if (delta === null) {
+    return <Badge variant="outline">New</Badge>
+  }
+  const up = delta >= 0
+  const Icon = up ? ArrowUpIcon : ArrowDownIcon
+  return (
+    <Badge variant="outline">
+      <Icon data-icon="inline-start" />
+      {up ? '+' : ''}
+      {delta.toFixed(1)}
+      {unit}
+    </Badge>
+  )
+}
+
 export function SourceSplitCard({
-  label,
-  value,
-  unit,
-  sub,
   bar,
+  delta,
+  deltaUnit = '%',
+  label,
   rows,
+  sub,
+  unit,
+  value,
 }: SourceSplitCardProps) {
   return (
     <Card className="gap-0">
       <CardContent className="flex flex-col gap-2">
-        <span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
-          {label}
-        </span>
+        <div className="flex items-start justify-between gap-2">
+          <span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
+            {label}
+          </span>
+          {delta === undefined ? null : (
+            <Trend delta={delta} unit={deltaUnit} />
+          )}
+        </div>
         <div className="flex items-baseline gap-1">
           <span className="font-semibold text-2xl tabular-nums tracking-tight">
             {value}

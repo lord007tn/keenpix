@@ -1,7 +1,6 @@
 import type { z } from 'zod'
 import { getEffectiveCloudflareSettings } from '@/data-access/admin/cloudflare'
 import {
-  getAnalyticsSummary,
   getDashboardKpis,
   getProjectStats,
   getTimeSeries,
@@ -10,12 +9,13 @@ import { listLogs } from '@/data-access/logs'
 import { listProjects } from '@/data-access/projects'
 import { fetchEdgeCacheStats } from '@/lib/cloudflare/analytics'
 import type { dashboardInputSchema } from '@/schemas/analytics'
-import type { EdgeSnapshot } from '@/shared/types'
+import type { EdgeCacheStats } from '@/shared/types'
 
 // The Overview is a scope-aware bird's-eye: KPI trends, the request chart, and
-// recent activity follow the selected project; the edge snapshot, project table,
-// and operations (all global-only) are dropped to "all projects". The full
-// edge/origin breakdown and deep charts live on the analytics page.
+// recent activity follow the selected project; the project table and operations
+// (global-only) are dropped to "all projects". The KPI cards are the same
+// source-split cards as the analytics page (so the two pages never disagree) —
+// edge data is included here whenever Cloudflare is configured.
 export async function getDashboard(
   input: z.output<typeof dashboardInputSchema>,
 ) {
@@ -33,32 +33,15 @@ export async function getDashboard(
   ])
   const stats = project ? {} : await getProjectStats(input.range)
 
-  // Cloudflare edge is zone-wide and fixed to 24h, so the delivery snapshot only
-  // applies to the all-projects overview. End-to-end efficiency combines the
-  // edge hits with keenpix disk hits over the same 24h whole-zone window.
+  // Cloudflare edge cache (zone-wide, last 24h). Same source as the analytics
+  // page; a transient error must never blank the overview.
   const cloudflare = await getEffectiveCloudflareSettings()
-  let edgeSnapshot: EdgeSnapshot | null = null
-  if (cloudflare && !project) {
+  let edge: EdgeCacheStats | null = null
+  if (cloudflare) {
     try {
-      const edge = await fetchEdgeCacheStats(cloudflare)
-      const origin24h = await getAnalyticsSummary('24h', undefined, {})
-      const diskHits = Math.round(
-        (origin24h.totalRequests * origin24h.hitRate) / 100,
-      )
-      edgeSnapshot = {
-        windowHours: edge.windowHours,
-        requests: edge.requests,
-        servedAtEdge: edge.cachedRequests,
-        reachedKeenpix: edge.requests - edge.cachedRequests,
-        bytesOffloaded: edge.bytesFromEdge,
-        hitRate: edge.hitRate,
-        endToEnd:
-          edge.requests === 0
-            ? 0
-            : ((edge.cachedRequests + diskHits) / edge.requests) * 100,
-      }
+      edge = await fetchEdgeCacheStats(cloudflare)
     } catch {
-      edgeSnapshot = null
+      edge = null
     }
   }
 
@@ -69,7 +52,7 @@ export async function getDashboard(
     kpis,
     series,
     recentLogs,
-    edgeSnapshot,
+    edge,
     edgeConfigured: Boolean(cloudflare),
   }
 }
