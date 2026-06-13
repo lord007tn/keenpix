@@ -108,17 +108,35 @@ export interface ProjectStat {
   requests: number
 }
 
-// Cloudflare edge-cache rollup for the window, fetched from the Cloudflare
-// GraphQL Analytics API. Zone-wide (all /img/* traffic), since Cloudflare does
-// not know the keenpix project id. These hits are served before the origin, so
-// they never appear in RequestLog.
+// One hourly bucket of edge traffic for the edge-cache time series.
+export interface EdgeCachePoint {
+  // Bytes served from the Cloudflare edge in this hour.
+  bytes: number
+  // Requests served from the edge cache (hit/stale/revalidated/updating).
+  hit: number
+  // X-axis label, e.g. "14:00".
+  label: string
+  // Requests that missed the edge and reached keenpix.
+  miss: number
+}
+
+// Cloudflare edge-cache rollup for the last 24h, fetched from the Cloudflare
+// GraphQL Analytics API. Zone-wide for the configured host's /img/* traffic,
+// since Cloudflare does not know the keenpix project id. These hits are served
+// before the origin, so they never appear in RequestLog. The adaptive dataset
+// is capped at a 1-day window on non-enterprise plans, hence the fixed 24h.
 export interface EdgeCacheStats {
+  // Per Cloudflare cache status (hit, miss, expired, bypass, none, ...).
+  byStatus: Array<{ requests: number; status: string }>
   bytesFromEdge: number
   cachedRequests: number
   // ISO timestamp of when these figures were fetched from Cloudflare.
   fetchedAt: string
   hitRate: number
   requests: number
+  // Hourly buckets across the window, oldest first.
+  series: EdgeCachePoint[]
+  windowHours: number
 }
 
 export interface ProjectBreakdownRow {
