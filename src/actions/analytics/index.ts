@@ -54,7 +54,7 @@ export async function getAnalytics(
   let edge: EdgeCacheStats | null = null
   if (cloudflare) {
     try {
-      edge = await fetchEdgeCacheStats(cloudflare, input.range)
+      edge = await fetchEdgeCacheStats(cloudflare)
     } catch {
       edge = null
     }

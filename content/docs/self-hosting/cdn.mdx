@@ -55,16 +55,21 @@ and identify URLs that fragment the edge cache.
 
 ### Built-in edge analytics
 
-Keenpix can pull these figures for you and show an **Edge cache** card on
-`/app/analytics`, next to the origin-shield cache card. Go to **Settings → CDN
-cache** and add a Cloudflare API token scoped to **Analytics → Read** plus your
-**Zone ID** (optionally a hostname to narrow `/img/*` traffic). Keenpix then queries
-the Cloudflare GraphQL Analytics API for the selected window — edge hit-rate,
-edge requests, and bytes served from the edge — caching the result for a few
-minutes so the dashboard stays off the network on every load. The token is
-stored encrypted at rest; you can also set it via the `CLOUDFLARE_*`
+Keenpix can pull these figures for you and show an **Edge cache** card plus an
+hourly **Cloudflare edge cache** chart on `/app/analytics`, next to the
+origin-shield cache card. Go to **Settings → CDN cache** and add a Cloudflare API
+token scoped to **Analytics → Read** plus your **Zone ID** (optionally a hostname
+to narrow `/img/*` traffic). Keenpix queries the Cloudflare GraphQL Analytics API
+(`httpRequestsAdaptiveGroups`) for edge hit-rate, edge requests, bytes served from
+the edge, and the hit/miss split per hour, caching the result for a few minutes so
+the dashboard stays off the network on every load. The token is stored encrypted
+at rest; you can also set it via the `CLOUDFLARE_*`
 [environment variables](/docs/self-hosting/configuration#cloudflare-edge-analytics).
 Use **Test connection** to confirm the token and zone before saving.
+
+Edge analytics always covers the **last 24 hours**: the adaptive dataset is
+capped at a one-day window on non-enterprise Cloudflare plans, so the edge cards
+report a fixed 24h window regardless of the dashboard's range selector.
 
 For deeper, per-URL reporting, ingest Cloudflare HTTP request logs or analytics as a
 separate edge-cache data source. The useful fields are:
