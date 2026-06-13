@@ -13,9 +13,12 @@ import {
 import {
   type ChartConfig,
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
+import { mergeFunnel, mergeSourceCompare } from '@/helpers/analytics/funnel'
 import { compactNumber, humanBytes } from '@/shared/format'
 import type {
   EdgeCachePoint,
@@ -26,12 +29,14 @@ import type {
 
 export type AreaView = 'requests' | 'bandwidth' | 'cache'
 
-type AreaPoint = TimePoint | (TimePoint & { hit: number })
-
 interface AreaBuild {
-  chartData: AreaPoint[]
+  // Recharts data rows; the concrete shape (TimePoint / FunnelPoint / edge
+  // point) varies per builder, so this stays a loose object array.
+  chartData: object[]
   config: ChartConfig
   keys: string[]
+  // Fixed y-axis range for rate views (0–100%) so headroom reads as "missed".
+  yDomain?: [number, number]
   yFormat: (v: number) => string
 }
 
@@ -58,6 +63,7 @@ function buildArea(data: TimePoint[], view: AreaView): AreaBuild {
         hit: d.requests === 0 ? 0 : (d.cached / d.requests) * 100,
       })),
       yFormat: (v: number) => `${Math.round(v)}%`,
+      yDomain: [0, 100],
     }
   }
   return {
@@ -71,16 +77,67 @@ function buildArea(data: TimePoint[], view: AreaView): AreaBuild {
   }
 }
 
+function buildFunnelArea(
+  origin: TimePoint[],
+  edge: EdgeCachePoint[],
+  view: AreaView,
+): AreaBuild {
+  const chartData = mergeFunnel(origin, edge)
+  if (view === 'bandwidth') {
+    return {
+      config: {
+        edgeBytes: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
+        originBytes: { label: 'keenpix origin', color: 'var(--chart-2)' },
+      } satisfies ChartConfig,
+      keys: ['edgeBytes', 'originBytes'],
+      chartData,
+      yFormat: (v: number) => humanBytes(v, 0),
+    }
+  }
+  if (view === 'cache') {
+    // Stack the two cache sources so the chart mirrors the hit-rate card:
+    // Cloudflare edge + keenpix disk, summing to the end-to-end hit rate.
+    return {
+      config: {
+        edgeShare: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
+        diskShare: { label: 'keenpix cache', color: 'var(--chart-2)' },
+      } satisfies ChartConfig,
+      keys: ['edgeShare', 'diskShare'],
+      chartData,
+      yFormat: (v: number) => `${Math.round(v)}%`,
+      yDomain: [0, 100],
+    }
+  }
+  return {
+    config: {
+      edgeServed: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
+      diskServed: { label: 'keenpix cache', color: 'var(--chart-2)' },
+      liveProcessed: {
+        label: 'Optimized live',
+        color: 'var(--muted-foreground)',
+      },
+    } satisfies ChartConfig,
+    keys: ['edgeServed', 'diskServed', 'liveProcessed'],
+    chartData,
+    yFormat: (v: number) => compactNumber(v, 0),
+  }
+}
+
 export function AnalyticsAreaChart({
   data,
+  edge,
+  funnel,
   view,
 }: {
   data: TimePoint[]
+  edge?: EdgeCachePoint[]
+  funnel?: boolean
   view: AreaView
 }) {
-  const { config, keys, chartData, yFormat } = buildArea(data, view)
+  const { config, keys, chartData, yFormat, yDomain } =
+    funnel && edge ? buildFunnelArea(data, edge, view) : buildArea(data, view)
   return (
-    <ChartContainer className="aspect-auto h-60 w-full" config={config}>
+    <ChartContainer className="aspect-auto h-64 w-full" config={config}>
       <AreaChart accessibilityLayer data={chartData}>
         <CartesianGrid vertical={false} />
         <XAxis
@@ -92,6 +149,7 @@ export function AnalyticsAreaChart({
         />
         <YAxis
           axisLine={false}
+          domain={yDomain}
           tickFormatter={yFormat}
           tickLine={false}
           width={48}
@@ -108,6 +166,95 @@ export function AnalyticsAreaChart({
             type="monotone"
           />
         ))}
+        <ChartLegend content={<ChartLegendContent />} />
+      </AreaChart>
+    </ChartContainer>
+  )
+}
+
+function buildCompareArea(view: AreaView): {
+  config: ChartConfig
+  keys: string[]
+  yDomain?: [number, number]
+  yFormat: (v: number) => string
+} {
+  if (view === 'bandwidth') {
+    return {
+      config: {
+        cfBytes: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
+        kpBytes: { label: 'keenpix', color: 'var(--chart-2)' },
+      },
+      keys: ['cfBytes', 'kpBytes'],
+      yFormat: (v: number) => humanBytes(v, 0),
+    }
+  }
+  if (view === 'cache') {
+    return {
+      config: {
+        cfHitRate: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
+        kpHitRate: { label: 'keenpix disk', color: 'var(--chart-2)' },
+      },
+      keys: ['cfHitRate', 'kpHitRate'],
+      yFormat: (v: number) => `${Math.round(v)}%`,
+      yDomain: [0, 100],
+    }
+  }
+  return {
+    config: {
+      cfRequests: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
+      kpRequests: { label: 'keenpix', color: 'var(--chart-2)' },
+    },
+    keys: ['cfRequests', 'kpRequests'],
+    yFormat: (v: number) => compactNumber(v, 0),
+  }
+}
+
+// Cloudflare and keenpix overlaid (not stacked) so the two sources can be
+// compared directly — most usefully the edge hit rate vs the keenpix disk hit
+// rate on the same axis. Lives next to the stacked funnel chart; both need the
+// 24h whole-zone window where edge data exists.
+export function SourceCompareChart({
+  data,
+  edge,
+  view,
+}: {
+  data: TimePoint[]
+  edge: EdgeCachePoint[]
+  view: AreaView
+}) {
+  const merged: object[] = mergeSourceCompare(data, edge)
+  const { config, keys, yFormat, yDomain } = buildCompareArea(view)
+  return (
+    <ChartContainer className="aspect-auto h-64 w-full" config={config}>
+      <AreaChart accessibilityLayer data={merged}>
+        <CartesianGrid vertical={false} />
+        <XAxis
+          axisLine={false}
+          dataKey="label"
+          minTickGap={24}
+          tickLine={false}
+          tickMargin={8}
+        />
+        <YAxis
+          axisLine={false}
+          domain={yDomain}
+          tickFormatter={yFormat}
+          tickLine={false}
+          width={48}
+        />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        {keys.map((k) => (
+          <Area
+            dataKey={k}
+            fill={`var(--color-${k})`}
+            fillOpacity={0.12}
+            key={k}
+            stroke={`var(--color-${k})`}
+            strokeWidth={2}
+            type="monotone"
+          />
+        ))}
+        <ChartLegend content={<ChartLegendContent />} />
       </AreaChart>
     </ChartContainer>
   )
@@ -153,14 +300,52 @@ export function FormatDonut({ data }: { data: FormatSlice[] }) {
   )
 }
 
-// Hourly Cloudflare edge traffic: requests served at the edge (hit) stacked
-// with those that missed and reached keenpix. Mirrors AnalyticsAreaChart but
-// for the fixed 24h edge window.
-export function EdgeCacheAreaChart({ data }: { data: EdgeCachePoint[] }) {
-  const config = {
-    hit: { label: 'Edge hit', color: 'var(--chart-2)' },
-    miss: { label: 'Reached origin', color: 'var(--chart-1)' },
-  } satisfies ChartConfig
+function buildEdgeArea(data: EdgeCachePoint[], view: AreaView): AreaBuild {
+  if (view === 'bandwidth') {
+    return {
+      config: {
+        bytes: { label: 'Served from edge', color: 'var(--chart-1)' },
+      } satisfies ChartConfig,
+      keys: ['bytes'],
+      chartData: data,
+      yFormat: (v: number) => humanBytes(v, 0),
+    }
+  }
+  if (view === 'cache') {
+    return {
+      config: {
+        rate: { label: 'Edge hit rate', color: 'var(--chart-2)' },
+      } satisfies ChartConfig,
+      keys: ['rate'],
+      chartData: data.map((d) => ({
+        ...d,
+        rate: d.hit + d.miss === 0 ? 0 : (d.hit / (d.hit + d.miss)) * 100,
+      })),
+      yFormat: (v: number) => `${Math.round(v)}%`,
+      yDomain: [0, 100],
+    }
+  }
+  return {
+    config: {
+      hit: { label: 'Edge hit', color: 'var(--chart-2)' },
+      miss: { label: 'Reached origin', color: 'var(--chart-1)' },
+    } satisfies ChartConfig,
+    keys: ['hit', 'miss'],
+    chartData: data,
+    yFormat: (v: number) => compactNumber(v, 0),
+  }
+}
+
+// Hourly Cloudflare edge traffic over the fixed 24h window, with the same
+// requests / bandwidth / cache views as the origin chart — but zone-wide and
+// edge-only (hit vs reached-origin, edge bytes, edge hit rate).
+export function EdgeCacheAreaChart({
+  data,
+  view,
+}: {
+  data: EdgeCachePoint[]
+  view: AreaView
+}) {
   if (data.length === 0) {
     return (
       <div className="flex h-60 items-center justify-center text-center text-muted-foreground text-sm">
@@ -168,9 +353,13 @@ export function EdgeCacheAreaChart({ data }: { data: EdgeCachePoint[] }) {
       </div>
     )
   }
+  const { config, keys, chartData, yFormat, yDomain } = buildEdgeArea(
+    data,
+    view,
+  )
   return (
-    <ChartContainer className="aspect-auto h-60 w-full" config={config}>
-      <AreaChart accessibilityLayer data={data}>
+    <ChartContainer className="aspect-auto h-64 w-full" config={config}>
+      <AreaChart accessibilityLayer data={chartData}>
         <CartesianGrid vertical={false} />
         <XAxis
           axisLine={false}
@@ -181,12 +370,13 @@ export function EdgeCacheAreaChart({ data }: { data: EdgeCachePoint[] }) {
         />
         <YAxis
           axisLine={false}
-          tickFormatter={(v: number) => compactNumber(v, 0)}
+          domain={yDomain}
+          tickFormatter={yFormat}
           tickLine={false}
           width={48}
         />
         <ChartTooltip content={<ChartTooltipContent />} />
-        {['hit', 'miss'].map((k) => (
+        {keys.map((k) => (
           <Area
             dataKey={k}
             fill={`var(--color-${k})`}
@@ -197,6 +387,7 @@ export function EdgeCacheAreaChart({ data }: { data: EdgeCachePoint[] }) {
             type="monotone"
           />
         ))}
+        <ChartLegend content={<ChartLegendContent />} />
       </AreaChart>
     </ChartContainer>
   )
