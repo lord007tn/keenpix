@@ -26,6 +26,15 @@ time-windowed):
 
 ## Deferred until ClickHouse
 
+- [ ] **Cloudflare edge-cache analytics.** Keenpix request logs only measure
+      requests that reach the origin; Cloudflare edge hits never hit the app.
+      Add a separate Cloudflare source, preferably Logpush HTTP request records
+      or GraphQL/Cache Analytics rollups, filtered to `/img/*`. Capture
+      `CacheCacheStatus`, `CacheResponseBytes`, `CacheTieredFill`,
+      `CacheReserveUsed`, `ClientRequestHost`, `ClientRequestPath`, and
+      `ClientRequestURI`, then join by parsed `project` query value. This should
+      power an "Edge cache" card alongside the current origin-shield cache card.
+      *Effort: L.*
 - [ ] **Geographic distribution.** *Data:* populate `RequestLog.country/region`
       (currently always null) from a CDN/proxy header (`CF-IPCountry`,
       `X-Vercel-IP-Country`) or a GeoIP lookup. *Code:* `getGeoDistribution` by country.
