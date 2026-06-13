@@ -66,7 +66,7 @@ permission, and it is stored encrypted at rest.
 | ---------------------- | ------- | ---------------------------------------------------------------------- |
 | `CLOUDFLARE_API_TOKEN` | —       | Zone-scoped API token with Analytics → Read                            |
 | `CLOUDFLARE_ZONE_ID`   | —       | 32-character hex zone id for the image hostname                        |
-| `CLOUDFLARE_HOST`      | —       | Optional hostname filter (e.g. `images.example.com`) for `/img/*` traffic |
+| `CLOUDFLARE_HOST`      | —       | Optional. A Cloudflare zone can serve several subdomains and edge analytics only filter by path (`/img/*`), so set this to the keenpix hostname (e.g. `images.example.com`) when the zone also hosts other sites that use a `/img` path. Leave blank to count the whole zone. |
 
 ## Limits & performance
 

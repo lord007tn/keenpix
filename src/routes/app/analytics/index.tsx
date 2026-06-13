@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { ServerIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { BarList } from '@/components/app/bar-list'
 import { DataFilters, type FilterField } from '@/components/app/data-filters'
+import { EdgeCacheKpis } from '@/components/app/edge-cache-kpis'
 import { PageHeader } from '@/components/app/page-header'
 import { StatCard } from '@/components/app/stat-card'
 import {
@@ -253,44 +255,65 @@ function AnalyticsPage() {
         title="Analytics"
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          delta={`${data.summary.savingsPct.toFixed(1)}%`}
-          label="Bandwidth saved"
-          sub="vs origin"
-          tooltip={
-            <div className="flex flex-col gap-0.5">
-              <span>
-                From origin: {humanBytes(data.summary.bandwidthIn, 1)}
-              </span>
-              <span>
-                To clients: {humanBytes(data.summary.bandwidthOut, 1)}
-              </span>
-              <span>Saved: {humanBytes(data.summary.bandwidthSaved, 1)}</span>
-            </div>
-          }
-          unit={savedUnit}
-          value={savedVal}
-        />
-        <StatCard
-          label="Total images"
-          sub={`last ${range}`}
-          unit="requests"
-          value={compactNumber(data.summary.totalRequests, 1)}
-        />
-        <StatCard
-          label="Cache hit rate"
-          sub={`last ${range}`}
-          unit="%"
-          value={data.summary.hitRate.toFixed(1)}
-        />
-        <StatCard
-          label="p95 latency"
-          sub={`last ${range}`}
-          unit="ms"
-          value={String(data.summary.p95)}
-        />
-      </div>
+      {data.edgeConfigured && data.edge ? (
+        <EdgeCacheKpis edge={data.edge} />
+      ) : null}
+      {data.edgeConfigured && !data.edge ? (
+        <p className="text-muted-foreground text-sm">
+          Couldn't load Cloudflare edge data — check the token in Settings → CDN
+          cache.
+        </p>
+      ) : null}
+
+      <section className="flex flex-col gap-3">
+        {data.edgeConfigured ? (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <ServerIcon className="size-4" />
+            <h2 className="font-medium text-foreground text-sm">
+              keenpix origin
+            </h2>
+            <span className="text-xs">last {range}</span>
+          </div>
+        ) : null}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            delta={`${data.summary.savingsPct.toFixed(1)}%`}
+            label="Bandwidth saved"
+            sub="vs origin"
+            tooltip={
+              <div className="flex flex-col gap-0.5">
+                <span>
+                  From origin: {humanBytes(data.summary.bandwidthIn, 1)}
+                </span>
+                <span>
+                  To clients: {humanBytes(data.summary.bandwidthOut, 1)}
+                </span>
+                <span>Saved: {humanBytes(data.summary.bandwidthSaved, 1)}</span>
+              </div>
+            }
+            unit={savedUnit}
+            value={savedVal}
+          />
+          <StatCard
+            label="Total images"
+            sub={`last ${range}`}
+            unit="requests"
+            value={compactNumber(data.summary.totalRequests, 1)}
+          />
+          <StatCard
+            label="Cache hit rate"
+            sub={`last ${range}`}
+            unit="%"
+            value={data.summary.hitRate.toFixed(1)}
+          />
+          <StatCard
+            label="p95 latency"
+            sub={`last ${range}`}
+            unit="ms"
+            value={String(data.summary.p95)}
+          />
+        </div>
+      </section>
 
       {isAll ? (
         <ProjectBreakdown onPick={setProject} rows={data.breakdown} />
@@ -375,51 +398,6 @@ function AnalyticsPage() {
             </div>
           </CardContent>
         </Card>
-
-        {data.edgeConfigured ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Edge cache</CardTitle>
-              <CardDescription>
-                Cloudflare edge · last {data.edge?.windowHours ?? 24}h
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              {data.edge ? (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Edge hit rate</span>
-                    <span className="font-medium tabular-nums">
-                      {data.edge.hitRate.toFixed(1)}%
-                    </span>
-                  </div>
-                  <Progress value={data.edge.hitRate} />
-                  <div className="flex justify-between text-muted-foreground text-xs">
-                    <span>
-                      {compactNumber(data.edge.cachedRequests)} hits ·{' '}
-                      {compactNumber(
-                        data.edge.requests - data.edge.cachedRequests,
-                      )}{' '}
-                      to origin
-                    </span>
-                    <span>
-                      {humanBytes(data.edge.bytesFromEdge, 1)} from edge
-                    </span>
-                  </div>
-                  <span className="text-muted-foreground text-xs">
-                    Cloudflare absorbed {compactNumber(data.edge.requests)} /img
-                    requests before they reached keenpix.
-                  </span>
-                </>
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  Couldn't load Cloudflare data. Check the token in Settings →
-                  CDN cache.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        ) : null}
 
         <Card>
           <CardHeader>

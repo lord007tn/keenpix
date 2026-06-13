@@ -1,4 +1,4 @@
-import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import {
   Card,
   CardContent,
@@ -12,6 +12,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
+import { compactNumber } from '@/shared/format'
 import type { TimePoint } from '@/shared/types'
 
 const chartConfig = {
@@ -72,6 +73,13 @@ export function ChartAreaInteractive({ data }: { data: TimePoint[] }) {
                 minTickGap={32}
                 tickLine={false}
                 tickMargin={8}
+              />
+              <YAxis
+                allowDecimals={false}
+                axisLine={false}
+                tickFormatter={(v: number) => compactNumber(v, 0)}
+                tickLine={false}
+                width={44}
               />
               <ChartTooltip
                 content={<ChartTooltipContent indicator="dot" />}
