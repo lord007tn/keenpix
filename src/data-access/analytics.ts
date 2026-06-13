@@ -129,10 +129,20 @@ async function latencyPercentiles(opts: {
   filters?: AnalyticsFilters
 }) {
   const rows = await prisma.$queryRaw<
-    Array<{ p50: number | null; p95: number | null; p99: number | null }>
+    Array<{
+      avg: number | null
+      p50: number | null
+      p75: number | null
+      p90: number | null
+      p95: number | null
+      p99: number | null
+    }>
   >`
     SELECT
+      avg("latencyMs") AS avg,
       percentile_cont(0.5) WITHIN GROUP (ORDER BY "latencyMs") AS p50,
+      percentile_cont(0.75) WITHIN GROUP (ORDER BY "latencyMs") AS p75,
+      percentile_cont(0.9) WITHIN GROUP (ORDER BY "latencyMs") AS p90,
       percentile_cont(0.95) WITHIN GROUP (ORDER BY "latencyMs") AS p95,
       percentile_cont(0.99) WITHIN GROUP (ORDER BY "latencyMs") AS p99
     FROM "RequestLog"
@@ -140,7 +150,10 @@ async function latencyPercentiles(opts: {
   `
   const r = rows[0]
   return {
+    avg: Math.round(Number(r?.avg ?? 0)),
     p50: Math.round(Number(r?.p50 ?? 0)),
+    p75: Math.round(Number(r?.p75 ?? 0)),
+    p90: Math.round(Number(r?.p90 ?? 0)),
     p95: Math.round(Number(r?.p95 ?? 0)),
     p99: Math.round(Number(r?.p99 ?? 0)),
   }
@@ -174,7 +187,10 @@ export async function getAnalyticsSummary(
       bandwidthIn === 0
         ? 0
         : ((bandwidthIn - bandwidthOut) / bandwidthIn) * 100,
+    avg: percentiles.avg,
     p50: percentiles.p50,
+    p75: percentiles.p75,
+    p90: percentiles.p90,
     p95: percentiles.p95,
     p99: percentiles.p99,
   }

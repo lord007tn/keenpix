@@ -63,7 +63,7 @@ export function SectionCards({ kpis }: { kpis: DashboardKpis }) {
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Total requests</CardDescription>
+          <CardDescription>Requests served</CardDescription>
           <CardTitle className="font-semibold @[250px]/card:text-3xl text-2xl tabular-nums">
             {compactNumber(kpis.requests.value)}
           </CardTitle>
@@ -76,7 +76,7 @@ export function SectionCards({ kpis }: { kpis: DashboardKpis }) {
             {trendWord(reqDelta)} vs previous period
           </div>
           <div className="text-muted-foreground">
-            Optimized image requests served
+            Reached keenpix — edge-cached excluded
           </div>
         </CardFooter>
       </Card>
@@ -121,7 +121,7 @@ export function SectionCards({ kpis }: { kpis: DashboardKpis }) {
 
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Cache hit rate</CardDescription>
+          <CardDescription>Disk cache hit rate</CardDescription>
           <CardTitle className="font-semibold @[250px]/card:text-3xl text-2xl tabular-nums">
             {kpis.hitRate.value.toFixed(1)}%
           </CardTitle>
@@ -134,7 +134,7 @@ export function SectionCards({ kpis }: { kpis: DashboardKpis }) {
             {trendWord(hitPp)} vs previous period
           </div>
           <div className="text-muted-foreground">
-            Requests served straight from cache
+            Served straight from keenpix's disk cache
           </div>
         </CardFooter>
       </Card>

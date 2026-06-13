@@ -1,9 +1,12 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ServerIcon } from 'lucide-react'
+import {
+  createFileRoute,
+  useNavigate,
+  useRouteContext,
+} from '@tanstack/react-router'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
-import { EdgeCacheKpis } from '@/components/app/edge-cache-kpis'
 import { PageHeader } from '@/components/app/page-header'
 import { ProjectsDataTable } from '@/components/app/projects-data-table'
+import { RecentActivity } from '@/components/app/recent-activity'
 import { SectionCards } from '@/components/app/section-cards'
 import {
   Empty,
@@ -13,6 +16,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { OperationsSummary } from '@/features/admin/operations-summary'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { getDashboardFn } from '@/functions/dashboard'
 import { appPageHead } from '@/shared/seo'
@@ -30,7 +34,7 @@ export const Route = createFileRoute('/app/dashboard/')({
   head: () =>
     appPageHead(
       'Dashboard',
-      'Keenpix dashboard for project health, request trends, cache performance, and image optimization activity.',
+      'Keenpix dashboard for project health, request trends, recent activity, and instance operations.',
     ),
   validateSearch: (
     search: Record<string, unknown>,
@@ -48,12 +52,12 @@ export const Route = createFileRoute('/app/dashboard/')({
 })
 
 function DashboardPage() {
-  const { projects, stats, kpis, series, edge, edgeConfigured } =
-    Route.useLoaderData()
+  const { projects, stats, kpis, series, recentLogs } = Route.useLoaderData()
   const { range } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
-  const rangeLabel = RANGES.find((r) => r.value === range)?.label ?? range
+  const { user } = useRouteContext({ from: '/app' })
+  const isSuperAdmin = user.role === 'super_admin'
 
   if (projects.length === 0) {
     return (
@@ -101,23 +105,18 @@ function DashboardPage() {
           </ToggleGroup>
         }
         eyebrow={isAll ? 'All projects' : currentProject?.name}
-        subtitle="Project health, request trends, and cache performance."
+        subtitle={
+          isAll
+            ? 'A bird’s-eye on every project — trends, activity, and instance health.'
+            : `${currentProject?.name ?? 'This project'} — trends and recent activity.`
+        }
         title="Dashboard"
       />
-      {edgeConfigured && edge ? <EdgeCacheKpis edge={edge} /> : null}
-      <section className="flex flex-col gap-3">
-        {edgeConfigured ? (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <ServerIcon className="size-4" />
-            <h2 className="font-medium text-foreground text-sm">
-              keenpix origin
-            </h2>
-            <span className="text-xs">last {rangeLabel}</span>
-          </div>
-        ) : null}
-        <SectionCards kpis={kpis} />
-      </section>
+
+      <SectionCards kpis={kpis} />
+
       <ChartAreaInteractive data={series} />
+
       {isAll ? (
         <ProjectsDataTable
           activeId={currentProject?.id}
@@ -126,6 +125,15 @@ function DashboardPage() {
           stats={stats}
         />
       ) : null}
+
+      {isAll && isSuperAdmin ? (
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+          <RecentActivity logs={recentLogs} />
+          <OperationsSummary />
+        </div>
+      ) : (
+        <RecentActivity logs={recentLogs} />
+      )}
     </div>
   )
 }
