@@ -16,6 +16,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   AnalyticsAreaChart,
   type AreaView,
+  EdgeCacheAreaChart,
   FormatDonut,
   LatencyHistogram,
 } from '@/features/analytics/charts'
@@ -324,6 +325,21 @@ function AnalyticsPage() {
         </CardContent>
       </Card>
 
+      {data.edgeConfigured && data.edge ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Cloudflare edge cache</CardTitle>
+            <CardDescription>
+              Requests served at the edge vs. those that reached keenpix · last{' '}
+              {data.edge.windowHours}h
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EdgeCacheAreaChart data={data.edge.series} />
+          </CardContent>
+        </Card>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader>
@@ -364,7 +380,9 @@ function AnalyticsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Edge cache</CardTitle>
-              <CardDescription>Cloudflare edge · whole zone</CardDescription>
+              <CardDescription>
+                Cloudflare edge · last {data.edge?.windowHours ?? 24}h
+              </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
               {data.edge ? (
@@ -378,14 +396,19 @@ function AnalyticsPage() {
                   <Progress value={data.edge.hitRate} />
                   <div className="flex justify-between text-muted-foreground text-xs">
                     <span>
-                      {compactNumber(data.edge.requests)} edge requests
+                      {compactNumber(data.edge.cachedRequests)} hits ·{' '}
+                      {compactNumber(
+                        data.edge.requests - data.edge.cachedRequests,
+                      )}{' '}
+                      to origin
                     </span>
                     <span>
                       {humanBytes(data.edge.bytesFromEdge, 1)} from edge
                     </span>
                   </div>
                   <span className="text-muted-foreground text-xs">
-                    Served before origin · not counted in keenpix logs
+                    Cloudflare absorbed {compactNumber(data.edge.requests)} /img
+                    requests before they reached keenpix.
                   </span>
                 </>
               ) : (
