@@ -1,5 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { ServerIcon } from 'lucide-react'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
+import { EdgeCacheKpis } from '@/components/app/edge-cache-kpis'
 import { PageHeader } from '@/components/app/page-header'
 import { ProjectsDataTable } from '@/components/app/projects-data-table'
 import { SectionCards } from '@/components/app/section-cards'
@@ -46,10 +48,12 @@ export const Route = createFileRoute('/app/dashboard/')({
 })
 
 function DashboardPage() {
-  const { projects, stats, kpis, series } = Route.useLoaderData()
+  const { projects, stats, kpis, series, edge, edgeConfigured } =
+    Route.useLoaderData()
   const { range } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
+  const rangeLabel = RANGES.find((r) => r.value === range)?.label ?? range
 
   if (projects.length === 0) {
     return (
@@ -100,7 +104,19 @@ function DashboardPage() {
         subtitle="Project health, request trends, and cache performance."
         title="Dashboard"
       />
-      <SectionCards kpis={kpis} />
+      {edgeConfigured && edge ? <EdgeCacheKpis edge={edge} /> : null}
+      <section className="flex flex-col gap-3">
+        {edgeConfigured ? (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <ServerIcon className="size-4" />
+            <h2 className="font-medium text-foreground text-sm">
+              keenpix origin
+            </h2>
+            <span className="text-xs">last {rangeLabel}</span>
+          </div>
+        ) : null}
+        <SectionCards kpis={kpis} />
+      </section>
       <ChartAreaInteractive data={series} />
       {isAll ? (
         <ProjectsDataTable
