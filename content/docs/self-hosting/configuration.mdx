@@ -53,13 +53,28 @@ SMTP is disabled or incomplete.
 | `SMTP_FROM_EMAIL` | —       | Sender email address                         |
 | `SMTP_FROM_NAME`  | —       | Sender display name                          |
 
+## Cloudflare edge analytics
+
+Optional. Wire a Cloudflare API token so keenpix can show real edge cache
+hit-rate alongside its origin-shield figures (see [CDN setup](/docs/self-hosting/cdn#measuring-cloudflare-cache)).
+Manage it from **Settings → CDN cache**; when database-managed settings are
+enabled with a token and zone, they take precedence over the environment
+variables below. The token only needs the zone-scoped **Analytics → Read**
+permission, and it is stored encrypted at rest.
+
+| Variable               | Default | Purpose                                                                |
+| ---------------------- | ------- | ---------------------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN` | —       | Zone-scoped API token with Analytics → Read                            |
+| `CLOUDFLARE_ZONE_ID`   | —       | 32-character hex zone id for the image hostname                        |
+| `CLOUDFLARE_HOST`      | —       | Optional hostname filter (e.g. `images.example.com`) for `/img/*` traffic |
+
 ## Limits & performance
 
 | Variable                   | Default        | Purpose                                          |
 | -------------------------- | -------------- | ------------------------------------------------ |
-| `KEENPIX_CACHE_MAX_BYTES` | `2147483648` (2GB) | Disk cache LRU cap                         |
+| `KEENPIX_CACHE_MAX_BYTES` | app default: `2147483648` (2GB); Docker/Coolify: `8589934592` (8GB) | Disk cache LRU cap |
 | `KEENPIX_CACHE_STALE_MS` | `86400000` (24h) | Serve stale disk entries immediately and refresh them in the background; `0` disables stale refresh |
-| `KEENPIX_MEMORY_CACHE_MAX_BYTES` | `67108864` (64MB) | In-process hot variant LRU cap; `0` disables memory caching |
+| `KEENPIX_MEMORY_CACHE_MAX_BYTES` | app default: `67108864` (64MB); Docker/Coolify: `268435456` (256MB) | In-process hot variant LRU cap; `0` disables memory caching |
 | `KEENPIX_MAX_ORIGIN_BYTES` | `52428800` (50MB) | Max bytes pulled from an origin before `413`  |
 | `KEENPIX_MAX_CONCURRENCY`  | CPU count      | Max simultaneous transforms before queueing      |
 | `KEENPIX_MAX_QUEUE`        | `100`          | Queue depth before shedding load with `503`      |
