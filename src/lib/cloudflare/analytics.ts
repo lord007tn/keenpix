@@ -136,9 +136,10 @@ export async function fetchEdgeCacheStats(
     }
     const hourKey = g.dimensions.datetimeHour ?? ''
     const bucket = hourly.get(hourKey) ?? { bytes: 0, hit: 0, miss: 0 }
-    bucket.bytes += bytes
     if (isHit) {
       bucket.hit += g.count
+      // EdgeCachePoint.bytes is the bytes *served from the edge*, i.e. hit bytes.
+      bucket.bytes += bytes
     } else {
       bucket.miss += g.count
     }

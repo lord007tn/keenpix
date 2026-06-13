@@ -5,11 +5,17 @@ import {
   getProjectStats,
   getTimeSeries,
 } from '@/data-access/analytics'
+import { listLogs } from '@/data-access/logs'
 import { listProjects } from '@/data-access/projects'
 import { fetchEdgeCacheStats } from '@/lib/cloudflare/analytics'
 import type { dashboardInputSchema } from '@/schemas/analytics'
 import type { EdgeCacheStats } from '@/shared/types'
 
+// The Overview is a scope-aware bird's-eye: KPI trends, the request chart, and
+// recent activity follow the selected project; the project table and operations
+// (global-only) are dropped to "all projects". The KPI cards are the same
+// source-split cards as the analytics page (so the two pages never disagree) —
+// edge data is included here whenever Cloudflare is configured.
 export async function getDashboard(
   input: z.output<typeof dashboardInputSchema>,
 ) {
@@ -20,14 +26,15 @@ export async function getDashboard(
     input.project && projects.some((p) => p.id === input.project)
       ? input.project
       : undefined
-  const [kpis, series] = await Promise.all([
+  const [kpis, series, recentLogs] = await Promise.all([
     getDashboardKpis(input.range, project),
     getTimeSeries(input.range, project),
+    listLogs(5, project),
   ])
   const stats = project ? {} : await getProjectStats(input.range)
-  // Cloudflare edge layer (zone-wide, last 24h). Kept separate from the
-  // range-based keenpix KPIs; a transient Cloudflare error must not blank the
-  // dashboard.
+
+  // Cloudflare edge cache (zone-wide, last 24h). Same source as the analytics
+  // page; a transient error must never blank the overview.
   const cloudflare = await getEffectiveCloudflareSettings()
   let edge: EdgeCacheStats | null = null
   if (cloudflare) {
@@ -37,12 +44,14 @@ export async function getDashboard(
       edge = null
     }
   }
+
   return {
     range: input.range,
     projects,
     stats,
     kpis,
     series,
+    recentLogs,
     edge,
     edgeConfigured: Boolean(cloudflare),
   }

@@ -9,62 +9,92 @@ import {
 import {
   type ChartConfig,
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
+import { mergeFunnel } from '@/helpers/analytics/funnel'
 import { compactNumber } from '@/shared/format'
-import type { TimePoint } from '@/shared/types'
+import type { EdgeCachePoint, TimePoint } from '@/shared/types'
 
-const chartConfig = {
+const originConfig = {
   cached: { label: 'Cache hits', color: 'var(--chart-2)' },
   optimized: { label: 'Optimized', color: 'var(--chart-1)' },
 } satisfies ChartConfig
 
-export function ChartAreaInteractive({ data }: { data: TimePoint[] }) {
+// The full funnel: served at the Cloudflare edge, then from the keenpix disk
+// cache, then optimized live. Only shown when edge + origin cover the same 24h
+// whole-zone window (see `funnel` at the call site).
+const funnelConfig = {
+  edgeServed: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
+  diskServed: { label: 'keenpix cache', color: 'var(--chart-2)' },
+  liveProcessed: { label: 'Optimized live', color: 'var(--muted-foreground)' },
+} satisfies ChartConfig
+
+export function ChartAreaInteractive({
+  data,
+  edge,
+  funnel,
+}: {
+  data: TimePoint[]
+  edge?: EdgeCachePoint[]
+  funnel?: boolean
+}) {
+  const showFunnel = Boolean(funnel && edge && edge.length > 0)
+  const config = showFunnel ? funnelConfig : originConfig
+  const keys = Object.keys(config)
+  const funnelRows = showFunnel ? mergeFunnel(data, edge ?? []) : null
+  const chartData: object[] = funnelRows ?? data
+  const allZero = funnelRows
+    ? funnelRows.every(
+        (d) => d.edgeServed + d.diskServed + d.liveProcessed === 0,
+      )
+    : data.every((d) => d.requests === 0)
+
   return (
     <Card className="@container/card">
       <CardHeader>
         <CardTitle>Requests over time</CardTitle>
         <CardDescription>
-          Cache hits vs live-optimized, this window
+          {showFunnel
+            ? 'Across Cloudflare edge and keenpix · last 24h'
+            : 'Cache hits vs live-optimized, this window'}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        {data.every((d) => d.requests === 0) ? (
+        {allZero ? (
           <div className="flex h-[250px] items-center justify-center text-muted-foreground text-sm">
             No requests in this period yet.
           </div>
         ) : (
           <ChartContainer
             className="aspect-auto h-[250px] w-full"
-            config={chartConfig}
+            config={config}
           >
-            <AreaChart accessibilityLayer data={data}>
+            <AreaChart accessibilityLayer data={chartData}>
               <defs>
-                <linearGradient id="fillOptimized" x1="0" x2="0" y1="0" y2="1">
-                  <stop
-                    offset="5%"
-                    stopColor="var(--color-optimized)"
-                    stopOpacity={1}
-                  />
-                  <stop
-                    offset="95%"
-                    stopColor="var(--color-optimized)"
-                    stopOpacity={0.1}
-                  />
-                </linearGradient>
-                <linearGradient id="fillCached" x1="0" x2="0" y1="0" y2="1">
-                  <stop
-                    offset="5%"
-                    stopColor="var(--color-cached)"
-                    stopOpacity={0.8}
-                  />
-                  <stop
-                    offset="95%"
-                    stopColor="var(--color-cached)"
-                    stopOpacity={0.1}
-                  />
-                </linearGradient>
+                {keys.map((k) => (
+                  <linearGradient
+                    id={`fill-${k}`}
+                    key={k}
+                    x1="0"
+                    x2="0"
+                    y1="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="5%"
+                      stopColor={`var(--color-${k})`}
+                      stopOpacity={0.8}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor={`var(--color-${k})`}
+                      stopOpacity={0.1}
+                    />
+                  </linearGradient>
+                ))}
               </defs>
               <CartesianGrid vertical={false} />
               <XAxis
@@ -85,20 +115,17 @@ export function ChartAreaInteractive({ data }: { data: TimePoint[] }) {
                 content={<ChartTooltipContent indicator="dot" />}
                 cursor={false}
               />
-              <Area
-                dataKey="cached"
-                fill="url(#fillCached)"
-                stackId="a"
-                stroke="var(--color-cached)"
-                type="natural"
-              />
-              <Area
-                dataKey="optimized"
-                fill="url(#fillOptimized)"
-                stackId="a"
-                stroke="var(--color-optimized)"
-                type="natural"
-              />
+              {keys.map((k) => (
+                <Area
+                  dataKey={k}
+                  fill={`url(#fill-${k})`}
+                  key={k}
+                  stackId="a"
+                  stroke={`var(--color-${k})`}
+                  type="natural"
+                />
+              ))}
+              <ChartLegend content={<ChartLegendContent />} />
             </AreaChart>
           </ChartContainer>
         )}
