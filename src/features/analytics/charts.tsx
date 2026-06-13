@@ -17,7 +17,12 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart'
 import { compactNumber, humanBytes } from '@/shared/format'
-import type { FormatSlice, LatencyBin, TimePoint } from '@/shared/types'
+import type {
+  EdgeCachePoint,
+  FormatSlice,
+  LatencyBin,
+  TimePoint,
+} from '@/shared/types'
 
 export type AreaView = 'requests' | 'bandwidth' | 'cache'
 
@@ -145,6 +150,55 @@ export function FormatDonut({ data }: { data: FormatSlice[] }) {
         <span className="text-muted-foreground text-xs">{top.label}</span>
       </div>
     </div>
+  )
+}
+
+// Hourly Cloudflare edge traffic: requests served at the edge (hit) stacked
+// with those that missed and reached keenpix. Mirrors AnalyticsAreaChart but
+// for the fixed 24h edge window.
+export function EdgeCacheAreaChart({ data }: { data: EdgeCachePoint[] }) {
+  const config = {
+    hit: { label: 'Edge hit', color: 'var(--chart-2)' },
+    miss: { label: 'Reached origin', color: 'var(--chart-1)' },
+  } satisfies ChartConfig
+  if (data.length === 0) {
+    return (
+      <div className="flex h-60 items-center justify-center text-center text-muted-foreground text-sm">
+        No edge traffic in the last 24h.
+      </div>
+    )
+  }
+  return (
+    <ChartContainer className="aspect-auto h-60 w-full" config={config}>
+      <AreaChart accessibilityLayer data={data}>
+        <CartesianGrid vertical={false} />
+        <XAxis
+          axisLine={false}
+          dataKey="label"
+          minTickGap={24}
+          tickLine={false}
+          tickMargin={8}
+        />
+        <YAxis
+          axisLine={false}
+          tickFormatter={(v: number) => compactNumber(v, 0)}
+          tickLine={false}
+          width={48}
+        />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        {['hit', 'miss'].map((k) => (
+          <Area
+            dataKey={k}
+            fill={`var(--color-${k})`}
+            fillOpacity={0.18}
+            key={k}
+            stackId="a"
+            stroke={`var(--color-${k})`}
+            type="monotone"
+          />
+        ))}
+      </AreaChart>
+    </ChartContainer>
   )
 }
 
