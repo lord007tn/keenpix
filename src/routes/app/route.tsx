@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { AppTopnav } from '@/components/app/app-topnav'
-import { RouteError } from '@/components/app/route-error'
+import { AppNotFound, RouteError } from '@/components/app/error-page'
 import { getSessionFn } from '@/functions/auth'
 import { listProjectsFn } from '@/functions/projects'
 import { appPageHead } from '@/shared/seo'
@@ -32,6 +32,7 @@ export const Route = createFileRoute('/app')({
   }),
   component: AppLayout,
   errorComponent: RouteError,
+  notFoundComponent: AppNotFound,
 })
 
 function AppLayout() {

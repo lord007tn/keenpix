@@ -3,7 +3,7 @@ import { getAppUrl, getRepositoryUrl } from '@/server/deployment'
 export const SITE_NAME = 'Keenpix'
 export const SITE_TITLE = 'Keenpix - self-hosted image optimization'
 export const SITE_DESCRIPTION =
-  'Self-hosted image optimization for teams that want a fast, secure, open-source image pipeline with sharp transforms, disk caching, analytics, and one drop-in URL.'
+  'Self-hosted image optimization for teams: a fast, secure, open-source image pipeline with sharp transforms, disk caching, analytics, and one drop-in URL.'
 export const SITE_KEYWORDS =
   'Keenpix, self-hosted image optimization, open-source image CDN, sharp image transforms, image proxy, WebP, AVIF, Docker image optimizer'
 export const BRAND_IMAGE_PATH = '/brand/keenpix-og.png'
@@ -76,10 +76,17 @@ export function absoluteUrl(path = '/') {
   return `${getAppUrl()}${normalizedPath}`
 }
 
+// Stable @id anchors so the Organization, WebSite, and SoftwareApplication
+// nodes form one linked entity graph instead of three disconnected nodes.
+const ORGANIZATION_ID = `${absoluteUrl('/')}#organization`
+const WEBSITE_ID = `${absoluteUrl('/')}#website`
+const SOFTWARE_ID = `${absoluteUrl('/')}#software`
+
 export function softwareApplicationJsonLd() {
   return {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
+    '@id': SOFTWARE_ID,
     applicationCategory: 'DeveloperApplication',
     codeRepository: getRepositoryUrl(),
     description: SITE_DESCRIPTION,
@@ -92,8 +99,10 @@ export function softwareApplicationJsonLd() {
       priceCurrency: 'USD',
     },
     operatingSystem: 'Linux, macOS, Windows',
-    softwareVersion: APP_VERSION,
+    publisher: { '@id': ORGANIZATION_ID },
     url: absoluteUrl('/'),
+    // Omitted entirely when the version isn't injected at build time.
+    ...(APP_VERSION ? { softwareVersion: APP_VERSION } : {}),
   }
 }
 
@@ -101,6 +110,7 @@ export function organizationJsonLd() {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': ORGANIZATION_ID,
     logo: absoluteUrl(BRAND_ICON_PATH),
     name: SITE_NAME,
     sameAs: [getRepositoryUrl()],
@@ -112,13 +122,11 @@ export function webSiteJsonLd() {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
+    '@id': WEBSITE_ID,
     description: SITE_DESCRIPTION,
     image: absoluteUrl(BRAND_IMAGE_PATH),
     name: SITE_NAME,
-    publisher: {
-      '@type': 'Organization',
-      name: SITE_NAME,
-    },
+    publisher: { '@id': ORGANIZATION_ID },
     url: absoluteUrl('/'),
   }
 }
@@ -147,7 +155,7 @@ export function docsJsonLd({
       headline: title,
       image: absoluteUrl(BRAND_IMAGE_PATH),
       isPartOf: {
-        '@type': 'TechArticle',
+        '@type': 'WebSite',
         name: 'Keenpix documentation',
         url: absoluteUrl('/docs'),
       },
