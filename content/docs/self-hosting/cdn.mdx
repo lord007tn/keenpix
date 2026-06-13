@@ -71,6 +71,12 @@ Edge analytics always covers the **last 24 hours**: the adaptive dataset is
 capped at a one-day window on non-enterprise Cloudflare plans, so the edge cards
 report a fixed 24h window regardless of the dashboard's range selector.
 
+The optional **hostname** narrows the figures to one subdomain. A Cloudflare zone
+covers the whole domain and the query only filters by path (`/img/*`), so if your
+zone also serves other sites that use a `/img` path, set the hostname (e.g.
+`images.example.com`) to attribute the numbers to keenpix alone. Leave it blank to
+count `/img/*` across the entire zone.
+
 For deeper, per-URL reporting, ingest Cloudflare HTTP request logs or analytics as a
 separate edge-cache data source. The useful fields are:
 
