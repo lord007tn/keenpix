@@ -112,9 +112,9 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_SELF_HOST` | – | Set `true` to run app-only self-host mode. Docker images default this to `true`. |
 | `KEENPIX_RUN_MIGRATIONS` / `KEENPIX_RUN_SEED` | – | Docker entrypoint controls for running migrations and bootstrap seed before app start. Defaults to `true`. |
 | `KEENPIX_CACHE_DIR` | – | Disk cache location (default `./.keenpix-cache`). |
-| `KEENPIX_CACHE_MAX_BYTES` | – | LRU eviction cap (default 2 GB). |
-| `KEENPIX_CACHE_STALE_MS` | – | Serve cached variants immediately after this age and refresh them in the background; `0` disables internal stale refresh (default 24h). |
-| `KEENPIX_MEMORY_CACHE_MAX_BYTES` | – | In-process hot variant LRU cap; set `0` to disable (default 64 MB). |
+| `KEENPIX_CACHE_MAX_BYTES` | – | LRU eviction cap. The app default is 2 GB; the Docker/Coolify compose files default to 8 GB for CDN-fronted origin-shield use. |
+| `KEENPIX_CACHE_STALE_MS` | – | Serve cached variants immediately after this age and refresh them in the background; `0` disables internal stale refresh. Default 24h. |
+| `KEENPIX_MEMORY_CACHE_MAX_BYTES` | – | In-process hot variant LRU cap; set `0` to disable. The app default is 64 MB; the Docker/Coolify compose files default to 256 MB. |
 | `KEENPIX_MAX_ORIGIN_BYTES` | – | Reject origin responses larger than this (default 50 MB). |
 | `KEENPIX_MAX_INPUT_PIXELS` | – | Decompression-bomb ceiling (default ~50 MP). |
 | `KEENPIX_MAX_DIMENSION` | – | Longest output side when a request omits `w`/`h` (default 4096). |
