@@ -2,57 +2,60 @@
 
 > Living document. Updated as work lands. See [`PLAN.md`](./PLAN.md) for the full plan.
 
-**Last updated:** 2026-05-31
+**Last updated:** 2026-06-13
 
 ---
 
 ## TL;DR — where we are
 
-**Phases 0–8 done — Keenpix is a working product end-to-end.** The image optimizer now uses the CDN-friendly path endpoint `GET /img/<source-url>?project=&w=&fmt=…`, fetches an allowlisted origin image, transforms it with **sharp**, disk-caches it (HIT/MISS), and logs every request to Postgres — guarded by an origin allowlist + private-IP/SSRF block. **better-auth email OTP** protects `/app` (sign-in verified end-to-end). **Prisma + Postgres** with a seed script (3 projects, 800+ logs). The UI (marketing/self-host splash + dashboard + analytics + logs + docs + settings + account/admin) runs on **real DB data** through the 4-layer architecture. Docker (`Dockerfile` + `docker-compose.yml`) ships the deploy target, and GitHub CI verifies both the app build and the self-host image build.
+**Phases 0–8 done — Keenpix is a working product end-to-end.** The image optimizer uses the CDN-friendly path endpoint `GET /img/<source-url>?project=&w=&fmt=…`, fetches an allowlisted origin image, transforms it with **sharp**, caches variants on disk and in memory, and logs every request to Postgres — guarded by an origin allowlist + private-IP/SSRF block. **better-auth email OTP** protects `/app`, with SMTP managed from Settings and env fallback. **Prisma + Postgres** with seed data powers projects, logs, settings, staff, internal API keys, and SDK activity. The UI (marketing/self-host splash, overview, analytics, live logs, operations, settings, account, docs) runs on real data through the 4-layer architecture.
 
-**Remaining:** Phase 9 (ClickHouse — deferred per user "later"), and the ESLint→Biome/Ultracite swap (task #9). A real email provider for OTP (currently a console sender).
+**Recent analytics state:** source-domain capture, per-project/domain breakdowns, SSE live logs, operations cache/queue health, optional Cloudflare GraphQL edge-cache analytics, and hourly Postgres analytics rollups are live. Overview and Analytics now separate Cloudflare edge delivery from Keenpix origin-shield metrics, with a fixed 24h edge window matching Cloudflare's adaptive dataset limits.
+
+**Remaining:** daily/weekly rollup tables plus raw-log retention, geographic analytics, per-URL/per-project Cloudflare edge attribution via Logpush or a richer edge ingest, and an optional ClickHouse sink only for unusually high-volume installs.
 
 ---
 
 ## Phase checklist
 
-- [~] **Phase 0 — Scaffold & tooling** (core done; lint-swap pending)
+- [x] **Phase 0 — Scaffold & tooling**
   - [x] TanStack Start app initialized (shadcn `start` template, base-ui, Tailwind v4) at repo root
   - [x] `@/*` path alias, tsconfig, vite config (from scaffold)
-  - [ ] Biome + Ultracite — _deferred; scaffold shipped ESLint/Prettier (task #9)_
+  - [x] Biome + Ultracite
   - [x] Layer folders created (routes, functions, actions, data-access, db, lib, components, features, shared, stores)
   - [x] shadcn initialized (`components.json`, Tailwind v4, OKLCH, vega base)
   - [x] Theme: brand orange primary + teal chart palette + **success / warning / info** tokens
   - [x] `git init`
   - [x] Dev server boots (HTTP 200) + `src/README.md` structure doc + `shared/format.ts`
-  - [ ] Nitro `node-server` preset (set when wiring real `/_keenpix` — Phase 6)
-- [x] **Phase 1 — App shell + Dashboard (mock)** — sidebar (project switcher + nav), topbar (breadcrumb + theme toggle), dashboard (project cards + sparklines + recent activity)
-- [x] **Phase 2 — Analytics / Logs / Docs / Settings / Billing (mock)** — analytics (stat row, area chart w/ requests·bandwidth·cache views, format donut, latency histogram, top-images/domains bar lists, geo), logs (live streaming table + path filter + status toggles), docs (tabs), settings (pipeline/security/danger config), billing
+  - [x] Nitro Node production build
+- [x] **Phase 1 — App shell + Dashboard** — top-tab app shell, project switcher, Overview dashboard with source-split analytics, recent activity, project table, and operations summary
+- [x] **Phase 2 — Analytics / Logs / Docs / Settings** — analytics source-split cards/charts, filters, project/domain breakdowns, SSE live logs, Fumadocs docs, project/global settings, operations, staff, SMTP, and internal API keys
 - [x] **Phase 3 — Marketing landing + auth/OTP UI** — landing at `/` (hero, features, self-host, CTA); login = email→OTP flow (shadcn `InputOTP`)
 - [x] **Phase 4 — Prisma + Postgres + seeders + wire data-access** — schema (Org/Project/Token/RequestLog + better-auth models), `prisma.config.ts` (Prisma 7 + PrismaPg), migration applied, seed (3 projects/2 tokens/800 logs), `data-access` on Prisma
-- [x] **Phase 5 — better-auth email OTP + route protection** — `emailOTP` plugin (console sender), `tanstackStartCookies`, `/api/auth/$` handler, `/app` gated; full sign-in verified end-to-end
+- [x] **Phase 5 — better-auth email OTP + route protection** — `emailOTP` plugin, SMTP/env delivery with dev console fallback, `tanstackStartCookies`, `/api/auth/$` handler, `/app` gated; full sign-in verified end-to-end
 - [x] **Phase 6 — `/img/*` sharp endpoint** — fetch → sharp resize/re-encode (avif/webp/jpeg/png, Accept-negotiated or explicit `fmt`) → disk cache (HIT/MISS) → `Cache-Control: immutable`; origin allowlist + SSRF guard; request logging. The source URL now lives in the request path so Cloudflare and other CDNs can see the source file extension.
-- [x] **Phase 7 — Real analytics from request_logs** — summary, timeseries (JS bucketing), format distribution, top images, latency histogram via Prisma aggregations (top-domains/geo remain fixtures)
+- [x] **Phase 7 — Real analytics from request_logs + Postgres rollups** — summary, timeseries, format distribution, status/domain filters, source-domain capture, top images, approximate latency percentiles/histogram, project/domain breakdowns, dashboard deltas, SSE live logs, and optional Cloudflare edge rollups
 - [x] **Phase 8 — Docker** — `Dockerfile` (node:22-slim, multi-stage, `prisma migrate deploy` on boot) + `docker-compose.yml` (app + `postgres:18-alpine` postgres:passer + volumes) + `.dockerignore`; `docker compose config` valid
 - [ ] **Phase 9 (later) — ClickHouse for analytics** — deferred per user
-- [ ] **Task #9 — husky → Biome + Ultracite** — deferred polish
+- [x] **Task #9 — husky → Biome + Ultracite**
 
 ---
 
 ## What works right now (verified)
 - `pnpm dev` → app at `http://localhost:3000`. Marketing `/` (200), `/login` (200), `/app/*` auth-gated (307 → /login without session).
 - **Image transform:** `GET /img/https://cdn.example.com/hero.jpg?project=store&w=400&fmt=webp` → optimized image with immutable cache headers; `403` on private-IP (SSRF) and on origins outside the project allowlist. `/api/keenpix` is intentionally gone.
-- **Auth:** `/api/auth/ok` 200; email→OTP sign-in creates a user + session and unlocks `/app` (verified end-to-end). OTP delivered via console sender.
+- **Auth:** `/api/auth/ok` 200; email→OTP sign-in creates a user + session and unlocks `/app` (verified end-to-end). OTP delivery uses Settings SMTP, env SMTP fallback, or console fallback in dev.
 - **DB:** Postgres `keenpix` — 3 projects, 800+ request logs (incl. real ones from transforms), 2 users. `pnpm db:seed` / `db:migrate` / `db:studio` wired.
-- **UI on real data:** dashboard (projects/activity), analytics (real summary/timeseries/format-dist/top-images/latency from `request_logs`), logs (live table), settings, docs, billing.
+- **UI on real data:** overview, analytics, live logs, operations, settings, docs, account, staff, SMTP, and internal API keys.
+- **Postgres analytics rollups:** new request logs update hourly rollup rows transactionally; migration backfills existing logs. Overview/Analytics read rollups, while Live Logs still reads raw rows.
+- **Optional Cloudflare edge analytics:** Settings → CDN cache stores encrypted token/zone/host settings; analytics/dashboard show edge hit-rate, edge requests, edge bytes, and hourly edge hit/miss when configured.
 - Theme: orange `--primary`, branded `--chart-*`, `--success`/`--warning`/`--info` (+`-foreground`) light+dark; `cva` variants on Button & Badge.
 - `pnpm typecheck` clean. Docker: `docker compose up --build` (app + Postgres).
 
 ## What's mocked / fixtures (intentional)
-- OTP email = console sender (swap for Resend/SMTP/Postmark).
-- Analytics **top-domains** + **geo hotspots** = fixtures (we don't store source-domain or lat/long yet).
-- Logs page live-stream appends client-side simulated rows on top of the real seeded/DB rows.
-- Some stat deltas / billing figures are illustrative constants.
+- Seed data is still used for local demos and fresh development databases.
+- OTP can fall back to console delivery in dev when SMTP is not configured.
+- Geographic analytics are not implemented yet; request logs do not currently populate country/region.
 
 ## Decisions log
 | Date | Decision | Rationale |
@@ -61,14 +64,14 @@
 | 2026-05-22 | Node + sharp (TS) | User direction; sharp needs Node, not Cloudflare Workers |
 | 2026-05-22 | App runs as Node container; Cloudflare = CDN in front | sharp can't run on Workers; CDN caches the transform endpoint |
 | 2026-05-31 | Transform endpoint moved to `/img/<source-url>` | Keeps the source file extension visible to CDNs and avoids an API-looking cache path |
-| 2026-05-22 | DB = SQLite (libsql) + drizzle | Self-host friendly, file-based; Postgres later |
+| 2026-05-22 | DB = Prisma + Postgres | User override; self-host deployment uses Postgres from day one |
 | 2026-05-22 | Mirror fluent-seo's 4-layer arch (data-access/actions/functions/routes) | User asked to follow reference structure |
 | 2026-05-22 | better-auth email OTP, configured fresh | Not in references; user requirement |
 | 2026-05-22 | shadcn tokens only + add success/warning/info | User requirement; no Tailwind default colors |
 
 ## Known gaps / open questions
-- Real email provider for OTP (using console sender until chosen — Resend? SMTP?).
 - Whether Paraglide i18n is needed for v1 (deferred for now).
+- How aggressive raw-log retention should be once daily/weekly rollups exist.
 
 ## Changelog
 - **2026-05-22** — Mapped safhati + fluent-seo, read skills (shadcn, composition, react-best-practices, frontend-design), reviewed TanStack Intent. Wrote `PLAN.md` + this file.
@@ -165,3 +168,5 @@
 - **2026-05-31 (session 10 — CDN-first endpoint + self-host CDN docs)** — Moved the public transform route from `/api/keenpix?url=...` to **`/img/<source-url>?project=...`** while preserving the same sharp/cache/allowlist pipeline. This fixes the Cloudflare caveat by keeping the source file extension in the request path and makes the endpoint look like image delivery instead of an API route. Added a self-host **CDN setup** doc covering Cloudflare Cache Rules (`/img/*`, full query string, no dashboard/auth caching), non-Cloudflare CDN guidance, and explicit `fmt` recommendations when a CDN cannot vary cache by `Accept`. Updated README, API reference, framework examples, docs search tree, dashboard/settings copy, and dev-server passthrough. Validated with `pnpm test`, `pnpm run typecheck`, `pnpm lint`, `pnpm build`, `pnpm run knip`, `pnpm run doctor`, browser checks for the self-host splash and CDN docs, and GitHub CI/Docker image checks. Merged as PR #8.
 
 - **2026-05-31 (session 11 — form/schema hardening and implementation status refresh)** — Consolidated form validation around **TanStack Form + zod schemas** for staff invitations, SMTP settings, project creation, allowlist hosts, pipeline settings, analytics/log filters, docs/admin/auth/common env inputs, and invitation acceptance. Added shared form-error extraction, improved common error-message parsing, and wired TanStack devtools panels for Query/Router/Form/Pacer. Tightened admin/staff/project forms with field-level validation, clearer disabled/pending states, safer env parsing, and cleaner route/search validation. Updated this implementation status so the living doc matches the `/img/*` endpoint and current product shape.
+
+- **2026-06-13 (release catch-up — v0.1.4 through v0.1.7 + unreleased edge/origin work)** — Current product now includes internal API keys + `/api/sdk`, app Settings sections for project and global configuration, source-domain analytics, SSE live logs, operations cache/queue health, IPX-style Sharp modifiers, SVG optimization, and Cloudflare GraphQL edge-cache analytics. Latest commits redesign Overview and Analytics around a Cloudflare edge → Keenpix disk cache → live origin funnel, with separate edge/origin source-split cards and chart lenses so zone-level edge data is not mixed with project-scoped origin trends.
