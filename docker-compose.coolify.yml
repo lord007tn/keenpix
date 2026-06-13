@@ -16,7 +16,7 @@ services:
       start_period: 30s
 
   app:
-    image: ghcr.io/lord007tn/keenpix:v0.1.2
+    image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
     restart: unless-stopped
     depends_on:
       postgres:
