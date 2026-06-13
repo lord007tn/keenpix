@@ -3,24 +3,24 @@ import { llms } from 'fumadocs-core/source'
 import { getAppUrl, isSelfHosted } from '@/server/deployment'
 import { source } from '@/shared/docs-source'
 
-interface MarkdownPageData {
-  _markdown?: string
-  description?: string
-  title?: string
-}
-
-function markdownPageData(value: unknown): MarkdownPageData {
-  if (typeof value !== 'object' || value === null) {
-    return {}
+// fumadocs attaches getText() to each page's data at runtime to expose the
+// processed Markdown body (enabled via includeProcessedMarkdown in
+// source.config.ts). The loader's Data type doesn't surface it, so read it
+// through a structural check.
+async function processedMarkdown(data: unknown) {
+  if (
+    typeof data === 'object' &&
+    data !== null &&
+    'getText' in data &&
+    typeof data.getText === 'function'
+  ) {
+    try {
+      return String(await data.getText('processed')).trim()
+    } catch {
+      return ''
+    }
   }
-  const markdown = Reflect.get(value, '_markdown')
-  const description = Reflect.get(value, 'description')
-  const title = Reflect.get(value, 'title')
-  return {
-    _markdown: typeof markdown === 'string' ? markdown : undefined,
-    description: typeof description === 'string' ? description : undefined,
-    title: typeof title === 'string' ? title : undefined,
-  }
+  return ''
 }
 
 const generator = llms(source, {
@@ -43,7 +43,7 @@ const generator = llms(source, {
 export const Route = createFileRoute('/{$llmFile}.txt')({
   server: {
     handlers: {
-      GET: ({ params }) => {
+      GET: async ({ params }) => {
         if (isSelfHosted()) {
           return new Response('Not found', { status: 404 })
         }
@@ -53,7 +53,7 @@ export const Route = createFileRoute('/{$llmFile}.txt')({
         }
 
         if (params.llmFile === 'llms-full') {
-          return textResponse(llmsFull())
+          return textResponse(await llmsFull())
         }
 
         return new Response('Not found', { status: 404 })
@@ -73,31 +73,35 @@ function llmsIndex() {
 `
 }
 
-function llmsFull() {
+async function llmsFull() {
   const baseUrl = getAppUrl()
+  const sections = await Promise.all(
+    source.getPages().map(async (page) => {
+      const body = await processedMarkdown(page.data)
+      const fallback = [
+        page.data.description,
+        `Canonical URL: ${baseUrl}${page.url}`,
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+
+      return [
+        `## ${page.data.title ?? page.url}`,
+        '',
+        `Source: ${baseUrl}${page.url}`,
+        '',
+        body || fallback,
+        '',
+      ].join('\n')
+    }),
+  )
 
   return [
     '# Keenpix documentation',
     '',
     'Complete hosted documentation for Keenpix, a self-hosted image optimization service.',
     '',
-    ...source.getPages().flatMap((page) => {
-      const data = markdownPageData(page.data)
-      const markdown =
-        data._markdown?.trim() ||
-        [data.description, `Canonical URL: ${baseUrl}${page.url}`]
-          .filter(Boolean)
-          .join('\n\n')
-
-      return [
-        `## ${data.title ?? page.url}`,
-        '',
-        `Source: ${baseUrl}${page.url}`,
-        '',
-        markdown,
-        '',
-      ]
-    }),
+    ...sections,
   ].join('\n')
 }
 
