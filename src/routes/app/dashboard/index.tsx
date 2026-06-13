@@ -4,6 +4,7 @@ import {
   useRouteContext,
 } from '@tanstack/react-router'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
+import { EdgeSnapshot } from '@/components/app/edge-snapshot'
 import { PageHeader } from '@/components/app/page-header'
 import { ProjectsDataTable } from '@/components/app/projects-data-table'
 import { RecentActivity } from '@/components/app/recent-activity'
@@ -33,8 +34,8 @@ const RANGES: { value: AnalyticsRange; label: string }[] = [
 export const Route = createFileRoute('/app/dashboard/')({
   head: () =>
     appPageHead(
-      'Dashboard',
-      'Keenpix dashboard for project health, request trends, recent activity, and instance operations.',
+      'Overview',
+      'Keenpix overview — edge delivery, request trends, recent activity, and instance operations at a glance.',
     ),
   validateSearch: (
     search: Record<string, unknown>,
@@ -52,7 +53,15 @@ export const Route = createFileRoute('/app/dashboard/')({
 })
 
 function DashboardPage() {
-  const { projects, stats, kpis, series, recentLogs } = Route.useLoaderData()
+  const {
+    projects,
+    stats,
+    kpis,
+    series,
+    recentLogs,
+    edgeSnapshot,
+    edgeConfigured,
+  } = Route.useLoaderData()
   const { range } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
@@ -107,13 +116,17 @@ function DashboardPage() {
         eyebrow={isAll ? 'All projects' : currentProject?.name}
         subtitle={
           isAll
-            ? 'A bird’s-eye on every project — trends, activity, and instance health.'
+            ? 'A bird’s-eye on every project — edge delivery, trends, activity, and instance health.'
             : `${currentProject?.name ?? 'This project'} — trends and recent activity.`
         }
-        title="Dashboard"
+        title="Overview"
       />
 
       <SectionCards kpis={kpis} />
+
+      {isAll ? (
+        <EdgeSnapshot configured={edgeConfigured} data={edgeSnapshot} />
+      ) : null}
 
       <ChartAreaInteractive data={series} />
 

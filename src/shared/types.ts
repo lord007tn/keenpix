@@ -142,6 +142,19 @@ export interface EdgeCacheStats {
   windowHours: number
 }
 
+// Condensed 24h edge-delivery headline for the Overview — the "whole funnel"
+// top-line (edge vs origin, end-to-end efficiency), with the full breakdown on
+// the Analytics page. Zone-wide, so it only applies to the all-projects view.
+export interface EdgeSnapshot {
+  bytesOffloaded: number
+  endToEnd: number
+  hitRate: number
+  reachedKeenpix: number
+  requests: number
+  servedAtEdge: number
+  windowHours: number
+}
+
 export interface ProjectBreakdownRow {
   avgLatency: number
   bandwidthSaved: number

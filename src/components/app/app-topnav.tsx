@@ -17,7 +17,7 @@ import { useProject } from '@/stores/project-context'
 // Project-scoped tabs. Each preserves the active ?project= scope so switching
 // tabs keeps you on the same project (or "All projects").
 const BASE_TABS = [
-  { to: '/app/dashboard', label: 'Dashboard', icon: LayoutGridIcon },
+  { to: '/app/dashboard', label: 'Overview', icon: LayoutGridIcon },
   { to: '/app/analytics', label: 'Analytics', icon: ChartColumnIcon },
   { to: '/app/logs', label: 'Live logs', icon: ScrollTextIcon },
 ] as const
