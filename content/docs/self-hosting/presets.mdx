@@ -60,7 +60,7 @@ KEENPIX_MAX_QUEUE="200"
 
 - An `https://` URL turns on secure cookies automatically.
 - Size `KEENPIX_CACHE_MAX_BYTES` to the disk volume; the in-memory LRU
-  (`KEENPIX_MEMORY_CACHE_MAX_BYTES`, default 64 MB) keeps the hottest variants in RAM.
+  (`KEENPIX_MEMORY_CACHE_MAX_BYTES`) keeps the hottest variants in RAM.
 - Set `KEENPIX_MAX_CONCURRENCY` near the CPU count; load past `KEENPIX_MAX_QUEUE` sheds
   with `503` instead of overrunning the box.
 
@@ -85,8 +85,11 @@ SMTP_USER="..."
 SMTP_PASSWORD="..."
 SMTP_FROM_EMAIL="keenpix@example.com"
 
-# The CDN absorbs repeat traffic, so the origin disk cache can be smaller.
-KEENPIX_CACHE_MAX_BYTES="2147483648"    # 2 GB
+# Cloudflare absorbs repeat traffic, but the origin is still the shared shield
+# for edge cold misses and tiered-cache fills.
+KEENPIX_CACHE_MAX_BYTES="8589934592"    # 8 GB
+KEENPIX_MEMORY_CACHE_MAX_BYTES="268435456" # 256 MB
+KEENPIX_CACHE_STALE_MS="86400000"       # 24 hours
 KEENPIX_MAX_CONCURRENCY="4"
 KEENPIX_MAX_QUEUE="200"
 ```
@@ -101,4 +104,6 @@ does not cache. Caching `/app` or `/api/auth` breaks sign-in.
   knowing that an explicit format will not fall back for unsupported browsers.
 - Use explicit `fmt=svg` for optimized SVG delivery. Omitted `fmt` / `fmt=auto`
   rasterizes SVG origins instead of preserving SVG output.
-- A smaller origin disk cache is fine because the CDN serves the repeat requests.
+- Size the origin disk cache to the image working set that still reaches Keenpix after
+  Cloudflare. For small sites 2 GB can be enough; for high-cardinality hotel/CMS
+  libraries, start around 8 GB and watch Operations for eviction churn.

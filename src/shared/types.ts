@@ -108,6 +108,19 @@ export interface ProjectStat {
   requests: number
 }
 
+// Cloudflare edge-cache rollup for the window, fetched from the Cloudflare
+// GraphQL Analytics API. Zone-wide (all /img/* traffic), since Cloudflare does
+// not know the keenpix project id. These hits are served before the origin, so
+// they never appear in RequestLog.
+export interface EdgeCacheStats {
+  bytesFromEdge: number
+  cachedRequests: number
+  // ISO timestamp of when these figures were fetched from Cloudflare.
+  fetchedAt: string
+  hitRate: number
+  requests: number
+}
+
 export interface ProjectBreakdownRow {
   avgLatency: number
   bandwidthSaved: number

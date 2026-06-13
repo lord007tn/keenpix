@@ -3,6 +3,7 @@ import {
   listApiKeyActivities,
   listInternalApiKeys,
 } from '@/data-access/admin/api-keys'
+import { getPublicCloudflareSettings } from '@/data-access/admin/cloudflare'
 import { listInvitations } from '@/data-access/admin/invitations'
 import { getPublicSmtpSettings } from '@/data-access/admin/smtp'
 import { listStaffUsers } from '@/data-access/admin/staff'
@@ -15,6 +16,7 @@ export async function getAdminWorkspace() {
     users,
     invitations,
     smtp,
+    cloudflare,
     apiKeys,
     apiKeyActivities,
     apiKeyActivitiesTotal,
@@ -23,6 +25,7 @@ export async function getAdminWorkspace() {
     listStaffUsers(),
     listInvitations(),
     getPublicSmtpSettings(),
+    getPublicCloudflareSettings(),
     listInternalApiKeys(INTERNAL_API_KEY_CONFIG),
     listApiKeyActivities(INTERNAL_API_KEY_CONFIG, 0, ACTIVITY_PAGE_SIZE),
     countApiKeyActivities(INTERNAL_API_KEY_CONFIG),
@@ -32,6 +35,7 @@ export async function getAdminWorkspace() {
     users,
     invitations,
     smtp,
+    cloudflare,
     apiKeys,
     apiKeyActivities,
     apiKeyActivitiesTotal,

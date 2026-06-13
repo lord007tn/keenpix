@@ -360,6 +360,44 @@ function AnalyticsPage() {
           </CardContent>
         </Card>
 
+        {data.edgeConfigured ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Edge cache</CardTitle>
+              <CardDescription>Cloudflare edge · whole zone</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              {data.edge ? (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Edge hit rate</span>
+                    <span className="font-medium tabular-nums">
+                      {data.edge.hitRate.toFixed(1)}%
+                    </span>
+                  </div>
+                  <Progress value={data.edge.hitRate} />
+                  <div className="flex justify-between text-muted-foreground text-xs">
+                    <span>
+                      {compactNumber(data.edge.requests)} edge requests
+                    </span>
+                    <span>
+                      {humanBytes(data.edge.bytesFromEdge, 1)} from edge
+                    </span>
+                  </div>
+                  <span className="text-muted-foreground text-xs">
+                    Served before origin · not counted in keenpix logs
+                  </span>
+                </>
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  Couldn't load Cloudflare data. Check the token in Settings →
+                  CDN cache.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
+
         <Card>
           <CardHeader>
             <CardTitle>Response latency</CardTitle>

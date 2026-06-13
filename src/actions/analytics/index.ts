@@ -1,4 +1,5 @@
 import type { z } from 'zod'
+import { getEffectiveCloudflareSettings } from '@/data-access/admin/cloudflare'
 import {
   getAnalyticsSummary,
   getAvailableFilters,
@@ -11,8 +12,13 @@ import {
   getTopImages,
 } from '@/data-access/analytics'
 import { getProject, resolveProjectId } from '@/data-access/projects'
+import { fetchEdgeCacheStats } from '@/lib/cloudflare/analytics'
 import type { analyticsInputSchema } from '@/schemas/analytics'
-import type { AllowedHostStat, AnalyticsRange } from '@/shared/types'
+import type {
+  AllowedHostStat,
+  AnalyticsRange,
+  EdgeCacheStats,
+} from '@/shared/types'
 
 export async function getAnalytics(
   input: z.output<typeof analyticsInputSchema>,
@@ -41,6 +47,18 @@ export async function getAnalytics(
   const domainBreakdown = project
     ? await getDomainBreakdown(input.range, project)
     : null
+  // Cloudflare edge cache (zone-wide). Only fetched when wired up in Settings →
+  // CDN cache; a transient Cloudflare error must never blank the page, so the
+  // card just reports "couldn't load" when edgeConfigured but edge is null.
+  const cloudflare = await getEffectiveCloudflareSettings()
+  let edge: EdgeCacheStats | null = null
+  if (cloudflare) {
+    try {
+      edge = await fetchEdgeCacheStats(cloudflare, input.range)
+    } catch {
+      edge = null
+    }
+  }
   return {
     range: input.range,
     summary,
@@ -51,6 +69,8 @@ export async function getAnalytics(
     breakdown,
     domainBreakdown,
     available,
+    edge,
+    edgeConfigured: Boolean(cloudflare),
   }
 }
 
