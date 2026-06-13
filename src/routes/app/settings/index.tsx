@@ -1,5 +1,6 @@
 import { createFileRoute, useRouteContext } from '@tanstack/react-router'
 import {
+  CloudIcon,
   ImageIcon,
   InfoIcon,
   KeyRoundIcon,
@@ -21,6 +22,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { ApiKeyManagement } from '@/features/admin/api-key-management'
+import { CloudflareSettingsPanel } from '@/features/admin/cloudflare-settings'
 import { OperationsConfig } from '@/features/admin/operations-config'
 import { SmtpSettingsPanel } from '@/features/admin/smtp-settings'
 import { StaffManagement } from '@/features/admin/staff-management'
@@ -36,6 +38,7 @@ const SECTIONS = [
   'pipeline',
   'security',
   'config',
+  'cdn',
   'api-keys',
   'staff',
   'email',
@@ -52,6 +55,7 @@ const SECTION_META: Record<Section, { label: string; icon: LucideIcon }> = {
   pipeline: { label: 'Pipeline', icon: ImageIcon },
   security: { label: 'Security', icon: ShieldIcon },
   config: { label: 'Configuration', icon: ServerIcon },
+  cdn: { label: 'CDN cache', icon: CloudIcon },
   'api-keys': { label: 'API keys', icon: KeyRoundIcon },
   staff: { label: 'Staff', icon: UsersIcon },
   email: { label: 'Email', icon: MailIcon },
@@ -120,7 +124,7 @@ function SettingsPage() {
     ? ['general', 'pipeline', 'security']
     : []
   const globalSections: Section[] = isSuperAdmin
-    ? ['config', 'api-keys', 'staff', 'email']
+    ? ['config', 'cdn', 'api-keys', 'staff', 'email']
     : []
   const available = [...projectSections, ...globalSections]
   const active = section && available.includes(section) ? section : available[0]
@@ -328,6 +332,23 @@ function SettingsPage() {
               </CardHeader>
               <CardContent>
                 <OperationsConfig />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {active === 'cdn' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Cloudflare edge analytics</CardTitle>
+                <CardDescription>
+                  Wire a Cloudflare API token so keenpix can show real edge
+                  cache hit-rate alongside its origin-shield figures. Edge hits
+                  are served before the origin, so they never reach keenpix on
+                  their own.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CloudflareSettingsPanel />
               </CardContent>
             </Card>
           ) : null}
