@@ -11,6 +11,7 @@ import {
 } from 'fumadocs-ui/layouts/docs/page'
 import { RootProvider } from 'fumadocs-ui/provider/tanstack'
 import { Suspense } from 'react'
+import { JsonLd } from '@/components/app/json-ld'
 import { getMDXComponents } from '@/components/mdx'
 import { docsSlugsSchema } from '@/schemas/docs'
 import { getAppUrl, isSelfHosted } from '@/server/deployment'
@@ -28,6 +29,7 @@ interface DocsLoaderData {
   breadcrumbs: Array<{ name: string; url: string }>
   canonicalUrl: string
   description?: string
+  jsonLd: ReturnType<typeof docsJsonLd> | null
   ogImage?: string
   pageTree: Awaited<ReturnType<typeof source.serializePageTree>>
   path: string
@@ -54,21 +56,6 @@ export const Route = createFileRoute('/docs/$')({
     const ogImage = loaderData?.ogImage ?? absoluteUrl(BRAND_IMAGE_PATH)
 
     return {
-      headScripts: loaderData
-        ? [
-            {
-              type: 'application/ld+json',
-              children: JSON.stringify(
-                docsJsonLd({
-                  description,
-                  path: loaderData.breadcrumbs,
-                  title,
-                  url: canonicalUrl,
-                }),
-              ),
-            },
-          ]
-        : undefined,
       links: [
         { rel: 'stylesheet', href: docsCss },
         {
@@ -101,24 +88,41 @@ const serverLoader = createServerFn({ method: 'GET' })
       throw notFound()
     }
 
+    // Extensionless on purpose: a `.webp` suffix is intercepted by the static
+    // asset handler (404) before reaching this dynamic route; the route serves
+    // image/webp regardless of extension.
     const ogPath =
       page.slugs.length > 0
-        ? `/og/docs/${page.slugs.join('/')}.webp`
-        : '/og/docs/index.webp'
+        ? `/og/docs/${page.slugs.join('/')}`
+        : '/og/docs/index'
+
+    const canonicalUrl = `${getAppUrl()}${page.url}`
+    const breadcrumbs = [
+      { name: 'Keenpix', url: getAppUrl() },
+      { name: 'Docs', url: `${getAppUrl()}/docs` },
+      { name: page.data.title, url: canonicalUrl },
+    ]
+    const selfHost = isSelfHosted()
 
     return {
-      breadcrumbs: [
-        { name: 'Keenpix', url: getAppUrl() },
-        { name: 'Docs', url: `${getAppUrl()}/docs` },
-        { name: page.data.title, url: `${getAppUrl()}${page.url}` },
-      ],
-      canonicalUrl: `${getAppUrl()}${page.url}`,
-      selfHost: isSelfHosted(),
+      breadcrumbs,
+      canonicalUrl,
+      selfHost,
       path: page.path,
       title: page.data.title,
       description: page.data.description,
       ogImage: `${getAppUrl()}${ogPath}`,
       pageTree: await source.serializePageTree(source.getPageTree()),
+      // Built here so the JSON-LD shares one source of truth with the page's
+      // breadcrumbs/canonical; rendered as an SSR <script> in Page().
+      jsonLd: selfHost
+        ? null
+        : docsJsonLd({
+            description: page.data.description,
+            path: breadcrumbs,
+            title: page.data.title,
+            url: canonicalUrl,
+          }),
     }
   })
 
@@ -137,12 +141,12 @@ const clientLoader = browserCollections.docs.createClientLoader({
 })
 
 function Page() {
-  const { path, pageTree } = useFumadocsLoader(
-    Route.useLoaderData() as DocsLoaderData,
-  )
+  const loaderData = Route.useLoaderData() as DocsLoaderData
+  const { path, pageTree } = useFumadocsLoader(loaderData)
 
   return (
     <RootProvider theme={{ enabled: false }}>
+      {loaderData.jsonLd ? <JsonLd data={loaderData.jsonLd} /> : null}
       <DocsLayout
         links={[
           { text: 'Dashboard', url: '/app' },

@@ -16,6 +16,7 @@ import { ModeToggle } from '@/components/theme/mode-toggle'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { REPOSITORY_URL } from '@/shared/repository'
 
 const FEATURES = [
   {
@@ -107,6 +108,7 @@ export function MarketingPage() {
             alt=""
             aria-hidden="true"
             className="absolute inset-0 -z-10 h-full w-full object-cover opacity-60"
+            fetchPriority="high"
             height="630"
             src="/brand/keenpix-og.png"
             width="1200"
@@ -220,7 +222,7 @@ export function MarketingPage() {
                     <div className="flex size-10 items-center justify-center rounded-md bg-primary/12 text-primary ring-1 ring-primary/15">
                       <f.icon className="size-5" />
                     </div>
-                    <div className="font-semibold text-lg">{f.title}</div>
+                    <h3 className="font-semibold text-lg">{f.title}</h3>
                     <p className="text-muted-foreground text-sm leading-relaxed">
                       {f.body}
                     </p>
@@ -302,7 +304,7 @@ Vary: Accept`}</CodeBlock>
                   className="border-border border-l pl-4 text-sm"
                   key={title}
                 >
-                  <div className="font-semibold">{title}</div>
+                  <h3 className="font-semibold">{title}</h3>
                   <p className="mt-2 text-muted-foreground leading-relaxed">
                     {body}
                   </p>
@@ -343,9 +345,19 @@ Vary: Accept`}</CodeBlock>
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-8 text-muted-foreground text-sm">
           <KeenpixLogo />
           <span className="font-mono text-xs">© 2026 keenpix · Apache-2.0</span>
-          <a className="hover:text-foreground" href="/docs">
-            Documentation
-          </a>
+          <nav className="flex items-center gap-4">
+            <a className="hover:text-foreground" href="/docs">
+              Documentation
+            </a>
+            <a
+              className="hover:text-foreground"
+              href={REPOSITORY_URL}
+              rel="noreferrer"
+              target="_blank"
+            >
+              GitHub
+            </a>
+          </nav>
         </div>
       </footer>
     </div>

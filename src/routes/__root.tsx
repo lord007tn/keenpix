@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
+import { NotFoundPage } from '@/components/app/error-page'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -30,7 +31,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { name: 'application-name', content: SITE_NAME },
-      { name: 'theme-color', content: '#06101f' },
+      { name: 'theme-color', content: '#07111f' },
       { property: 'og:site_name', content: SITE_NAME },
       ...seo({
         title: SITE_TITLE,
@@ -64,14 +65,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { rel: 'alternate', type: 'text/plain', href: '/llms.txt' },
     ],
   }),
-  notFoundComponent: () => (
-    <main className="container mx-auto p-4 pt-16">
-      <h1 className="font-semibold text-2xl">404</h1>
-      <p className="text-muted-foreground">
-        The requested page could not be found.
-      </p>
-    </main>
-  ),
+  notFoundComponent: NotFoundPage,
   shellComponent: RootDocument,
 })
 
