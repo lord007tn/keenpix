@@ -1,57 +1,24 @@
 import dayjs, { type Dayjs } from 'dayjs'
 import { prisma } from '@/db'
-import { Prisma } from '@/generated/prisma/client'
 import type {
   AnalyticsRange,
   DomainBreakdownRow,
-  LatencyBin,
   ProjectStat,
-  TimePoint,
 } from '@/shared/types'
+import {
+  listAnalyticsRollups,
+  type RollupRow,
+  rollupRangeMeta,
+  rollupSinceFor,
+  rollupsToLatencyBins,
+  rollupsToTimeSeries,
+  summarizeRollups,
+} from './analytics-rollups'
 import { listProjects } from './projects'
 
-// Real aggregations over request_logs. Every query is scoped to one project when
-// projectId is supplied, otherwise it stays org-wide.
-interface RangeMeta {
-  label: (d: Dayjs, i: number) => string
-  ms: number
-  n: number
-}
-
-const DAY = 86_400_000
-const HOUR = 3_600_000
-
-function rangeMeta(range: AnalyticsRange): RangeMeta {
-  switch (range) {
-    case '7d':
-      return {
-        n: 7,
-        ms: DAY,
-        label: (d) => d.format('ddd'),
-      }
-    case '30d':
-      return {
-        n: 30,
-        ms: DAY,
-        label: (d) => d.format('M/D'),
-      }
-    case '90d':
-      return { n: 12, ms: 7 * DAY, label: (_d, i) => `W${i + 1}` }
-    default:
-      return {
-        n: 24,
-        ms: HOUR,
-        label: (d) => d.format('HH:00'),
-      }
-  }
-}
-
-function sinceFor(range: AnalyticsRange): Date {
-  const { n, ms } = rangeMeta(range)
-  return dayjs()
-    .subtract(n * ms, 'millisecond')
-    .toDate()
-}
+// Real analytics read from hourly Postgres rollups. Raw request_logs still power
+// Live Logs and short-term debugging, but dashboard-style aggregation should not
+// scan the raw table indefinitely.
 
 export interface AnalyticsFilters {
   domain?: string[]
@@ -59,104 +26,34 @@ export interface AnalyticsFilters {
   status?: string[]
 }
 
-// Shared Prisma where builder for analytics windows, project scope, and filters.
-function scope(since: Date, projectId?: string, filters?: AnalyticsFilters) {
-  const where: {
-    format?: { in: string[] }
-    projectId?: string
-    sourceHost?: { in: string[] }
-    status?: { in: number[] }
-    ts: { gte: Date }
-  } = { ts: { gte: since } }
-  if (projectId) {
-    where.projectId = projectId
-  }
-  if (filters?.format && filters.format.length > 0) {
-    where.format = { in: filters.format }
-  }
-  if (filters?.domain && filters.domain.length > 0) {
-    where.sourceHost = { in: filters.domain }
-  }
-  if (filters?.status && filters.status.length > 0) {
-    const codes = filters.status.map(Number).filter((n) => !Number.isNaN(n))
-    // All-invalid input must be a no-op, not `in: []` (which matches zero rows
-    // and would blank the page).
-    if (codes.length > 0) {
-      where.status = { in: codes }
+function groupRollups<T>(
+  rows: RollupRow[],
+  key: (row: RollupRow) => string,
+  build: (key: string, rows: RollupRow[]) => T,
+) {
+  const groups = new Map<string, RollupRow[]>()
+  for (const row of rows) {
+    const k = key(row)
+    const group = groups.get(k)
+    if (group) {
+      group.push(row)
+    } else {
+      groups.set(k, [row])
     }
   }
-  return where
+  return [...groups.entries()].map(([k, grouped]) => build(k, grouped))
 }
 
-// Build the SQL WHERE for the raw percentile query — mirrors scope() but emits
-// parameterized SQL so percentiles can be computed in Postgres.
-function latencyWhereSql(opts: {
-  gte: Date
-  lt?: Date
-  projectId?: string
-  filters?: AnalyticsFilters
-}): Prisma.Sql {
-  const conds: Prisma.Sql[] = [Prisma.sql`"ts" >= ${opts.gte}`]
-  if (opts.lt) {
-    conds.push(Prisma.sql`"ts" < ${opts.lt}`)
-  }
-  if (opts.projectId) {
-    conds.push(Prisma.sql`"projectId" = ${opts.projectId}`)
-  }
-  if (opts.filters?.format && opts.filters.format.length > 0) {
-    conds.push(Prisma.sql`"format" = ANY(${opts.filters.format})`)
-  }
-  if (opts.filters?.domain && opts.filters.domain.length > 0) {
-    conds.push(Prisma.sql`"sourceHost" = ANY(${opts.filters.domain})`)
-  }
-  if (opts.filters?.status && opts.filters.status.length > 0) {
-    const codes = opts.filters.status
-      .map(Number)
-      .filter((n) => !Number.isNaN(n))
-    if (codes.length > 0) {
-      conds.push(Prisma.sql`"status" = ANY(${codes})`)
-    }
-  }
-  return Prisma.join(conds, ' AND ')
-}
-
-// Continuous (interpolated) latency percentiles computed in Postgres, so we
-// never pull every row's latency into the app just to sort it.
-async function latencyPercentiles(opts: {
-  gte: Date
-  lt?: Date
-  projectId?: string
-  filters?: AnalyticsFilters
-}) {
-  const rows = await prisma.$queryRaw<
-    Array<{
-      avg: number | null
-      p50: number | null
-      p75: number | null
-      p90: number | null
-      p95: number | null
-      p99: number | null
-    }>
-  >`
-    SELECT
-      avg("latencyMs") AS avg,
-      percentile_cont(0.5) WITHIN GROUP (ORDER BY "latencyMs") AS p50,
-      percentile_cont(0.75) WITHIN GROUP (ORDER BY "latencyMs") AS p75,
-      percentile_cont(0.9) WITHIN GROUP (ORDER BY "latencyMs") AS p90,
-      percentile_cont(0.95) WITHIN GROUP (ORDER BY "latencyMs") AS p95,
-      percentile_cont(0.99) WITHIN GROUP (ORDER BY "latencyMs") AS p99
-    FROM "RequestLog"
-    WHERE ${latencyWhereSql(opts)}
-  `
-  const r = rows[0]
-  return {
-    avg: Math.round(Number(r?.avg ?? 0)),
-    p50: Math.round(Number(r?.p50 ?? 0)),
-    p75: Math.round(Number(r?.p75 ?? 0)),
-    p90: Math.round(Number(r?.p90 ?? 0)),
-    p95: Math.round(Number(r?.p95 ?? 0)),
-    p99: Math.round(Number(r?.p99 ?? 0)),
-  }
+function rowsFor(
+  range: AnalyticsRange,
+  projectId?: string,
+  filters?: AnalyticsFilters,
+) {
+  return listAnalyticsRollups(prisma, {
+    gte: rollupSinceFor(range),
+    projectId,
+    filters,
+  })
 }
 
 export async function getAnalyticsSummary(
@@ -164,36 +61,7 @@ export async function getAnalyticsSummary(
   projectId?: string,
   filters?: AnalyticsFilters,
 ) {
-  const since = sinceFor(range)
-  const where = scope(since, projectId, filters)
-  const [agg, total, cachedCount, percentiles] = await Promise.all([
-    prisma.requestLog.aggregate({
-      where,
-      _sum: { bytesIn: true, bytesOut: true },
-    }),
-    prisma.requestLog.count({ where }),
-    prisma.requestLog.count({ where: { ...where, cached: true } }),
-    latencyPercentiles({ gte: since, projectId, filters }),
-  ])
-  const bandwidthIn = agg._sum.bytesIn ?? 0
-  const bandwidthOut = agg._sum.bytesOut ?? 0
-  return {
-    totalRequests: total,
-    bandwidthIn,
-    bandwidthOut,
-    bandwidthSaved: bandwidthIn - bandwidthOut,
-    hitRate: total === 0 ? 0 : (cachedCount / total) * 100,
-    savingsPct:
-      bandwidthIn === 0
-        ? 0
-        : ((bandwidthIn - bandwidthOut) / bandwidthIn) * 100,
-    avg: percentiles.avg,
-    p50: percentiles.p50,
-    p75: percentiles.p75,
-    p90: percentiles.p90,
-    p95: percentiles.p95,
-    p99: percentiles.p99,
-  }
+  return summarizeRollups(await rowsFor(range, projectId, filters))
 }
 
 export async function getTimeSeries(
@@ -201,39 +69,7 @@ export async function getTimeSeries(
   projectId?: string,
   filters?: AnalyticsFilters,
 ) {
-  const meta = rangeMeta(range)
-  const sinceAt = dayjs().subtract(meta.n * meta.ms, 'millisecond')
-  const since = sinceAt.toDate()
-  const logs = await prisma.requestLog.findMany({
-    where: scope(since, projectId, filters),
-    select: { ts: true, cached: true, bytesIn: true, bytesOut: true },
-  })
-
-  const buckets: TimePoint[] = Array.from({ length: meta.n }, (_, i) => ({
-    label: meta.label(sinceAt.add(i * meta.ms, 'millisecond'), i),
-    requests: 0,
-    cached: 0,
-    optimized: 0,
-    bandwidthIn: 0,
-    bandwidthOut: 0,
-  }))
-
-  for (const l of logs) {
-    const idx = Math.min(
-      meta.n - 1,
-      Math.max(0, Math.floor((l.ts.getTime() - sinceAt.valueOf()) / meta.ms)),
-    )
-    const b = buckets[idx]
-    b.requests += 1
-    if (l.cached) {
-      b.cached += 1
-    } else {
-      b.optimized += 1
-    }
-    b.bandwidthIn += l.bytesIn
-    b.bandwidthOut += l.bytesOut
-  }
-  return buckets
+  return rollupsToTimeSeries(await rowsFor(range, projectId, filters), range)
 }
 
 const FORMAT_COLORS: Record<string, string> = {
@@ -252,17 +88,20 @@ export async function getFormatDistribution(
   projectId?: string,
   filters?: AnalyticsFilters,
 ) {
-  const since = sinceFor(range)
-  const grouped = await prisma.requestLog.groupBy({
-    by: ['format'],
-    where: scope(since, projectId, filters),
-    _count: { _all: true },
-  })
-  const total = grouped.reduce((a, g) => a + g._count._all, 0) || 1
+  const rows = await rowsFor(range, projectId, filters)
+  const grouped = groupRollups(
+    rows,
+    (row) => row.format,
+    (format, groupedRows) => ({
+      format,
+      requests: groupedRows.reduce((sum, row) => sum + row.requests, 0),
+    }),
+  )
+  const total = grouped.reduce((sum, row) => sum + row.requests, 0) || 1
   return grouped
     .map((g) => ({
       label: g.format.toUpperCase(),
-      value: Math.round((g._count._all / total) * 1000) / 10,
+      value: Math.round((g.requests / total) * 1000) / 10,
       color: FORMAT_COLORS[g.format] ?? 'var(--muted-foreground)',
     }))
     .sort((a, b) => b.value - a.value)
@@ -276,34 +115,13 @@ export async function getAvailableFilters(
   range: AnalyticsRange = '24h',
   projectId?: string,
 ) {
-  const since = sinceFor(range)
-  const where = scope(since, projectId)
-  const [formatRows, statusRows, domainRows] = await Promise.all([
-    prisma.requestLog.groupBy({
-      by: ['format'],
-      where,
-      _count: { _all: true },
-    }),
-    prisma.requestLog.groupBy({
-      by: ['status'],
-      where,
-      _count: { _all: true },
-    }),
-    prisma.requestLog.groupBy({
-      by: ['sourceHost'],
-      where,
-      _count: { _all: true },
-    }),
-  ])
+  const rows = await rowsFor(range, projectId)
   return {
-    formats: formatRows.map((r) => r.format).sort(),
-    statuses: statusRows.map((r) => r.status).sort((a, b) => a - b),
+    formats: [...new Set(rows.map((r) => r.format))].sort(),
+    statuses: [...new Set(rows.map((r) => r.status))].sort((a, b) => a - b),
     // Source domains actually observed in the window (incl. subdomains), so the
     // filter options match how origins are stored rather than the bare allowlist.
-    domains: domainRows
-      .map((r) => r.sourceHost)
-      .filter((h): h is string => h !== null)
-      .sort(),
+    domains: [...new Set(rows.map((r) => r.sourceHost))].filter(Boolean).sort(),
   }
 }
 
@@ -312,15 +130,16 @@ export async function getTopImages(
   projectId?: string,
   filters?: AnalyticsFilters,
 ) {
-  const since = sinceFor(range)
-  const grouped = await prisma.requestLog.groupBy({
-    by: ['path'],
-    where: scope(since, projectId, filters),
-    _count: { _all: true },
-    orderBy: { _count: { path: 'desc' } },
-    take: 8,
-  })
-  return grouped.map((g) => ({ label: g.path, value: g._count._all }))
+  return groupRollups(
+    await rowsFor(range, projectId, filters),
+    (row) => row.path,
+    (path, groupedRows) => ({
+      label: path,
+      value: groupedRows.reduce((sum, row) => sum + row.requests, 0),
+    }),
+  )
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8)
 }
 
 export async function getLatencyBins(
@@ -328,64 +147,23 @@ export async function getLatencyBins(
   projectId?: string,
   filters?: AnalyticsFilters,
 ) {
-  const since = sinceFor(range)
-  const rows = await prisma.requestLog.findMany({
-    where: scope(since, projectId, filters),
-    select: { latencyMs: true },
-  })
-  const edges = [5, 10, 20, 35, 55, 80, 120, 180, 260, 380, 540, 800, 1100]
-  const labels = [
-    '<5ms',
-    '10',
-    '20',
-    '35',
-    '55',
-    '80',
-    '120',
-    '180',
-    '260',
-    '380',
-    '540',
-    '800',
-    '>1s',
-  ]
-  const bins: LatencyBin[] = edges.map((bucket, i) => ({
-    bucket,
-    label: labels[i],
-    value: 0,
-  }))
-  for (const r of rows) {
-    let i = edges.findIndex((e) => r.latencyMs <= e)
-    if (i === -1) {
-      i = edges.length - 1
-    }
-    bins[i].value += 1
-  }
-  return bins
+  return rollupsToLatencyBins(await rowsFor(range, projectId, filters))
 }
 
 export async function getProjectStats(range: AnalyticsRange = '24h') {
-  const since = sinceFor(range)
-  const [byProject, hitsByProject] = await Promise.all([
-    prisma.requestLog.groupBy({
-      by: ['projectId'],
-      where: { ts: { gte: since } },
-      _count: { _all: true },
-    }),
-    prisma.requestLog.groupBy({
-      by: ['projectId'],
-      where: { ts: { gte: since }, cached: true },
-      _count: { _all: true },
-    }),
-  ])
-  const hits = new Map(hitsByProject.map((g) => [g.projectId, g._count._all]))
   const out: Record<string, ProjectStat> = {}
-  for (const g of byProject) {
-    const requests = g._count._all
-    const cached = hits.get(g.projectId) ?? 0
-    out[g.projectId] = {
-      requests,
-      hitRate: requests === 0 ? 0 : (cached / requests) * 100,
+  for (const row of groupRollups(
+    await rowsFor(range),
+    (r) => r.projectId,
+    (projectId, groupedRows) => ({
+      projectId,
+      requests: groupedRows.reduce((sum, r) => sum + r.requests, 0),
+      cached: groupedRows.reduce((sum, r) => sum + r.cachedRequests, 0),
+    }),
+  )) {
+    out[row.projectId] = {
+      requests: row.requests,
+      hitRate: row.requests === 0 ? 0 : (row.cached / row.requests) * 100,
     }
   }
   return out
@@ -393,51 +171,23 @@ export async function getProjectStats(range: AnalyticsRange = '24h') {
 
 // Per-project rollup for the org-wide analytics breakdown.
 export async function getProjectBreakdown(range: AnalyticsRange) {
-  const since = sinceFor(range)
-  const where = { ts: { gte: since } }
-  const [byProject, hitsByProject, bytesByProject, projects] =
-    await Promise.all([
-      prisma.requestLog.groupBy({
-        by: ['projectId'],
-        where,
-        _count: { _all: true },
-        _avg: { latencyMs: true },
-      }),
-      prisma.requestLog.groupBy({
-        by: ['projectId'],
-        where: { ...where, cached: true },
-        _count: { _all: true },
-      }),
-      prisma.requestLog.groupBy({
-        by: ['projectId'],
-        where,
-        _sum: { bytesIn: true, bytesOut: true },
-      }),
-      listProjects(),
-    ])
-  const hits = new Map(hitsByProject.map((g) => [g.projectId, g._count._all]))
-  const bytes = new Map(
-    bytesByProject.map((g) => [
-      g.projectId,
-      { in: g._sum.bytesIn ?? 0, out: g._sum.bytesOut ?? 0 },
-    ]),
-  )
+  const [rows, projects] = await Promise.all([rowsFor(range), listProjects()])
   const nameById = new Map(projects.map((p) => [p.id, p.name]))
-  return byProject
-    .map((g) => {
-      const requests = g._count._all
-      const cached = hits.get(g.projectId) ?? 0
-      const b = bytes.get(g.projectId) ?? { in: 0, out: 0 }
+  return groupRollups(
+    rows,
+    (row) => row.projectId,
+    (projectId, groupedRows) => {
+      const summary = summarizeRollups(groupedRows)
       return {
-        projectId: g.projectId,
-        name: nameById.get(g.projectId) ?? g.projectId,
-        requests,
-        bandwidthSaved: b.in - b.out,
-        hitRate: requests === 0 ? 0 : (cached / requests) * 100,
-        avgLatency: Math.round(g._avg.latencyMs ?? 0),
+        projectId,
+        name: nameById.get(projectId) ?? projectId,
+        requests: summary.totalRequests,
+        bandwidthSaved: summary.bandwidthSaved,
+        hitRate: summary.hitRate,
+        avgLatency: summary.avg,
       }
-    })
-    .sort((a, b) => b.requests - a.requests)
+    },
+  ).sort((a, b) => b.requests - a.requests)
 }
 
 // Per-source-domain rollup for a single project's analytics. Only the project's
@@ -446,52 +196,28 @@ export async function getDomainBreakdown(
   range: AnalyticsRange,
   projectId: string,
 ) {
-  const since = sinceFor(range)
-  const where = scope(since, projectId)
-  const [byDomain, hitsByDomain, bytesByDomain] = await Promise.all([
-    prisma.requestLog.groupBy({
-      by: ['sourceHost'],
-      where,
-      _count: { _all: true },
-      _avg: { latencyMs: true },
-      _max: { ts: true },
-    }),
-    prisma.requestLog.groupBy({
-      by: ['sourceHost'],
-      where: { ...where, cached: true },
-      _count: { _all: true },
-    }),
-    prisma.requestLog.groupBy({
-      by: ['sourceHost'],
-      where,
-      _sum: { bytesIn: true, bytesOut: true },
-    }),
-  ])
-  const hits = new Map(hitsByDomain.map((g) => [g.sourceHost, g._count._all]))
-  const bytes = new Map(
-    bytesByDomain.map((g) => [
-      g.sourceHost,
-      { in: g._sum.bytesIn ?? 0, out: g._sum.bytesOut ?? 0 },
-    ]),
-  )
-  return byDomain
-    .map((g) => {
-      const domain = g.sourceHost
-      if (domain === null) {
+  return groupRollups(
+    await rowsFor(range, projectId),
+    (row) => row.sourceHost,
+    (domain, groupedRows) => {
+      if (!domain) {
         return null
       }
-      const requests = g._count._all
-      const cached = hits.get(domain) ?? 0
-      const b = bytes.get(domain) ?? { in: 0, out: 0 }
+      const summary = summarizeRollups(groupedRows)
+      const lastSeen = groupedRows.reduce<Dayjs | null>((latest, row) => {
+        const next = dayjs(row.bucketStart)
+        return !latest || next.isAfter(latest) ? next : latest
+      }, null)
       return {
         domain,
-        requests,
-        bandwidthSaved: b.in - b.out,
-        hitRate: requests === 0 ? 0 : (cached / requests) * 100,
-        avgLatency: Math.round(g._avg.latencyMs ?? 0),
-        lastSeen: g._max.ts ? dayjs(g._max.ts).format('MMM D, HH:mm') : null,
+        requests: summary.totalRequests,
+        bandwidthSaved: summary.bandwidthSaved,
+        hitRate: summary.hitRate,
+        avgLatency: summary.avg,
+        lastSeen: lastSeen ? lastSeen.format('MMM D, HH:mm') : null,
       }
-    })
+    },
+  )
     .filter((r): r is DomainBreakdownRow => r !== null)
     .sort((a, b) => b.requests - a.requests)
 }
@@ -507,52 +233,25 @@ interface HostTraffic {
 // layer joins this with the project's allowlist to build the allowed-hosts
 // table (hosts seen here that are not on the list surface as "not allowed").
 export async function getHostTraffic(range: AnalyticsRange, projectId: string) {
-  const since = sinceFor(range)
-  const where = scope(since, projectId)
-  const [byHost, hitsByHost, bytesByHost, lastByHost] = await Promise.all([
-    prisma.requestLog.groupBy({
-      by: ['sourceHost'],
-      where,
-      _count: { _all: true },
-    }),
-    prisma.requestLog.groupBy({
-      by: ['sourceHost'],
-      where: { ...where, cached: true },
-      _count: { _all: true },
-    }),
-    prisma.requestLog.groupBy({
-      by: ['sourceHost'],
-      where,
-      _sum: { bytesIn: true, bytesOut: true },
-    }),
-    prisma.requestLog.groupBy({
-      by: ['sourceHost'],
-      where,
-      _max: { ts: true },
-    }),
-  ])
-  const hits = new Map(hitsByHost.map((g) => [g.sourceHost, g._count._all]))
-  const bytes = new Map(
-    bytesByHost.map((g) => [
-      g.sourceHost,
-      { in: g._sum.bytesIn ?? 0, out: g._sum.bytesOut ?? 0 },
-    ]),
-  )
-  const last = new Map(lastByHost.map((g) => [g.sourceHost, g._max.ts]))
   const map = new Map<string, HostTraffic>()
-  for (const g of byHost) {
-    if (g.sourceHost === null) {
+  for (const row of groupRollups(
+    await rowsFor(range, projectId),
+    (r) => r.sourceHost,
+    (host, groupedRows) => ({ host, groupedRows }),
+  )) {
+    if (!row.host) {
       continue
     }
-    const requests = g._count._all
-    const cached = hits.get(g.sourceHost) ?? 0
-    const b = bytes.get(g.sourceHost) ?? { in: 0, out: 0 }
-    const ts = last.get(g.sourceHost)
-    map.set(g.sourceHost, {
-      requests,
-      hitRate: requests === 0 ? 0 : (cached / requests) * 100,
-      bandwidthSaved: b.in - b.out,
-      lastSeen: ts ? dayjs(ts).format('MMM D, HH:mm') : null,
+    const summary = summarizeRollups(row.groupedRows)
+    const lastSeen = row.groupedRows.reduce<Dayjs | null>((latest, r) => {
+      const next = dayjs(r.bucketStart)
+      return !latest || next.isAfter(latest) ? next : latest
+    }, null)
+    map.set(row.host, {
+      requests: summary.totalRequests,
+      hitRate: summary.hitRate,
+      bandwidthSaved: summary.bandwidthSaved,
+      lastSeen: lastSeen ? lastSeen.format('MMM D, HH:mm') : null,
     })
   }
   return map
@@ -563,28 +262,16 @@ async function windowStats(
   gte: Date,
   lt?: Date,
 ) {
-  const where = {
-    ...(projectId ? { projectId } : {}),
-    ts: lt ? { gte, lt } : { gte },
-  }
-  const [agg, total, cached, percentiles] = await Promise.all([
-    prisma.requestLog.aggregate({
-      where,
-      _sum: { bytesIn: true, bytesOut: true },
-    }),
-    prisma.requestLog.count({ where }),
-    prisma.requestLog.count({ where: { ...where, cached: true } }),
-    latencyPercentiles({ gte, lt, projectId }),
-  ])
-  const bIn = agg._sum.bytesIn ?? 0
-  const bOut = agg._sum.bytesOut ?? 0
+  const summary = summarizeRollups(
+    await listAnalyticsRollups(prisma, { gte, lt, projectId }),
+  )
   return {
-    requests: total,
-    bandwidthIn: bIn,
-    bandwidthOut: bOut,
-    bandwidthSaved: bIn - bOut,
-    hitRate: total === 0 ? 0 : (cached / total) * 100,
-    p95: percentiles.p95,
+    requests: summary.totalRequests,
+    bandwidthIn: summary.bandwidthIn,
+    bandwidthOut: summary.bandwidthOut,
+    bandwidthSaved: summary.bandwidthSaved,
+    hitRate: summary.hitRate,
+    p95: summary.p95,
   }
 }
 
@@ -593,7 +280,7 @@ export async function getDashboardKpis(
   range: AnalyticsRange,
   projectId?: string,
 ) {
-  const { n, ms } = rangeMeta(range)
+  const { n, ms } = rollupRangeMeta(range)
   const windowMs = n * ms
   const now = dayjs()
   const [cur, prev] = await Promise.all([
