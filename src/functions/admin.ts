@@ -5,6 +5,10 @@ import {
   listApiKeyActivitiesPage,
 } from '@/actions/admin/api-keys'
 import {
+  testCloudflareConnection,
+  updateCloudflareSettings,
+} from '@/actions/admin/cloudflare'
+import {
   acceptInvitation,
   createInvitation,
   getInvitation,
@@ -23,6 +27,7 @@ import {
   acceptInvitationSchema,
   apiActivityPageSchema,
   cacheMaintenanceSchema,
+  cloudflareSettingsSchema,
   createInvitationSchema,
   invitationTokenSchema,
   operationsConfigSchema,
@@ -153,4 +158,25 @@ export const sendTestEmailFn = createServerFn({ method: 'POST' })
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     return sendTestEmail(data.to)
+  })
+
+export const updateCloudflareSettingsFn = createServerFn({ method: 'POST' })
+  .inputValidator(cloudflareSettingsSchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return updateCloudflareSettings({
+      enabled: data.enabled,
+      // A blank token means "keep the saved one"; only persist a real change.
+      apiToken: data.apiToken || undefined,
+      zoneId: data.zoneId,
+      host: data.host,
+    })
+  })
+
+export const testCloudflareConnectionFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .handler(({ context }) => {
+    requireSuperAdmin(context)
+    return testCloudflareConnection()
   })

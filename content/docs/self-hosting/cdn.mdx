@@ -41,6 +41,44 @@ Cloudflare proxying alone is not the complete setup for this app. The transform 
 dynamic from Cloudflare's perspective, so add the Cache Rule above to make `/img/*`
 eligible for edge cache.
 
+## Measuring Cloudflare cache
+
+Keenpix analytics only include requests that reach the Keenpix origin. A Cloudflare
+edge `HIT` is served before the app runs, so it will not appear in the Keenpix request
+log. Treat Keenpix cache hit-rate as the origin-shield hit-rate for Cloudflare misses,
+not the total end-user cache hit-rate.
+
+For the total edge picture, use Cloudflare **Cache Analytics** filtered to the Keenpix
+image hostname and `/img/` path. Review cache status, top miss URLs, and data transfer
+served by Cloudflare versus origin. This is the fastest way to validate the cache rule
+and identify URLs that fragment the edge cache.
+
+### Built-in edge analytics
+
+Keenpix can pull these figures for you and show an **Edge cache** card on
+`/app/analytics`, next to the origin-shield cache card. Go to **Settings → CDN
+cache** and add a Cloudflare API token scoped to **Analytics → Read** plus your
+**Zone ID** (optionally a hostname to narrow `/img/*` traffic). Keenpix then queries
+the Cloudflare GraphQL Analytics API for the selected window — edge hit-rate,
+edge requests, and bytes served from the edge — caching the result for a few
+minutes so the dashboard stays off the network on every load. The token is
+stored encrypted at rest; you can also set it via the `CLOUDFLARE_*`
+[environment variables](/docs/self-hosting/configuration#cloudflare-edge-analytics).
+Use **Test connection** to confirm the token and zone before saving.
+
+For deeper, per-URL reporting, ingest Cloudflare HTTP request logs or analytics as a
+separate edge-cache data source. The useful fields are:
+
+- `CacheCacheStatus` for `hit`, `miss`, `expired`, `revalidated`, `dynamic`, and related
+  statuses.
+- `ClientRequestHost`, `ClientRequestPath`, and `ClientRequestURI` to scope records to
+  `/img/*` and parse the Keenpix `project` query value.
+- `CacheResponseBytes` for bytes served from Cloudflare cache.
+- `CacheTieredFill` and `CacheReserveUsed` if those Cloudflare products are enabled.
+
+Do not try to derive edge-hit counts from `/app/analytics`; by design, those edge hits do
+not contact the origin.
+
 ## Format negotiation
 
 The preferred URL shape puts the source URL in the path:
