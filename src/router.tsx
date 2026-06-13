@@ -1,5 +1,5 @@
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
-import { RouteError } from '@/components/app/route-error'
+import { ServerErrorPage } from '@/components/app/error-page'
 import {
   getQueryContext,
   QueryProvider,
@@ -14,7 +14,7 @@ export function getRouter() {
     scrollRestoration: true,
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,
-    defaultErrorComponent: RouteError,
+    defaultErrorComponent: ServerErrorPage,
     Wrap: ({ children }) => (
       <QueryProvider queryClient={queryContext.queryClient}>
         {children}
