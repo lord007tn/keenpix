@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import dayjs from 'dayjs'
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -317,8 +318,8 @@ function LogsPage() {
                         <ChevronRightIcon className="size-3.5" />
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {l.ts}
+                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                      {dayjs(l.ts).format('MMM D, HH:mm:ss')}
                     </TableCell>
                     {isAll ? (
                       <TableCell className="text-foreground">
@@ -375,7 +376,10 @@ function LogsPage() {
                                 projectName.get(l.projectId) ?? l.projectId,
                             },
                             { label: 'Domain', value: l.sourceHost ?? '—' },
-                            { label: 'Timestamp', value: l.ts },
+                            {
+                              label: 'Timestamp',
+                              value: dayjs(l.ts).format('MMM D, YYYY HH:mm:ss'),
+                            },
                             { label: 'Status', value: String(l.status) },
                             { label: 'Format', value: l.format },
                             { label: 'Width', value: `${l.w}px` },
@@ -389,6 +393,13 @@ function LogsPage() {
                             {
                               label: 'Bytes out',
                               value: humanBytes(l.bytesOut),
+                            },
+                            {
+                              label: 'Saved',
+                              value:
+                                l.bytesSaved > 0
+                                  ? humanBytes(l.bytesSaved)
+                                  : '—',
                             },
                           ].map((d) => (
                             <div

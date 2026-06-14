@@ -146,6 +146,9 @@ model RequestLog {
   latencyMs Float
   bytesIn   Int
   bytesOut  Int
+  // Bytes the optimizer trimmed off the origin original on this request
+  // (max(0, bytesIn - bytesOut); 0 for cache hits, which never fetch origin).
+  bytesSaved Int     @default(0)
   region    String?
   country   String?
   sourceHost String?
@@ -153,6 +156,49 @@ model RequestLog {
   @@index([projectId, ts])
   @@index([orgId, ts])
   @@index([projectId, sourceHost])
+}
+
+// Hourly request-log rollups used by dashboard/analytics so normal views do
+// not scan raw logs indefinitely. Null sourceHost values are stored as an empty
+// string to keep the deterministic rollup key compact and indexable.
+model AnalyticsRollupHourly {
+  id                String   @id
+  bucketStart       DateTime
+  orgId             String
+  projectId         String
+  sourceHost        String   @default("")
+  path              String
+  format            String
+  status            Int
+  requests          Int      @default(0)
+  cachedRequests    Int      @default(0)
+  optimizedRequests Int      @default(0)
+  bytesIn           BigInt   @default(0)
+  bytesOut          BigInt   @default(0)
+  bytesSaved        BigInt   @default(0)
+  latencyMsSum      Float    @default(0)
+  latencyLe5        Int      @default(0)
+  latencyLe10       Int      @default(0)
+  latencyLe20       Int      @default(0)
+  latencyLe35       Int      @default(0)
+  latencyLe55       Int      @default(0)
+  latencyLe80       Int      @default(0)
+  latencyLe120      Int      @default(0)
+  latencyLe180      Int      @default(0)
+  latencyLe260      Int      @default(0)
+  latencyLe380      Int      @default(0)
+  latencyLe540      Int      @default(0)
+  latencyLe800      Int      @default(0)
+  latencyLe1100     Int      @default(0)
+  latencyGt1100     Int      @default(0)
+  updatedAt         DateTime @updatedAt
+
+  @@index([bucketStart])
+  @@index([orgId, bucketStart])
+  @@index([projectId, bucketStart])
+  @@index([projectId, sourceHost, bucketStart])
+  @@index([format, bucketStart])
+  @@index([status, bucketStart])
 }
 
 // better-auth tables. Keep these names aligned with the auth adapter config.

@@ -12,8 +12,8 @@ It is built for operators who want the important parts kept visible: project all
 - **No public API keys** - access is gated by each project's domain allowlist. An empty allowlist fails closed with 403, so a fresh project is never an open proxy.
 - **Internal API keys** - trusted backend systems can manage projects, domains, and pipeline settings through authenticated JSON endpoints.
 - **Projects and origins** - each project owns its source host rules, settings, request logs, and analytics.
-- **Built-in analytics** - requests, bandwidth saved, cache hit rate, output formats, latency, and top images come from the request log.
-- **Self-host dashboard** - seeded super admin, staff invitations, project settings, SMTP configuration, and operational views.
+- **Built-in analytics** - requests, bandwidth saved, cache hit rate, output formats, latency, top images, and source domains come from Postgres rollups fed by the request log; optional Cloudflare edge analytics show the cache layer in front.
+- **Self-host dashboard** - seeded super admin, staff invitations, project settings, API keys, SMTP configuration, Cloudflare edge analytics, and operational views.
 - **Open-internet hardening** - allowlist checks, private/loopback/link-local/CGNAT blocking, IPv4-mapped IPv6 handling, DNS rebinding protection, response-size limits, decompression-bomb limits, and transform back-pressure.
 
 Stack: TanStack Start (React 19, SSR) · Prisma 7 + PostgreSQL · sharp · Docker. Apache-2.0 licensed.
@@ -106,9 +106,14 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_APP_URL` | – | Canonical URL used for hosted docs metadata and generated OG/LLM links. Defaults to `BETTER_AUTH_URL`. |
 | `KEENPIX_SUPER_ADMIN_EMAIL` | ✅ | Email for the seeded super admin account. |
 | `KEENPIX_SUPER_ADMIN_PASSWORD` | ✅ | Password for the seeded super admin account. |
+| `KEENPIX_ADMIN_EMAIL` / `KEENPIX_ADMIN_PASSWORD` | – | Legacy aliases for the super-admin bootstrap variables. |
+| `LOG_LEVEL` | – | Server log level (`info` by default). |
+| `VITE_KEENPIX_PUBLIC_URL` | – | Browser-facing app URL for local/source builds when it cannot be inferred from the browser origin. |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` | – | Optional SMTP fallback used only when Settings SMTP is disabled or incomplete. |
 | `SMTP_USER` / `SMTP_PASSWORD` | – | Optional fallback SMTP credentials. |
 | `SMTP_FROM_EMAIL` / `SMTP_FROM_NAME` | – | Optional fallback SMTP sender defaults. |
+| `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ZONE_ID` | – | Optional Cloudflare edge analytics fallback when Settings → CDN cache is not enabled. Token needs zone **Analytics → Read**. |
+| `CLOUDFLARE_HOST` | – | Optional hostname filter for Cloudflare edge analytics when one zone serves multiple `/img/*` hosts. |
 | `KEENPIX_SELF_HOST` | – | Set `true` to run app-only self-host mode. Docker images default this to `true`. |
 | `KEENPIX_RUN_MIGRATIONS` / `KEENPIX_RUN_SEED` | – | Docker entrypoint controls for running migrations and bootstrap seed before app start. Defaults to `true`. |
 | `KEENPIX_CACHE_DIR` | – | Disk cache location (default `./.keenpix-cache`). |
@@ -211,7 +216,7 @@ In an `<img>`, any non-200 shows as a broken image — a 403 almost always means
 
 SDK API keys are for trusted backend integrations such as JoodCMS. They are separate from the public image transform flow: `/img/*` still uses project allowlists and does not require an authentication header.
 
-Create a key from **Workspace → API Keys** as a super admin. Keys can be scoped to every project or to a single project. Project scope is stored on the Better Auth API key metadata, so no custom token table is used. Project-scoped keys can only read or write that project and cannot create new projects. The key is shown once. Send it as either:
+Create a key from **Settings → API keys** as a super admin. Keys can be scoped to every project or to a single project. Project scope is stored on the Better Auth API key metadata, so no custom token table is used. Project-scoped keys can only read or write that project and cannot create new projects. The key is shown once. Send it as either:
 
 ```bash
 Authorization: Bearer <KEY>

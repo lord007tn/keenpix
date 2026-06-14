@@ -2,6 +2,84 @@
 
 All notable changes to Keenpix are documented here.
 
+## Unreleased
+
+### Added
+
+- Hourly Postgres analytics rollups with migration backfill and transactional updates when new request logs are written.
+- Rollup-based analytics summaries, charts, top images, format/status/domain filters, and dashboard KPI deltas so normal dashboard queries no longer scan raw request logs.
+- The overview dashboard now includes recent request activity and instance operations health alongside the analytics cards.
+- Analytics and dashboard cards now reconcile Cloudflare edge delivery, Keenpix disk-cache delivery, and live origin processing into one source-split funnel.
+- Analytics charts gained edge/origin lenses for funnel, comparison, and Cloudflare-only views.
+
+### Changed
+
+- The dashboard and analytics pages now distinguish Cloudflare edge metrics from Keenpix origin-shield metrics so totals and trend badges do not mix incompatible sources.
+- Coolify deployments default back to the public `ghcr.io/lord007tn/keenpix:latest` image unless `KEENPIX_IMAGE` is set.
+
+## [v0.1.7] - 2026-06-13
+
+### Added
+
+- Optional Cloudflare edge-cache analytics using the Cloudflare GraphQL Analytics API.
+- A Settings -> CDN cache panel for storing an encrypted Cloudflare API token, Zone ID, and optional image hostname.
+- Linked-entity JSON-LD, shared error pages, shared 404 handling, and documentation Open Graph image routes.
+
+### Changed
+
+- Analytics can now show Cloudflare edge hit-rate, edge requests, bytes served from the edge, and hourly hit/miss split for `/img/*`.
+- Edge analytics use a fixed last-24-hours window to match the Cloudflare adaptive dataset limit on non-enterprise plans.
+
+## [v0.1.6] - 2026-06-12
+
+### Added
+
+- Project Settings gained richer pipeline, allowed-host, and operations configuration surfaces.
+- Analytics gained source-domain capture, filtering, and per-project source-domain breakdowns.
+- Operations now shows real cache hit-rate and reasserts persisted cache caps when loading health data.
+- The user menu now surfaces the app version.
+
+### Changed
+
+- Replaced the previous app sidebar with the current top-tab command-center navigation.
+- Disk cache eviction now uses an index and directory sharding for faster large-cache maintenance.
+- Runtime cache caps can be managed from the app instead of only through environment variables.
+
+## [v0.1.5] - 2026-06-10
+
+### Added
+
+- IPX-style Sharp modifiers for geometry, color, effects, extra formats, and animation controls.
+- SVG output optimization through SVGO with explicit `fmt=svg` support.
+- SSE-backed live logs streamed from the server.
+- Operations health for disk cache, memory cache, and transform queue pressure.
+- Playwright smoke coverage and a fresh smoke dev-server flow.
+- Expanded reference documentation for endpoint parameters, responses, SDK API, operations, and deployment presets.
+
+### Changed
+
+- Improved image delivery p95 with disk-cache and transform-path performance work.
+- SDK handlers and server modules were reorganized around clearer boundaries.
+- Docker builds now use an Alpine image and improved layer caching.
+- Release-note generation now uses changelogithub defaults and includes conventional commit categories.
+
+### Fixed
+
+- SVGO runtime dependencies are kept external so optimized SVG handling works in production builds.
+- SVG auto-format behavior is documented correctly: `fmt=auto` rasterizes, while `fmt=svg` preserves SVG output.
+
+## [v0.1.4] - 2026-06-05
+
+### Added
+
+- Project-scoped analytics and per-domain breakdowns.
+- GitHub release automation through changelogithub.
+
+### Changed
+
+- Analytics aggregations were made faster for project-scoped views.
+- Date handling now uses inline `dayjs` calls and product code avoids trivial formatter/helper wrappers.
+
 ## [v0.1.3] - 2026-06-03
 
 ### Added

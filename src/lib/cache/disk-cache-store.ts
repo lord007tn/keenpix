@@ -26,12 +26,31 @@ const EXT: Record<OutputFormat, string> = {
 
 const noop = () => undefined
 
+const SIZE_SEGMENT = /^\d+$/
+
+// Files are named `${key}.${originalBytes}.${ext}` so each variant's origin
+// original size survives a restart (the index is rebuilt from the filesystem).
+// Keys are 64-char hex with no dots, so splitting on "." is unambiguous; files
+// written before this scheme (`${key}.${ext}`) parse with originalBytes 0.
+function parseCacheFileName(name: string) {
+  const segments = name.split('.')
+  const maybeSize = segments.at(-2)
+  if (segments.length >= 3 && maybeSize && SIZE_SEGMENT.test(maybeSize)) {
+    const ext = segments.at(-1)
+    const key = segments.slice(0, -2).join('.')
+    return { indexKey: `${key}.${ext}`, originalBytes: Number(maybeSize) }
+  }
+  return { indexKey: name, originalBytes: 0 }
+}
+
 interface IndexEntry {
   // Monotonic access counter; higher means more recently used. Kept separate
   // from mtime so LRU ordering never depends on filesystem timestamps.
   accessOrder: number
   // When the variant was generated, used for stale-while-revalidate.
   mtimeMs: number
+  // Origin original size this variant was optimized from, for savings accounting.
+  originalBytes: number
   path: string
   size: number
 }
@@ -98,7 +117,11 @@ export class DiskCacheStore implements CacheStore {
         return null
       }
       entry.accessOrder = ++this.accessOrder
-      return { createdAt: entry.mtimeMs, data: buf }
+      return {
+        createdAt: entry.mtimeMs,
+        data: buf,
+        originalBytes: entry.originalBytes,
+      }
     } catch {
       // File vanished underneath us; drop the stale index entry.
       this.forget(name)
@@ -106,11 +129,21 @@ export class DiskCacheStore implements CacheStore {
     }
   }
 
-  async set(key: string, format: OutputFormat, data: Buffer) {
+  async set(
+    key: string,
+    format: OutputFormat,
+    data: Buffer,
+    originalBytes = 0,
+  ) {
     await this.ready
     const shard = key.slice(0, 2)
     const name = `${key}.${EXT[format]}`
-    const file = path.join(this.cacheDir, shard, name)
+    // The origin original size rides in the filename so it survives a restart.
+    const file = path.join(
+      this.cacheDir,
+      shard,
+      `${key}.${originalBytes}.${EXT[format]}`,
+    )
     await this.ensureShard(shard)
 
     // Write to a unique temp file then atomically rename into place. A crash or
@@ -127,7 +160,8 @@ export class DiskCacheStore implements CacheStore {
     const previous = this.index.get(name)
     if (previous) {
       this.totalBytes -= previous.size
-      // A legacy flat-layout file for this key is now superseded by the shard.
+      // A legacy flat-layout file, or a prior variant whose origin size differed,
+      // sits at a different path and is now superseded.
       if (previous.path !== file) {
         await unlink(previous.path).catch(noop)
       }
@@ -136,6 +170,7 @@ export class DiskCacheStore implements CacheStore {
     this.index.set(name, {
       accessOrder: ++this.accessOrder,
       mtimeMs: now,
+      originalBytes,
       path: file,
       size: data.byteLength,
     })
@@ -206,9 +241,17 @@ export class DiskCacheStore implements CacheStore {
     const files = await this.scanDir()
     files.sort((a, b) => a.mtimeMs - b.mtimeMs)
     for (const file of files) {
-      this.index.set(file.name, {
+      const { indexKey, originalBytes } = parseCacheFileName(file.name)
+      // Newer files (sorted last) supersede an older one sharing the index key;
+      // drop the older size so the byte total never double-counts.
+      const previous = this.index.get(indexKey)
+      if (previous) {
+        this.totalBytes -= previous.size
+      }
+      this.index.set(indexKey, {
         accessOrder: ++this.accessOrder,
         mtimeMs: file.mtimeMs,
+        originalBytes,
         path: file.path,
         size: file.size,
       })

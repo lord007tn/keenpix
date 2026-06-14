@@ -1,7 +1,9 @@
 import type { z } from 'zod'
 import { getEffectiveCloudflareSettings } from '@/data-access/admin/cloudflare'
 import {
+  getAnalyticsSummary,
   getDashboardKpis,
+  getLatencyBins,
   getProjectStats,
   getTimeSeries,
 } from '@/data-access/analytics'
@@ -26,11 +28,17 @@ export async function getDashboard(
     input.project && projects.some((p) => p.id === input.project)
       ? input.project
       : undefined
-  const [kpis, series, recentLogs] = await Promise.all([
-    getDashboardKpis(input.range, project),
-    getTimeSeries(input.range, project),
-    listLogs(5, project),
-  ])
+  const [kpis, series, recentLogs, latencySummary, latency] = await Promise.all(
+    [
+      getDashboardKpis(input.range, project),
+      getTimeSeries(input.range, project),
+      listLogs(5, project),
+      // Same per-request latency the Analytics page shows, so the shared Response
+      // latency card reads identically on both.
+      getAnalyticsSummary(input.range, project),
+      getLatencyBins(input.range, project),
+    ],
+  )
   const stats = project ? {} : await getProjectStats(input.range)
 
   // Cloudflare edge cache (zone-wide, last 24h). Same source as the analytics
@@ -52,6 +60,8 @@ export async function getDashboard(
     kpis,
     series,
     recentLogs,
+    latencySummary,
+    latency,
     edge,
     edgeConfigured: Boolean(cloudflare),
   }

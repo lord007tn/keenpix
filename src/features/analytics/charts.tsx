@@ -275,27 +275,45 @@ export function FormatDonut({ data }: { data: FormatSlice[] }) {
   }
   const top = data[0]
   return (
-    <div className="relative">
-      <ChartContainer className="mx-auto aspect-square h-44" config={config}>
-        <PieChart>
-          <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-          <Pie
-            data={data}
-            dataKey="value"
-            innerRadius={52}
-            nameKey="label"
-            strokeWidth={2}
-          >
-            {data.map((d) => (
-              <Cell fill={d.color} key={d.label} stroke="var(--card)" />
-            ))}
-          </Pie>
-        </PieChart>
-      </ChartContainer>
-      <div className="pointer-events-none absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
-        <span className="font-semibold text-xl tabular-nums">{top.value}%</span>
-        <span className="text-muted-foreground text-xs">{top.label}</span>
+    <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-6">
+      <div className="relative shrink-0">
+        <ChartContainer className="aspect-square h-44" config={config}>
+          <PieChart>
+            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+            <Pie
+              data={data}
+              dataKey="value"
+              innerRadius={52}
+              nameKey="label"
+              strokeWidth={2}
+            >
+              {data.map((d) => (
+                <Cell fill={d.color} key={d.label} stroke="var(--card)" />
+              ))}
+            </Pie>
+          </PieChart>
+        </ChartContainer>
+        <div className="pointer-events-none absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
+          <span className="font-semibold text-xl tabular-nums">
+            {top.value}%
+          </span>
+          <span className="text-muted-foreground text-xs">{top.label}</span>
+        </div>
       </div>
+      <ul className="flex w-full flex-col gap-2 sm:flex-1">
+        {data.map((d) => (
+          <li className="flex items-center gap-2 text-xs" key={d.label}>
+            <span
+              className="size-2.5 shrink-0 rounded-[2px]"
+              style={{ background: d.color }}
+            />
+            <span className="flex-1 truncate text-muted-foreground">
+              {d.label}
+            </span>
+            <span className="font-medium tabular-nums">{d.value}%</span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
