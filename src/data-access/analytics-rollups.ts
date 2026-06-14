@@ -24,6 +24,7 @@ export interface RollupRow {
   bucketStart: Date
   bytesIn: bigint
   bytesOut: bigint
+  bytesSaved: bigint
   cachedRequests: number
   format: string
   latencyGt1100: number
@@ -109,6 +110,7 @@ export async function updateAnalyticsRollupForLog(
       "optimizedRequests",
       "bytesIn",
       "bytesOut",
+      "bytesSaved",
       "latencyMsSum",
       "latencyLe5",
       "latencyLe10",
@@ -148,6 +150,7 @@ export async function updateAnalyticsRollupForLog(
       ${log.cached ? 0 : 1},
       ${log.bytesIn},
       ${log.bytesOut},
+      ${log.bytesSaved},
       ${log.latencyMs},
       ${bucket.latencyLe5},
       ${bucket.latencyLe10},
@@ -171,6 +174,7 @@ export async function updateAnalyticsRollupForLog(
       "optimizedRequests" = "AnalyticsRollupHourly"."optimizedRequests" + ${log.cached ? 0 : 1},
       "bytesIn" = "AnalyticsRollupHourly"."bytesIn" + ${log.bytesIn},
       "bytesOut" = "AnalyticsRollupHourly"."bytesOut" + ${log.bytesOut},
+      "bytesSaved" = "AnalyticsRollupHourly"."bytesSaved" + ${log.bytesSaved},
       "latencyMsSum" = "AnalyticsRollupHourly"."latencyMsSum" + ${log.latencyMs},
       "latencyLe5" = "AnalyticsRollupHourly"."latencyLe5" + ${bucket.latencyLe5},
       "latencyLe10" = "AnalyticsRollupHourly"."latencyLe10" + ${bucket.latencyLe10},
@@ -230,6 +234,7 @@ export function listAnalyticsRollups(
       bucketStart: true,
       bytesIn: true,
       bytesOut: true,
+      bytesSaved: true,
       cachedRequests: true,
       format: true,
       latencyGt1100: true,
@@ -263,12 +268,14 @@ export function summarizeRollups(rows: RollupRow[]) {
   let cachedRequests = 0
   let bandwidthIn = 0
   let bandwidthOut = 0
+  let bandwidthSaved = 0
   let latencyMsSum = 0
   for (const row of rows) {
     totalRequests += row.requests
     cachedRequests += row.cachedRequests
     bandwidthIn += Number(row.bytesIn)
     bandwidthOut += Number(row.bytesOut)
+    bandwidthSaved += Number(row.bytesSaved)
     latencyMsSum += row.latencyMsSum
     for (const b of LATENCY_BUCKETS) {
       counts[b.field] += row[b.field]
@@ -278,12 +285,18 @@ export function summarizeRollups(rows: RollupRow[]) {
     totalRequests,
     bandwidthIn,
     bandwidthOut,
-    bandwidthSaved: bandwidthIn - bandwidthOut,
+    // Real optimizer savings summed per request — always ≥ 0, unlike the old
+    // bandwidthIn − bandwidthOut, which went negative once cache hits (bytesIn
+    // 0, bytesOut > 0) dominated the window.
+    bandwidthSaved,
     hitRate: totalRequests === 0 ? 0 : (cachedRequests / totalRequests) * 100,
+    // How much smaller every delivery was than the origin original it replaced:
+    // saved / (saved + served). Booked on hits too, so the denominator is the
+    // original-equivalent bytes (served + saved), not just origin fetches.
     savingsPct:
-      bandwidthIn === 0
+      bandwidthSaved + bandwidthOut === 0
         ? 0
-        : ((bandwidthIn - bandwidthOut) / bandwidthIn) * 100,
+        : (bandwidthSaved / (bandwidthSaved + bandwidthOut)) * 100,
     avg: totalRequests === 0 ? 0 : Math.round(latencyMsSum / totalRequests),
     p50: approximateLatencyPercentile(counts, 0.5),
     p75: approximateLatencyPercentile(counts, 0.75),

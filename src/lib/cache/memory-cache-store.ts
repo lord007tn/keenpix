@@ -43,8 +43,12 @@ export class MemoryCacheStore implements CacheStore {
     return this.cache?.get(memoryKey(key, format)) ?? null
   }
 
-  set(key: string, format: OutputFormat, data: Buffer) {
-    this.cache?.set(memoryKey(key, format), { createdAt: Date.now(), data })
+  set(key: string, format: OutputFormat, data: Buffer, originalBytes = 0) {
+    this.cache?.set(memoryKey(key, format), {
+      createdAt: Date.now(),
+      data,
+      originalBytes,
+    })
   }
 
   setEntry(key: string, format: OutputFormat, entry: CacheEntry) {

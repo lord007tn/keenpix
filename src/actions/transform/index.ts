@@ -79,12 +79,19 @@ async function readOrCreateTransform({
         )
       })
     }
-    return { out: cached.data, cached: true, bytesIn: 0 }
+    // A hit still booked a saving: it served an optimized variant in place of
+    // the (larger) origin original, whose size we persisted with the entry.
+    return {
+      out: cached.data,
+      cached: true,
+      bytesIn: 0,
+      originalBytes: cached.originalBytes,
+    }
   }
 
   const existing = inflightTransforms.get(cacheKey)
   if (existing) {
-    return { out: await existing, cached: false, bytesIn: 0 }
+    return { out: await existing, cached: false, bytesIn: 0, originalBytes: 0 }
   }
 
   const work = startTransformRefresh({
@@ -96,7 +103,12 @@ async function readOrCreateTransform({
   })
   try {
     const result = await work
-    return { out: result.out, cached: false, bytesIn: result.bytesIn }
+    return {
+      out: result.out,
+      cached: false,
+      bytesIn: result.bytesIn,
+      originalBytes: result.bytesIn,
+    }
   } finally {
     inflightTransforms.delete(cacheKey)
   }
@@ -122,7 +134,7 @@ function startTransformRefresh(input: CachedTransformInput) {
       throw new TransformError('Origin is not a valid image', 502)
     }
 
-    await writeCache(cacheKey, format, output).catch((error) => {
+    await writeCache(cacheKey, format, output, bytesIn).catch((error) => {
       logger.warn(errorContext(error), 'Cache write failed')
     })
 
@@ -168,6 +180,7 @@ export async function optimizeProjectImage({
   let cached = false
   let bytesIn = 0
   let bytesOut = 0
+  let originalBytes = 0
 
   try {
     assertAllowedOrigin(src, project.allowedOrigins)
@@ -194,6 +207,7 @@ export async function optimizeProjectImage({
     cached = result.cached
     bytesIn = result.bytesIn
     bytesOut = result.out.byteLength
+    originalBytes = result.originalBytes
 
     return {
       body: result.out,
@@ -223,6 +237,10 @@ export async function optimizeProjectImage({
         latencyMs: Math.round(performance.now() - startedAt),
         bytesIn,
         bytesOut,
+        // Compression delta booked on every delivery (hit or miss): the origin
+        // original — persisted with the cache entry, so a hit knows it without
+        // refetching — minus the optimized bytes served.
+        bytesSaved: Math.max(0, originalBytes - bytesOut),
       }).catch(() => {
         // Request logging is telemetry, not part of the transform response path.
       })

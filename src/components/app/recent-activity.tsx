@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import dayjs from 'dayjs'
 import {
   Card,
   CardContent,
@@ -54,7 +55,7 @@ export function RecentActivity({ logs }: { logs: LogRow[] }) {
               {logs.map((l) => (
                 <TableRow key={l.id}>
                   <TableCell className="whitespace-nowrap text-muted-foreground">
-                    {l.ts}
+                    {dayjs(l.ts).format('MMM D, HH:mm:ss')}
                   </TableCell>
                   <TableCell className="max-w-0 truncate">{l.path}</TableCell>
                   <TableCell className="text-foreground">{l.format}</TableCell>
