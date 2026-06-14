@@ -7,7 +7,12 @@ import {
   type LatencyBucketCounts,
   latencyBucketField,
 } from '@/helpers/analytics/latency-buckets'
-import type { AnalyticsRange, LatencyBin, TimePoint } from '@/shared/types'
+import type {
+  AnalyticsRange,
+  LatencyBin,
+  StatusPoint,
+  TimePoint,
+} from '@/shared/types'
 import type { AnalyticsFilters } from './analytics'
 import type { NewRequestLog } from './request-logs'
 
@@ -306,35 +311,81 @@ export function summarizeRollups(rows: RollupRow[]) {
   }
 }
 
-export function rollupsToTimeSeries(rows: RollupRow[], range: AnalyticsRange) {
+// Shared bucketing for every over-time chart: n evenly-spaced buckets ending
+// now, a label per bucket, and the bucket a rollup row falls into (clamped to
+// the visible window).
+function rollupBucketing(range: AnalyticsRange) {
   const meta = rollupRangeMeta(range)
   const sinceMs = dayjs()
     .subtract(meta.n * meta.ms, 'millisecond')
     .valueOf()
-  const buckets: TimePoint[] = Array.from({ length: meta.n }, (_, i) => {
-    const start = dayjs(sinceMs)
-      .add(i * meta.ms, 'millisecond')
-      .toDate()
-    return {
-      label: meta.label(start, i),
-      requests: 0,
-      cached: 0,
-      optimized: 0,
-      bandwidthIn: 0,
-      bandwidthOut: 0,
-    }
-  })
+  return {
+    n: meta.n,
+    labelFor: (i: number) =>
+      meta.label(
+        dayjs(sinceMs)
+          .add(i * meta.ms, 'millisecond')
+          .toDate(),
+        i,
+      ),
+    indexFor: (bucketStart: Date) =>
+      Math.min(
+        meta.n - 1,
+        Math.max(0, Math.floor((bucketStart.getTime() - sinceMs) / meta.ms)),
+      ),
+  }
+}
+
+export function rollupsToTimeSeries(rows: RollupRow[], range: AnalyticsRange) {
+  const { n, labelFor, indexFor } = rollupBucketing(range)
+  const buckets: TimePoint[] = Array.from({ length: n }, (_, i) => ({
+    label: labelFor(i),
+    requests: 0,
+    cached: 0,
+    optimized: 0,
+    bandwidthIn: 0,
+    bandwidthOut: 0,
+    bandwidthSaved: 0,
+  }))
   for (const row of rows) {
-    const idx = Math.min(
-      meta.n - 1,
-      Math.max(0, Math.floor((row.bucketStart.getTime() - sinceMs) / meta.ms)),
-    )
-    const bucket = buckets[idx]
+    const bucket = buckets[indexFor(row.bucketStart)]
     bucket.requests += row.requests
     bucket.cached += row.cachedRequests
     bucket.optimized += row.optimizedRequests
     bucket.bandwidthIn += Number(row.bytesIn)
     bucket.bandwidthOut += Number(row.bytesOut)
+    bucket.bandwidthSaved += Number(row.bytesSaved)
+  }
+  return buckets
+}
+
+// Requests per time bucket split by HTTP status class. Drives the reliability
+// chart; 3xx (mostly 304 Not Modified) is kept distinct so it doesn't read as
+// an error next to genuine 4xx/5xx.
+export function rollupsToStatusSeries(
+  rows: RollupRow[],
+  range: AnalyticsRange,
+): StatusPoint[] {
+  const { n, labelFor, indexFor } = rollupBucketing(range)
+  const buckets: StatusPoint[] = Array.from({ length: n }, (_, i) => ({
+    label: labelFor(i),
+    success: 0,
+    redirect: 0,
+    clientError: 0,
+    serverError: 0,
+  }))
+  for (const row of rows) {
+    const bucket = buckets[indexFor(row.bucketStart)]
+    const cls = Math.floor(row.status / 100)
+    if (cls === 2) {
+      bucket.success += row.requests
+    } else if (cls === 3) {
+      bucket.redirect += row.requests
+    } else if (cls === 4) {
+      bucket.clientError += row.requests
+    } else if (cls === 5) {
+      bucket.serverError += row.requests
+    }
   }
   return buckets
 }

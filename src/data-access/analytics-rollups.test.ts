@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   type RollupRow,
   rollupsToLatencyBins,
+  rollupsToStatusSeries,
   rollupsToTimeSeries,
   summarizeRollups,
 } from './analytics-rollups'
@@ -89,6 +90,32 @@ describe('analytics rollup math', () => {
         expect.objectContaining({ label: '11:00', requests: 4, cached: 3 }),
         expect.objectContaining({ label: '12:00', requests: 0, cached: 0 }),
       ])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('splits requests into status classes per time bucket', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(dayjs('2026-06-13T12:30:00.000Z').toDate())
+    try {
+      const at11 = dayjs('2026-06-13T11:00:00.000Z').toDate()
+      const series = rollupsToStatusSeries(
+        [
+          row({ bucketStart: at11, status: 200, requests: 4 }),
+          row({ bucketStart: at11, status: 304, requests: 3 }),
+          row({ bucketStart: at11, status: 404, requests: 2 }),
+          row({ bucketStart: at11, status: 503, requests: 1 }),
+        ],
+        '24h',
+      )
+
+      expect(series.find((p) => p.label === '11:00')).toMatchObject({
+        success: 4,
+        redirect: 3,
+        clientError: 2,
+        serverError: 1,
+      })
     } finally {
       vi.useRealTimers()
     }
