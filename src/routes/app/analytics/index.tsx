@@ -9,6 +9,7 @@ import { type ReactNode, useMemo, useState } from 'react'
 import { BarList } from '@/components/app/bar-list'
 import { DataFilters, type FilterField } from '@/components/app/data-filters'
 import { PageHeader } from '@/components/app/page-header'
+import { RefreshingIndicator } from '@/components/app/refreshing-indicator'
 import {
   Card,
   CardContent,
@@ -23,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Spinner } from '@/components/ui/spinner'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   AnalyticsAreaChart,
@@ -37,16 +39,17 @@ import {
 import { DomainBreakdown } from '@/features/analytics/domain-breakdown'
 import { ProjectBreakdown } from '@/features/analytics/project-breakdown'
 import { ResponseLatencyCard } from '@/features/analytics/response-latency-card'
-import { AnalyticsPageSkeleton } from '@/features/analytics/skeletons'
 import { SourceSplitCards } from '@/features/analytics/source-split-cards'
+import { useAnalyticsQuery } from '@/features/analytics/use-analytics-query'
 import { useEdgeStats } from '@/features/analytics/use-edge-stats'
-import { getAnalyticsFn } from '@/functions/analytics'
 import { compactNumber, humanBytes } from '@/shared/format'
 import { appPageHead } from '@/shared/seo'
 import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
 
 const RANGES: AnalyticsRange[] = ['24h', '7d', '30d', '90d']
+
+const EMPTY_AVAILABLE = { formats: [], statuses: [], domains: [] }
 
 function parseStringArray(value: unknown): string[] | undefined {
   if (Array.isArray(value)) {
@@ -79,27 +82,6 @@ export const Route = createFileRoute('/app/analytics/')({
     format: parseStringArray(search.format),
     status: parseStringArray(search.status),
   }),
-  loaderDeps: ({ search }) => ({
-    range: search.range,
-    project: search.project,
-    domain: search.domain,
-    format: search.format,
-    status: search.status,
-  }),
-  loader: ({ deps }) =>
-    getAnalyticsFn({
-      data: {
-        range: deps.range,
-        project: deps.project,
-        domain: deps.domain,
-        format: deps.format,
-        status: deps.status,
-      },
-    }),
-  // Show the per-section skeleton quickly while the loader runs (navigations,
-  // range/filter changes) instead of holding a frozen screen.
-  pendingComponent: AnalyticsPageSkeleton,
-  pendingMs: 100,
   component: AnalyticsPage,
 })
 
@@ -197,12 +179,16 @@ function isChartLens(value: unknown): value is ChartLens {
 }
 
 function AnalyticsPage() {
-  const data = Route.useLoaderData()
-  const { range, format, status, domain } = Route.useSearch()
+  const search = Route.useSearch()
+  const { range, format, status, domain } = search
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
-  // Cloudflare edge stats load off the loader's critical path so a slow remote
-  // call never blocks the page; the edge cards/lenses fill in afterward.
+  // Stale-while-revalidate: the previous window stays on screen while a new
+  // range/filter loads; `isRefreshing` drives the inline indicator.
+  const { data, isPending, isFetching, isError } = useAnalyticsQuery(search)
+  const isRefreshing = isFetching && !isPending
+  // Cloudflare edge stats load off the critical path; the edge cards/lenses
+  // fill in afterward.
   const { edge, edgeConfigured, edgePending, edgeError } = useEdgeStats()
   const [view, setView] = useState<AreaView>('requests')
   const [lens, setLens] = useState<ChartLens>('funnel')
@@ -210,7 +196,7 @@ function AnalyticsPage() {
   // Top images carry both dimensions; rank and format by the selected metric.
   const topImages = useMemo(
     () =>
-      [...data.topImages]
+      [...(data?.topImages ?? [])]
         .sort((a, b) =>
           topMetric === 'bytes' ? b.bytes - a.bytes : b.requests - a.requests,
         )
@@ -219,17 +205,21 @@ function AnalyticsPage() {
           label: r.label,
           value: topMetric === 'bytes' ? r.bytes : r.requests,
         })),
-    [data.topImages, topMetric],
+    [data?.topImages, topMetric],
   )
   const fields = useMemo(() => {
-    const base = buildFields(data.available, format ?? [], status ?? [])
+    const base = buildFields(
+      data?.available ?? EMPTY_AVAILABLE,
+      format ?? [],
+      status ?? [],
+    )
     if (isAll) {
       return base
     }
     // The domain filter is per-project: options are the source hosts actually
     // observed (subdomains included) plus any already-selected value.
     const domains = [
-      ...new Set([...data.available.domains, ...(domain ?? [])]),
+      ...new Set([...(data?.available?.domains ?? []), ...(domain ?? [])]),
     ].sort()
     if (domains.length === 0) {
       return base
@@ -242,14 +232,89 @@ function AnalyticsPage() {
         options: domains.map((d) => ({ value: d, label: d })),
       },
     ]
-  }, [data.available, format, status, domain, isAll])
+  }, [data?.available, format, status, domain, isAll])
+
+  const header = (
+    <PageHeader
+      actions={
+        <>
+          {data ? (
+            <DataFilters
+              fields={fields}
+              onChange={(key, next) =>
+                navigate({
+                  search: (p) => ({
+                    ...p,
+                    [key]: next.length > 0 ? next : undefined,
+                  }),
+                })
+              }
+              onClear={() =>
+                navigate({
+                  search: (p) => ({
+                    ...p,
+                    domain: undefined,
+                    format: undefined,
+                    status: undefined,
+                  }),
+                })
+              }
+              values={{
+                domain: domain ?? [],
+                format: format ?? [],
+                status: status ?? [],
+              }}
+            />
+          ) : null}
+          <RefreshingIndicator active={isRefreshing} />
+          <ToggleGroup
+            onValueChange={(v: string[]) => {
+              const next = v[0]
+              if (isAnalyticsRange(next)) {
+                navigate({ search: (p) => ({ ...p, range: next }) })
+              }
+            }}
+            size="sm"
+            value={[range]}
+            variant="outline"
+          >
+            {RANGES.map((r) => (
+              <ToggleGroupItem key={r} value={r}>
+                {r}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </>
+      }
+      eyebrow={isAll ? 'All projects' : currentProject?.name}
+      subtitle="Everything keenpix has seen this window. Built in, not bolted on."
+      title="Analytics"
+    />
+  )
+
+  // First load (no cached data yet): keep the header interactive over a light
+  // loading state — no skeletons.
+  if (!data) {
+    return (
+      <div className="flex flex-col gap-6 p-6">
+        {header}
+        {isError ? (
+          <p className="text-destructive text-sm">
+            Couldn’t load analytics — it will retry shortly.
+          </p>
+        ) : (
+          <div className="flex min-h-[40vh] items-center justify-center">
+            <Spinner className="size-5 text-muted-foreground" />
+          </div>
+        )}
+      </div>
+    )
+  }
 
   const hasDomainFilter = Boolean(domain && domain.length > 0)
   // The window where edge + origin reconcile into a source split: 24h, whole
-  // zone, unfiltered. In that window the KPI cards change shape once edge lands,
-  // so we hold a skeleton there until the edge query resolves.
+  // zone, unfiltered (the default landing view).
   const edgeReconcilableWindow = isAll && !hasDomainFilter && range === '24h'
-  const loadingEdge = edgePending && edgeReconcilableWindow
   // Edge and origin numbers only reconcile in the one window where both layers
   // measure the same traffic. Outside it the cards collapse to origin-only.
   const edgeGated = edgeConfigured && edge !== null && edgeReconcilableWindow
@@ -310,58 +375,7 @@ function AnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <PageHeader
-        actions={
-          <>
-            <DataFilters
-              fields={fields}
-              onChange={(key, next) =>
-                navigate({
-                  search: (p) => ({
-                    ...p,
-                    [key]: next.length > 0 ? next : undefined,
-                  }),
-                })
-              }
-              onClear={() =>
-                navigate({
-                  search: (p) => ({
-                    ...p,
-                    domain: undefined,
-                    format: undefined,
-                    status: undefined,
-                  }),
-                })
-              }
-              values={{
-                domain: domain ?? [],
-                format: format ?? [],
-                status: status ?? [],
-              }}
-            />
-            <ToggleGroup
-              onValueChange={(v: string[]) => {
-                const next = v[0]
-                if (isAnalyticsRange(next)) {
-                  navigate({ search: (p) => ({ ...p, range: next }) })
-                }
-              }}
-              size="sm"
-              value={[range]}
-              variant="outline"
-            >
-              {RANGES.map((r) => (
-                <ToggleGroupItem key={r} value={r}>
-                  {r}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </>
-        }
-        eyebrow={isAll ? 'All projects' : currentProject?.name}
-        subtitle="Everything keenpix has seen this window. Built in, not bolted on."
-        title="Analytics"
-      />
+      {header}
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium text-foreground text-sm">This window</h2>
@@ -369,7 +383,6 @@ function AnalyticsPage() {
           connect={edgeNotConfigured}
           edge={edge}
           gated={edgeGated}
-          loadingEdge={loadingEdge}
           note={edgeNote}
           summary={data.summary}
         />
