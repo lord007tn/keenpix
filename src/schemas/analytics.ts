@@ -19,6 +19,10 @@ export const dashboardInputSchema = z.object({
   range: analyticsRangeSchema.catch('24h'),
 })
 
+export const edgeCacheStatsSchema = z.object({
+  range: analyticsRangeSchema.catch('24h'),
+})
+
 export const allowedHostStatsSchema = z.object({
   projectId: nonEmptyStringSchema(),
   range: analyticsRangeSchema.catch('30d'),

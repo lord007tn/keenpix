@@ -203,6 +203,24 @@ model AnalyticsRollupHourly {
   @@index([status, bucketStart])
 }
 
+// Cloudflare's adaptive analytics dataset is capped at ~24h on non-enterprise
+// plans, so we persist its hourly /img/* edge groups here to build history the
+// dashboard can read over any range. One row per (zone, host, hour, cacheStatus)
+// — the raw adaptive group; hit/miss is classified at read time. Captured
+// opportunistically (throttled) when the dashboard loads.
+model EdgeRollupHourly {
+  id          String   @id
+  zoneId      String
+  host        String   @default("")
+  bucketStart DateTime
+  cacheStatus String
+  count       Int      @default(0)
+  bytes       BigInt   @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@index([zoneId, host, bucketStart])
+}
+
 // better-auth tables. Keep these names aligned with the auth adapter config.
 model User {
   id            String    @id @default(cuid())
