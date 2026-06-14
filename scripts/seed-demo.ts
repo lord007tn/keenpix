@@ -78,8 +78,15 @@ async function main() {
     const now = Date.now()
     const logs = Array.from({ length: 320 }, () => {
       const cached = Math.random() < 0.62
-      const bytesIn = int(40_000, 900_000)
-      const bytesOut = Math.round(bytesIn * (0.18 + Math.random() * 0.4))
+      // The source image fetched from the origin, and the (much smaller)
+      // optimized payload keenpix actually delivers — keeping deliveries a small
+      // fraction of the original is the whole product, so it must show up as a
+      // real positive "bandwidth saved" KPI. A cache hit serves the optimized
+      // bytes from disk without re-fetching the origin (bytesIn 0), but still
+      // saved the difference vs the original on this delivery.
+      const original = int(180_000, 1_400_000)
+      const optimized = Math.round(original * (0.12 + Math.random() * 0.18))
+      const saved = Math.max(0, original - optimized)
       return {
         orgId: ORG_ID,
         projectId: p.id,
@@ -92,12 +99,67 @@ async function main() {
         status: pick(STATUSES),
         cached,
         latencyMs: cached ? int(2, 18) : int(40, 320),
-        bytesIn: cached ? 0 : bytesIn,
-        bytesOut,
+        bytesIn: cached ? 0 : original,
+        bytesOut: optimized,
+        bytesSaved: saved,
       }
     })
     await prisma.requestLog.createMany({ data: logs })
-    console.log(`  ${p.name}: ${logs.length} request logs`)
+
+    // The analytics + overview pages read exclusively from the hourly rollups,
+    // not from RequestLog. Production maintains them incrementally inside
+    // createRequestLog, but this seed inserts logs directly — so rebuild the
+    // project's rollups from its freshly-seeded logs (same aggregation as the
+    // migration backfill) or the dashboards would render empty.
+    await prisma.analyticsRollupHourly.deleteMany({
+      where: { projectId: p.id },
+    })
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "AnalyticsRollupHourly" (
+         "id", "bucketStart", "orgId", "projectId", "sourceHost", "path",
+         "format", "status", "requests", "cachedRequests", "optimizedRequests",
+         "bytesIn", "bytesOut", "bytesSaved", "latencyMsSum", "latencyLe5", "latencyLe10",
+         "latencyLe20", "latencyLe35", "latencyLe55", "latencyLe80",
+         "latencyLe120", "latencyLe180", "latencyLe260", "latencyLe380",
+         "latencyLe540", "latencyLe800", "latencyLe1100", "latencyGt1100",
+         "updatedAt"
+       )
+       SELECT
+         md5(concat_ws('|',
+           date_trunc('hour', "ts")::text, "orgId", "projectId",
+           coalesce("sourceHost", ''), "path", "format", "status"::text)),
+         date_trunc('hour', "ts"), "orgId", "projectId",
+         coalesce("sourceHost", ''), "path", "format", "status",
+         count(*)::int,
+         count(*) FILTER (WHERE "cached")::int,
+         count(*) FILTER (WHERE NOT "cached")::int,
+         coalesce(sum("bytesIn"), 0)::bigint,
+         coalesce(sum("bytesOut"), 0)::bigint,
+         coalesce(sum("bytesSaved"), 0)::bigint,
+         coalesce(sum("latencyMs"), 0)::double precision,
+         count(*) FILTER (WHERE "latencyMs" <= 5)::int,
+         count(*) FILTER (WHERE "latencyMs" > 5 AND "latencyMs" <= 10)::int,
+         count(*) FILTER (WHERE "latencyMs" > 10 AND "latencyMs" <= 20)::int,
+         count(*) FILTER (WHERE "latencyMs" > 20 AND "latencyMs" <= 35)::int,
+         count(*) FILTER (WHERE "latencyMs" > 35 AND "latencyMs" <= 55)::int,
+         count(*) FILTER (WHERE "latencyMs" > 55 AND "latencyMs" <= 80)::int,
+         count(*) FILTER (WHERE "latencyMs" > 80 AND "latencyMs" <= 120)::int,
+         count(*) FILTER (WHERE "latencyMs" > 120 AND "latencyMs" <= 180)::int,
+         count(*) FILTER (WHERE "latencyMs" > 180 AND "latencyMs" <= 260)::int,
+         count(*) FILTER (WHERE "latencyMs" > 260 AND "latencyMs" <= 380)::int,
+         count(*) FILTER (WHERE "latencyMs" > 380 AND "latencyMs" <= 540)::int,
+         count(*) FILTER (WHERE "latencyMs" > 540 AND "latencyMs" <= 800)::int,
+         count(*) FILTER (WHERE "latencyMs" > 800 AND "latencyMs" <= 1100)::int,
+         count(*) FILTER (WHERE "latencyMs" > 1100)::int,
+         CURRENT_TIMESTAMP
+       FROM "RequestLog"
+       WHERE "projectId" = $1
+       GROUP BY
+         date_trunc('hour', "ts"), "orgId", "projectId",
+         coalesce("sourceHost", ''), "path", "format", "status"`,
+      p.id,
+    )
+    console.log(`  ${p.name}: ${logs.length} request logs + hourly rollups`)
   }
 
   // Internal API key + a page-able stream of activity.
