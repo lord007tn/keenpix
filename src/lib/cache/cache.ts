@@ -48,9 +48,10 @@ export async function writeCache(
   key: string,
   format: OutputFormat,
   data: Buffer,
+  originalBytes: number,
 ) {
-  await diskCache.set(key, format, data)
-  await memoryCache.set(key, format, data)
+  await diskCache.set(key, format, data, originalBytes)
+  await memoryCache.set(key, format, data, originalBytes)
 }
 
 function isCacheEntryStale(entry: CacheEntry) {

@@ -1,8 +1,10 @@
 import { prisma } from '@/db'
+import { updateAnalyticsRollupForLog } from './analytics-rollups'
 
 export interface NewRequestLog {
   bytesIn: number
   bytesOut: number
+  bytesSaved: number
   cached: boolean
   country?: string
   format: string
@@ -18,23 +20,28 @@ export interface NewRequestLog {
 }
 
 export async function createRequestLog(log: NewRequestLog) {
-  await prisma.requestLog.create({
-    data: {
-      orgId: log.orgId,
-      projectId: log.projectId,
-      path: log.path,
-      width: log.width ?? null,
-      quality: log.quality ?? null,
-      format: log.format,
-      status: log.status,
-      cached: log.cached,
-      latencyMs: log.latencyMs,
-      bytesIn: log.bytesIn,
-      bytesOut: log.bytesOut,
-      region: log.region ?? null,
-      country: log.country ?? null,
-      sourceHost: log.sourceHost ?? null,
-    },
+  await prisma.$transaction(async (tx) => {
+    const row = await tx.requestLog.create({
+      data: {
+        orgId: log.orgId,
+        projectId: log.projectId,
+        path: log.path,
+        width: log.width ?? null,
+        quality: log.quality ?? null,
+        format: log.format,
+        status: log.status,
+        cached: log.cached,
+        latencyMs: log.latencyMs,
+        bytesIn: log.bytesIn,
+        bytesOut: log.bytesOut,
+        bytesSaved: log.bytesSaved,
+        region: log.region ?? null,
+        country: log.country ?? null,
+        sourceHost: log.sourceHost ?? null,
+      },
+      select: { ts: true },
+    })
+    await updateAnalyticsRollupForLog(tx, { ...log, ts: row.ts })
   })
 }
 

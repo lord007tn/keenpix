@@ -9,7 +9,7 @@ manage Keenpix projects programmatically. It is separate from the public `/img/*
 transform endpoint: image URLs stay keyless and are still protected by each
 project's allowed source hosts.
 
-Create an internal API key from **Workspace -> API Keys** as a super admin. Keys can
+Create an internal API key from **Settings -> API keys** as a super admin. Keys can
 be scoped to every project or to one project. Project-scoped keys can read and write
 only that project and cannot create new projects.
 
@@ -21,7 +21,7 @@ X-Keenpix-Api-Key: <KEY>
 ```
 
 All SDK responses are JSON and set `Cache-Control: no-store`. SDK requests are
-recorded under **Workspace -> API Keys -> API activity**.
+recorded under **Settings -> API keys -> API activity**.
 
 ## Endpoints
 
