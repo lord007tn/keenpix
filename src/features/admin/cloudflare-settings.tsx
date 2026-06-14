@@ -49,8 +49,14 @@ const EMPTY_META: CloudflareFormMeta = {
 export function CloudflareSettingsPanel() {
   const [meta, setMeta] = useState<CloudflareFormMeta>(EMPTY_META)
   const [testing, setTesting] = useState(false)
+  // Drive defaultValues from state, not a fixed EMPTY. useForm re-applies its
+  // options.defaultValues to the store after every render (when the form is
+  // untouched), so calling form.reset() to load server data gets reverted on
+  // the next render. Updating these defaults instead lets that same mechanism
+  // populate the fields and keeps them populated.
+  const [formDefaults, setFormDefaults] = useState<CloudflareForm>(EMPTY)
   const cloudflareForm = useForm({
-    defaultValues: EMPTY,
+    defaultValues: formDefaults,
     validators: {
       onChange: cloudflareSettingsSchema,
       onSubmit: cloudflareSettingsSchema,
@@ -58,10 +64,11 @@ export function CloudflareSettingsPanel() {
     onSubmit: async ({ value }) => {
       try {
         const saved = await updateCloudflareSettingsFn({ data: value })
-        cloudflareForm.reset({
-          ...value,
-          apiToken: '',
-        })
+        // New clean baseline (token write-only): update the defaults so the
+        // post-render sync agrees, and reset to clear the dirty/touched state.
+        const next = { ...value, apiToken: '' }
+        setFormDefaults(next)
+        cloudflareForm.reset(next)
         setMeta({ source: saved.source, tokenSet: saved.tokenSet })
         toast.success('Cloudflare settings saved')
       } catch (e) {
@@ -73,7 +80,7 @@ export function CloudflareSettingsPanel() {
   const load = useCallback(async () => {
     try {
       const data = await getAdminWorkspaceFn()
-      cloudflareForm.reset({
+      setFormDefaults({
         apiToken: '',
         enabled: data.cloudflare.enabled,
         host: data.cloudflare.host,
@@ -86,7 +93,7 @@ export function CloudflareSettingsPanel() {
     } catch (e) {
       toast.error(getErrorMessage(e, 'Could not load Cloudflare settings'))
     }
-  }, [cloudflareForm])
+  }, [])
 
   useEffect(() => {
     load()
