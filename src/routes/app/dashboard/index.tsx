@@ -7,6 +7,7 @@ import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
 import { PageHeader } from '@/components/app/page-header'
 import { ProjectsDataTable } from '@/components/app/projects-data-table'
 import { RecentActivity } from '@/components/app/recent-activity'
+import { RefreshingIndicator } from '@/components/app/refreshing-indicator'
 import {
   Empty,
   EmptyContent,
@@ -14,14 +15,14 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from '@/components/ui/empty'
+import { Spinner } from '@/components/ui/spinner'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { OperationsSummary } from '@/features/admin/operations-summary'
 import { ResponseLatencyCard } from '@/features/analytics/response-latency-card'
-import { DashboardPageSkeleton } from '@/features/analytics/skeletons'
 import { SourceSplitCards } from '@/features/analytics/source-split-cards'
+import { useDashboardQuery } from '@/features/analytics/use-dashboard-query'
 import { useEdgeStats } from '@/features/analytics/use-edge-stats'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
-import { getDashboardFn } from '@/functions/dashboard'
 import { appPageHead } from '@/shared/seo'
 import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
@@ -50,38 +51,87 @@ export const Route = createFileRoute('/app/dashboard/')({
   validateSearch: (
     search: Record<string, unknown>,
   ): { range: AnalyticsRange; project?: string } => ({
-    range: isAnalyticsRange(search.range) ? search.range : '30d',
+    // 24h by default so the rollup data lines up with the 24h-only Cloudflare
+    // edge stats and the source split reconciles on landing.
+    range: isAnalyticsRange(search.range) ? search.range : '24h',
     project: typeof search.project === 'string' ? search.project : undefined,
   }),
-  loaderDeps: ({ search }) => ({
-    range: search.range,
-    project: search.project,
-  }),
-  loader: ({ deps }) =>
-    getDashboardFn({ data: { range: deps.range, project: deps.project } }),
-  // Show the per-section skeleton quickly while the loader runs instead of
-  // holding a frozen screen on navigations and range changes.
-  pendingComponent: DashboardPageSkeleton,
-  pendingMs: 100,
   component: DashboardPage,
 })
 
 function DashboardPage() {
-  const { projects, stats, kpis, series, recentLogs, latencySummary, latency } =
-    Route.useLoaderData()
-  const { range } = Route.useSearch()
+  const search = Route.useSearch()
+  const { range } = search
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
   const { user } = useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
-  // Cloudflare edge stats load off the loader's critical path so a slow remote
-  // call never blocks the overview; the KPI edge split fills in afterward.
+  // Stale-while-revalidate: the previous payload stays on screen while a new
+  // range/project loads in the background; `isRefreshing` drives the indicator.
+  const { data, isPending, isFetching, isError } = useDashboardQuery(search)
+  const isRefreshing = isFetching && !isPending
+  // Cloudflare edge stats load off the critical path; the KPI edge split fills
+  // in afterward.
   const { edge, edgeConfigured, edgePending, edgeError } = useEdgeStats()
+
+  const header = (
+    <PageHeader
+      actions={
+        <>
+          <RefreshingIndicator active={isRefreshing} />
+          <ToggleGroup
+            onValueChange={(v: string[]) => {
+              const next = v[0]
+              if (isAnalyticsRange(next)) {
+                navigate({ search: (prev) => ({ ...prev, range: next }) })
+              }
+            }}
+            size="sm"
+            value={[range]}
+            variant="outline"
+          >
+            {RANGES.map((r) => (
+              <ToggleGroupItem key={r.value} value={r.value}>
+                {r.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </>
+      }
+      eyebrow={isAll ? 'All projects' : currentProject?.name}
+      subtitle={
+        isAll
+          ? 'A bird’s-eye on every project — edge delivery, trends, activity, and instance health.'
+          : `${currentProject?.name ?? 'This project'} — trends and recent activity.`
+      }
+      title="Overview"
+    />
+  )
+
+  // First load (no cached data yet): the real header stays interactive over a
+  // light loading state — no skeletons.
+  if (!data) {
+    return (
+      <div className="@container/main flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
+        {header}
+        {isError ? (
+          <p className="text-destructive text-sm">
+            Couldn’t load the overview — it will retry shortly.
+          </p>
+        ) : (
+          <div className="flex min-h-[40vh] items-center justify-center">
+            <Spinner className="size-5 text-muted-foreground" />
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const { projects, stats, kpis, series, recentLogs, latencySummary, latency } =
+    data
 
   // The KPI row is the same source-split cards as the analytics page, fed from
   // the dashboard's KPI payload, so the two pages always show identical numbers.
-  // Trends attach only where the value is the origin metric (never an
-  // edge-inclusive total, where an origin trend would contradict it).
   const cardSummary = {
     bandwidthOut: kpis.bandwidthOut,
     bandwidthSaved: kpis.bandwidthSaved.value,
@@ -89,11 +139,7 @@ function DashboardPage() {
     hitRate: kpis.hitRate.value,
   }
   const edgeReconcilableWindow = isAll && range === '24h'
-  const loadingEdge = edgePending && edgeReconcilableWindow
   const edgeGated = edgeConfigured && edge !== null && edgeReconcilableWindow
-  // Both the connect CTA and the note wait for the edge query to resolve so
-  // neither flashes while it is still pending — and a failed fetch is "couldn't
-  // load" (handled by the !edge note below), never a false "not configured".
   const edgeNotConfigured = !(edgePending || edgeError || edgeConfigured)
   let edgeNote: string | undefined
   if (!(edgePending || edgeGated || edgeNotConfigured)) {
@@ -139,41 +185,13 @@ function DashboardPage() {
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
-      <PageHeader
-        actions={
-          <ToggleGroup
-            onValueChange={(v: string[]) => {
-              const next = v[0]
-              if (isAnalyticsRange(next)) {
-                navigate({ search: (prev) => ({ ...prev, range: next }) })
-              }
-            }}
-            size="sm"
-            value={[range]}
-            variant="outline"
-          >
-            {RANGES.map((r) => (
-              <ToggleGroupItem key={r.value} value={r.value}>
-                {r.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        }
-        eyebrow={isAll ? 'All projects' : currentProject?.name}
-        subtitle={
-          isAll
-            ? 'A bird’s-eye on every project — edge delivery, trends, activity, and instance health.'
-            : `${currentProject?.name ?? 'This project'} — trends and recent activity.`
-        }
-        title="Overview"
-      />
+      {header}
 
       <SourceSplitCards
         connect={edgeNotConfigured}
         deltas={deltas}
         edge={edge}
         gated={edgeGated}
-        loadingEdge={loadingEdge}
         note={edgeNote}
         summary={cardSummary}
       />
