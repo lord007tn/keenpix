@@ -1,20 +1,10 @@
 import dayjs from 'dayjs'
 import type { Prisma } from '@/generated/prisma/client'
 import {
-  approximateLatencyPercentile,
-  emptyLatencyBucketCounts,
   LATENCY_BUCKETS,
-  type LatencyBucketCounts,
   latencyBucketField,
 } from '@/helpers/analytics/latency-buckets'
-import type {
-  AnalyticsRange,
-  LatencyBin,
-  LatencyTrendPoint,
-  StatusPoint,
-  TimePoint,
-} from '@/shared/types'
-import type { AnalyticsFilters } from './analytics'
+import type { AnalyticsRange } from '@/shared/types'
 import type { NewRequestLog } from './request-logs'
 
 const DAY = 86_400_000
@@ -24,37 +14,6 @@ interface RangeMeta {
   label: (date: Date, index: number) => string
   ms: number
   n: number
-}
-
-export interface RollupRow {
-  bucketStart: Date
-  bytesIn: bigint
-  bytesOut: bigint
-  bytesSaved: bigint
-  cachedRequests: number
-  country: string
-  format: string
-  latencyGt1100: number
-  latencyLe5: number
-  latencyLe10: number
-  latencyLe20: number
-  latencyLe35: number
-  latencyLe55: number
-  latencyLe80: number
-  latencyLe120: number
-  latencyLe180: number
-  latencyLe260: number
-  latencyLe380: number
-  latencyLe540: number
-  latencyLe800: number
-  latencyLe1100: number
-  latencyMsSum: number
-  optimizedRequests: number
-  path: string
-  projectId: string
-  requests: number
-  sourceHost: string
-  status: number
 }
 
 export function rollupRangeMeta(range: AnalyticsRange): RangeMeta {
@@ -205,123 +164,10 @@ export async function updateAnalyticsRollupForLog(
   `
 }
 
-function filterWhere(filters?: AnalyticsFilters) {
-  const where: {
-    format?: { in: string[] }
-    sourceHost?: { in: string[] }
-    status?: { in: number[] }
-  } = {}
-  if (filters?.format && filters.format.length > 0) {
-    where.format = { in: filters.format }
-  }
-  if (filters?.domain && filters.domain.length > 0) {
-    where.sourceHost = { in: filters.domain }
-  }
-  if (filters?.status && filters.status.length > 0) {
-    const codes = filters.status.map(Number).filter((n) => !Number.isNaN(n))
-    if (codes.length > 0) {
-      where.status = { in: codes }
-    }
-  }
-  return where
-}
-
-export function listAnalyticsRollups(
-  tx: Prisma.TransactionClient,
-  opts: {
-    filters?: AnalyticsFilters
-    gte: Date
-    lt?: Date
-    projectId?: string
-  },
-) {
-  return tx.analyticsRollupHourly.findMany({
-    where: {
-      ...filterWhere(opts.filters),
-      ...(opts.projectId ? { projectId: opts.projectId } : {}),
-      bucketStart: opts.lt ? { gte: opts.gte, lt: opts.lt } : { gte: opts.gte },
-    },
-    select: {
-      bucketStart: true,
-      bytesIn: true,
-      bytesOut: true,
-      bytesSaved: true,
-      cachedRequests: true,
-      country: true,
-      format: true,
-      latencyGt1100: true,
-      latencyLe5: true,
-      latencyLe10: true,
-      latencyLe20: true,
-      latencyLe35: true,
-      latencyLe55: true,
-      latencyLe80: true,
-      latencyLe120: true,
-      latencyLe180: true,
-      latencyLe260: true,
-      latencyLe380: true,
-      latencyLe540: true,
-      latencyLe800: true,
-      latencyLe1100: true,
-      latencyMsSum: true,
-      optimizedRequests: true,
-      path: true,
-      projectId: true,
-      requests: true,
-      sourceHost: true,
-      status: true,
-    },
-  })
-}
-
-export function summarizeRollups(rows: RollupRow[]) {
-  const counts: LatencyBucketCounts = emptyLatencyBucketCounts()
-  let totalRequests = 0
-  let cachedRequests = 0
-  let bandwidthIn = 0
-  let bandwidthOut = 0
-  let bandwidthSaved = 0
-  let latencyMsSum = 0
-  for (const row of rows) {
-    totalRequests += row.requests
-    cachedRequests += row.cachedRequests
-    bandwidthIn += Number(row.bytesIn)
-    bandwidthOut += Number(row.bytesOut)
-    bandwidthSaved += Number(row.bytesSaved)
-    latencyMsSum += row.latencyMsSum
-    for (const b of LATENCY_BUCKETS) {
-      counts[b.field] += row[b.field]
-    }
-  }
-  return {
-    totalRequests,
-    bandwidthIn,
-    bandwidthOut,
-    // Real optimizer savings summed per request — always ≥ 0, unlike the old
-    // bandwidthIn − bandwidthOut, which went negative once cache hits (bytesIn
-    // 0, bytesOut > 0) dominated the window.
-    bandwidthSaved,
-    hitRate: totalRequests === 0 ? 0 : (cachedRequests / totalRequests) * 100,
-    // How much smaller every delivery was than the origin original it replaced:
-    // saved / (saved + served). Booked on hits too, so the denominator is the
-    // original-equivalent bytes (served + saved), not just origin fetches.
-    savingsPct:
-      bandwidthSaved + bandwidthOut === 0
-        ? 0
-        : (bandwidthSaved / (bandwidthSaved + bandwidthOut)) * 100,
-    avg: totalRequests === 0 ? 0 : Math.round(latencyMsSum / totalRequests),
-    p50: approximateLatencyPercentile(counts, 0.5),
-    p75: approximateLatencyPercentile(counts, 0.75),
-    p90: approximateLatencyPercentile(counts, 0.9),
-    p95: approximateLatencyPercentile(counts, 0.95),
-    p99: approximateLatencyPercentile(counts, 0.99),
-  }
-}
-
 // Shared bucketing for every over-time chart: n evenly-spaced buckets ending
 // now, a label per bucket, and the bucket a rollup row falls into (clamped to
 // the visible window).
-function rollupBucketing(range: AnalyticsRange) {
+export function rollupBucketing(range: AnalyticsRange) {
   const meta = rollupRangeMeta(range)
   const sinceMs = dayjs()
     .subtract(meta.n * meta.ms, 'millisecond')
@@ -341,89 +187,4 @@ function rollupBucketing(range: AnalyticsRange) {
         Math.max(0, Math.floor((bucketStart.getTime() - sinceMs) / meta.ms)),
       ),
   }
-}
-
-export function rollupsToTimeSeries(rows: RollupRow[], range: AnalyticsRange) {
-  const { n, labelFor, indexFor } = rollupBucketing(range)
-  const buckets: TimePoint[] = Array.from({ length: n }, (_, i) => ({
-    label: labelFor(i),
-    requests: 0,
-    cached: 0,
-    optimized: 0,
-    bandwidthIn: 0,
-    bandwidthOut: 0,
-    bandwidthSaved: 0,
-  }))
-  for (const row of rows) {
-    const bucket = buckets[indexFor(row.bucketStart)]
-    bucket.requests += row.requests
-    bucket.cached += row.cachedRequests
-    bucket.optimized += row.optimizedRequests
-    bucket.bandwidthIn += Number(row.bytesIn)
-    bucket.bandwidthOut += Number(row.bytesOut)
-    bucket.bandwidthSaved += Number(row.bytesSaved)
-  }
-  return buckets
-}
-
-// Requests per time bucket split by HTTP status class. Drives the reliability
-// chart; 3xx (mostly 304 Not Modified) is kept distinct so it doesn't read as
-// an error next to genuine 4xx/5xx.
-export function rollupsToStatusSeries(
-  rows: RollupRow[],
-  range: AnalyticsRange,
-): StatusPoint[] {
-  const { n, labelFor, indexFor } = rollupBucketing(range)
-  const buckets: StatusPoint[] = Array.from({ length: n }, (_, i) => ({
-    label: labelFor(i),
-    success: 0,
-    redirect: 0,
-    clientError: 0,
-    serverError: 0,
-  }))
-  for (const row of rows) {
-    const bucket = buckets[indexFor(row.bucketStart)]
-    const cls = Math.floor(row.status / 100)
-    if (cls === 2) {
-      bucket.success += row.requests
-    } else if (cls === 3) {
-      bucket.redirect += row.requests
-    } else if (cls === 4) {
-      bucket.clientError += row.requests
-    } else if (cls === 5) {
-      bucket.serverError += row.requests
-    }
-  }
-  return buckets
-}
-
-export function rollupsToLatencyBins(rows: RollupRow[]): LatencyBin[] {
-  return LATENCY_BUCKETS.map((b) => ({
-    bucket: b.max,
-    label: b.label,
-    value: rows.reduce((sum, row) => sum + row[b.field], 0),
-  }))
-}
-
-// Approximate p50/p95/p99 per time bucket by summing each bucket's stored
-// latency histogram columns and reading the percentiles off them — the same
-// approximation the window total uses, just resolved over time.
-export function rollupsToLatencyTrend(
-  rows: RollupRow[],
-  range: AnalyticsRange,
-): LatencyTrendPoint[] {
-  const { n, labelFor, indexFor } = rollupBucketing(range)
-  const counts = Array.from({ length: n }, () => emptyLatencyBucketCounts())
-  for (const row of rows) {
-    const bucket = counts[indexFor(row.bucketStart)]
-    for (const b of LATENCY_BUCKETS) {
-      bucket[b.field] += row[b.field]
-    }
-  }
-  return counts.map((c, i) => ({
-    label: labelFor(i),
-    p50: approximateLatencyPercentile(c, 0.5),
-    p95: approximateLatencyPercentile(c, 0.95),
-    p99: approximateLatencyPercentile(c, 0.99),
-  }))
 }
