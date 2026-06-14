@@ -29,9 +29,18 @@ export async function handleTransformRequest(
     return new Response('Missing ?project', { status: 400 })
   }
 
+  // The edge tells us the requester's country (Cloudflare/Vercel set these);
+  // absent in local/dev, where it just falls back to "" (Unknown).
+  const country = (
+    request.headers.get('cf-ipcountry') ??
+    request.headers.get('x-vercel-ip-country') ??
+    ''
+  ).toUpperCase()
+
   try {
     const result = await optimizeProjectImage({
       accept: request.headers.get('accept') ?? '',
+      country,
       projectId,
       searchParams,
       src,

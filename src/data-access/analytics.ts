@@ -3,6 +3,7 @@ import { prisma } from '@/db'
 import type {
   AnalyticsRange,
   DomainBreakdownRow,
+  GeoRow,
   ProjectStat,
   TopImageRow,
 } from '@/shared/types'
@@ -157,6 +158,26 @@ export async function getStatusSeries(
   filters?: AnalyticsFilters,
 ) {
   return rollupsToStatusSeries(await rowsFor(range, projectId, filters), range)
+}
+
+// Requests by requester country. Empty country (no edge header) folds into a
+// single "Unknown" row rather than being dropped.
+export async function getGeoDistribution(
+  range: AnalyticsRange,
+  projectId?: string,
+  filters?: AnalyticsFilters,
+): Promise<GeoRow[]> {
+  return groupRollups(
+    await rowsFor(range, projectId, filters),
+    (row) => row.country,
+    (country, groupedRows) => ({
+      country: country || 'Unknown',
+      requests: groupedRows.reduce((sum, row) => sum + row.requests, 0),
+      saved: groupedRows.reduce((sum, row) => sum + Number(row.bytesSaved), 0),
+    }),
+  )
+    .sort((a, b) => b.requests - a.requests)
+    .slice(0, 12)
 }
 
 export async function getLatencyBins(
