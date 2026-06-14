@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   type RollupRow,
   rollupsToLatencyBins,
+  rollupsToLatencyTrend,
   rollupsToStatusSeries,
   rollupsToTimeSeries,
   summarizeRollups,
@@ -115,6 +116,34 @@ describe('analytics rollup math', () => {
         redirect: 3,
         clientError: 2,
         serverError: 1,
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('reads p50/p95/p99 per time bucket from histogram columns', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(dayjs('2026-06-13T12:30:00.000Z').toDate())
+    try {
+      const at11 = dayjs('2026-06-13T11:00:00.000Z').toDate()
+      const trend = rollupsToLatencyTrend(
+        [
+          row({ bucketStart: at11, latencyLe20: 90 }),
+          row({
+            bucketStart: at11,
+            latencyLe20: 0,
+            latencyLe120: 8,
+            latencyGt1100: 2,
+          }),
+        ],
+        '24h',
+      )
+
+      expect(trend.find((p) => p.label === '11:00')).toMatchObject({
+        p50: 20,
+        p95: 120,
+        p99: 1600,
       })
     } finally {
       vi.useRealTimers()

@@ -7,6 +7,7 @@ import {
   Cell,
   ComposedChart,
   Line,
+  LineChart,
   Pie,
   PieChart,
   XAxis,
@@ -26,6 +27,7 @@ import type {
   EdgeCachePoint,
   FormatSlice,
   LatencyBin,
+  LatencyTrendPoint,
   StatusPoint,
   TimePoint,
 } from '@/shared/types'
@@ -562,6 +564,56 @@ export function StatusAreaChart({ data }: { data: StatusPoint[] }) {
         ))}
         <ChartLegend content={<ChartLegendContent />} />
       </AreaChart>
+    </ChartContainer>
+  )
+}
+
+// p50/p95/p99 as lines over the window — the moving companion to the latency
+// histogram, so a creeping tail shows up before it dominates the total.
+export function LatencyTrendChart({ data }: { data: LatencyTrendPoint[] }) {
+  const config = {
+    p50: { label: 'p50', color: 'var(--muted-foreground)' },
+    p95: { label: 'p95', color: 'var(--warning)' },
+    p99: { label: 'p99', color: 'var(--destructive)' },
+  } satisfies ChartConfig
+  const keys = ['p50', 'p95', 'p99']
+  if (data.every((d) => d.p50 + d.p95 + d.p99 === 0)) {
+    return (
+      <div className="flex h-56 items-center justify-center text-center text-muted-foreground text-sm">
+        No requests in this window yet.
+      </div>
+    )
+  }
+  return (
+    <ChartContainer className="aspect-auto h-56 w-full" config={config}>
+      <LineChart accessibilityLayer data={data}>
+        <CartesianGrid vertical={false} />
+        <XAxis
+          axisLine={false}
+          dataKey="label"
+          minTickGap={24}
+          tickLine={false}
+          tickMargin={8}
+        />
+        <YAxis
+          axisLine={false}
+          tickFormatter={(v: number) => `${v}ms`}
+          tickLine={false}
+          width={52}
+        />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        {keys.map((k) => (
+          <Line
+            dataKey={k}
+            dot={false}
+            key={k}
+            stroke={`var(--color-${k})`}
+            strokeWidth={2}
+            type="monotone"
+          />
+        ))}
+        <ChartLegend content={<ChartLegendContent />} />
+      </LineChart>
     </ChartContainer>
   )
 }

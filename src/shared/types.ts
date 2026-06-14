@@ -80,6 +80,15 @@ export interface LatencyBin {
   value: number
 }
 
+// Approximate latency percentiles for one time bucket, for the latency-trend
+// chart (the histogram shows the whole window; this shows it moving over time).
+export interface LatencyTrendPoint {
+  label: string
+  p50: number
+  p95: number
+  p99: number
+}
+
 export type LogStatus = number
 
 export type LogFormat = OutputFormat
