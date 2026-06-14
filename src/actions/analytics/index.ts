@@ -1,20 +1,29 @@
 import type { z } from 'zod'
 import { getEffectiveCloudflareSettings } from '@/data-access/admin/cloudflare'
+import { listRollupsForRange } from '@/data-access/analytics'
 import {
-  getAnalyticsSummary,
-  getAvailableFilters,
-  getDomainBreakdown,
-  getFormatDistribution,
-  getGeoDistribution,
-  getHostTraffic,
-  getLatencyBins,
-  getLatencyTrend,
-  getProjectBreakdown,
-  getStatusSeries,
-  getTimeSeries,
-  getTopImages,
-} from '@/data-access/analytics'
-import { getProject, resolveProjectId } from '@/data-access/projects'
+  rollupsToLatencyBins,
+  rollupsToLatencyTrend,
+  rollupsToStatusSeries,
+  rollupsToTimeSeries,
+  summarizeRollups,
+} from '@/data-access/analytics-rollups'
+import {
+  getProject,
+  listProjects,
+  resolveProjectId,
+} from '@/data-access/projects'
+import {
+  domainBreakdown,
+  hostTraffic,
+  projectBreakdown,
+} from '@/helpers/analytics/breakdowns'
+import {
+  availableFilters,
+  formatDistribution,
+  geoDistribution,
+  topImages,
+} from '@/helpers/analytics/distributions'
 import { fetchEdgeCacheStats } from '@/lib/cloudflare/analytics'
 import type { analyticsInputSchema } from '@/schemas/analytics'
 import type {
@@ -35,60 +44,56 @@ export async function getAnalytics(
     format: input.format ?? [],
     status: input.status ?? [],
   }
-  const [
-    summary,
-    series,
-    formats,
-    topImages,
-    latency,
-    latencyTrend,
-    statusSeries,
-    geo,
-    available,
-  ] = await Promise.all([
-    getAnalyticsSummary(input.range, project, filters),
-    getTimeSeries(input.range, project, filters),
-    getFormatDistribution(input.range, project, filters),
-    getTopImages(input.range, project, filters),
-    getLatencyBins(input.range, project, filters),
-    getLatencyTrend(input.range, project, filters),
-    getStatusSeries(input.range, project, filters),
-    getGeoDistribution(input.range, project, filters),
-    getAvailableFilters(input.range, project),
+  // Two reads cover the whole page: the filtered window powers every metric
+  // card; one unfiltered read of the same window serves both the filter menus
+  // (which must always offer every value present, ignoring the active filters)
+  // and the project/domain breakdown. Project names load in parallel and are
+  // only used by the org-wide breakdown.
+  const [filtered, unfiltered, projects] = await Promise.all([
+    listRollupsForRange(input.range, project, filters),
+    listRollupsForRange(input.range, project),
+    project ? Promise.resolve([]) : listProjects(),
   ])
+
   // Per-project domain rollup vs. org-wide project rollup: one or the other,
   // matching which scope the page is showing.
-  const breakdown = project ? [] : await getProjectBreakdown(input.range)
-  const domainBreakdown = project
-    ? await getDomainBreakdown(input.range, project)
-    : null
-  // Cloudflare edge cache (zone-wide). Only fetched when wired up in Settings →
-  // CDN cache; a transient Cloudflare error must never blank the page, so the
-  // card just reports "couldn't load" when edgeConfigured but edge is null.
-  const cloudflare = await getEffectiveCloudflareSettings()
-  let edge: EdgeCacheStats | null = null
-  if (cloudflare) {
-    try {
-      edge = await fetchEdgeCacheStats(cloudflare)
-    } catch {
-      edge = null
-    }
-  }
+  const breakdown = project
+    ? []
+    : projectBreakdown(unfiltered, new Map(projects.map((p) => [p.id, p.name])))
+
   return {
     range: input.range,
-    summary,
-    series,
-    formats,
-    topImages,
-    latency,
-    latencyTrend,
-    statusSeries,
-    geo,
+    summary: summarizeRollups(filtered),
+    series: rollupsToTimeSeries(filtered, input.range),
+    formats: formatDistribution(filtered),
+    topImages: topImages(filtered),
+    latency: rollupsToLatencyBins(filtered),
+    latencyTrend: rollupsToLatencyTrend(filtered, input.range),
+    statusSeries: rollupsToStatusSeries(filtered, input.range),
+    geo: geoDistribution(filtered),
     breakdown,
-    domainBreakdown,
-    available,
-    edge,
-    edgeConfigured: Boolean(cloudflare),
+    domainBreakdown: project ? domainBreakdown(unfiltered) : null,
+    available: availableFilters(unfiltered),
+  }
+}
+
+// Cloudflare edge cache (zone-wide, last 24h). Split out of the page payload so
+// a transient Cloudflare round-trip never blocks the analytics/overview render —
+// the client fetches it separately and fills the edge cards in afterward. Only
+// queried when wired up in Settings → CDN cache; a transient error reports
+// "couldn't load" (edgeConfigured true, edge null) rather than blanking a card.
+export async function getEdgeCacheStats(): Promise<{
+  edge: EdgeCacheStats | null
+  edgeConfigured: boolean
+}> {
+  const cloudflare = await getEffectiveCloudflareSettings()
+  if (!cloudflare) {
+    return { edge: null, edgeConfigured: false }
+  }
+  try {
+    return { edge: await fetchEdgeCacheStats(cloudflare), edgeConfigured: true }
+  } catch {
+    return { edge: null, edgeConfigured: true }
   }
 }
 
@@ -99,13 +104,14 @@ export async function getAllowedHostStats(
   projectId: string,
   range: AnalyticsRange,
 ): Promise<AllowedHostStat[]> {
-  const [project, traffic] = await Promise.all([
+  const [project, rows] = await Promise.all([
     getProject(projectId),
-    getHostTraffic(range, projectId),
+    listRollupsForRange(range, projectId),
   ])
+  const traffic = hostTraffic(rows)
   const allowed = project?.allowedOrigins ?? []
   const allowedSet = new Set(allowed)
-  const rows: AllowedHostStat[] = allowed.map((host) => {
+  const rowsOut: AllowedHostStat[] = allowed.map((host) => {
     const s = traffic.get(host)
     return {
       host,
@@ -118,8 +124,8 @@ export async function getAllowedHostStats(
   })
   for (const [host, s] of traffic) {
     if (!allowedSet.has(host)) {
-      rows.push({ host, allowed: false, ...s })
+      rowsOut.push({ host, allowed: false, ...s })
     }
   }
-  return rows
+  return rowsOut
 }
