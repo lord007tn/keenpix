@@ -481,43 +481,70 @@ function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex flex-col gap-1">
-              <CardTitle>Top images</CardTitle>
-              <CardDescription>
-                {topMetric === 'bytes'
-                  ? 'By delivered bytes'
-                  : 'By request count'}{' '}
-                · last {range}
-              </CardDescription>
-            </div>
-            <ToggleGroup
-              onValueChange={(v: string[]) => {
-                if (v[0] === 'requests' || v[0] === 'bytes') {
-                  setTopMetric(v[0])
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-col gap-1">
+                <CardTitle>Top images</CardTitle>
+                <CardDescription>
+                  {topMetric === 'bytes'
+                    ? 'By delivered bytes'
+                    : 'By request count'}{' '}
+                  · last {range}
+                </CardDescription>
+              </div>
+              <ToggleGroup
+                onValueChange={(v: string[]) => {
+                  if (v[0] === 'requests' || v[0] === 'bytes') {
+                    setTopMetric(v[0])
+                  }
+                }}
+                size="sm"
+                value={[topMetric]}
+                variant="outline"
+              >
+                <ToggleGroupItem value="requests">Requests</ToggleGroupItem>
+                <ToggleGroupItem value="bytes">Bytes</ToggleGroupItem>
+              </ToggleGroup>
+            </CardHeader>
+            <CardContent>
+              <BarList
+                barColor="var(--chart-1)"
+                data={topImages}
+                valueFormat={(v) =>
+                  topMetric === 'bytes'
+                    ? humanBytes(v, 1)
+                    : `${compactNumber(v)} req`
                 }
-              }}
-              size="sm"
-              value={[topMetric]}
-              variant="outline"
-            >
-              <ToggleGroupItem value="requests">Requests</ToggleGroupItem>
-              <ToggleGroupItem value="bytes">Bytes</ToggleGroupItem>
-            </ToggleGroup>
-          </CardHeader>
-          <CardContent>
-            <BarList
-              barColor="var(--chart-1)"
-              data={topImages}
-              valueFormat={(v) =>
-                topMetric === 'bytes'
-                  ? humanBytes(v, 1)
-                  : `${compactNumber(v)} req`
-              }
-            />
-          </CardContent>
-        </Card>
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Traffic by country</CardTitle>
+              <CardDescription>
+                Requests by requester country · last {range}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {data.geo.length > 0 ? (
+                <BarList
+                  barColor="var(--chart-3)"
+                  data={data.geo.map((g) => ({
+                    label: g.country,
+                    value: g.requests,
+                  }))}
+                  valueFormat={(v) => `${compactNumber(v)} req`}
+                />
+              ) : (
+                <p className="py-6 text-center text-muted-foreground text-sm">
+                  No requests in this window yet.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
       <section className="flex flex-col gap-3">

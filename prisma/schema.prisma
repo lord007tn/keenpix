@@ -167,6 +167,8 @@ model AnalyticsRollupHourly {
   orgId             String
   projectId         String
   sourceHost        String   @default("")
+  // ISO country from the edge (CF-IPCountry); "" when the header was absent.
+  country           String   @default("")
   path              String
   format            String
   status            Int

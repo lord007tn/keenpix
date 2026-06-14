@@ -16,6 +16,7 @@ function row(overrides: Partial<RollupRow>): RollupRow {
     bytesOut: 400n,
     bytesSaved: 600n,
     cachedRequests: 1,
+    country: 'US',
     format: 'webp',
     latencyGt1100: 0,
     latencyLe5: 0,
