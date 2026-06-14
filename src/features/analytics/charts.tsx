@@ -5,6 +5,9 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   XAxis,
@@ -24,6 +27,8 @@ import type {
   EdgeCachePoint,
   FormatSlice,
   LatencyBin,
+  LatencyTrendPoint,
+  StatusPoint,
   TimePoint,
 } from '@/shared/types'
 
@@ -310,7 +315,14 @@ export function FormatDonut({ data }: { data: FormatSlice[] }) {
             <span className="flex-1 truncate text-muted-foreground">
               {d.label}
             </span>
-            <span className="font-medium tabular-nums">{d.value}%</span>
+            <span className="shrink-0 tabular-nums">
+              <span className="font-medium">{d.value}%</span>
+              {d.saved > 0 ? (
+                <span className="ml-2 text-muted-foreground">
+                  {humanBytes(d.saved, 0)} saved
+                </span>
+              ) : null}
+            </span>
           </li>
         ))}
       </ul>
@@ -428,6 +440,180 @@ export function LatencyHistogram({ data }: { data: LatencyBin[] }) {
         <ChartTooltip content={<ChartTooltipContent hideLabel />} />
         <Bar dataKey="value" fill="var(--color-value)" radius={3} />
       </BarChart>
+    </ChartContainer>
+  )
+}
+
+// Per-bucket optimizer savings (area, left axis) with the running cumulative
+// total (line, right axis) so the window reads both "how much each hour saved"
+// and "how much has been saved so far".
+export function BandwidthSavedChart({ data }: { data: TimePoint[] }) {
+  const config = {
+    saved: { label: 'Saved', color: 'var(--chart-2)' },
+    cumulative: { label: 'Cumulative', color: 'var(--chart-1)' },
+  } satisfies ChartConfig
+  let running = 0
+  const chartData = data.map((d) => {
+    running += d.bandwidthSaved
+    return { label: d.label, saved: d.bandwidthSaved, cumulative: running }
+  })
+  if (running === 0) {
+    return (
+      <div className="flex h-56 items-center justify-center text-center text-muted-foreground text-sm">
+        No savings in this window yet.
+      </div>
+    )
+  }
+  return (
+    <ChartContainer className="aspect-auto h-56 w-full" config={config}>
+      <ComposedChart accessibilityLayer data={chartData}>
+        <CartesianGrid vertical={false} />
+        <XAxis
+          axisLine={false}
+          dataKey="label"
+          minTickGap={24}
+          tickLine={false}
+          tickMargin={8}
+        />
+        <YAxis
+          axisLine={false}
+          tickFormatter={(v: number) => humanBytes(v, 0)}
+          tickLine={false}
+          width={52}
+          yAxisId="left"
+        />
+        <YAxis
+          axisLine={false}
+          orientation="right"
+          tickFormatter={(v: number) => humanBytes(v, 0)}
+          tickLine={false}
+          width={52}
+          yAxisId="right"
+        />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        <Area
+          dataKey="saved"
+          fill="var(--color-saved)"
+          fillOpacity={0.18}
+          stroke="var(--color-saved)"
+          type="monotone"
+          yAxisId="left"
+        />
+        <Line
+          dataKey="cumulative"
+          dot={false}
+          stroke="var(--color-cumulative)"
+          strokeWidth={2}
+          type="monotone"
+          yAxisId="right"
+        />
+        <ChartLegend content={<ChartLegendContent />} />
+      </ComposedChart>
+    </ChartContainer>
+  )
+}
+
+// Requests over time stacked by HTTP status class. 2xx/3xx read as healthy
+// (green / muted) so any 4xx (warning) or 5xx (destructive) band stands out.
+export function StatusAreaChart({ data }: { data: StatusPoint[] }) {
+  const config = {
+    success: { label: '2xx', color: 'var(--success)' },
+    redirect: { label: '3xx', color: 'var(--muted-foreground)' },
+    clientError: { label: '4xx', color: 'var(--warning)' },
+    serverError: { label: '5xx', color: 'var(--destructive)' },
+  } satisfies ChartConfig
+  const keys = ['success', 'redirect', 'clientError', 'serverError']
+  const allZero = data.every(
+    (d) => d.success + d.redirect + d.clientError + d.serverError === 0,
+  )
+  if (allZero) {
+    return (
+      <div className="flex h-56 items-center justify-center text-center text-muted-foreground text-sm">
+        No requests in this window yet.
+      </div>
+    )
+  }
+  return (
+    <ChartContainer className="aspect-auto h-56 w-full" config={config}>
+      <AreaChart accessibilityLayer data={data}>
+        <CartesianGrid vertical={false} />
+        <XAxis
+          axisLine={false}
+          dataKey="label"
+          minTickGap={24}
+          tickLine={false}
+          tickMargin={8}
+        />
+        <YAxis
+          axisLine={false}
+          tickFormatter={(v: number) => compactNumber(v, 0)}
+          tickLine={false}
+          width={48}
+        />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        {keys.map((k) => (
+          <Area
+            dataKey={k}
+            fill={`var(--color-${k})`}
+            fillOpacity={0.2}
+            key={k}
+            stackId="a"
+            stroke={`var(--color-${k})`}
+            type="monotone"
+          />
+        ))}
+        <ChartLegend content={<ChartLegendContent />} />
+      </AreaChart>
+    </ChartContainer>
+  )
+}
+
+// p50/p95/p99 as lines over the window — the moving companion to the latency
+// histogram, so a creeping tail shows up before it dominates the total.
+export function LatencyTrendChart({ data }: { data: LatencyTrendPoint[] }) {
+  const config = {
+    p50: { label: 'p50', color: 'var(--muted-foreground)' },
+    p95: { label: 'p95', color: 'var(--warning)' },
+    p99: { label: 'p99', color: 'var(--destructive)' },
+  } satisfies ChartConfig
+  const keys = ['p50', 'p95', 'p99']
+  if (data.every((d) => d.p50 + d.p95 + d.p99 === 0)) {
+    return (
+      <div className="flex h-56 items-center justify-center text-center text-muted-foreground text-sm">
+        No requests in this window yet.
+      </div>
+    )
+  }
+  return (
+    <ChartContainer className="aspect-auto h-56 w-full" config={config}>
+      <LineChart accessibilityLayer data={data}>
+        <CartesianGrid vertical={false} />
+        <XAxis
+          axisLine={false}
+          dataKey="label"
+          minTickGap={24}
+          tickLine={false}
+          tickMargin={8}
+        />
+        <YAxis
+          axisLine={false}
+          tickFormatter={(v: number) => `${v}ms`}
+          tickLine={false}
+          width={52}
+        />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        {keys.map((k) => (
+          <Line
+            dataKey={k}
+            dot={false}
+            key={k}
+            stroke={`var(--color-${k})`}
+            strokeWidth={2}
+            type="monotone"
+          />
+        ))}
+        <ChartLegend content={<ChartLegendContent />} />
+      </LineChart>
     </ChartContainer>
   )
 }

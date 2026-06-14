@@ -7,7 +7,13 @@ import {
   type LatencyBucketCounts,
   latencyBucketField,
 } from '@/helpers/analytics/latency-buckets'
-import type { AnalyticsRange, LatencyBin, TimePoint } from '@/shared/types'
+import type {
+  AnalyticsRange,
+  LatencyBin,
+  LatencyTrendPoint,
+  StatusPoint,
+  TimePoint,
+} from '@/shared/types'
 import type { AnalyticsFilters } from './analytics'
 import type { NewRequestLog } from './request-logs'
 
@@ -26,6 +32,7 @@ export interface RollupRow {
   bytesOut: bigint
   bytesSaved: bigint
   cachedRequests: number
+  country: string
   format: string
   latencyGt1100: number
   latencyLe5: number
@@ -94,6 +101,7 @@ export async function updateAnalyticsRollupForLog(
   log: NewRequestLog & { ts: Date },
 ) {
   const sourceHost = log.sourceHost ?? ''
+  const country = log.country ?? ''
   const bucket = latencyIncrements(log.latencyMs)
   await tx.$executeRaw`
     INSERT INTO "AnalyticsRollupHourly" (
@@ -102,6 +110,7 @@ export async function updateAnalyticsRollupForLog(
       "orgId",
       "projectId",
       "sourceHost",
+      "country",
       "path",
       "format",
       "status",
@@ -134,6 +143,7 @@ export async function updateAnalyticsRollupForLog(
         ${log.orgId}::text,
         ${log.projectId}::text,
         ${sourceHost}::text,
+        ${country}::text,
         ${log.path}::text,
         ${log.format}::text,
         ${log.status}::text
@@ -142,6 +152,7 @@ export async function updateAnalyticsRollupForLog(
       ${log.orgId},
       ${log.projectId},
       ${sourceHost},
+      ${country},
       ${log.path},
       ${log.format},
       ${log.status},
@@ -236,6 +247,7 @@ export function listAnalyticsRollups(
       bytesOut: true,
       bytesSaved: true,
       cachedRequests: true,
+      country: true,
       format: true,
       latencyGt1100: true,
       latencyLe5: true,
@@ -306,35 +318,81 @@ export function summarizeRollups(rows: RollupRow[]) {
   }
 }
 
-export function rollupsToTimeSeries(rows: RollupRow[], range: AnalyticsRange) {
+// Shared bucketing for every over-time chart: n evenly-spaced buckets ending
+// now, a label per bucket, and the bucket a rollup row falls into (clamped to
+// the visible window).
+function rollupBucketing(range: AnalyticsRange) {
   const meta = rollupRangeMeta(range)
   const sinceMs = dayjs()
     .subtract(meta.n * meta.ms, 'millisecond')
     .valueOf()
-  const buckets: TimePoint[] = Array.from({ length: meta.n }, (_, i) => {
-    const start = dayjs(sinceMs)
-      .add(i * meta.ms, 'millisecond')
-      .toDate()
-    return {
-      label: meta.label(start, i),
-      requests: 0,
-      cached: 0,
-      optimized: 0,
-      bandwidthIn: 0,
-      bandwidthOut: 0,
-    }
-  })
+  return {
+    n: meta.n,
+    labelFor: (i: number) =>
+      meta.label(
+        dayjs(sinceMs)
+          .add(i * meta.ms, 'millisecond')
+          .toDate(),
+        i,
+      ),
+    indexFor: (bucketStart: Date) =>
+      Math.min(
+        meta.n - 1,
+        Math.max(0, Math.floor((bucketStart.getTime() - sinceMs) / meta.ms)),
+      ),
+  }
+}
+
+export function rollupsToTimeSeries(rows: RollupRow[], range: AnalyticsRange) {
+  const { n, labelFor, indexFor } = rollupBucketing(range)
+  const buckets: TimePoint[] = Array.from({ length: n }, (_, i) => ({
+    label: labelFor(i),
+    requests: 0,
+    cached: 0,
+    optimized: 0,
+    bandwidthIn: 0,
+    bandwidthOut: 0,
+    bandwidthSaved: 0,
+  }))
   for (const row of rows) {
-    const idx = Math.min(
-      meta.n - 1,
-      Math.max(0, Math.floor((row.bucketStart.getTime() - sinceMs) / meta.ms)),
-    )
-    const bucket = buckets[idx]
+    const bucket = buckets[indexFor(row.bucketStart)]
     bucket.requests += row.requests
     bucket.cached += row.cachedRequests
     bucket.optimized += row.optimizedRequests
     bucket.bandwidthIn += Number(row.bytesIn)
     bucket.bandwidthOut += Number(row.bytesOut)
+    bucket.bandwidthSaved += Number(row.bytesSaved)
+  }
+  return buckets
+}
+
+// Requests per time bucket split by HTTP status class. Drives the reliability
+// chart; 3xx (mostly 304 Not Modified) is kept distinct so it doesn't read as
+// an error next to genuine 4xx/5xx.
+export function rollupsToStatusSeries(
+  rows: RollupRow[],
+  range: AnalyticsRange,
+): StatusPoint[] {
+  const { n, labelFor, indexFor } = rollupBucketing(range)
+  const buckets: StatusPoint[] = Array.from({ length: n }, (_, i) => ({
+    label: labelFor(i),
+    success: 0,
+    redirect: 0,
+    clientError: 0,
+    serverError: 0,
+  }))
+  for (const row of rows) {
+    const bucket = buckets[indexFor(row.bucketStart)]
+    const cls = Math.floor(row.status / 100)
+    if (cls === 2) {
+      bucket.success += row.requests
+    } else if (cls === 3) {
+      bucket.redirect += row.requests
+    } else if (cls === 4) {
+      bucket.clientError += row.requests
+    } else if (cls === 5) {
+      bucket.serverError += row.requests
+    }
   }
   return buckets
 }
@@ -344,5 +402,28 @@ export function rollupsToLatencyBins(rows: RollupRow[]): LatencyBin[] {
     bucket: b.max,
     label: b.label,
     value: rows.reduce((sum, row) => sum + row[b.field], 0),
+  }))
+}
+
+// Approximate p50/p95/p99 per time bucket by summing each bucket's stored
+// latency histogram columns and reading the percentiles off them — the same
+// approximation the window total uses, just resolved over time.
+export function rollupsToLatencyTrend(
+  rows: RollupRow[],
+  range: AnalyticsRange,
+): LatencyTrendPoint[] {
+  const { n, labelFor, indexFor } = rollupBucketing(range)
+  const counts = Array.from({ length: n }, () => emptyLatencyBucketCounts())
+  for (const row of rows) {
+    const bucket = counts[indexFor(row.bucketStart)]
+    for (const b of LATENCY_BUCKETS) {
+      bucket[b.field] += row[b.field]
+    }
+  }
+  return counts.map((c, i) => ({
+    label: labelFor(i),
+    p50: approximateLatencyPercentile(c, 0.5),
+    p95: approximateLatencyPercentile(c, 0.95),
+    p99: approximateLatencyPercentile(c, 0.99),
   }))
 }
