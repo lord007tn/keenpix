@@ -71,8 +71,9 @@ function DashboardPage() {
   const { data, isPending, isFetching, isError } = useDashboardQuery(search)
   const isRefreshing = isFetching && !isPending
   // Cloudflare edge stats load off the critical path; the KPI edge split fills
-  // in afterward.
-  const { edge, edgeConfigured, edgePending, edgeError } = useEdgeStats()
+  // in afterward. Range-aware now that we persist edge history.
+  const { edge, edgeConfigured, edgeCovered, edgePending, edgeError } =
+    useEdgeStats(range)
 
   const header = (
     <PageHeader
@@ -138,8 +139,9 @@ function DashboardPage() {
     totalRequests: kpis.requests.value,
     hitRate: kpis.hitRate.value,
   }
-  const edgeReconcilableWindow = isAll && range === '24h'
-  const edgeGated = edgeConfigured && edge !== null && edgeReconcilableWindow
+  // Edge is zone-wide, so it only reconciles at all-projects scope and only over
+  // a window our captured history fully covers.
+  const edgeGated = edgeConfigured && edge !== null && isAll && edgeCovered
   const edgeNotConfigured = !(edgePending || edgeError || edgeConfigured)
   let edgeNote: string | undefined
   if (!(edgePending || edgeGated || edgeNotConfigured)) {
@@ -148,7 +150,7 @@ function DashboardPage() {
         "Couldn't load Cloudflare edge data — check the token in Settings → CDN cache."
     } else if (isAll) {
       edgeNote =
-        'Cloudflare edge is fixed to the last 24h — switch to 24h to see the source split.'
+        'Cloudflare edge history is still accumulating — older data for this range isn’t available yet.'
     } else {
       edgeNote =
         'Cloudflare edge is whole-zone only — switch to All projects to see the source split.'
