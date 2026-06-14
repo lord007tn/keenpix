@@ -1,15 +1,19 @@
 import dayjs from 'dayjs'
 import type { z } from 'zod'
-import { listRollupsBetween } from '@/data-access/analytics'
 import {
-  rollupRangeMeta,
-  rollupsToLatencyBins,
-  rollupsToTimeSeries,
-  summarizeRollups,
-} from '@/data-access/analytics-rollups'
+  aggregateRollupSummary,
+  groupRollupsByBucket,
+  groupRollupsByProject,
+} from '@/data-access/analytics-aggregates'
+import { rollupRangeMeta } from '@/data-access/analytics-rollups'
 import { listLogs } from '@/data-access/logs'
 import { listProjects } from '@/data-access/projects'
-import { projectStats } from '@/helpers/analytics/breakdowns'
+import {
+  latencyBinsFromAgg,
+  projectStats,
+  summarizeAgg,
+  timeSeriesFromBuckets,
+} from '@/helpers/analytics/rollup-shapers'
 import type { dashboardInputSchema } from '@/schemas/analytics'
 
 // The Overview is a scope-aware bird's-eye: KPI trends, the request chart, and
@@ -29,42 +33,50 @@ export async function getDashboard(
       ? input.project
       : undefined
 
-  // One read of the current window powers KPIs, the chart series, latency, and
-  // (all-projects) the per-project table; a second disjoint read of the
-  // immediately-previous window gives the KPI trend deltas. A single `now`
-  // pins both windows so the chart and KPI windows can't drift apart.
+  // One aggregate of the current window powers KPIs, the chart series, latency,
+  // and (all-projects) the per-project table; a second aggregate of the disjoint
+  // previous window gives the KPI trend deltas. A single `now` pins both windows.
   const { n, ms } = rollupRangeMeta(input.range)
   const windowMs = n * ms
   const now = dayjs()
   const curGte = now.subtract(windowMs, 'millisecond').toDate()
   const prevGte = now.subtract(2 * windowMs, 'millisecond').toDate()
-  const [current, previous, recentLogs] = await Promise.all([
-    listRollupsBetween(project, curGte),
-    listRollupsBetween(project, prevGte, curGte),
-    listLogs(5, project),
-  ])
+  const cur = { gte: curGte, projectId: project }
+  const prev = { gte: prevGte, lt: curGte, projectId: project }
 
-  const cur = summarizeRollups(current)
-  const prev = summarizeRollups(previous)
+  const [curSummary, curBuckets, prevSummary, recentLogs, projectGrouped] =
+    await Promise.all([
+      aggregateRollupSummary(cur),
+      groupRollupsByBucket(cur),
+      aggregateRollupSummary(prev),
+      listLogs(5, project),
+      project ? Promise.resolve(null) : groupRollupsByProject(cur),
+    ])
+
+  const curStats = summarizeAgg(curSummary)
+  const prevStats = summarizeAgg(prevSummary)
   const kpis = {
-    requests: { value: cur.totalRequests, prev: prev.totalRequests },
-    bandwidthSaved: { value: cur.bandwidthSaved, prev: prev.bandwidthSaved },
-    bandwidthIn: cur.bandwidthIn,
-    bandwidthOut: cur.bandwidthOut,
-    hitRate: { value: cur.hitRate, prev: prev.hitRate },
-    p95: { value: cur.p95, prev: prev.p95 },
+    requests: { value: curStats.totalRequests, prev: prevStats.totalRequests },
+    bandwidthSaved: {
+      value: curStats.bandwidthSaved,
+      prev: prevStats.bandwidthSaved,
+    },
+    bandwidthIn: curStats.bandwidthIn,
+    bandwidthOut: curStats.bandwidthOut,
+    hitRate: { value: curStats.hitRate, prev: prevStats.hitRate },
+    p95: { value: curStats.p95, prev: prevStats.p95 },
   }
 
   return {
     range: input.range,
     projects,
-    stats: project ? {} : projectStats(current),
+    stats: projectGrouped ? projectStats(projectGrouped) : {},
     kpis,
-    series: rollupsToTimeSeries(current, input.range),
+    series: timeSeriesFromBuckets(curBuckets, input.range),
     recentLogs,
     // Same per-request latency the Analytics page shows, so the shared Response
     // latency card reads identically on both.
-    latencySummary: cur,
-    latency: rollupsToLatencyBins(current),
+    latencySummary: curStats,
+    latency: latencyBinsFromAgg(curSummary),
   }
 }
