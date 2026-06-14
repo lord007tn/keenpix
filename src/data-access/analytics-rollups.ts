@@ -32,6 +32,7 @@ export interface RollupRow {
   bytesOut: bigint
   bytesSaved: bigint
   cachedRequests: number
+  country: string
   format: string
   latencyGt1100: number
   latencyLe5: number
@@ -100,6 +101,7 @@ export async function updateAnalyticsRollupForLog(
   log: NewRequestLog & { ts: Date },
 ) {
   const sourceHost = log.sourceHost ?? ''
+  const country = log.country ?? ''
   const bucket = latencyIncrements(log.latencyMs)
   await tx.$executeRaw`
     INSERT INTO "AnalyticsRollupHourly" (
@@ -108,6 +110,7 @@ export async function updateAnalyticsRollupForLog(
       "orgId",
       "projectId",
       "sourceHost",
+      "country",
       "path",
       "format",
       "status",
@@ -140,6 +143,7 @@ export async function updateAnalyticsRollupForLog(
         ${log.orgId}::text,
         ${log.projectId}::text,
         ${sourceHost}::text,
+        ${country}::text,
         ${log.path}::text,
         ${log.format}::text,
         ${log.status}::text
@@ -148,6 +152,7 @@ export async function updateAnalyticsRollupForLog(
       ${log.orgId},
       ${log.projectId},
       ${sourceHost},
+      ${country},
       ${log.path},
       ${log.format},
       ${log.status},
@@ -242,6 +247,7 @@ export function listAnalyticsRollups(
       bytesOut: true,
       bytesSaved: true,
       cachedRequests: true,
+      country: true,
       format: true,
       latencyGt1100: true,
       latencyLe5: true,

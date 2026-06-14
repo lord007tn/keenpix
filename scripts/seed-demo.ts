@@ -39,6 +39,21 @@ const PROJECTS = [
 
 const FORMATS = ['avif', 'webp', 'jpeg', 'png']
 const STATUSES = [200, 200, 200, 200, 304, 304, 404, 500]
+// Weighted so a couple of countries dominate, with one '' (Unknown) for the
+// edge-header-absent case the geo card has to handle.
+const COUNTRIES = [
+  'US',
+  'US',
+  'US',
+  'SA',
+  'SA',
+  'GB',
+  'DE',
+  'FR',
+  'IN',
+  'BR',
+  '',
+]
 const PATHS = [
   '/products/hero.jpg',
   '/products/gallery-1.jpg',
@@ -93,6 +108,7 @@ async function main() {
         ts: new Date(now - Math.floor(Math.random() * 7 * DAY)),
         path: pick(PATHS),
         sourceHost: pick(p.allowedOrigins),
+        country: pick(COUNTRIES),
         width: pick([320, 640, 800, 1200, 1600]),
         quality: pick([60, 70, 75, 82]),
         format: pick(FORMATS),
@@ -116,20 +132,22 @@ async function main() {
     })
     await prisma.$executeRawUnsafe(
       `INSERT INTO "AnalyticsRollupHourly" (
-         "id", "bucketStart", "orgId", "projectId", "sourceHost", "path",
-         "format", "status", "requests", "cachedRequests", "optimizedRequests",
-         "bytesIn", "bytesOut", "bytesSaved", "latencyMsSum", "latencyLe5", "latencyLe10",
-         "latencyLe20", "latencyLe35", "latencyLe55", "latencyLe80",
-         "latencyLe120", "latencyLe180", "latencyLe260", "latencyLe380",
-         "latencyLe540", "latencyLe800", "latencyLe1100", "latencyGt1100",
-         "updatedAt"
+         "id", "bucketStart", "orgId", "projectId", "sourceHost", "country",
+         "path", "format", "status", "requests", "cachedRequests",
+         "optimizedRequests", "bytesIn", "bytesOut", "bytesSaved", "latencyMsSum",
+         "latencyLe5", "latencyLe10", "latencyLe20", "latencyLe35", "latencyLe55",
+         "latencyLe80", "latencyLe120", "latencyLe180", "latencyLe260",
+         "latencyLe380", "latencyLe540", "latencyLe800", "latencyLe1100",
+         "latencyGt1100", "updatedAt"
        )
        SELECT
          md5(concat_ws('|',
            date_trunc('hour', "ts")::text, "orgId", "projectId",
-           coalesce("sourceHost", ''), "path", "format", "status"::text)),
+           coalesce("sourceHost", ''), coalesce("country", ''), "path", "format",
+           "status"::text)),
          date_trunc('hour', "ts"), "orgId", "projectId",
-         coalesce("sourceHost", ''), "path", "format", "status",
+         coalesce("sourceHost", ''), coalesce("country", ''), "path", "format",
+         "status",
          count(*)::int,
          count(*) FILTER (WHERE "cached")::int,
          count(*) FILTER (WHERE NOT "cached")::int,
@@ -156,7 +174,8 @@ async function main() {
        WHERE "projectId" = $1
        GROUP BY
          date_trunc('hour', "ts"), "orgId", "projectId",
-         coalesce("sourceHost", ''), "path", "format", "status"`,
+         coalesce("sourceHost", ''), coalesce("country", ''), "path", "format",
+         "status"`,
       p.id,
     )
     console.log(`  ${p.name}: ${logs.length} request logs + hourly rollups`)

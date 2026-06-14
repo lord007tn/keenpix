@@ -143,6 +143,14 @@ export interface ProjectStat {
   requests: number
 }
 
+// Requests (and bytes saved) by requester country for the geo breakdown. country
+// is an ISO code, or "Unknown" when the edge didn't report one.
+export interface GeoRow {
+  country: string
+  requests: number
+  saved: number
+}
+
 // One hourly bucket of edge traffic for the edge-cache time series.
 export interface EdgeCachePoint {
   // Bytes served from the Cloudflare edge in this hour.

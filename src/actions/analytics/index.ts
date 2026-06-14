@@ -5,6 +5,7 @@ import {
   getAvailableFilters,
   getDomainBreakdown,
   getFormatDistribution,
+  getGeoDistribution,
   getHostTraffic,
   getLatencyBins,
   getLatencyTrend,
@@ -42,6 +43,7 @@ export async function getAnalytics(
     latency,
     latencyTrend,
     statusSeries,
+    geo,
     available,
   ] = await Promise.all([
     getAnalyticsSummary(input.range, project, filters),
@@ -51,6 +53,7 @@ export async function getAnalytics(
     getLatencyBins(input.range, project, filters),
     getLatencyTrend(input.range, project, filters),
     getStatusSeries(input.range, project, filters),
+    getGeoDistribution(input.range, project, filters),
     getAvailableFilters(input.range, project),
   ])
   // Per-project domain rollup vs. org-wide project rollup: one or the other,
@@ -80,6 +83,7 @@ export async function getAnalytics(
     latency,
     latencyTrend,
     statusSeries,
+    geo,
     breakdown,
     domainBreakdown,
     available,

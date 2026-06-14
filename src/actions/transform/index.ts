@@ -13,6 +13,7 @@ import type { OutputFormat, TransformOptions } from '@/shared/transform'
 
 export interface OptimizeProjectImageInput {
   accept: string
+  country?: string
   projectId: string
   recordLog?: boolean
   searchParams: URLSearchParams
@@ -156,6 +157,7 @@ function startTransformRefresh(input: CachedTransformInput) {
 // origin, run fetch + sharp + cache, then record request analytics.
 export async function optimizeProjectImage({
   accept,
+  country = '',
   projectId,
   recordLog = true,
   searchParams,
@@ -229,6 +231,7 @@ export async function optimizeProjectImage({
         projectId: project.id,
         path: logPath(src),
         sourceHost: logHost(src),
+        country,
         width,
         quality,
         format,
