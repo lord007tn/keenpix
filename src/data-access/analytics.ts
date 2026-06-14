@@ -4,6 +4,7 @@ import type {
   AnalyticsRange,
   DomainBreakdownRow,
   ProjectStat,
+  TopImageRow,
 } from '@/shared/types'
 import {
   listAnalyticsRollups,
@@ -11,6 +12,7 @@ import {
   rollupRangeMeta,
   rollupSinceFor,
   rollupsToLatencyBins,
+  rollupsToStatusSeries,
   rollupsToTimeSeries,
   summarizeRollups,
 } from './analytics-rollups'
@@ -95,6 +97,7 @@ export async function getFormatDistribution(
     (format, groupedRows) => ({
       format,
       requests: groupedRows.reduce((sum, row) => sum + row.requests, 0),
+      saved: groupedRows.reduce((sum, row) => sum + Number(row.bytesSaved), 0),
     }),
   )
   const total = grouped.reduce((sum, row) => sum + row.requests, 0) || 1
@@ -102,6 +105,7 @@ export async function getFormatDistribution(
     .map((g) => ({
       label: g.format.toUpperCase(),
       value: Math.round((g.requests / total) * 1000) / 10,
+      saved: g.saved,
       color: FORMAT_COLORS[g.format] ?? 'var(--muted-foreground)',
     }))
     .sort((a, b) => b.value - a.value)
@@ -125,21 +129,33 @@ export async function getAvailableFilters(
   }
 }
 
+// Most-requested paths carrying both request count and delivered bytes, so the
+// card can rank by either. Capped wider than the 8 shown so re-sorting by bytes
+// still surfaces the real heavy hitters.
 export async function getTopImages(
   range: AnalyticsRange = '24h',
   projectId?: string,
   filters?: AnalyticsFilters,
-) {
+): Promise<TopImageRow[]> {
   return groupRollups(
     await rowsFor(range, projectId, filters),
     (row) => row.path,
     (path, groupedRows) => ({
       label: path,
-      value: groupedRows.reduce((sum, row) => sum + row.requests, 0),
+      requests: groupedRows.reduce((sum, row) => sum + row.requests, 0),
+      bytes: groupedRows.reduce((sum, row) => sum + Number(row.bytesOut), 0),
     }),
   )
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8)
+    .sort((a, b) => b.requests - a.requests)
+    .slice(0, 20)
+}
+
+export async function getStatusSeries(
+  range: AnalyticsRange,
+  projectId?: string,
+  filters?: AnalyticsFilters,
+) {
+  return rollupsToStatusSeries(await rowsFor(range, projectId, filters), range)
 }
 
 export async function getLatencyBins(

@@ -33,15 +33,37 @@ export function isAnalyticsRange(value: unknown): value is AnalyticsRange {
 export interface TimePoint {
   bandwidthIn: number
   bandwidthOut: number
+  bandwidthSaved: number
   cached: number
   label: string
   optimized: number
   requests: number
 }
 
+// One time bucket of requests split by HTTP status class, for the reliability
+// chart that surfaces 4xx/5xx spikes over the window.
+export interface StatusPoint {
+  clientError: number
+  label: string
+  redirect: number
+  serverError: number
+  success: number
+}
+
+// A most-requested path carrying both dimensions so the Top images card can
+// rank by request count or by delivered bytes without a refetch.
+export interface TopImageRow {
+  bytes: number
+  label: string
+  requests: number
+}
+
 export interface FormatSlice {
   color: string
   label: string
+  // Bytes the optimizer saved on this format over the window — surfaced in the
+  // donut legend as the per-format savings breakdown.
+  saved: number
   value: number
 }
 
