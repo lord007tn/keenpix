@@ -4,6 +4,7 @@ import { updateAnalyticsRollupForLog } from './analytics-rollups'
 export interface NewRequestLog {
   bytesIn: number
   bytesOut: number
+  bytesSaved: number
   cached: boolean
   country?: string
   format: string
@@ -33,6 +34,7 @@ export async function createRequestLog(log: NewRequestLog) {
         latencyMs: log.latencyMs,
         bytesIn: log.bytesIn,
         bytesOut: log.bytesOut,
+        bytesSaved: log.bytesSaved,
         region: log.region ?? null,
         country: log.country ?? null,
         sourceHost: log.sourceHost ?? null,

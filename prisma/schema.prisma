@@ -146,6 +146,9 @@ model RequestLog {
   latencyMs Float
   bytesIn   Int
   bytesOut  Int
+  // Bytes the optimizer trimmed off the origin original on this request
+  // (max(0, bytesIn - bytesOut); 0 for cache hits, which never fetch origin).
+  bytesSaved Int     @default(0)
   region    String?
   country   String?
   sourceHost String?
@@ -172,6 +175,7 @@ model AnalyticsRollupHourly {
   optimizedRequests Int      @default(0)
   bytesIn           BigInt   @default(0)
   bytesOut          BigInt   @default(0)
+  bytesSaved        BigInt   @default(0)
   latencyMsSum      Float    @default(0)
   latencyLe5        Int      @default(0)
   latencyLe10       Int      @default(0)

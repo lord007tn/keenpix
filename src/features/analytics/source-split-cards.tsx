@@ -39,11 +39,19 @@ function savedCard(
   delta?: number | null,
 ): SourceSplitCardProps {
   // Compression saving is purely an origin act — the edge offloads egress, it
-  // doesn't re-encode — so this never has an edge value, in any window.
+  // doesn't re-encode — so this never has an edge value, in any window. The sub
+  // surfaces how much smaller every delivery was than its origin original:
+  // saved / (saved + served).
+  const totalOriginal = summary.bandwidthSaved + summary.bandwidthOut
+  const savingsPct =
+    totalOriginal > 0 ? (summary.bandwidthSaved / totalOriginal) * 100 : 0
   return {
     label: 'Bandwidth saved',
     value: humanBytes(summary.bandwidthSaved, 1),
-    sub: 'compression · origin only',
+    sub:
+      savingsPct > 0
+        ? `${Math.round(savingsPct)}% smaller · compression`
+        : 'compression · origin only',
     delta,
     rows: [
       { source: 'none', label: 'Cloudflare edge', value: '—' },

@@ -162,6 +162,25 @@ describe('DiskCacheStore', () => {
     }
   })
 
+  it('round-trips the origin original size, surviving an index rebuild', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'keenpix-cache-'))
+    const data = Buffer.from('optimized-bytes')
+
+    try {
+      const first = new DiskCacheStore(dir, 1024)
+      await first.set('key', 'webp', data, 5000)
+      expect((await first.getEntry('key', 'webp'))?.originalBytes).toBe(5000)
+
+      // A fresh store rebuilds the index from disk; the size must survive.
+      const second = new DiskCacheStore(dir, 1024)
+      const entry = await second.getEntry('key', 'webp')
+      expect(entry?.data).toEqual(data)
+      expect(entry?.originalBytes).toBe(5000)
+    } finally {
+      await rm(dir, { force: true, recursive: true })
+    }
+  })
+
   it('evicts the least-recently-used entries when over the cap', async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'keenpix-cache-'))
     const data = Buffer.alloc(100, 1)

@@ -78,6 +78,7 @@ export function isLogFormat(value: unknown): value is LogFormat {
 export interface LogRow {
   bytesIn: number
   bytesOut: number
+  bytesSaved: number
   cached: boolean
   format: LogFormat
   id: string

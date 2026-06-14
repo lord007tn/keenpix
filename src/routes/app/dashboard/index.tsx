@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/empty'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { OperationsSummary } from '@/features/admin/operations-summary'
+import { ResponseLatencyCard } from '@/features/analytics/response-latency-card'
 import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { getDashboardFn } from '@/functions/dashboard'
@@ -60,8 +61,17 @@ export const Route = createFileRoute('/app/dashboard/')({
 })
 
 function DashboardPage() {
-  const { projects, stats, kpis, series, recentLogs, edge, edgeConfigured } =
-    Route.useLoaderData()
+  const {
+    projects,
+    stats,
+    kpis,
+    series,
+    recentLogs,
+    latencySummary,
+    latency,
+    edge,
+    edgeConfigured,
+  } = Route.useLoaderData()
   const { range } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
@@ -161,6 +171,8 @@ function DashboardPage() {
         note={edgeNote}
         summary={cardSummary}
       />
+
+      <ResponseLatencyCard bins={latency} summary={latencySummary} />
 
       <ChartAreaInteractive data={series} />
 
