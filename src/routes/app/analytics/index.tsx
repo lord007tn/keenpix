@@ -188,8 +188,9 @@ function AnalyticsPage() {
   const { data, isPending, isFetching, isError } = useAnalyticsQuery(search)
   const isRefreshing = isFetching && !isPending
   // Cloudflare edge stats load off the critical path; the edge cards/lenses
-  // fill in afterward.
-  const { edge, edgeConfigured, edgePending, edgeError } = useEdgeStats()
+  // fill in afterward. Range-aware now that we persist edge history.
+  const { edge, edgeConfigured, edgeCovered, edgePending, edgeError } =
+    useEdgeStats(range)
   const [view, setView] = useState<AreaView>('requests')
   const [lens, setLens] = useState<ChartLens>('funnel')
   const [topMetric, setTopMetric] = useState<'requests' | 'bytes'>('requests')
@@ -312,28 +313,28 @@ function AnalyticsPage() {
   }
 
   const hasDomainFilter = Boolean(domain && domain.length > 0)
-  // The window where edge + origin reconcile into a source split: 24h, whole
-  // zone, unfiltered (the default landing view).
-  const edgeReconcilableWindow = isAll && !hasDomainFilter && range === '24h'
-  // Edge and origin numbers only reconcile in the one window where both layers
-  // measure the same traffic. Outside it the cards collapse to origin-only.
-  const edgeGated = edgeConfigured && edge !== null && edgeReconcilableWindow
+  // Edge is zone-wide /img/*, so it only reconciles with origin at all-projects
+  // scope with no domain filter — and only over a window our captured history
+  // fully covers (edgeCovered).
+  const edgeScopeOk = isAll && !hasDomainFilter
+  const edgeGated =
+    edgeConfigured && edge !== null && edgeScopeOk && edgeCovered
   // Not wired up at all gets a real connect CTA; the other reasons are just a
-  // muted "switch window/scope" hint. Both wait for the edge query to resolve
-  // so neither flashes while it is still pending — and a failed fetch is "couldn't
-  // load" (handled by the !edge note below), never a false "not configured".
+  // muted hint. Both wait for the edge query to resolve so neither flashes while
+  // it is still pending — and a failed fetch is "couldn't load" (handled by the
+  // !edge note below), never a false "not configured".
   const edgeNotConfigured = !(edgePending || edgeError || edgeConfigured)
   let edgeNote: string | undefined
   if (!(edgePending || edgeGated || edgeNotConfigured)) {
     if (edgeError || !edge) {
       edgeNote =
         "Couldn't load Cloudflare edge data — check the token in Settings → CDN cache."
-    } else if (!isAll || hasDomainFilter) {
+    } else if (edgeScopeOk) {
       edgeNote =
-        'Cloudflare edge is whole-zone only — switch to All projects with no filters to see the source split.'
+        'Cloudflare edge history is still accumulating — older data for this range isn’t available yet.'
     } else {
       edgeNote =
-        'Cloudflare edge is fixed to the last 24h — switch to 24h to see the source split.'
+        'Cloudflare edge is whole-zone only — switch to All projects with no filters to see the source split.'
     }
   }
 
@@ -347,11 +348,11 @@ function AnalyticsPage() {
   const activeLens: ChartLens = lensAvailable[lens] ? lens : 'funnel'
   let lensDescription: string
   if (activeLens === 'compare') {
-    lensDescription = 'Cloudflare edge vs keenpix, overlaid · last 24h'
+    lensDescription = `Cloudflare edge vs keenpix, overlaid · last ${range}`
   } else if (activeLens === 'edge') {
-    lensDescription = `Cloudflare edge, zone-wide · last ${edge?.windowHours ?? 24}h`
+    lensDescription = `Cloudflare edge, zone-wide · last ${range}`
   } else if (edgeGated) {
-    lensDescription = 'Cloudflare edge → keenpix cache → live · last 24h'
+    lensDescription = `Cloudflare edge → keenpix cache → live · last ${range}`
   } else {
     lensDescription = `keenpix origin · last ${range}`
   }

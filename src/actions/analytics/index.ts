@@ -1,4 +1,5 @@
 import type { z } from 'zod'
+import type { EffectiveCloudflareSettings } from '@/data-access/admin/cloudflare'
 import { getEffectiveCloudflareSettings } from '@/data-access/admin/cloudflare'
 import {
   aggregateRollupSummary,
@@ -13,10 +14,16 @@ import {
 } from '@/data-access/analytics-aggregates'
 import { rollupSinceFor } from '@/data-access/analytics-rollups'
 import {
+  edgeCoverageStart,
+  listEdgeRollups,
+  upsertEdgeRollups,
+} from '@/data-access/edge-rollups'
+import {
   getProject,
   listProjects,
   resolveProjectId,
 } from '@/data-access/projects'
+import { reconstructEdgeStats } from '@/helpers/analytics/edge-rollups'
 import {
   domainBreakdown,
   formatDistribution,
@@ -29,7 +36,7 @@ import {
   summarizeAgg,
   timeSeriesFromBuckets,
 } from '@/helpers/analytics/rollup-shapers'
-import { fetchEdgeCacheStats } from '@/lib/cloudflare/analytics'
+import { fetchEdgeAdaptiveHourly } from '@/lib/cloudflare/analytics'
 import type { analyticsInputSchema } from '@/schemas/analytics'
 import type {
   AllowedHostStat,
@@ -105,23 +112,69 @@ export async function getAnalytics(
   }
 }
 
-// Cloudflare edge cache (zone-wide, last 24h). Split out of the page payload so
-// a transient Cloudflare round-trip never blocks the analytics/overview render —
-// the client fetches it separately and fills the edge cards in afterward. Only
-// queried when wired up in Settings → CDN cache; a transient error reports
-// "couldn't load" (edgeConfigured true, edge null) rather than blanking a card.
-export async function getEdgeCacheStats(): Promise<{
+// Cloudflare's adaptive dataset is capped at ~24h, so we capture its hourly
+// /img/* groups and persist them (EdgeRollupHourly) to build history we can read
+// over any range. Capture is opportunistic + throttled per zone+host so a busy
+// dashboard keeps it fresh without hammering the API.
+const CAPTURE_THROTTLE_MS = 15 * 60 * 1000
+const lastCaptureAt = new Map<string, number>()
+
+export async function captureEdgeRollups(
+  settings: EffectiveCloudflareSettings,
+) {
+  const host = settings.host ?? ''
+  const key = `${settings.zoneId}:${host}`
+  const now = Date.now()
+  const last = lastCaptureAt.get(key)
+  if (last && now - last < CAPTURE_THROTTLE_MS) {
+    return
+  }
+  lastCaptureAt.set(key, now)
+  const groups = await fetchEdgeAdaptiveHourly(settings)
+  await upsertEdgeRollups(settings.zoneId, host, groups)
+}
+
+// Edge cache stats for the selected range, reconstructed from our persisted
+// rollups. Split out of the page payload so a transient Cloudflare round-trip
+// never blocks the render — the client fetches it separately. `edgeCovered` is
+// false when the window reaches before our captured history (so the UI can show
+// the edge data without reconciling misleading totals).
+export async function getEdgeCacheStats(range: AnalyticsRange): Promise<{
   edge: EdgeCacheStats | null
   edgeConfigured: boolean
+  edgeCovered: boolean
 }> {
   const cloudflare = await getEffectiveCloudflareSettings()
   if (!cloudflare) {
-    return { edge: null, edgeConfigured: false }
+    return { edge: null, edgeConfigured: false, edgeCovered: false }
   }
+  const host = cloudflare.host ?? ''
   try {
-    return { edge: await fetchEdgeCacheStats(cloudflare), edgeConfigured: true }
+    const existing = await edgeCoverageStart(cloudflare.zoneId, host)
+    if (existing) {
+      // Refresh in the background (throttled); don't block the read.
+      captureEdgeRollups(cloudflare).catch(() => {
+        // Best-effort — the read still serves what we already have.
+      })
+    } else {
+      // No history yet — capture once synchronously so there's data to show.
+      await captureEdgeRollups(cloudflare)
+    }
+    const gte = rollupSinceFor(range)
+    const [rows, coverageStart] = await Promise.all([
+      listEdgeRollups(cloudflare.zoneId, host, gte),
+      existing
+        ? Promise.resolve(existing)
+        : edgeCoverageStart(cloudflare.zoneId, host),
+    ])
+    return {
+      edge: rows.length > 0 ? reconstructEdgeStats(rows, range) : null,
+      edgeConfigured: true,
+      edgeCovered:
+        coverageStart !== null && coverageStart.getTime() <= gte.getTime(),
+    }
   } catch {
-    return { edge: null, edgeConfigured: true }
+    return { edge: null, edgeConfigured: true, edgeCovered: false }
   }
 }
 
