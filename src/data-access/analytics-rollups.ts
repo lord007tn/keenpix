@@ -10,6 +10,7 @@ import {
 import type {
   AnalyticsRange,
   LatencyBin,
+  LatencyTrendPoint,
   StatusPoint,
   TimePoint,
 } from '@/shared/types'
@@ -395,5 +396,28 @@ export function rollupsToLatencyBins(rows: RollupRow[]): LatencyBin[] {
     bucket: b.max,
     label: b.label,
     value: rows.reduce((sum, row) => sum + row[b.field], 0),
+  }))
+}
+
+// Approximate p50/p95/p99 per time bucket by summing each bucket's stored
+// latency histogram columns and reading the percentiles off them — the same
+// approximation the window total uses, just resolved over time.
+export function rollupsToLatencyTrend(
+  rows: RollupRow[],
+  range: AnalyticsRange,
+): LatencyTrendPoint[] {
+  const { n, labelFor, indexFor } = rollupBucketing(range)
+  const counts = Array.from({ length: n }, () => emptyLatencyBucketCounts())
+  for (const row of rows) {
+    const bucket = counts[indexFor(row.bucketStart)]
+    for (const b of LATENCY_BUCKETS) {
+      bucket[b.field] += row[b.field]
+    }
+  }
+  return counts.map((c, i) => ({
+    label: labelFor(i),
+    p50: approximateLatencyPercentile(c, 0.5),
+    p95: approximateLatencyPercentile(c, 0.95),
+    p99: approximateLatencyPercentile(c, 0.99),
   }))
 }
