@@ -1,13 +1,17 @@
 import type { z } from 'zod'
 import { getEffectiveCloudflareSettings } from '@/data-access/admin/cloudflare'
-import { listRollupsForRange } from '@/data-access/analytics'
 import {
-  rollupsToLatencyBins,
-  rollupsToLatencyTrend,
-  rollupsToStatusSeries,
-  rollupsToTimeSeries,
-  summarizeRollups,
-} from '@/data-access/analytics-rollups'
+  aggregateRollupSummary,
+  groupRollupsByBucket,
+  groupRollupsByBucketStatus,
+  groupRollupsByCountry,
+  groupRollupsByFormat,
+  groupRollupsByHost,
+  groupRollupsByPath,
+  groupRollupsByProject,
+  listAvailableFilters,
+} from '@/data-access/analytics-aggregates'
+import { rollupSinceFor } from '@/data-access/analytics-rollups'
 import {
   getProject,
   listProjects,
@@ -15,15 +19,16 @@ import {
 } from '@/data-access/projects'
 import {
   domainBreakdown,
-  hostTraffic,
-  projectBreakdown,
-} from '@/helpers/analytics/breakdowns'
-import {
-  availableFilters,
   formatDistribution,
   geoDistribution,
-  topImages,
-} from '@/helpers/analytics/distributions'
+  hostTraffic,
+  latencyBinsFromAgg,
+  latencyTrendFromBuckets,
+  projectBreakdown,
+  statusSeriesFromBuckets,
+  summarizeAgg,
+  timeSeriesFromBuckets,
+} from '@/helpers/analytics/rollup-shapers'
 import { fetchEdgeCacheStats } from '@/lib/cloudflare/analytics'
 import type { analyticsInputSchema } from '@/schemas/analytics'
 import type {
@@ -32,6 +37,10 @@ import type {
   EdgeCacheStats,
 } from '@/shared/types'
 
+// Every metric is a Postgres GROUP BY / aggregate, so the database returns a few
+// pre-summed rows instead of the full per-(hour × project × host × country ×
+// path × format × status) fan-out. Pure shapers in analytics-aggregates turn the
+// summed rows into the page's series/distributions/breakdowns.
 export async function getAnalytics(
   input: z.output<typeof analyticsInputSchema>,
 ) {
@@ -44,36 +53,55 @@ export async function getAnalytics(
     format: input.format ?? [],
     status: input.status ?? [],
   }
-  // Two reads cover the whole page: the filtered window powers every metric
-  // card; one unfiltered read of the same window serves both the filter menus
-  // (which must always offer every value present, ignoring the active filters)
-  // and the project/domain breakdown. Project names load in parallel and are
-  // only used by the org-wide breakdown.
-  const [filtered, unfiltered, projects] = await Promise.all([
-    listRollupsForRange(input.range, project, filters),
-    listRollupsForRange(input.range, project),
+  const gte = rollupSinceFor(input.range)
+  // The filtered window powers every metric card; the unfiltered window feeds
+  // the filter menus (which must offer every value present) and the breakdown.
+  const filtered = { gte, projectId: project, filters }
+  const unfiltered = { gte, projectId: project }
+  const [
+    summaryAgg,
+    buckets,
+    statusBuckets,
+    formats,
+    topImages,
+    geoRows,
+    available,
+    projects,
+    projectGrouped,
+    hostGrouped,
+  ] = await Promise.all([
+    aggregateRollupSummary(filtered),
+    groupRollupsByBucket(filtered),
+    groupRollupsByBucketStatus(filtered),
+    groupRollupsByFormat(filtered),
+    groupRollupsByPath(filtered),
+    groupRollupsByCountry(filtered),
+    listAvailableFilters(unfiltered),
     project ? Promise.resolve([]) : listProjects(),
+    project ? Promise.resolve(null) : groupRollupsByProject(unfiltered),
+    project ? groupRollupsByHost(unfiltered) : Promise.resolve(null),
   ])
-
-  // Per-project domain rollup vs. org-wide project rollup: one or the other,
-  // matching which scope the page is showing.
-  const breakdown = project
-    ? []
-    : projectBreakdown(unfiltered, new Map(projects.map((p) => [p.id, p.name])))
 
   return {
     range: input.range,
-    summary: summarizeRollups(filtered),
-    series: rollupsToTimeSeries(filtered, input.range),
-    formats: formatDistribution(filtered),
-    topImages: topImages(filtered),
-    latency: rollupsToLatencyBins(filtered),
-    latencyTrend: rollupsToLatencyTrend(filtered, input.range),
-    statusSeries: rollupsToStatusSeries(filtered, input.range),
-    geo: geoDistribution(filtered),
-    breakdown,
-    domainBreakdown: project ? domainBreakdown(unfiltered) : null,
-    available: availableFilters(unfiltered),
+    summary: summarizeAgg(summaryAgg),
+    series: timeSeriesFromBuckets(buckets, input.range),
+    formats: formatDistribution(formats),
+    topImages,
+    latency: latencyBinsFromAgg(summaryAgg),
+    latencyTrend: latencyTrendFromBuckets(buckets, input.range),
+    statusSeries: statusSeriesFromBuckets(statusBuckets, input.range),
+    geo: geoDistribution(geoRows),
+    // Per-project domain rollup vs. org-wide project rollup: one or the other,
+    // matching which scope the page is showing.
+    breakdown: projectGrouped
+      ? projectBreakdown(
+          projectGrouped,
+          new Map(projects.map((p) => [p.id, p.name])),
+        )
+      : [],
+    domainBreakdown: hostGrouped ? domainBreakdown(hostGrouped) : null,
+    available,
   }
 }
 
@@ -104,11 +132,11 @@ export async function getAllowedHostStats(
   projectId: string,
   range: AnalyticsRange,
 ): Promise<AllowedHostStat[]> {
-  const [project, rows] = await Promise.all([
+  const [project, hostGrouped] = await Promise.all([
     getProject(projectId),
-    listRollupsForRange(range, projectId),
+    groupRollupsByHost({ gte: rollupSinceFor(range), projectId }),
   ])
-  const traffic = hostTraffic(rows)
+  const traffic = hostTraffic(hostGrouped)
   const allowed = project?.allowedOrigins ?? []
   const allowedSet = new Set(allowed)
   const rowsOut: AllowedHostStat[] = allowed.map((host) => {
