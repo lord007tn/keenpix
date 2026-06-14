@@ -11,8 +11,8 @@ export const LATENCY_BUCKETS = [
   { field: 'latencyLe380', label: '380', max: 380 },
   { field: 'latencyLe540', label: '540', max: 540 },
   { field: 'latencyLe800', label: '800', max: 800 },
-  { field: 'latencyLe1100', label: '>1s', max: 1100 },
-  { field: 'latencyGt1100', label: '>1s', max: 1600 },
+  { field: 'latencyLe1100', label: '1.1s', max: 1100 },
+  { field: 'latencyGt1100', label: '>1.1s', max: 1600 },
 ] as const
 const MAX_LATENCY_BUCKET = 1600
 

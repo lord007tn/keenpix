@@ -29,12 +29,11 @@ import {
   type AreaView,
   EdgeCacheAreaChart,
   FormatDonut,
-  LatencyHistogram,
   SourceCompareChart,
 } from '@/features/analytics/charts'
 import { DomainBreakdown } from '@/features/analytics/domain-breakdown'
-import { PercentileStat } from '@/features/analytics/percentile-stat'
 import { ProjectBreakdown } from '@/features/analytics/project-breakdown'
+import { ResponseLatencyCard } from '@/features/analytics/response-latency-card'
 import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import { getAnalyticsFn } from '@/functions/analytics'
 import { compactNumber } from '@/shared/format'
@@ -449,47 +448,7 @@ function AnalyticsPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Response latency</CardTitle>
-              <CardDescription>Per-request distribution</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <div className="flex flex-wrap gap-x-6 gap-y-3">
-                <PercentileStat
-                  label="avg"
-                  tone="text-muted-foreground"
-                  value={String(data.summary.avg)}
-                />
-                <PercentileStat
-                  label="p50"
-                  tone="text-muted-foreground"
-                  value={String(data.summary.p50)}
-                />
-                <PercentileStat
-                  label="p75"
-                  tone=""
-                  value={String(data.summary.p75)}
-                />
-                <PercentileStat
-                  label="p90"
-                  tone="text-warning-text"
-                  value={String(data.summary.p90)}
-                />
-                <PercentileStat
-                  label="p95"
-                  tone="text-warning-text"
-                  value={String(data.summary.p95)}
-                />
-                <PercentileStat
-                  label="p99"
-                  tone="text-destructive-text"
-                  value={String(data.summary.p99)}
-                />
-              </div>
-              <LatencyHistogram data={data.latency} />
-            </CardContent>
-          </Card>
+          <ResponseLatencyCard bins={data.latency} summary={data.summary} />
         </div>
 
         <Card>

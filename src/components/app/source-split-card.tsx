@@ -61,7 +61,7 @@ export function SourceSplitCard({
 }: SourceSplitCardProps) {
   return (
     <Card className="gap-0">
-      <CardContent className="flex flex-col gap-2">
+      <CardContent className="flex flex-1 flex-col gap-2">
         <div className="flex items-start justify-between gap-2">
           <span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
             {label}
@@ -81,39 +81,44 @@ export function SourceSplitCard({
         {sub ? (
           <span className="text-muted-foreground text-xs">{sub}</span>
         ) : null}
-        {bar && bar.length > 0 ? (
-          <div className="mt-1 flex h-1.5 gap-0.5">
-            {bar.map((s) => (
-              <div
-                className="rounded-[2px]"
-                key={s.source}
-                style={{
-                  width: `${s.pct}%`,
-                  background: SOURCE_COLOR[s.source],
-                }}
-              />
+        {/* Bar + legend are pinned to the card bottom (mt-auto) so an optional
+            sub line on one card never knocks its bar/legend out of row alignment
+            with its siblings — the cards stretch to equal height in the grid. */}
+        <div className="mt-auto flex flex-col gap-2 pt-3">
+          {bar && bar.length > 0 ? (
+            <div className="flex h-1.5 gap-0.5">
+              {bar.map((s) => (
+                <div
+                  className="rounded-[2px]"
+                  key={s.source}
+                  style={{
+                    width: `${s.pct}%`,
+                    background: SOURCE_COLOR[s.source],
+                  }}
+                />
+              ))}
+            </div>
+          ) : null}
+          <div className="flex flex-col gap-1 border-t pt-2">
+            {rows.map((r) => (
+              <div className="flex items-center gap-2 text-xs" key={r.label}>
+                <span
+                  className="size-2 shrink-0 rounded-[2px]"
+                  style={{ background: SOURCE_COLOR[r.source] }}
+                />
+                <span className="flex-1 text-muted-foreground">{r.label}</span>
+                <span
+                  className={
+                    r.source === 'none'
+                      ? 'text-muted-foreground tabular-nums'
+                      : 'font-medium tabular-nums'
+                  }
+                >
+                  {r.value}
+                </span>
+              </div>
             ))}
           </div>
-        ) : null}
-        <div className="mt-1 flex flex-col gap-1 border-t pt-2">
-          {rows.map((r) => (
-            <div className="flex items-center gap-2 text-xs" key={r.label}>
-              <span
-                className="size-2 shrink-0 rounded-[2px]"
-                style={{ background: SOURCE_COLOR[r.source] }}
-              />
-              <span className="flex-1 text-muted-foreground">{r.label}</span>
-              <span
-                className={
-                  r.source === 'none'
-                    ? 'text-muted-foreground tabular-nums'
-                    : 'font-medium tabular-nums'
-                }
-              >
-                {r.value}
-              </span>
-            </div>
-          ))}
         </div>
       </CardContent>
     </Card>

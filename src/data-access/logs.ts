@@ -10,7 +10,8 @@ export async function listLogs(limit = 36, projectId?: string) {
   return rows.map((r) => ({
     id: r.id,
     projectId: r.projectId,
-    ts: r.ts.toISOString().replace('T', ' ').slice(5, 19),
+    // Full ISO timestamp; the UI formats it (absolute + relative) with dayjs.
+    ts: r.ts.toISOString(),
     path: r.path,
     sourceHost: r.sourceHost ?? null,
     w: r.width ?? 0,
@@ -21,5 +22,6 @@ export async function listLogs(limit = 36, projectId?: string) {
     latency: r.latencyMs,
     bytesIn: r.bytesIn,
     bytesOut: r.bytesOut,
+    bytesSaved: r.bytesSaved,
   }))
 }
