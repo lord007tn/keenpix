@@ -12,6 +12,7 @@ import {
   rollupRangeMeta,
   rollupSinceFor,
   rollupsToLatencyBins,
+  rollupsToLatencyTrend,
   rollupsToStatusSeries,
   rollupsToTimeSeries,
   summarizeRollups,
@@ -164,6 +165,14 @@ export async function getLatencyBins(
   filters?: AnalyticsFilters,
 ) {
   return rollupsToLatencyBins(await rowsFor(range, projectId, filters))
+}
+
+export async function getLatencyTrend(
+  range: AnalyticsRange,
+  projectId?: string,
+  filters?: AnalyticsFilters,
+) {
+  return rollupsToLatencyTrend(await rowsFor(range, projectId, filters), range)
 }
 
 export async function getProjectStats(range: AnalyticsRange = '24h') {

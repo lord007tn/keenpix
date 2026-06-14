@@ -30,6 +30,7 @@ import {
   BandwidthSavedChart,
   EdgeCacheAreaChart,
   FormatDonut,
+  LatencyTrendChart,
   SourceCompareChart,
   StatusAreaChart,
 } from '@/features/analytics/charts'
@@ -467,6 +468,18 @@ function AnalyticsPage() {
 
           <ResponseLatencyCard bins={data.latency} summary={data.summary} />
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Latency over time</CardTitle>
+            <CardDescription>
+              p50 / p95 / p99 per bucket · last {range}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LatencyTrendChart data={data.latencyTrend} />
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">

@@ -7,6 +7,7 @@ import {
   getFormatDistribution,
   getHostTraffic,
   getLatencyBins,
+  getLatencyTrend,
   getProjectBreakdown,
   getStatusSeries,
   getTimeSeries,
@@ -39,6 +40,7 @@ export async function getAnalytics(
     formats,
     topImages,
     latency,
+    latencyTrend,
     statusSeries,
     available,
   ] = await Promise.all([
@@ -47,6 +49,7 @@ export async function getAnalytics(
     getFormatDistribution(input.range, project, filters),
     getTopImages(input.range, project, filters),
     getLatencyBins(input.range, project, filters),
+    getLatencyTrend(input.range, project, filters),
     getStatusSeries(input.range, project, filters),
     getAvailableFilters(input.range, project),
   ])
@@ -75,6 +78,7 @@ export async function getAnalytics(
     formats,
     topImages,
     latency,
+    latencyTrend,
     statusSeries,
     breakdown,
     domainBreakdown,
