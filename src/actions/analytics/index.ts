@@ -5,9 +5,12 @@ import {
   getAvailableFilters,
   getDomainBreakdown,
   getFormatDistribution,
+  getGeoDistribution,
   getHostTraffic,
   getLatencyBins,
+  getLatencyTrend,
   getProjectBreakdown,
+  getStatusSeries,
   getTimeSeries,
   getTopImages,
 } from '@/data-access/analytics'
@@ -32,15 +35,27 @@ export async function getAnalytics(
     format: input.format ?? [],
     status: input.status ?? [],
   }
-  const [summary, series, formats, topImages, latency, available] =
-    await Promise.all([
-      getAnalyticsSummary(input.range, project, filters),
-      getTimeSeries(input.range, project, filters),
-      getFormatDistribution(input.range, project, filters),
-      getTopImages(input.range, project, filters),
-      getLatencyBins(input.range, project, filters),
-      getAvailableFilters(input.range, project),
-    ])
+  const [
+    summary,
+    series,
+    formats,
+    topImages,
+    latency,
+    latencyTrend,
+    statusSeries,
+    geo,
+    available,
+  ] = await Promise.all([
+    getAnalyticsSummary(input.range, project, filters),
+    getTimeSeries(input.range, project, filters),
+    getFormatDistribution(input.range, project, filters),
+    getTopImages(input.range, project, filters),
+    getLatencyBins(input.range, project, filters),
+    getLatencyTrend(input.range, project, filters),
+    getStatusSeries(input.range, project, filters),
+    getGeoDistribution(input.range, project, filters),
+    getAvailableFilters(input.range, project),
+  ])
   // Per-project domain rollup vs. org-wide project rollup: one or the other,
   // matching which scope the page is showing.
   const breakdown = project ? [] : await getProjectBreakdown(input.range)
@@ -66,6 +81,9 @@ export async function getAnalytics(
     formats,
     topImages,
     latency,
+    latencyTrend,
+    statusSeries,
+    geo,
     breakdown,
     domainBreakdown,
     available,
