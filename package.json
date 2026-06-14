@@ -1,6 +1,6 @@
 {
   "name": "keenpix",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Open-source, self-hosted image optimization with a drop-in transform API, sharp, Postgres, disk caching, and analytics.",
   "private": true,
   "type": "module",
