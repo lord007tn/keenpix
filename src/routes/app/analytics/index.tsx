@@ -37,7 +37,9 @@ import {
 import { DomainBreakdown } from '@/features/analytics/domain-breakdown'
 import { ProjectBreakdown } from '@/features/analytics/project-breakdown'
 import { ResponseLatencyCard } from '@/features/analytics/response-latency-card'
+import { AnalyticsPageSkeleton } from '@/features/analytics/skeletons'
 import { SourceSplitCards } from '@/features/analytics/source-split-cards'
+import { useEdgeStats } from '@/features/analytics/use-edge-stats'
 import { getAnalyticsFn } from '@/functions/analytics'
 import { compactNumber, humanBytes } from '@/shared/format'
 import { appPageHead } from '@/shared/seo'
@@ -94,6 +96,10 @@ export const Route = createFileRoute('/app/analytics/')({
         status: deps.status,
       },
     }),
+  // Show the per-section skeleton quickly while the loader runs (navigations,
+  // range/filter changes) instead of holding a frozen screen.
+  pendingComponent: AnalyticsPageSkeleton,
+  pendingMs: 100,
   component: AnalyticsPage,
 })
 
@@ -195,6 +201,9 @@ function AnalyticsPage() {
   const { range, format, status, domain } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
+  // Cloudflare edge stats load off the loader's critical path so a slow remote
+  // call never blocks the page; the edge cards/lenses fill in afterward.
+  const { edge, edgeConfigured, edgePending, edgeError } = useEdgeStats()
   const [view, setView] = useState<AreaView>('requests')
   const [lens, setLens] = useState<ChartLens>('funnel')
   const [topMetric, setTopMetric] = useState<'requests' | 'bytes'>('requests')
@@ -236,21 +245,22 @@ function AnalyticsPage() {
   }, [data.available, format, status, domain, isAll])
 
   const hasDomainFilter = Boolean(domain && domain.length > 0)
+  // The window where edge + origin reconcile into a source split: 24h, whole
+  // zone, unfiltered. In that window the KPI cards change shape once edge lands,
+  // so we hold a skeleton there until the edge query resolves.
+  const edgeReconcilableWindow = isAll && !hasDomainFilter && range === '24h'
+  const loadingEdge = edgePending && edgeReconcilableWindow
   // Edge and origin numbers only reconcile in the one window where both layers
-  // measure the same traffic: 24h, whole zone, unfiltered. Outside it the cards
-  // collapse to origin-only with a dash for the edge.
-  const edgeGated =
-    data.edgeConfigured &&
-    data.edge !== null &&
-    isAll &&
-    !hasDomainFilter &&
-    range === '24h'
+  // measure the same traffic. Outside it the cards collapse to origin-only.
+  const edgeGated = edgeConfigured && edge !== null && edgeReconcilableWindow
   // Not wired up at all gets a real connect CTA; the other reasons are just a
-  // muted "switch window/scope" hint.
-  const edgeNotConfigured = !data.edgeConfigured
+  // muted "switch window/scope" hint. Both wait for the edge query to resolve
+  // so neither flashes while it is still pending — and a failed fetch is "couldn't
+  // load" (handled by the !edge note below), never a false "not configured".
+  const edgeNotConfigured = !(edgePending || edgeError || edgeConfigured)
   let edgeNote: string | undefined
-  if (!(edgeGated || edgeNotConfigured)) {
-    if (!data.edge) {
+  if (!(edgePending || edgeGated || edgeNotConfigured)) {
+    if (edgeError || !edge) {
       edgeNote =
         "Couldn't load Cloudflare edge data — check the token in Settings → CDN cache."
     } else if (!isAll || hasDomainFilter) {
@@ -267,35 +277,31 @@ function AnalyticsPage() {
   const lensAvailable: Record<ChartLens, boolean> = {
     funnel: true,
     compare: edgeGated,
-    edge: data.edgeConfigured && data.edge !== null,
+    edge: edgeConfigured && edge !== null,
   }
   const activeLens: ChartLens = lensAvailable[lens] ? lens : 'funnel'
   let lensDescription: string
   if (activeLens === 'compare') {
     lensDescription = 'Cloudflare edge vs keenpix, overlaid · last 24h'
   } else if (activeLens === 'edge') {
-    lensDescription = `Cloudflare edge, zone-wide · last ${data.edge?.windowHours ?? 24}h`
+    lensDescription = `Cloudflare edge, zone-wide · last ${edge?.windowHours ?? 24}h`
   } else if (edgeGated) {
     lensDescription = 'Cloudflare edge → keenpix cache → live · last 24h'
   } else {
     lensDescription = `keenpix origin · last ${range}`
   }
   let chartEl: ReactNode
-  if (activeLens === 'compare' && data.edge) {
+  if (activeLens === 'compare' && edge) {
     chartEl = (
-      <SourceCompareChart
-        data={data.series}
-        edge={data.edge.series}
-        view={view}
-      />
+      <SourceCompareChart data={data.series} edge={edge.series} view={view} />
     )
-  } else if (activeLens === 'edge' && data.edge) {
-    chartEl = <EdgeCacheAreaChart data={data.edge.series} view={view} />
+  } else if (activeLens === 'edge' && edge) {
+    chartEl = <EdgeCacheAreaChart data={edge.series} view={view} />
   } else {
     chartEl = (
       <AnalyticsAreaChart
         data={data.series}
-        edge={data.edge?.series}
+        edge={edge?.series}
         funnel={edgeGated}
         view={view}
       />
@@ -361,8 +367,9 @@ function AnalyticsPage() {
         <h2 className="font-medium text-foreground text-sm">This window</h2>
         <SourceSplitCards
           connect={edgeNotConfigured}
-          edge={data.edge}
+          edge={edge}
           gated={edgeGated}
+          loadingEdge={loadingEdge}
           note={edgeNote}
           summary={data.summary}
         />
