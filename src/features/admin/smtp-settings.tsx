@@ -165,8 +165,14 @@ function TestEmailDialog() {
 
 export function SmtpSettingsPanel() {
   const [meta, setMeta] = useState<SmtpFormMeta>(EMPTY_META)
+  // Drive defaultValues from state, not a fixed EMPTY. useForm re-applies its
+  // options.defaultValues to the store after every render (when the form is
+  // untouched), so calling form.reset() to load server data gets reverted on
+  // the next render. Updating these defaults instead populates the fields and
+  // keeps them populated.
+  const [formDefaults, setFormDefaults] = useState<SmtpForm>(EMPTY)
   const smtpForm = useForm({
-    defaultValues: EMPTY,
+    defaultValues: formDefaults,
     validators: {
       onChange: smtpSettingsSchema,
       onSubmit: smtpSettingsSchema,
@@ -174,10 +180,11 @@ export function SmtpSettingsPanel() {
     onSubmit: async ({ value }) => {
       try {
         const saved = await updateSmtpSettingsFn({ data: value })
-        smtpForm.reset({
-          ...value,
-          password: '',
-        })
+        // New clean baseline (password write-only): sync the defaults and reset
+        // to clear the dirty/touched state.
+        const next = { ...value, password: '' }
+        setFormDefaults(next)
+        smtpForm.reset(next)
         setMeta((current) => ({
           ...current,
           passwordSet: saved.passwordSet,
@@ -193,7 +200,7 @@ export function SmtpSettingsPanel() {
   const load = useCallback(async () => {
     try {
       const data = await getAdminWorkspaceFn()
-      smtpForm.reset({
+      setFormDefaults({
         enabled: data.smtp.enabled,
         fromEmail: data.smtp.fromEmail,
         fromName: data.smtp.fromName,
@@ -210,7 +217,7 @@ export function SmtpSettingsPanel() {
     } catch (e) {
       toast.error(getErrorMessage(e, 'Could not load SMTP settings'))
     }
-  }, [smtpForm])
+  }, [])
 
   useEffect(() => {
     load()
