@@ -27,16 +27,19 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   AnalyticsAreaChart,
   type AreaView,
+  BandwidthSavedChart,
   EdgeCacheAreaChart,
   FormatDonut,
+  LatencyTrendChart,
   SourceCompareChart,
+  StatusAreaChart,
 } from '@/features/analytics/charts'
 import { DomainBreakdown } from '@/features/analytics/domain-breakdown'
 import { ProjectBreakdown } from '@/features/analytics/project-breakdown'
 import { ResponseLatencyCard } from '@/features/analytics/response-latency-card'
 import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import { getAnalyticsFn } from '@/functions/analytics'
-import { compactNumber } from '@/shared/format'
+import { compactNumber, humanBytes } from '@/shared/format'
 import { appPageHead } from '@/shared/seo'
 import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
@@ -194,6 +197,21 @@ function AnalyticsPage() {
   const { currentProject, isAll, setProject } = useProject()
   const [view, setView] = useState<AreaView>('requests')
   const [lens, setLens] = useState<ChartLens>('funnel')
+  const [topMetric, setTopMetric] = useState<'requests' | 'bytes'>('requests')
+  // Top images carry both dimensions; rank and format by the selected metric.
+  const topImages = useMemo(
+    () =>
+      [...data.topImages]
+        .sort((a, b) =>
+          topMetric === 'bytes' ? b.bytes - a.bytes : b.requests - a.requests,
+        )
+        .slice(0, 8)
+        .map((r) => ({
+          label: r.label,
+          value: topMetric === 'bytes' ? r.bytes : r.requests,
+        })),
+    [data.topImages, topMetric],
+  )
   const fields = useMemo(() => {
     const base = buildFields(data.available, format ?? [], status ?? [])
     if (isAll) {
@@ -453,19 +471,111 @@ function AnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Top images</CardTitle>
+            <CardTitle>Latency over time</CardTitle>
             <CardDescription>
-              Most-requested paths, last {range}
+              p50 / p95 / p99 per bucket · last {range}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <BarList
-              barColor="var(--chart-1)"
-              data={data.topImages}
-              valueFormat={(v) => `${compactNumber(v)} req`}
-            />
+            <LatencyTrendChart data={data.latencyTrend} />
           </CardContent>
         </Card>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-col gap-1">
+                <CardTitle>Top images</CardTitle>
+                <CardDescription>
+                  {topMetric === 'bytes'
+                    ? 'By delivered bytes'
+                    : 'By request count'}{' '}
+                  · last {range}
+                </CardDescription>
+              </div>
+              <ToggleGroup
+                onValueChange={(v: string[]) => {
+                  if (v[0] === 'requests' || v[0] === 'bytes') {
+                    setTopMetric(v[0])
+                  }
+                }}
+                size="sm"
+                value={[topMetric]}
+                variant="outline"
+              >
+                <ToggleGroupItem value="requests">Requests</ToggleGroupItem>
+                <ToggleGroupItem value="bytes">Bytes</ToggleGroupItem>
+              </ToggleGroup>
+            </CardHeader>
+            <CardContent>
+              <BarList
+                barColor="var(--chart-1)"
+                data={topImages}
+                valueFormat={(v) =>
+                  topMetric === 'bytes'
+                    ? humanBytes(v, 1)
+                    : `${compactNumber(v)} req`
+                }
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Traffic by country</CardTitle>
+              <CardDescription>
+                Requests by requester country · last {range}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {data.geo.length > 0 ? (
+                <BarList
+                  barColor="var(--chart-3)"
+                  data={data.geo.map((g) => ({
+                    label: g.country,
+                    value: g.requests,
+                  }))}
+                  valueFormat={(v) => `${compactNumber(v)} req`}
+                />
+              ) : (
+                <p className="py-6 text-center text-muted-foreground text-sm">
+                  No requests in this window yet.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-medium text-foreground text-sm">
+          Savings &amp; reliability
+        </h2>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Bandwidth saved over time</CardTitle>
+              <CardDescription>
+                Per bucket and cumulative · last {range}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BandwidthSavedChart data={data.series} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Requests by status</CardTitle>
+              <CardDescription>
+                2xx / 3xx / 4xx / 5xx · last {range}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <StatusAreaChart data={data.statusSeries} />
+            </CardContent>
+          </Card>
+        </div>
       </section>
     </div>
   )
