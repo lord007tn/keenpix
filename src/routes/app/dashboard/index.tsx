@@ -17,7 +17,9 @@ import {
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { OperationsSummary } from '@/features/admin/operations-summary'
 import { ResponseLatencyCard } from '@/features/analytics/response-latency-card'
+import { DashboardPageSkeleton } from '@/features/analytics/skeletons'
 import { SourceSplitCards } from '@/features/analytics/source-split-cards'
+import { useEdgeStats } from '@/features/analytics/use-edge-stats'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { getDashboardFn } from '@/functions/dashboard'
 import { appPageHead } from '@/shared/seo'
@@ -57,26 +59,24 @@ export const Route = createFileRoute('/app/dashboard/')({
   }),
   loader: ({ deps }) =>
     getDashboardFn({ data: { range: deps.range, project: deps.project } }),
+  // Show the per-section skeleton quickly while the loader runs instead of
+  // holding a frozen screen on navigations and range changes.
+  pendingComponent: DashboardPageSkeleton,
+  pendingMs: 100,
   component: DashboardPage,
 })
 
 function DashboardPage() {
-  const {
-    projects,
-    stats,
-    kpis,
-    series,
-    recentLogs,
-    latencySummary,
-    latency,
-    edge,
-    edgeConfigured,
-  } = Route.useLoaderData()
+  const { projects, stats, kpis, series, recentLogs, latencySummary, latency } =
+    Route.useLoaderData()
   const { range } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
   const { user } = useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
+  // Cloudflare edge stats load off the loader's critical path so a slow remote
+  // call never blocks the overview; the KPI edge split fills in afterward.
+  const { edge, edgeConfigured, edgePending, edgeError } = useEdgeStats()
 
   // The KPI row is the same source-split cards as the analytics page, fed from
   // the dashboard's KPI payload, so the two pages always show identical numbers.
@@ -88,11 +88,16 @@ function DashboardPage() {
     totalRequests: kpis.requests.value,
     hitRate: kpis.hitRate.value,
   }
-  const edgeGated = edgeConfigured && edge !== null && isAll && range === '24h'
-  const edgeNotConfigured = !edgeConfigured
+  const edgeReconcilableWindow = isAll && range === '24h'
+  const loadingEdge = edgePending && edgeReconcilableWindow
+  const edgeGated = edgeConfigured && edge !== null && edgeReconcilableWindow
+  // Both the connect CTA and the note wait for the edge query to resolve so
+  // neither flashes while it is still pending — and a failed fetch is "couldn't
+  // load" (handled by the !edge note below), never a false "not configured".
+  const edgeNotConfigured = !(edgePending || edgeError || edgeConfigured)
   let edgeNote: string | undefined
-  if (!(edgeGated || edgeNotConfigured)) {
-    if (!edge) {
+  if (!(edgePending || edgeGated || edgeNotConfigured)) {
+    if (edgeError || !edge) {
       edgeNote =
         "Couldn't load Cloudflare edge data — check the token in Settings → CDN cache."
     } else if (isAll) {
@@ -168,6 +173,7 @@ function DashboardPage() {
         deltas={deltas}
         edge={edge}
         gated={edgeGated}
+        loadingEdge={loadingEdge}
         note={edgeNote}
         summary={cardSummary}
       />

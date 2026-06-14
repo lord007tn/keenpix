@@ -1,5 +1,9 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getAllowedHostStats, getAnalytics } from '@/actions/analytics'
+import {
+  getAllowedHostStats,
+  getAnalytics,
+  getEdgeCacheStats,
+} from '@/actions/analytics'
 import { authMiddleware } from '@/lib/auth/guards'
 import {
   allowedHostStatsSchema,
@@ -12,6 +16,13 @@ export const getAnalyticsFn = createServerFn({ method: 'GET' })
   .inputValidator(analyticsInputSchema)
   .middleware([authMiddleware])
   .handler(({ data }) => getAnalytics(data))
+
+// Cloudflare edge stats are zone-wide and fixed to the last 24h, so they take no
+// range/project input. Fetched on its own off the page's critical path so the
+// remote Cloudflare call never blocks the analytics/overview render.
+export const getEdgeCacheStatsFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(() => getEdgeCacheStats())
 
 export const getAllowedHostStatsFn = createServerFn({ method: 'GET' })
   .inputValidator(allowedHostStatsSchema)
