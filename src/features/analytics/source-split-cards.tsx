@@ -7,6 +7,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { compactNumber, humanBytes } from '@/shared/format'
 import type { AnalyticsSummary, EdgeCacheStats } from '@/shared/types'
+import { KpiRowSkeleton } from './skeletons'
 
 // The origin KPI row, re-expressed as "total, then by source". Cloudflare edge
 // and keenpix origin are two stages of one request funnel, so the only honest
@@ -203,6 +204,7 @@ export function SourceSplitCards({
   deltas,
   edge,
   gated,
+  loadingEdge,
   note,
   summary,
 }: {
@@ -210,9 +212,16 @@ export function SourceSplitCards({
   deltas?: CardDeltas
   edge: EdgeCacheStats | null
   gated: boolean
+  // True only while the edge query is still pending *and* this window would
+  // reconcile edge + origin (so the cards will change shape once it lands).
+  // Hold a skeleton rather than flashing origin-only → split.
+  loadingEdge?: boolean
   note?: string
   summary: CardSummary
 }) {
+  if (loadingEdge) {
+    return <KpiRowSkeleton />
+  }
   const cards =
     gated && edge
       ? reconciledCards(edge, summary, deltas)

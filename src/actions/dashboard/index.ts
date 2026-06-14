@@ -1,23 +1,23 @@
+import dayjs from 'dayjs'
 import type { z } from 'zod'
-import { getEffectiveCloudflareSettings } from '@/data-access/admin/cloudflare'
+import { listRollupsBetween } from '@/data-access/analytics'
 import {
-  getAnalyticsSummary,
-  getDashboardKpis,
-  getLatencyBins,
-  getProjectStats,
-  getTimeSeries,
-} from '@/data-access/analytics'
+  rollupRangeMeta,
+  rollupsToLatencyBins,
+  rollupsToTimeSeries,
+  summarizeRollups,
+} from '@/data-access/analytics-rollups'
 import { listLogs } from '@/data-access/logs'
 import { listProjects } from '@/data-access/projects'
-import { fetchEdgeCacheStats } from '@/lib/cloudflare/analytics'
+import { projectStats } from '@/helpers/analytics/breakdowns'
 import type { dashboardInputSchema } from '@/schemas/analytics'
-import type { EdgeCacheStats } from '@/shared/types'
 
 // The Overview is a scope-aware bird's-eye: KPI trends, the request chart, and
 // recent activity follow the selected project; the project table and operations
 // (global-only) are dropped to "all projects". The KPI cards are the same
-// source-split cards as the analytics page (so the two pages never disagree) —
-// edge data is included here whenever Cloudflare is configured.
+// source-split cards as the analytics page (so the two pages never disagree).
+// Cloudflare edge data is fetched separately by the client so a slow round-trip
+// never blocks this render.
 export async function getDashboard(
   input: z.output<typeof dashboardInputSchema>,
 ) {
@@ -28,41 +28,43 @@ export async function getDashboard(
     input.project && projects.some((p) => p.id === input.project)
       ? input.project
       : undefined
-  const [kpis, series, recentLogs, latencySummary, latency] = await Promise.all(
-    [
-      getDashboardKpis(input.range, project),
-      getTimeSeries(input.range, project),
-      listLogs(5, project),
-      // Same per-request latency the Analytics page shows, so the shared Response
-      // latency card reads identically on both.
-      getAnalyticsSummary(input.range, project),
-      getLatencyBins(input.range, project),
-    ],
-  )
-  const stats = project ? {} : await getProjectStats(input.range)
 
-  // Cloudflare edge cache (zone-wide, last 24h). Same source as the analytics
-  // page; a transient error must never blank the overview.
-  const cloudflare = await getEffectiveCloudflareSettings()
-  let edge: EdgeCacheStats | null = null
-  if (cloudflare) {
-    try {
-      edge = await fetchEdgeCacheStats(cloudflare)
-    } catch {
-      edge = null
-    }
+  // One read of the current window powers KPIs, the chart series, latency, and
+  // (all-projects) the per-project table; a second disjoint read of the
+  // immediately-previous window gives the KPI trend deltas. A single `now`
+  // pins both windows so the chart and KPI windows can't drift apart.
+  const { n, ms } = rollupRangeMeta(input.range)
+  const windowMs = n * ms
+  const now = dayjs()
+  const curGte = now.subtract(windowMs, 'millisecond').toDate()
+  const prevGte = now.subtract(2 * windowMs, 'millisecond').toDate()
+  const [current, previous, recentLogs] = await Promise.all([
+    listRollupsBetween(project, curGte),
+    listRollupsBetween(project, prevGte, curGte),
+    listLogs(5, project),
+  ])
+
+  const cur = summarizeRollups(current)
+  const prev = summarizeRollups(previous)
+  const kpis = {
+    requests: { value: cur.totalRequests, prev: prev.totalRequests },
+    bandwidthSaved: { value: cur.bandwidthSaved, prev: prev.bandwidthSaved },
+    bandwidthIn: cur.bandwidthIn,
+    bandwidthOut: cur.bandwidthOut,
+    hitRate: { value: cur.hitRate, prev: prev.hitRate },
+    p95: { value: cur.p95, prev: prev.p95 },
   }
 
   return {
     range: input.range,
     projects,
-    stats,
+    stats: project ? {} : projectStats(current),
     kpis,
-    series,
+    series: rollupsToTimeSeries(current, input.range),
     recentLogs,
-    latencySummary,
-    latency,
-    edge,
-    edgeConfigured: Boolean(cloudflare),
+    // Same per-request latency the Analytics page shows, so the shared Response
+    // latency card reads identically on both.
+    latencySummary: cur,
+    latency: rollupsToLatencyBins(current),
   }
 }
