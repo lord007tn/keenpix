@@ -30,9 +30,10 @@ import { DEFAULT_ORG } from './constants'
 
 const MB = 1024 * 1024
 
-// Sample the container's CPU/RAM every 10s into the in-process ring/peak state,
-// persisting one aggregated row per hour. Keep ~90 days of hourly history.
-const RESOURCE_SAMPLE_MS = 10_000
+// Sample the container's CPU/RAM every 5s into the in-process ring/peak state so
+// the operations page reads near-realtime, persisting one aggregated row per
+// hour. Keep ~90 days of hourly history.
+const RESOURCE_SAMPLE_MS = 5000
 const RESOURCE_RETENTION_DAYS = 90
 
 declare global {
