@@ -47,6 +47,9 @@ type CacheMaintenanceTarget = 'all' | 'disk' | 'memory'
 // turns the panel badge red and raises the operational-attention alert.
 const PRESSURE_PERCENT = 85
 
+// Near-realtime auto-refresh cadence, matched to the server's resource sampler.
+const REFRESH_MS = 5000
+
 function percent(value: number, max: number) {
   if (max <= 0) {
     return 0
@@ -94,18 +97,20 @@ function Panel({
   )
 }
 
-// Minimal area sparkline for the live ring buffer — no axes or tooltip, just the
-// recent shape of CPU% or RAM bytes.
+// Minimal area sparkline for the live ring buffer — no axes; hovering reveals the
+// formatted value (CPU % or RAM bytes) at that point.
 function Sparkline({
   data,
   dataKey,
   color,
   label,
+  format,
 }: {
   data: object[]
   dataKey: string
   color: string
   label: string
+  format: (value: number) => string
 }) {
   return (
     <ChartContainer
@@ -113,6 +118,27 @@ function Sparkline({
       config={{ [dataKey]: { color, label } }}
     >
       <AreaChart data={data} margin={{ bottom: 0, left: 0, right: 0, top: 4 }}>
+        <ChartTooltip
+          content={
+            <ChartTooltipContent
+              formatter={(value) => (
+                <div className="flex flex-1 items-center justify-between gap-3 leading-none">
+                  <span className="flex items-center gap-1.5 text-muted-foreground">
+                    <span
+                      className="size-2 shrink-0 rounded-[2px]"
+                      style={{ background: color }}
+                    />
+                    {label}
+                  </span>
+                  <span className="font-medium font-mono tabular-nums">
+                    {format(Number(value))}
+                  </span>
+                </div>
+              )}
+              hideLabel
+            />
+          }
+        />
         <Area
           dataKey={dataKey}
           dot={false}
@@ -228,7 +254,26 @@ function ResourceTrends({
               tickLine={false}
               width={34}
             />
-            <ChartTooltip content={<ChartTooltipContent />} />
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  formatter={(value, name, item) => (
+                    <div className="flex flex-1 items-center justify-between gap-3 leading-none">
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        <span
+                          className="size-2 shrink-0 rounded-[2px]"
+                          style={{ background: item.color }}
+                        />
+                        {config[name as 'cpu' | 'mem']?.label ?? name}
+                      </span>
+                      <span className="font-medium font-mono tabular-nums">
+                        {Math.round(Number(value))}%
+                      </span>
+                    </div>
+                  )}
+                />
+              }
+            />
             <Line
               dataKey="cpu"
               dot={false}
@@ -263,17 +308,25 @@ export function OperationsHealth() {
   const [maintenanceTarget, setMaintenanceTarget] =
     useState<CacheMaintenanceTarget | null>(null)
 
-  const refresh = useCallback(async () => {
-    setPending(true)
+  // `silent` skips the pending flag so the background auto-refresh never flickers
+  // the manual button or its spinner.
+  const refresh = useCallback(async (silent = false) => {
+    if (!silent) {
+      setPending(true)
+    }
     try {
       setHealth(await getOperationsHealthFn())
     } finally {
-      setPending(false)
+      if (!silent) {
+        setPending(false)
+      }
     }
   }, [])
 
   useEffect(() => {
     refresh()
+    const id = setInterval(() => refresh(true), REFRESH_MS)
+    return () => clearInterval(id)
   }, [refresh])
 
   const diskUsed = health
@@ -376,7 +429,7 @@ export function OperationsHealth() {
         </div>
         <Button
           disabled={pending}
-          onClick={refresh}
+          onClick={() => refresh()}
           size="sm"
           variant="outline"
         >
@@ -427,7 +480,8 @@ export function OperationsHealth() {
               color="var(--chart-1)"
               data={series}
               dataKey="cpu"
-              label="CPU %"
+              format={(v) => `${v}%`}
+              label="CPU"
             />
           ) : null}
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -458,6 +512,7 @@ export function OperationsHealth() {
               color="var(--chart-2)"
               data={series}
               dataKey="mem"
+              format={(v) => humanBytes(v)}
               label="RAM"
             />
           ) : null}
