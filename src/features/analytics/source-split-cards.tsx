@@ -64,7 +64,7 @@ function savedCard(
   }
 }
 
-function reconciledCards(
+export function reconciledCards(
   edge: EdgeCacheStats,
   summary: CardSummary,
   deltas?: CardDeltas,
@@ -73,17 +73,17 @@ function reconciledCards(
   const edgeBytesPct = ratio(edge.bytesFromEdge, deliveredTotal)
   const reached = edge.requests - edge.cachedRequests
   const edgeReqPct = ratio(edge.cachedRequests, edge.requests)
-  // End-to-end hit rate: served at the edge OR from keenpix disk, over all
-  // client requests. Disk hits come from the same 24h whole-zone origin window.
-  const originDiskHits = Math.round(
-    (summary.totalRequests * summary.hitRate) / 100,
-  )
-  const endToEnd = ratio(edge.cachedRequests + originDiskHits, edge.requests)
-  const diskContribution = ratio(originDiskHits, edge.requests)
   // Split what reached keenpix into disk-served vs freshly optimized, using the
   // origin's own disk hit-rate, so the three sum to every client request.
   const diskReached = Math.round((reached * summary.hitRate) / 100)
   const liveReached = reached - diskReached
+  // End-to-end hit rate: served at the edge OR from keenpix disk, over all client
+  // requests. Disk hits are counted against what actually reached the origin
+  // (reached × origin hit-rate), not keenpix's own request total — the two are
+  // measured by different systems and can diverge enough to push the rate past
+  // 100%. Bounded here because diskReached <= reached = requests - cached.
+  const endToEnd = ratio(edge.cachedRequests + diskReached, edge.requests)
+  const diskContribution = ratio(diskReached, edge.requests)
   return [
     {
       label: 'Bandwidth delivered',
