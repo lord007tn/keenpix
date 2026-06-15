@@ -6,8 +6,15 @@ icon: ChartArea
 
 Analytics is built in, not bolted on. Every request to `/img/*` writes a log row
 (timestamp, project, source host, path, width, format, status, cache hit/miss,
-latency, bytes in/out) and updates an hourly Postgres rollup. Live Logs read the
-raw rows; dashboard analytics read the rollups.
+latency, bytes in/out) and increments an hourly Postgres rollup. Live Logs read the
+raw rows; dashboard analytics aggregate the rollups in Postgres, so even a 90-day
+range returns a handful of pre-summed rows and stays fast.
+
+The Overview and Analytics pages serve the last view instantly and revalidate in the
+background (stale-while-revalidate): changing the range or scope keeps the previous
+numbers on screen with a small _Refreshing…_ indicator while fresh data loads, and a
+skeleton shows only on the very first load. Both default to a 24h range, so origin
+figures line up with the edge data described below.
 
 ## What you get
 
@@ -15,12 +22,21 @@ raw rows; dashboard analytics read the rollups.
   a real trend versus the previous window.
 - **Requests over time** — cache hits vs live-optimized, with a range toggle (24h–90d).
 - **Format distribution** — how much traffic each output format receives.
-- **Response latency** — a p50/p95/p99 breakdown and a histogram.
-- **Top images** — the most-requested paths.
+- **Response latency** — a p50/p75/p90/p95/p99 breakdown and a histogram.
+- **Latency over time** — p50/p95/p99 per time bucket, so you can spot slow windows.
+- **Top images** — the heaviest paths, rankable by request count or delivered bytes.
+- **Traffic by country** — requests grouped by requester country (from the edge `CF-IPCountry`
+  header).
+- **Requests by status** — 2xx / 3xx / 4xx / 5xx over time, so 304s read as cache, not errors.
+- **Bandwidth saved over time** — per-bucket and cumulative optimizer savings.
+- **Per-project / per-domain breakdown** — an org-wide project table at All-projects scope, or
+  a per-source-domain table when one project is selected.
 - **Live logs** — every request, newest first, with faceted filters (format, status,
   cache, and source domain when a single project is selected).
 - **Optional Cloudflare edge analytics** — edge hit-rate, edge requests, bytes served
-  from Cloudflare, and hourly edge hit/miss split for `/img/*`.
+  from Cloudflare, and an hourly edge hit/miss split for `/img/*`, shown as
+  source-split cards (Cloudflare edge vs Keenpix origin). Edge is persisted by Keenpix,
+  so it reconciles across any range — 24h, 7d, 30d, 90d — not just a fixed 24h window.
 
 ## Scope: all projects or one
 
@@ -29,7 +45,9 @@ totals plus a per-project breakdown; pick a single project to scope every chart,
 logs, and the KPIs to it.
 
 <Callout type="info">
-  Origin-shield analytics are computed from Postgres rollups, with raw logs kept for
-  live/debug views. Cloudflare edge analytics are pulled separately from Cloudflare's
-  GraphQL Analytics API because edge hits never reach the Keenpix server.
+  Origin-shield analytics are aggregated from the hourly Postgres rollups, with raw logs
+  kept for live/debug views. Edge hits are served before the origin and never reach the
+  Keenpix server, so edge analytics are pulled separately from Cloudflare's adaptive
+  Analytics API — and persisted by Keenpix so they survive Cloudflare's 24h window and
+  build up history for wider ranges over time.
 </Callout>
