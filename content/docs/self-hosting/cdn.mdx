@@ -43,10 +43,13 @@ eligible for edge cache.
 
 ## Measuring Cloudflare cache
 
-Keenpix analytics only include requests that reach the Keenpix origin. A Cloudflare
-edge `HIT` is served before the app runs, so it will not appear in the Keenpix request
-log. Treat Keenpix cache hit-rate as the origin-shield hit-rate for Cloudflare misses,
-not the total end-user cache hit-rate.
+Keenpix origin analytics only include requests that reach the Keenpix origin. A
+Cloudflare edge `HIT` is served before the app runs, so it never appears in the
+Keenpix request log or origin rollups. Treat the origin hit-rate as the
+origin-shield hit-rate for Cloudflare misses, not the total end-user cache
+hit-rate. To see the edge side, connect the built-in edge analytics below — Keenpix
+pulls the Cloudflare numbers and persists them so they line up next to the
+origin-shield figures.
 
 For the total edge picture, use Cloudflare **Cache Analytics** filtered to the Keenpix
 image hostname and `/img/` path. Review cache status, top miss URLs, and data transfer
@@ -55,27 +58,58 @@ and identify URLs that fragment the edge cache.
 
 ### Built-in edge analytics
 
-Keenpix can pull these figures for you and show source-split cards and hourly
-Cloudflare edge charts on Overview and `/app/analytics`, next to the
-origin-shield figures. Go to **Settings → CDN cache** and add a Cloudflare API
-token scoped to **Analytics → Read** plus your **Zone ID** (optionally a hostname
-to narrow `/img/*` traffic). Keenpix queries the Cloudflare GraphQL Analytics API
-(`httpRequestsAdaptiveGroups`) for edge hit-rate, edge requests, bytes served from
-the edge, and the hit/miss split per hour, caching the result for a few minutes so
-the dashboard stays off the network on every load. The token is stored encrypted
-at rest; you can also set it via the `CLOUDFLARE_*`
-[environment variables](/docs/self-hosting/configuration#cloudflare-edge-analytics).
-Use **Test connection** to confirm the token and zone before saving.
+Keenpix can pull the real Cloudflare edge figures for you and show **source-split
+cards** (Cloudflare edge vs Keenpix origin) and an hourly edge hit/miss chart on
+Overview and `/app/analytics`, next to the origin-shield numbers. The cards cover
+edge hit-rate, edge requests, and bytes served from the edge.
 
-Edge analytics always covers the **last 24 hours**: the adaptive dataset is
-capped at a one-day window on non-enterprise Cloudflare plans, so the edge cards
-report a fixed 24h window regardless of the dashboard's range selector.
+To connect it, go to **Settings → CDN cache** and add a Cloudflare API token scoped
+to **Analytics → Read**, your 32-character hex **Zone ID**, and optionally a
+**hostname**. The token is stored **encrypted at rest** — the key is derived from
+`BETTER_AUTH_SECRET`, so the encrypted value is per-instance and cannot be copied
+between instances; re-enter the token on each instance. Use **Test connection** to
+validate the token and zone before saving. You can also configure these via the
+`CLOUDFLARE_*`
+[environment variables](/docs/self-hosting/configuration#cloudflare-edge-analytics);
+database-managed settings (token + zone + enabled) take precedence over the env vars.
 
 The optional **hostname** narrows the figures to one subdomain. A Cloudflare zone
 covers the whole domain and the query only filters by path (`/img/*`), so if your
 zone also serves other sites that use a `/img` path, set the hostname (e.g.
-`images.example.com`) to attribute the numbers to keenpix alone. Leave it blank to
+`images.example.com`) to attribute the numbers to Keenpix alone. Leave it blank to
 count `/img/*` across the entire zone.
+
+#### How the edge data is persisted
+
+Keenpix reads the Cloudflare GraphQL `httpRequestsAdaptiveGroups` dataset — the only
+one that supports the `/img/*` path filter with per-cache-status detail. On
+non-Enterprise plans that dataset only answers for roughly the **last 24 hours** and
+rejects wider queries. So instead of querying it live for each range, Keenpix
+captures the last-24h hourly series and **persists it** to its own edge-rollup
+table, then reconstructs edge analytics from that table for **any** range
+(24h / 7d / 30d / 90d). The edge cards are no longer fixed to a 24h window.
+
+Capture is **opportunistic and throttled** (about once every 15 minutes per
+zone/host). It runs as a best-effort background refresh when someone loads the
+Overview or analytics page — there is **no cron or scheduler**. The edge query also
+runs **off the page's critical path**, so a slow Cloudflare round-trip never blocks
+the page render. Each capture pulls a fresh last-24h series, so any gap shorter than
+24h self-heals on the next dashboard visit. (If nobody opens the dashboard for more
+than 24h, that window is lost — fine for a regularly-used dashboard.)
+
+<Callout type="info">
+**History grows forward.** Cloudflare won't backfill far beyond the recent window,
+so the first capture seeds about 24h of history. The **24h** view reconciles right
+away; **7d** and **30d** fill in over the following days, and **90d** accumulates
+over time. For a range that reaches before the captured history, the edge totals
+still show, but the source-split cards stay origin-only and add the note
+*"Cloudflare edge history is still accumulating — older data for this range isn't
+available yet"* rather than reconcile a misleading partial total.
+</Callout>
+
+The reconciled source-split appears only at **All projects** scope. Cloudflare has no
+notion of the Keenpix project id, so edge data is **zone/host-wide** for `/img/*` —
+per-project edge figures are not available.
 
 For deeper, per-URL reporting, ingest Cloudflare HTTP request logs or analytics as a
 separate edge-cache data source. The useful fields are:
