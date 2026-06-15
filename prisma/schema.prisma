@@ -221,6 +221,26 @@ model EdgeRollupHourly {
   @@index([zoneId, host, bucketStart])
 }
 
+// Hourly container resource rollups (CPU + memory) sampled in-process, persisted
+// one row per hour as avg + peak so capacity trends survive restarts without
+// storing the raw per-sample stream. id is the hour's ISO timestamp. Pruned past
+// the retention window. cpuCores is the effective core budget (cgroup quota or
+// host cores) at capture time; memLimitBytes is the cgroup cap or host total.
+model ResourceRollupHourly {
+  id            String   @id
+  bucketStart   DateTime
+  cpuAvgPct     Float    @default(0)
+  cpuPeakPct    Float    @default(0)
+  cpuCores      Float?
+  memAvgBytes   BigInt   @default(0)
+  memPeakBytes  BigInt   @default(0)
+  memLimitBytes BigInt   @default(0)
+  samples       Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  @@index([bucketStart])
+}
+
 // better-auth tables. Keep these names aligned with the auth adapter config.
 model User {
   id            String    @id @default(cuid())
