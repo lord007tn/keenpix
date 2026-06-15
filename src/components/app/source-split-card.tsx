@@ -99,10 +99,11 @@ export function SourceSplitCard({
             />
           ))}
         </div>
-        {/* Legend pinned to the card bottom (mt-auto) so the keys bottom-align
-            across cards even when row counts differ; the slack sits between the
-            bar and the legend. */}
-        <div className="mt-auto flex flex-col gap-1 border-t pt-2">
+        {/* Legend flows straight under the bar — every card has the same
+            top-to-bottom structure (header → bar → keys). Cards stay equal height
+            via the grid; the small slack from differing row counts sits at the
+            card bottom, not as a gap under the bar. */}
+        <div className="flex flex-col gap-1 border-t pt-2">
           {rows.map((r) => (
             <div className="flex items-center gap-2 text-xs" key={r.label}>
               <span
