@@ -1,20 +1,21 @@
+import { createId } from '@paralleldrive/cuid2'
 import { prisma } from '@/db'
 import { Prisma } from '@/generated/prisma/client'
 import type { ResourceRollup } from '@/lib/system/container-stats'
 
-// Persist one aggregated row per hour (avg + peak). The id is the hour's ISO
-// timestamp, so a re-flush of the same hour — e.g. a partial bucket after a
-// mid-hour restart — upserts in place rather than duplicating.
+// Persist one aggregated row per hour (avg + peak). bucketStart is the upsert
+// key (one row per hour), so a re-flush of the same hour — e.g. a partial bucket
+// after a mid-hour restart — upserts in place rather than duplicating. id is a
+// cuid; the database default never fires because raw SQL provides it explicitly.
 export async function upsertResourceRollup(rollup: ResourceRollup) {
-  const id = rollup.bucketStart.toISOString()
   await prisma.$executeRaw(Prisma.sql`
     INSERT INTO "ResourceRollupHourly" ("id", "bucketStart", "cpuAvgPct", "cpuPeakPct", "cpuCores", "memAvgBytes", "memPeakBytes", "memLimitBytes", "samples", "updatedAt")
     VALUES (
-      ${id}, ${rollup.bucketStart}, ${rollup.cpuAvgPct}, ${rollup.cpuPeakPct}, ${rollup.cpuCores},
+      ${createId()}, ${rollup.bucketStart}, ${rollup.cpuAvgPct}, ${rollup.cpuPeakPct}, ${rollup.cpuCores},
       ${BigInt(Math.round(rollup.memAvgBytes))}, ${BigInt(Math.round(rollup.memPeakBytes))}, ${BigInt(Math.round(rollup.memLimitBytes))},
       ${rollup.samples}, CURRENT_TIMESTAMP
     )
-    ON CONFLICT ("id") DO UPDATE SET
+    ON CONFLICT ("bucketStart") DO UPDATE SET
       "cpuAvgPct" = EXCLUDED."cpuAvgPct",
       "cpuPeakPct" = EXCLUDED."cpuPeakPct",
       "cpuCores" = EXCLUDED."cpuCores",
