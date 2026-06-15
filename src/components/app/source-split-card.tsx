@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 // Cloudflare-edge vs keenpix-origin breakdown beneath it. Additive metrics get
 // a real split + mini bar; a 'none' row renders a muted dash so the card itself
 // shows which metrics the edge cannot measure.
-export type SplitSource = 'edge' | 'origin' | 'disk' | 'none'
+export type SplitSource = 'edge' | 'origin' | 'disk' | 'live' | 'none'
 
 export interface SplitRow {
   label: string
@@ -30,6 +30,9 @@ const SOURCE_COLOR: Record<SplitSource, string> = {
   edge: 'var(--chart-1)',
   origin: 'var(--chart-2)',
   disk: 'var(--chart-2)',
+  // Optimized-live (origin processed a fresh transform) — matches the funnel
+  // chart's "Optimized live" band.
+  live: 'var(--muted-foreground)',
   none: 'var(--border)',
 }
 
