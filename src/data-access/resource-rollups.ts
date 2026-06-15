@@ -1,4 +1,4 @@
-import { createId } from '@paralleldrive/cuid2'
+import cuid from 'cuid'
 import { prisma } from '@/db'
 import { Prisma } from '@/generated/prisma/client'
 import type { ResourceRollup } from '@/lib/system/container-stats'
@@ -11,7 +11,7 @@ export async function upsertResourceRollup(rollup: ResourceRollup) {
   await prisma.$executeRaw(Prisma.sql`
     INSERT INTO "ResourceRollupHourly" ("id", "bucketStart", "cpuAvgPct", "cpuPeakPct", "cpuCores", "memAvgBytes", "memPeakBytes", "memLimitBytes", "samples", "updatedAt")
     VALUES (
-      ${createId()}, ${rollup.bucketStart}, ${rollup.cpuAvgPct}, ${rollup.cpuPeakPct}, ${rollup.cpuCores},
+      ${cuid()}, ${rollup.bucketStart}, ${rollup.cpuAvgPct}, ${rollup.cpuPeakPct}, ${rollup.cpuCores},
       ${BigInt(Math.round(rollup.memAvgBytes))}, ${BigInt(Math.round(rollup.memPeakBytes))}, ${BigInt(Math.round(rollup.memLimitBytes))},
       ${rollup.samples}, CURRENT_TIMESTAMP
     )

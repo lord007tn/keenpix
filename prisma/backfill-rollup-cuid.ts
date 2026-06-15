@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { createId } from '@paralleldrive/cuid2'
+import cuid from 'cuid'
 import { prisma } from '../src/db'
 import { Prisma } from '../src/generated/prisma/client'
 
@@ -10,8 +10,8 @@ import { Prisma } from '../src/generated/prisma/client'
 // natural-key unique constraints, so rewriting them is cosmetic and never
 // changes row counts. EdgeRollupHourly is Cloudflare data and is left untouched.
 
-// cuid2 default shape: 24 chars, leading letter, lowercase alphanumeric.
-const CUID2_PATTERN = '^[a-z][0-9a-z]{23}$'
+// cuid (v1) shape: 25 chars, leading "c", lowercase base36.
+const CUID_PATTERN = '^c[0-9a-z]{24}$'
 const BATCH = 1000
 
 async function backfill(
@@ -21,12 +21,12 @@ async function backfill(
   let total = 0
   for (;;) {
     const rows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
-      SELECT "id" FROM ${quoted} WHERE "id" !~ ${CUID2_PATTERN} LIMIT ${BATCH}
+      SELECT "id" FROM ${quoted} WHERE "id" !~ ${CUID_PATTERN} LIMIT ${BATCH}
     `)
     if (rows.length === 0) {
       break
     }
-    const pairs = rows.map((r) => Prisma.sql`(${r.id}, ${createId()})`)
+    const pairs = rows.map((r) => Prisma.sql`(${r.id}, ${cuid()})`)
     await prisma.$executeRaw(Prisma.sql`
       UPDATE ${quoted} AS t
       SET "id" = v.newid
