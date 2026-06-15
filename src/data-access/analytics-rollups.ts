@@ -1,3 +1,4 @@
+import { createId } from '@paralleldrive/cuid2'
 import dayjs from 'dayjs'
 import type { Prisma } from '@/generated/prisma/client'
 import {
@@ -97,16 +98,7 @@ export async function updateAnalyticsRollupForLog(
       "updatedAt"
     )
     VALUES (
-      md5(concat_ws('|',
-        date_trunc('hour', ${log.ts}::timestamp)::text,
-        ${log.orgId}::text,
-        ${log.projectId}::text,
-        ${sourceHost}::text,
-        ${country}::text,
-        ${log.path}::text,
-        ${log.format}::text,
-        ${log.status}::text
-      )),
+      ${createId()},
       date_trunc('hour', ${log.ts}::timestamp),
       ${log.orgId},
       ${log.projectId},
@@ -138,7 +130,7 @@ export async function updateAnalyticsRollupForLog(
       ${bucket.latencyGt1100},
       CURRENT_TIMESTAMP
     )
-    ON CONFLICT ("id") DO UPDATE SET
+    ON CONFLICT ("bucketStart", "orgId", "projectId", "sourceHost", "country", "path", "format", "status") DO UPDATE SET
       "requests" = "AnalyticsRollupHourly"."requests" + 1,
       "cachedRequests" = "AnalyticsRollupHourly"."cachedRequests" + ${log.cached ? 1 : 0},
       "optimizedRequests" = "AnalyticsRollupHourly"."optimizedRequests" + ${log.cached ? 0 : 1},
