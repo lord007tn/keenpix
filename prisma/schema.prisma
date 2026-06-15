@@ -162,7 +162,7 @@ model RequestLog {
 // not scan raw logs indefinitely. Null sourceHost values are stored as an empty
 // string to keep the deterministic rollup key compact and indexable.
 model AnalyticsRollupHourly {
-  id                String   @id
+  id                String   @id @default(cuid(2))
   bucketStart       DateTime
   orgId             String
   projectId         String
@@ -195,6 +195,10 @@ model AnalyticsRollupHourly {
   latencyGt1100     Int      @default(0)
   updatedAt         DateTime @updatedAt
 
+  // Natural key for the per-request hourly upsert. Replaces the old md5(id)
+  // dedup so id can be a random cuid. All columns are NOT NULL (sourceHost and
+  // country default to ""), so the unique constraint dedups cleanly.
+  @@unique([bucketStart, orgId, projectId, sourceHost, country, path, format, status])
   @@index([bucketStart])
   @@index([orgId, bucketStart])
   @@index([projectId, bucketStart])
@@ -223,11 +227,12 @@ model EdgeRollupHourly {
 
 // Hourly container resource rollups (CPU + memory) sampled in-process, persisted
 // one row per hour as avg + peak so capacity trends survive restarts without
-// storing the raw per-sample stream. id is the hour's ISO timestamp. Pruned past
-// the retention window. cpuCores is the effective core budget (cgroup quota or
-// host cores) at capture time; memLimitBytes is the cgroup cap or host total.
+// storing the raw per-sample stream. One row per hour (bucketStart is the upsert
+// key); id is a cuid. Pruned past the retention window. cpuCores is the effective
+// core budget (cgroup quota or host cores) at capture time; memLimitBytes is the
+// cgroup cap or host total.
 model ResourceRollupHourly {
-  id            String   @id
+  id            String   @id @default(cuid(2))
   bucketStart   DateTime
   cpuAvgPct     Float    @default(0)
   cpuPeakPct    Float    @default(0)
@@ -238,6 +243,7 @@ model ResourceRollupHourly {
   samples       Int      @default(0)
   updatedAt     DateTime @updatedAt
 
+  @@unique([bucketStart])
   @@index([bucketStart])
 }
 
