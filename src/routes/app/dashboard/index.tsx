@@ -15,10 +15,10 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from '@/components/ui/empty'
-import { Spinner } from '@/components/ui/spinner'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { OperationsSummary } from '@/features/admin/operations-summary'
 import { ResponseLatencyCard } from '@/features/analytics/response-latency-card'
+import { DashboardBodySkeleton } from '@/features/analytics/skeletons'
 import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import { useDashboardQuery } from '@/features/analytics/use-dashboard-query'
 import { useEdgeStats } from '@/features/analytics/use-edge-stats'
@@ -120,9 +120,7 @@ function DashboardPage() {
             Couldn’t load the overview — it will retry shortly.
           </p>
         ) : (
-          <div className="flex min-h-[40vh] items-center justify-center">
-            <Spinner className="size-5 text-muted-foreground" />
-          </div>
+          <DashboardBodySkeleton />
         )}
       </div>
     )
