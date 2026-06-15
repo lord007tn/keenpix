@@ -17,6 +17,7 @@ import {
 import {
   getOperationsConfig,
   getOperationsHealth,
+  getResourceTrend,
   runCacheMaintenance,
   updateOperationsConfig,
 } from '@/actions/admin/operations'
@@ -31,6 +32,7 @@ import {
   createInvitationSchema,
   invitationTokenSchema,
   operationsConfigSchema,
+  resourceTrendSchema,
   revokeInvitationSchema,
   sendTestEmailSchema,
   smtpSettingsSchema,
@@ -72,6 +74,14 @@ export const getOperationsConfigFn = createServerFn({ method: 'GET' })
   .handler(({ context }) => {
     requireSuperAdmin(context)
     return getOperationsConfig()
+  })
+
+export const getResourceTrendFn = createServerFn({ method: 'GET' })
+  .inputValidator(resourceTrendSchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return getResourceTrend(data.range)
   })
 
 export const updateOperationsConfigFn = createServerFn({ method: 'POST' })
