@@ -1,10 +1,14 @@
 import dayjs from 'dayjs'
+import { ensureResourceSampler } from '@/actions/admin/operations'
 import { checkDatabaseHealth } from '@/data-access/health'
 import { getCacheRuntimeStats } from '@/lib/cache/cache'
 import { getQueueStats } from '@/lib/queue/transform-queue'
 
 export async function getHealthStatus() {
   const started = performance.now()
+  // The Docker healthcheck hits this every ~10s, so it doubles as the keep-alive
+  // that guarantees the resource sampler is running shortly after boot.
+  ensureResourceSampler()
 
   try {
     const database = await checkDatabaseHealth()
