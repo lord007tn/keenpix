@@ -81,47 +81,46 @@ export function SourceSplitCard({
             <span className="text-muted-foreground text-sm">{unit}</span>
           ) : null}
         </div>
-        {sub ? (
-          <span className="text-muted-foreground text-xs">{sub}</span>
-        ) : null}
-        {/* Bar + legend are pinned to the card bottom (mt-auto) so an optional
-            sub line on one card never knocks its bar/legend out of row alignment
-            with its siblings — the cards stretch to equal height in the grid. */}
-        <div className="mt-auto flex flex-col gap-2 pt-3">
-          {bar && bar.length > 0 ? (
-            <div className="flex h-1.5 gap-0.5">
-              {bar.map((s) => (
-                <div
-                  className="rounded-[2px]"
-                  key={s.source}
-                  style={{
-                    width: `${s.pct}%`,
-                    background: SOURCE_COLOR[s.source],
-                  }}
-                />
-              ))}
+        {/* Always reserve one line for the sub so the proportion bar starts at
+            the same height in every card, with or without a sub. */}
+        <span className="min-h-4 text-muted-foreground text-xs">{sub}</span>
+        {/* Top-anchored under the value — and a reserved empty slot when a card
+            has no bar — so every card's bar lines up across the row regardless of
+            how many legend rows it carries. */}
+        <div className="flex h-1.5 gap-0.5">
+          {bar?.map((s) => (
+            <div
+              className="rounded-[2px]"
+              key={s.source}
+              style={{
+                width: `${Math.min(100, s.pct)}%`,
+                background: SOURCE_COLOR[s.source],
+              }}
+            />
+          ))}
+        </div>
+        {/* Legend pinned to the card bottom (mt-auto) so the keys bottom-align
+            across cards even when row counts differ; the slack sits between the
+            bar and the legend. */}
+        <div className="mt-auto flex flex-col gap-1 border-t pt-2">
+          {rows.map((r) => (
+            <div className="flex items-center gap-2 text-xs" key={r.label}>
+              <span
+                className="size-2 shrink-0 rounded-[2px]"
+                style={{ background: SOURCE_COLOR[r.source] }}
+              />
+              <span className="flex-1 text-muted-foreground">{r.label}</span>
+              <span
+                className={
+                  r.source === 'none'
+                    ? 'text-muted-foreground tabular-nums'
+                    : 'font-medium tabular-nums'
+                }
+              >
+                {r.value}
+              </span>
             </div>
-          ) : null}
-          <div className="flex flex-col gap-1 border-t pt-2">
-            {rows.map((r) => (
-              <div className="flex items-center gap-2 text-xs" key={r.label}>
-                <span
-                  className="size-2 shrink-0 rounded-[2px]"
-                  style={{ background: SOURCE_COLOR[r.source] }}
-                />
-                <span className="flex-1 text-muted-foreground">{r.label}</span>
-                <span
-                  className={
-                    r.source === 'none'
-                      ? 'text-muted-foreground tabular-nums'
-                      : 'font-medium tabular-nums'
-                  }
-                >
-                  {r.value}
-                </span>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
       </CardContent>
     </Card>
