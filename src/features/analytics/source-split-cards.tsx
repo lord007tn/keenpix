@@ -80,6 +80,10 @@ function reconciledCards(
   )
   const endToEnd = ratio(edge.cachedRequests + originDiskHits, edge.requests)
   const diskContribution = ratio(originDiskHits, edge.requests)
+  // Split what reached keenpix into disk-served vs freshly optimized, using the
+  // origin's own disk hit-rate, so the three sum to every client request.
+  const diskReached = Math.round((reached * summary.hitRate) / 100)
+  const liveReached = reached - diskReached
   return [
     {
       label: 'Bandwidth delivered',
@@ -106,7 +110,8 @@ function reconciledCards(
       value: compactNumber(edge.requests),
       bar: [
         { source: 'edge', pct: edgeReqPct },
-        { source: 'origin', pct: 100 - edgeReqPct },
+        { source: 'disk', pct: ratio(diskReached, edge.requests) },
+        { source: 'live', pct: ratio(liveReached, edge.requests) },
       ],
       rows: [
         {
@@ -115,9 +120,14 @@ function reconciledCards(
           value: `${compactNumber(edge.cachedRequests)} · ${Math.round(edgeReqPct)}%`,
         },
         {
-          source: 'origin',
-          label: 'Reached keenpix',
-          value: `${compactNumber(reached)} · ${Math.round(100 - edgeReqPct)}%`,
+          source: 'disk',
+          label: 'From keenpix disk',
+          value: `${compactNumber(diskReached)} · ${Math.round(ratio(diskReached, edge.requests))}%`,
+        },
+        {
+          source: 'live',
+          label: 'Optimized live',
+          value: `${compactNumber(liveReached)} · ${Math.round(ratio(liveReached, edge.requests))}%`,
         },
       ],
     },
@@ -151,6 +161,10 @@ function originOnlyCards(
   deltas?: CardDeltas,
 ): SourceSplitCardProps[] {
   const dash = { source: 'none', label: 'Cloudflare edge', value: '—' } as const
+  // Of everything that reached keenpix, the split between disk-cache hits and
+  // fresh optimizes.
+  const diskHits = Math.round((summary.totalRequests * summary.hitRate) / 100)
+  const liveServed = summary.totalRequests - diskHits
   return [
     {
       label: 'Bandwidth delivered',
@@ -168,14 +182,23 @@ function originOnlyCards(
     {
       label: 'Client requests',
       value: compactNumber(summary.totalRequests),
-      sub: 'keenpix origin',
+      sub: 'reached keenpix',
       delta: deltas?.requests,
+      bar: [
+        { source: 'disk', pct: summary.hitRate },
+        { source: 'live', pct: 100 - summary.hitRate },
+      ],
       rows: [
         dash,
         {
-          source: 'origin',
-          label: 'Reached keenpix',
-          value: compactNumber(summary.totalRequests),
+          source: 'disk',
+          label: 'From keenpix disk',
+          value: `${compactNumber(diskHits)} · ${Math.round(summary.hitRate)}%`,
+        },
+        {
+          source: 'live',
+          label: 'Optimized live',
+          value: `${compactNumber(liveServed)} · ${Math.round(100 - summary.hitRate)}%`,
         },
       ],
     },
