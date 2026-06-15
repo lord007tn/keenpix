@@ -162,7 +162,7 @@ model RequestLog {
 // not scan raw logs indefinitely. Null sourceHost values are stored as an empty
 // string to keep the deterministic rollup key compact and indexable.
 model AnalyticsRollupHourly {
-  id                String   @id @default(cuid(2))
+  id                String   @id @default(cuid())
   bucketStart       DateTime
   orgId             String
   projectId         String
@@ -232,7 +232,7 @@ model EdgeRollupHourly {
 // core budget (cgroup quota or host cores) at capture time; memLimitBytes is the
 // cgroup cap or host total.
 model ResourceRollupHourly {
-  id            String   @id @default(cuid(2))
+  id            String   @id @default(cuid())
   bucketStart   DateTime
   cpuAvgPct     Float    @default(0)
   cpuPeakPct    Float    @default(0)

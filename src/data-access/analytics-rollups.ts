@@ -1,4 +1,4 @@
-import { createId } from '@paralleldrive/cuid2'
+import cuid from 'cuid'
 import dayjs from 'dayjs'
 import type { Prisma } from '@/generated/prisma/client'
 import {
@@ -98,7 +98,7 @@ export async function updateAnalyticsRollupForLog(
       "updatedAt"
     )
     VALUES (
-      ${createId()},
+      ${cuid()},
       date_trunc('hour', ${log.ts}::timestamp),
       ${log.orgId},
       ${log.projectId},
