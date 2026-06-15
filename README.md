@@ -125,6 +125,8 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_MAX_DIMENSION` | – | Longest output side when a request omits `w`/`h` (default 4096). |
 | `KEENPIX_ORIGIN_TIMEOUT_MS` | – | Per-attempt origin fetch timeout; a slow origin returns 504 (default 10000). |
 | `KEENPIX_MAX_CONCURRENCY` / `KEENPIX_MAX_QUEUE` | – | Concurrent transform jobs / queue depth before shedding 503. |
+| `KEENPIX_MEM_LIMIT` / `KEENPIX_CPU_LIMIT` / `KEENPIX_MEM_RESERVATION` | – | Opt-in Docker Compose resource caps for the app container. Default `0` = no limit. When set, Docker enforces them and the Operations page CPU/RAM gauges read the cap as the real ceiling. A too-low memory cap can get the app OOM-killed. |
+| `KEENPIX_PG_MEM_LIMIT` / `KEENPIX_PG_CPU_LIMIT` / `KEENPIX_PG_MEM_RESERVATION` | – | Same opt-in resource caps for the bundled Postgres container. Default `0` = no limit. |
 
 ---
 
