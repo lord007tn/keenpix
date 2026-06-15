@@ -24,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Spinner } from '@/components/ui/spinner'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   AnalyticsAreaChart,
@@ -39,6 +38,7 @@ import {
 import { DomainBreakdown } from '@/features/analytics/domain-breakdown'
 import { ProjectBreakdown } from '@/features/analytics/project-breakdown'
 import { ResponseLatencyCard } from '@/features/analytics/response-latency-card'
+import { AnalyticsBodySkeleton } from '@/features/analytics/skeletons'
 import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import { useAnalyticsQuery } from '@/features/analytics/use-analytics-query'
 import { useEdgeStats } from '@/features/analytics/use-edge-stats'
@@ -304,9 +304,7 @@ function AnalyticsPage() {
             Couldn’t load analytics — it will retry shortly.
           </p>
         ) : (
-          <div className="flex min-h-[40vh] items-center justify-center">
-            <Spinner className="size-5 text-muted-foreground" />
-          </div>
+          <AnalyticsBodySkeleton />
         )}
       </div>
     )
@@ -379,7 +377,6 @@ function AnalyticsPage() {
       {header}
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-medium text-foreground text-sm">This window</h2>
         <SourceSplitCards
           connect={edgeNotConfigured}
           edge={edge}
