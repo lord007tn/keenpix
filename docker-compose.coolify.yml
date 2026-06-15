@@ -2,6 +2,10 @@ services:
   postgres:
     image: postgres:18-alpine
     restart: unless-stopped
+    # Opt-in resource caps. Default 0 = no limit, unchanged until you set them.
+    mem_limit: ${KEENPIX_PG_MEM_LIMIT:-0}
+    mem_reservation: ${KEENPIX_PG_MEM_RESERVATION:-0}
+    cpus: ${KEENPIX_PG_CPU_LIMIT:-0}
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-keenpix}
       - POSTGRES_USER=${SERVICE_USER_POSTGRES}
@@ -18,6 +22,12 @@ services:
   app:
     image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
     restart: unless-stopped
+    # Opt-in resource caps. Default 0 = no limit. Setting KEENPIX_MEM_LIMIT makes
+    # the Operations page CPU/RAM gauges read against a real cgroup cap and lets
+    # Docker enforce it. Note: too low a memory cap can get the app OOM-killed.
+    mem_limit: ${KEENPIX_MEM_LIMIT:-0}
+    mem_reservation: ${KEENPIX_MEM_RESERVATION:-0}
+    cpus: ${KEENPIX_CPU_LIMIT:-0}
     depends_on:
       postgres:
         condition: service_healthy

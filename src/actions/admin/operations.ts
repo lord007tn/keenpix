@@ -4,8 +4,14 @@ import {
   getOperationsConfigRow,
   saveOperationsConfigRow,
 } from '@/data-access/admin/operations-settings'
+import { rollupSinceFor } from '@/data-access/analytics-rollups'
 import { listProjects } from '@/data-access/projects'
 import { getCacheHitStats } from '@/data-access/request-logs'
+import {
+  listResourceRollups,
+  pruneResourceRollups,
+  upsertResourceRollup,
+} from '@/data-access/resource-rollups'
 import {
   applyCacheLimits,
   clearCacheStorage,
@@ -13,10 +19,57 @@ import {
   getCacheStorageStats,
 } from '@/lib/cache/cache'
 import { getQueueStats } from '@/lib/queue/transform-queue'
+import {
+  getResourceLiveStats,
+  readResourceSnapshot,
+  recordSample,
+} from '@/lib/system/container-stats'
 import type { cacheMaintenanceSchema } from '@/schemas/admin'
+import type { AnalyticsRange } from '@/shared/types'
 import { DEFAULT_ORG } from './constants'
 
 const MB = 1024 * 1024
+
+// Sample the container's CPU/RAM every 10s into the in-process ring/peak state,
+// persisting one aggregated row per hour. Keep ~90 days of hourly history.
+const RESOURCE_SAMPLE_MS = 10_000
+const RESOURCE_RETENTION_DAYS = 90
+
+declare global {
+  var __keenpixResourceSampler: ReturnType<typeof setInterval> | undefined
+}
+
+async function sampleResourceTick() {
+  const completed = recordSample(await readResourceSnapshot())
+  if (completed) {
+    await upsertResourceRollup(completed)
+    await pruneResourceRollups(
+      dayjs().subtract(RESOURCE_RETENTION_DAYS, 'day').toDate(),
+    )
+  }
+}
+
+// Start the background resource sampler once per process. Idempotent and guarded
+// on a global (like the Prisma client) so HMR or repeat calls never stack timers.
+// Called from the operations page load and the /api/health check, so it stays
+// alive from shortly after boot even when nobody has the page open.
+export function ensureResourceSampler() {
+  if (globalThis.__keenpixResourceSampler) {
+    return
+  }
+  const timer = setInterval(() => {
+    sampleResourceTick().catch(() => {
+      // Best-effort sampling — a transient read/write failure just skips a tick.
+    })
+  }, RESOURCE_SAMPLE_MS)
+  // Never let the sampler hold the event loop open on shutdown.
+  timer.unref?.()
+  globalThis.__keenpixResourceSampler = timer
+  // Kick an immediate first sample so the page has data without waiting a tick.
+  sampleResourceTick().catch(() => {
+    // Best-effort — the next interval tick retries.
+  })
+}
 
 // Re-assert a persisted cache-cap override onto the running instance.
 // applyCacheLimits no-ops values that already match, so it's safe to call on any
@@ -33,14 +86,16 @@ async function reassertCacheOverride() {
 
 export async function getOperationsHealth() {
   const uptimeSeconds = Math.round(process.uptime())
+  ensureResourceSampler()
   await reassertCacheOverride()
-  const [cache, projects, cacheHits] = await Promise.all([
+  const [cache, projects, cacheHits, resources] = await Promise.all([
     getCacheStorageStats(),
     listProjects(DEFAULT_ORG),
     getCacheHitStats(
       DEFAULT_ORG,
       dayjs().subtract(uptimeSeconds, 'second').toDate(),
     ),
+    getResourceLiveStats(),
   ])
   return {
     cache,
@@ -55,9 +110,17 @@ export async function getOperationsHealth() {
     },
     generatedAt: dayjs().toISOString(),
     projectCount: projects.length,
+    resources,
     transformQueue: getQueueStats(),
     uptimeSeconds,
   }
+}
+
+// Hourly CPU/RAM history for the selected range, from the persisted rollups.
+// Powers the capacity-planning trend chart ("when to expand").
+export async function getResourceTrend(range: AnalyticsRange) {
+  const points = await listResourceRollups(rollupSinceFor(range))
+  return { points, range }
 }
 
 export function runCacheMaintenance(
