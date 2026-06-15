@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { nonEmptyStringSchema } from './common'
+import { analyticsRangeSchema, nonEmptyStringSchema } from './common'
 
 const staffRoleSchema = z.enum(['admin', 'staff'])
 
@@ -70,6 +70,10 @@ export const cloudflareSettingsSchema = z.object({
 
 export const cacheMaintenanceSchema = z.object({
   target: z.enum(['all', 'disk', 'memory']),
+})
+
+export const resourceTrendSchema = z.object({
+  range: analyticsRangeSchema.catch('24h'),
 })
 
 export const operationsConfigSchema = z.object({
