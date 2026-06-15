@@ -56,11 +56,15 @@ SMTP is disabled or incomplete.
 ## Cloudflare edge analytics
 
 Optional. Wire a Cloudflare API token so keenpix can show real edge cache
-hit-rate alongside its origin-shield figures (see [CDN setup](/docs/self-hosting/cdn#measuring-cloudflare-cache)).
-Manage it from **Settings → CDN cache**; when database-managed settings are
-enabled with a token and zone, they take precedence over the environment
-variables below. The token only needs the zone-scoped **Analytics → Read**
-permission, and it is stored encrypted at rest.
+hit-rate alongside its origin-shield figures (see [edge analytics](/docs/self-hosting/cdn#built-in-edge-analytics)).
+keenpix now persists hourly edge rollups, so edge analytics covers any range and
+accumulates history beyond Cloudflare's ~24h adaptive window — coverage grows
+forward as the dashboard is used. Manage it from **Settings → CDN cache**; when
+database-managed settings are enabled with a token and zone, they take precedence
+over the environment variables below. The token only needs the zone-scoped
+**Analytics → Read** permission. It is stored encrypted at rest with a key derived
+from `BETTER_AUTH_SECRET`, so the encrypted value is per-instance and cannot be
+copied between instances — re-enter the token on each instance.
 
 | Variable               | Default | Purpose                                                                |
 | ---------------------- | ------- | ---------------------------------------------------------------------- |
