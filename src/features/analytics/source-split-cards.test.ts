@@ -70,3 +70,52 @@ describe('reconciledCards — end-to-end cache hit rate', () => {
     expect(card?.value).toBe('60.0%')
   })
 })
+
+describe('reconciledCards — bandwidth saved', () => {
+  it('estimates the edge compression saving from the origin ratio', () => {
+    // Origin served 3.6 GB at 10.3 GB saved; the edge delivered 7.3 GB of the
+    // same optimized variants, so the estimated edge saving is
+    // 7.3 × (10.3 / 3.6) ≈ 20.9 GB.
+    const edge = edgeStats({
+      bytesFromEdge: 7.3e9,
+      cachedRequests: 70,
+      hitRate: 70,
+      requests: 100,
+    })
+    const summary = {
+      bandwidthOut: 3.6e9,
+      bandwidthSaved: 10.3e9,
+      hitRate: 40,
+      totalRequests: 30,
+    }
+    const card = reconciledCards(edge, summary).find(
+      (c) => c.label === 'Bandwidth saved',
+    )
+    const edgeRow = card?.rows.find((r) => r.label === 'Cloudflare edge')
+
+    // Edge now carries an estimate instead of the "—" dash.
+    expect(edgeRow?.source).toBe('edge')
+    expect(edgeRow?.value).toContain('est.')
+    expect(edgeRow?.value).not.toBe('—')
+    // Estimate-inclusive total gets a split bar and no vs-previous trend.
+    expect(card?.bar).toHaveLength(2)
+    expect(card?.delta).toBeUndefined()
+  })
+
+  it('falls back to the dash when no edge data is available (origin-only)', () => {
+    // Zero edge bytes still counts as "edge present" (reconciled), so this is a
+    // light guard that the estimate path stays self-consistent at the boundary.
+    const edge = edgeStats({ bytesFromEdge: 0, requests: 10 })
+    const summary = {
+      bandwidthOut: 1000,
+      bandwidthSaved: 2000,
+      hitRate: 50,
+      totalRequests: 10,
+    }
+    const card = reconciledCards(edge, summary).find(
+      (c) => c.label === 'Bandwidth saved',
+    )
+    const edgeRow = card?.rows.find((r) => r.label === 'Cloudflare edge')
+    expect(edgeRow?.value).toBe('~0 B · est.')
+  })
+})

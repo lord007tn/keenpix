@@ -37,24 +37,48 @@ function ratio(part: number, whole: number) {
 function savedCard(
   summary: CardSummary,
   delta?: number | null,
+  edgeBytesFromEdge?: number,
 ): SourceSplitCardProps {
-  // Compression saving is purely an origin act — the edge offloads egress, it
-  // doesn't re-encode — so this never has an edge value, in any window. The sub
-  // surfaces how much smaller every delivery was than its origin original:
-  // saved / (saved + served).
+  // The sub surfaces how much smaller every delivery was than its origin
+  // original: saved / (saved + served).
   const totalOriginal = summary.bandwidthSaved + summary.bandwidthOut
   const savingsPct =
     totalOriginal > 0 ? (summary.bandwidthSaved / totalOriginal) * 100 : 0
+  // keenpix never sees a Cloudflare cache hit, so it can't *measure* the
+  // compression saving on edge-served bytes. But the edge serves the same
+  // optimized variants, so we estimate it by applying the origin's observed
+  // savings ratio (bytesSaved / bytesOut) to the edge-delivered bytes. Estimate,
+  // not measured — flagged "est." in the row and excluded from the trend.
+  const hasEdge = edgeBytesFromEdge != null
+  const edgeSaved =
+    hasEdge && summary.bandwidthOut > 0
+      ? edgeBytesFromEdge * (summary.bandwidthSaved / summary.bandwidthOut)
+      : 0
+  const total = summary.bandwidthSaved + edgeSaved
   return {
     label: 'Bandwidth saved',
-    value: humanBytes(summary.bandwidthSaved, 1),
+    value: humanBytes(total, 1),
     sub:
       savingsPct > 0
         ? `${Math.round(savingsPct)}% smaller · compression`
         : 'compression · origin only',
-    delta,
+    // The trend only attaches to an origin-measured headline; the edge-inclusive
+    // total mixes in an estimate, so it carries no vs-previous delta.
+    delta: hasEdge ? undefined : delta,
+    bar: hasEdge
+      ? [
+          { source: 'edge', pct: ratio(edgeSaved, total) },
+          { source: 'origin', pct: ratio(summary.bandwidthSaved, total) },
+        ]
+      : undefined,
     rows: [
-      { source: 'none', label: 'Cloudflare edge', value: '—' },
+      hasEdge
+        ? {
+            source: 'edge',
+            label: 'Cloudflare edge',
+            value: `~${humanBytes(edgeSaved, 1)} · est.`,
+          }
+        : { source: 'none', label: 'Cloudflare edge', value: '—' },
       {
         source: 'origin',
         label: 'keenpix origin',
@@ -152,7 +176,7 @@ export function reconciledCards(
         },
       ],
     },
-    savedCard(summary, deltas?.saved),
+    savedCard(summary, deltas?.saved, edge.bytesFromEdge),
   ]
 }
 
