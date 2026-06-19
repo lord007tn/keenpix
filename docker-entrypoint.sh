@@ -10,7 +10,7 @@ if [ "$command" = "migrate" ]; then
 fi
 
 if [ "$command" = "seed" ]; then
-  exec prisma db seed
+  exec node /app/prisma/seed.ts
 fi
 
 if [ "$command" != "start" ]; then
@@ -30,7 +30,7 @@ if [ "$run_seed" = "false" ] || [ "$run_seed" = "0" ] || [ "$run_seed" = "no" ];
   printf '[keenpix] Skipping database seed\n'
 else
   printf '[keenpix] Seeding bootstrap data\n'
-  prisma db seed
+  node /app/prisma/seed.ts
 fi
 
 printf '[keenpix] Starting Keenpix on port %s\n' "${PORT:-3000}"
