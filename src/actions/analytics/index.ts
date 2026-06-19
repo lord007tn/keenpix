@@ -118,20 +118,36 @@ export async function getAnalytics(
 // dashboard keeps it fresh without hammering the API.
 const CAPTURE_THROTTLE_MS = 15 * 60 * 1000
 const lastCaptureAt = new Map<string, number>()
+// In-flight captures per zone+host. The read path doesn't await a background
+// refresh, so this lets it report "still preparing" until the fetch lands — the
+// client polls on that flag instead of needing a manual reload to see fresh data.
+const captureInFlight = new Map<string, Promise<void>>()
 
-export async function captureEdgeRollups(
+// Start a rollup capture unless one is already running or the throttle window
+// hasn't elapsed. Returns the in-flight promise (await it to capture
+// synchronously) or null when nothing needed to run.
+function startEdgeCapture(
   settings: EffectiveCloudflareSettings,
-) {
+): Promise<void> | null {
   const host = settings.host ?? ''
   const key = `${settings.zoneId}:${host}`
-  const now = Date.now()
-  const last = lastCaptureAt.get(key)
-  if (last && now - last < CAPTURE_THROTTLE_MS) {
-    return
+  const running = captureInFlight.get(key)
+  if (running) {
+    return running
   }
-  lastCaptureAt.set(key, now)
-  const groups = await fetchEdgeAdaptiveHourly(settings)
-  await upsertEdgeRollups(settings.zoneId, host, groups)
+  const last = lastCaptureAt.get(key)
+  if (last && Date.now() - last < CAPTURE_THROTTLE_MS) {
+    return null
+  }
+  lastCaptureAt.set(key, Date.now())
+  const run = (async () => {
+    const groups = await fetchEdgeAdaptiveHourly(settings)
+    await upsertEdgeRollups(settings.zoneId, host, groups)
+  })().finally(() => {
+    captureInFlight.delete(key)
+  })
+  captureInFlight.set(key, run)
+  return run
 }
 
 // Edge cache stats for the selected range, reconstructed from our persisted
@@ -143,22 +159,35 @@ export async function getEdgeCacheStats(range: AnalyticsRange): Promise<{
   edge: EdgeCacheStats | null
   edgeConfigured: boolean
   edgeCovered: boolean
+  edgeRefreshing: boolean
 }> {
   const cloudflare = await getEffectiveCloudflareSettings()
   if (!cloudflare) {
-    return { edge: null, edgeConfigured: false, edgeCovered: false }
+    return {
+      edge: null,
+      edgeConfigured: false,
+      edgeCovered: false,
+      edgeRefreshing: false,
+    }
   }
   const host = cloudflare.host ?? ''
   try {
     const existing = await edgeCoverageStart(cloudflare.zoneId, host)
+    let refreshing = false
     if (existing) {
-      // Refresh in the background (throttled); don't block the read.
-      captureEdgeRollups(cloudflare).catch(() => {
-        // Best-effort — the read still serves what we already have.
-      })
+      // Refresh in the background (throttled); don't block the read. Surface
+      // whether a capture is actually in flight so the client polls until it
+      // lands instead of waiting for a manual reload.
+      const capture = startEdgeCapture(cloudflare)
+      if (capture) {
+        capture.catch(() => {
+          // Best-effort — the read still serves what we already have.
+        })
+        refreshing = true
+      }
     } else {
       // No history yet — capture once synchronously so there's data to show.
-      await captureEdgeRollups(cloudflare)
+      await startEdgeCapture(cloudflare)
     }
     const gte = rollupSinceFor(range)
     const [rows, coverageStart] = await Promise.all([
@@ -172,9 +201,15 @@ export async function getEdgeCacheStats(range: AnalyticsRange): Promise<{
       edgeConfigured: true,
       edgeCovered:
         coverageStart !== null && coverageStart.getTime() <= gte.getTime(),
+      edgeRefreshing: refreshing,
     }
   } catch {
-    return { edge: null, edgeConfigured: true, edgeCovered: false }
+    return {
+      edge: null,
+      edgeConfigured: true,
+      edgeCovered: false,
+      edgeRefreshing: false,
+    }
   }
 }
 

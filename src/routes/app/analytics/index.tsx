@@ -189,8 +189,14 @@ function AnalyticsPage() {
   const isRefreshing = isFetching && !isPending
   // Cloudflare edge stats load off the critical path; the edge cards/lenses
   // fill in afterward. Range-aware now that we persist edge history.
-  const { edge, edgeConfigured, edgeCovered, edgePending, edgeError } =
-    useEdgeStats(range)
+  const {
+    edge,
+    edgeConfigured,
+    edgeCovered,
+    edgeRefreshing,
+    edgePending,
+    edgeError,
+  } = useEdgeStats(range)
   const [view, setView] = useState<AreaView>('requests')
   const [lens, setLens] = useState<ChartLens>('funnel')
   const [topMetric, setTopMetric] = useState<'requests' | 'bytes'>('requests')
@@ -322,8 +328,11 @@ function AnalyticsPage() {
   // it is still pending — and a failed fetch is "couldn't load" (handled by the
   // !edge note below), never a false "not configured".
   const edgeNotConfigured = !(edgePending || edgeError || edgeConfigured)
+  // A background capture is in flight and the reconciled split isn't on screen
+  // yet — show the "preparing" indicator (and hold the note) until it lands.
+  const edgePreparing = edgeRefreshing && !edgeGated
   let edgeNote: string | undefined
-  if (!(edgePending || edgeGated || edgeNotConfigured)) {
+  if (!(edgePending || edgePreparing || edgeGated || edgeNotConfigured)) {
     if (edgeError || !edge) {
       edgeNote =
         "Couldn't load Cloudflare edge data — check the token in Settings → CDN cache."
@@ -382,6 +391,7 @@ function AnalyticsPage() {
           edge={edge}
           gated={edgeGated}
           note={edgeNote}
+          preparing={edgePreparing}
           summary={data.summary}
         />
       </section>

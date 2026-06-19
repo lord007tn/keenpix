@@ -12,11 +12,16 @@ export function useEdgeStats(range: AnalyticsRange) {
     queryKey: ['edge-stats', range],
     queryFn: () => getEdgeCacheStatsFn({ data: { range } }),
     staleTime: 30_000,
+    // The first read kicks off a background capture of fresh Cloudflare rollups;
+    // poll while it's in flight so the edge split streams in on its own rather
+    // than waiting for a manual reload. Stops once a response clears the flag.
+    refetchInterval: (q) => (q.state.data?.edgeRefreshing ? 3000 : false),
   })
   return {
     edge: query.data?.edge ?? null,
     edgeConfigured: query.data?.edgeConfigured ?? false,
     edgeCovered: query.data?.edgeCovered ?? false,
+    edgeRefreshing: query.data?.edgeRefreshing ?? false,
     edgePending: query.isPending,
     edgeError: query.isError,
   }
