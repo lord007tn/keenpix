@@ -251,6 +251,7 @@ export function SourceSplitCards({
   edge,
   gated,
   note,
+  preparing,
   summary,
 }: {
   connect?: boolean
@@ -258,6 +259,7 @@ export function SourceSplitCards({
   edge: EdgeCacheStats | null
   gated: boolean
   note?: string
+  preparing?: boolean
   summary: CardSummary
 }) {
   // While the (separate, session-cached) edge query is still loading, the cards
@@ -288,7 +290,20 @@ export function SourceSplitCards({
           </AlertDescription>
         </Alert>
       ) : null}
-      {note && !connect ? (
+      {preparing && !connect ? (
+        <span
+          aria-live="polite"
+          className="flex items-center gap-1.5 text-muted-foreground text-xs"
+        >
+          Preparing Cloudflare edge data
+          <span className="flex items-center gap-1">
+            <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:-300ms]" />
+            <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:-150ms]" />
+            <span className="size-1.5 animate-bounce rounded-full bg-current" />
+          </span>
+        </span>
+      ) : null}
+      {note && !connect && !preparing ? (
         <p className="text-muted-foreground text-xs">{note}</p>
       ) : null}
     </div>
