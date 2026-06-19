@@ -72,8 +72,14 @@ function DashboardPage() {
   const isRefreshing = isFetching && !isPending
   // Cloudflare edge stats load off the critical path; the KPI edge split fills
   // in afterward. Range-aware now that we persist edge history.
-  const { edge, edgeConfigured, edgeCovered, edgePending, edgeError } =
-    useEdgeStats(range)
+  const {
+    edge,
+    edgeConfigured,
+    edgeCovered,
+    edgeRefreshing,
+    edgePending,
+    edgeError,
+  } = useEdgeStats(range)
 
   const header = (
     <PageHeader
@@ -141,8 +147,11 @@ function DashboardPage() {
   // a window our captured history fully covers.
   const edgeGated = edgeConfigured && edge !== null && isAll && edgeCovered
   const edgeNotConfigured = !(edgePending || edgeError || edgeConfigured)
+  // A background capture is in flight and the reconciled split isn't on screen
+  // yet — show the "preparing" indicator (and hold the note) until it lands.
+  const edgePreparing = edgeRefreshing && !edgeGated
   let edgeNote: string | undefined
-  if (!(edgePending || edgeGated || edgeNotConfigured)) {
+  if (!(edgePending || edgePreparing || edgeGated || edgeNotConfigured)) {
     if (edgeError || !edge) {
       edgeNote =
         "Couldn't load Cloudflare edge data — check the token in Settings → CDN cache."
@@ -193,6 +202,7 @@ function DashboardPage() {
         edge={edge}
         gated={edgeGated}
         note={edgeNote}
+        preparing={edgePreparing}
         summary={cardSummary}
       />
 
