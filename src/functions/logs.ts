@@ -1,9 +1,9 @@
 import { createServerFn } from '@tanstack/react-start'
 import { listLogs } from '@/actions/logs'
 import { authMiddleware } from '@/lib/auth/guards'
-import { logsProjectSchema } from '@/schemas/logs'
+import { logsQuerySchema } from '@/schemas/logs'
 
 export const listLogsFn = createServerFn({ method: 'GET' })
-  .inputValidator(logsProjectSchema)
+  .inputValidator(logsQuerySchema)
   .middleware([authMiddleware])
-  .handler(({ data: project }) => listLogs(project))
+  .handler(({ data }) => listLogs(data.project, 200, data))

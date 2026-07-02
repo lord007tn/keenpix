@@ -1,3 +1,4 @@
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import {
@@ -27,6 +28,8 @@ import { appPageHead } from '@/shared/seo'
 import type { LogRow } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
 
+const EMPTY_VALUES: string[] = []
+
 export const Route = createFileRoute('/app/logs/')({
   head: () =>
     appPageHead(
@@ -37,7 +40,7 @@ export const Route = createFileRoute('/app/logs/')({
     project: typeof search.project === 'string' ? search.project : undefined,
   }),
   loaderDeps: ({ search }) => ({ project: search.project }),
-  loader: ({ deps }) => listLogsFn({ data: deps.project }),
+  loader: ({ deps }) => listLogsFn({ data: { project: deps.project } }),
   component: LogsPage,
 })
 
@@ -80,18 +83,52 @@ function LogsPage() {
   const [live, setLive] = useState(true)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [filter, setFilter] = useState('')
+  const [debouncedFilter, setDebouncedFilter] = useState('')
   const [filterValues, setFilterValues] = useState<Record<string, string[]>>({})
-  const formats = filterValues.format ?? []
-  const statuses = filterValues.status ?? []
-  const cacheStates = filterValues.cache ?? []
-  const domains = isAll ? [] : (filterValues.domain ?? [])
+  const formats = filterValues.format ?? EMPTY_VALUES
+  const statuses = filterValues.status ?? EMPTY_VALUES
+  const cacheStates = filterValues.cache ?? EMPTY_VALUES
+  const domains = isAll ? EMPTY_VALUES : (filterValues.domain ?? EMPTY_VALUES)
+  const search = filter.trim().toLowerCase()
+  const debouncedSearch = debouncedFilter.trim()
+  const hasServerFilters =
+    debouncedSearch.length >= 2 ||
+    formats.length > 0 ||
+    statuses.length > 0 ||
+    cacheStates.length > 0 ||
+    domains.length > 0
+
+  const queryParams = useMemo(
+    () => ({
+      cache: cacheStates,
+      domain: domains,
+      format: formats,
+      project,
+      search: debouncedSearch || undefined,
+      status: statuses,
+    }),
+    [cacheStates, debouncedSearch, domains, formats, project, statuses],
+  )
+  const filteredLogsQuery = useQuery({
+    enabled: hasServerFilters,
+    placeholderData: keepPreviousData,
+    queryFn: () => listLogsFn({ data: queryParams }),
+    queryKey: ['logs', queryParams],
+    refetchInterval: live && hasServerFilters ? 2500 : false,
+    staleTime: 10_000,
+  })
 
   useEffect(() => {
     setLogs(initialLogs)
   }, [initialLogs])
 
   useEffect(() => {
-    if (!live) {
+    const id = window.setTimeout(() => setDebouncedFilter(filter), 250)
+    return () => window.clearTimeout(id)
+  }, [filter])
+
+  useEffect(() => {
+    if (!live || hasServerFilters) {
       return
     }
     const params = new URLSearchParams()
@@ -113,7 +150,7 @@ function LogsPage() {
       })
     })
     return () => source.close()
-  }, [live, project])
+  }, [hasServerFilters, live, project])
 
   useEffect(() => {
     if (!live) {
@@ -143,8 +180,14 @@ function LogsPage() {
         .map((v) => ({ value: v, label: v })),
     [logs],
   )
-  const filtered = logs.filter((l) => {
-    if (filter && !l.path.toLowerCase().includes(filter.toLowerCase())) {
+  const visibleLogs = hasServerFilters ? (filteredLogsQuery.data ?? logs) : logs
+  const filtered = visibleLogs.filter((l) => {
+    if (
+      search &&
+      ![l.path, l.sourceHost ?? '', l.id, l.format, String(l.status)].some(
+        (value) => value.toLowerCase().includes(search),
+      )
+    ) {
       return false
     }
     if (formats.length > 0 && !formats.includes(l.format)) {
@@ -269,7 +312,9 @@ function LogsPage() {
             values={filterValues}
           />
           <span className="ml-auto text-muted-foreground text-xs tabular-nums">
-            {filtered.length} of {logs.length}
+            {hasServerFilters
+              ? `${filtered.length} matches`
+              : `${filtered.length} of ${logs.length}`}
           </span>
         </div>
       </Card>
@@ -421,7 +466,17 @@ function LogsPage() {
                 </Fragment>
               )
             })}
-            {filtered.length === 0 ? (
+            {filteredLogsQuery.isError ? (
+              <TableRow>
+                <TableCell
+                  className="py-14 text-center text-destructive"
+                  colSpan={columnCount}
+                >
+                  Couldn’t search logs.
+                </TableCell>
+              </TableRow>
+            ) : null}
+            {!filteredLogsQuery.isError && filtered.length === 0 ? (
               <TableRow>
                 <TableCell
                   className="py-14 text-center text-muted-foreground"

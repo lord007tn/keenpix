@@ -49,7 +49,7 @@ export async function getDashboard(
       aggregateRollupSummary(cur),
       groupRollupsByBucket(cur),
       aggregateRollupSummary(prev),
-      listLogs(5, project),
+      listLogs({ limit: 5, projectId: project }),
       project ? Promise.resolve(null) : groupRollupsByProject(cur),
     ])
 
