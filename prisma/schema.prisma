@@ -153,6 +153,7 @@ model RequestLog {
   country   String?
   sourceHost String?
 
+  @@index([ts])
   @@index([projectId, ts])
   @@index([orgId, ts])
   @@index([projectId, sourceHost])
