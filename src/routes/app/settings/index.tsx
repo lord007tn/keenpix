@@ -31,7 +31,7 @@ import { cn } from '@/lib/cn/utils'
 import { appPageHead } from '@/shared/seo'
 import { useProject } from '@/stores/project-context'
 
-// Instance operations/SMTP/CDN config lives in the Admin console (/app/admin),
+// Instance operations/SMTP/CDN config lives in the Admin console (/admin),
 // not here — Settings is project config + per-org billing + workspace API
 // keys/staff.
 const SECTIONS = [

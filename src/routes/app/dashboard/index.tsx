@@ -209,7 +209,7 @@ function DashboardPage() {
         />
       ) : null}
 
-      {/* Operator/instance health lives in the Admin console (/app/admin) only,
+      {/* Operator/instance health lives in the Admin console (/admin) only,
           not on the tenant dashboard. */}
       <RecentActivity logs={recentLogs} />
     </div>

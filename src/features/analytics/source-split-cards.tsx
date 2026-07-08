@@ -284,7 +284,7 @@ export function SourceSplitCards({
             These cards show only what reached keenpix. Connect Cloudflare to
             split each metric between the edge and the origin and reveal the
             true end-to-end cache hit rate.{' '}
-            <Link search={{ section: 'cdn' }} to="/app/admin">
+            <Link search={{ section: 'cdn' }} to="/admin">
               Connect in Admin → CDN cache
             </Link>
           </AlertDescription>

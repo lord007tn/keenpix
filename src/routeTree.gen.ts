@@ -15,9 +15,11 @@ import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AppRouteRouteImport } from './routes/app/route'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as LegalLicenseRouteImport } from './routes/legal/license'
@@ -38,7 +40,6 @@ import { Route as AppOperationsIndexRouteImport } from './routes/app/operations/
 import { Route as AppLogsIndexRouteImport } from './routes/app/logs/index'
 import { Route as AppDashboardIndexRouteImport } from './routes/app/dashboard/index'
 import { Route as AppAnalyticsIndexRouteImport } from './routes/app/analytics/index'
-import { Route as AppAdminIndexRouteImport } from './routes/app/admin/index'
 import { Route as AppAccountIndexRouteImport } from './routes/app/account/index'
 import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
 import { Route as OgBlogSplatRouteImport } from './routes/og/blog/$'
@@ -78,6 +79,11 @@ const AppRouteRoute = AppRouteRouteImport.update({
   path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -92,6 +98,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRouteRoute,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 const LegalTermsRoute = LegalTermsRouteImport.update({
   id: '/legal/terms',
@@ -193,11 +204,6 @@ const AppAnalyticsIndexRoute = AppAnalyticsIndexRouteImport.update({
   path: '/analytics/',
   getParentRoute: () => AppRouteRoute,
 } as any)
-const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
-  getParentRoute: () => AppRouteRoute,
-} as any)
 const AppAccountIndexRoute = AppAccountIndexRouteImport.update({
   id: '/account/',
   path: '/account/',
@@ -237,6 +243,7 @@ const ApiInternalBillingReportUsageRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/app': typeof AppRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/accept-invite': typeof AcceptInviteRoute
@@ -258,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/legal/license': typeof LegalLicenseRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -265,7 +273,6 @@ export interface FileRoutesByFullPath {
   '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account/': typeof AppAccountIndexRoute
-  '/app/admin/': typeof AppAdminIndexRoute
   '/app/analytics/': typeof AppAnalyticsIndexRoute
   '/app/dashboard/': typeof AppDashboardIndexRoute
   '/app/logs/': typeof AppLogsIndexRoute
@@ -296,6 +303,7 @@ export interface FileRoutesByTo {
   '/legal/license': typeof LegalLicenseRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
   '/blog': typeof BlogIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -303,7 +311,6 @@ export interface FileRoutesByTo {
   '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account': typeof AppAccountIndexRoute
-  '/app/admin': typeof AppAdminIndexRoute
   '/app/analytics': typeof AppAnalyticsIndexRoute
   '/app/dashboard': typeof AppDashboardIndexRoute
   '/app/logs': typeof AppLogsIndexRoute
@@ -315,6 +322,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/app': typeof AppRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/accept-invite': typeof AcceptInviteRoute
@@ -336,6 +344,7 @@ export interface FileRoutesById {
   '/legal/license': typeof LegalLicenseRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -343,7 +352,6 @@ export interface FileRoutesById {
   '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account/': typeof AppAccountIndexRoute
-  '/app/admin/': typeof AppAdminIndexRoute
   '/app/analytics/': typeof AppAnalyticsIndexRoute
   '/app/dashboard/': typeof AppDashboardIndexRoute
   '/app/logs/': typeof AppLogsIndexRoute
@@ -356,6 +364,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/app'
     | '/about'
     | '/accept-invite'
@@ -377,6 +386,7 @@ export interface FileRouteTypes {
     | '/legal/license'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/admin/'
     | '/app/'
     | '/blog/'
     | '/api/auth/$'
@@ -384,7 +394,6 @@ export interface FileRouteTypes {
     | '/og/blog/$'
     | '/og/docs/$'
     | '/app/account/'
-    | '/app/admin/'
     | '/app/analytics/'
     | '/app/dashboard/'
     | '/app/logs/'
@@ -415,6 +424,7 @@ export interface FileRouteTypes {
     | '/legal/license'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/admin'
     | '/app'
     | '/blog'
     | '/api/auth/$'
@@ -422,7 +432,6 @@ export interface FileRouteTypes {
     | '/og/blog/$'
     | '/og/docs/$'
     | '/app/account'
-    | '/app/admin'
     | '/app/analytics'
     | '/app/dashboard'
     | '/app/logs'
@@ -433,6 +442,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/app'
     | '/about'
     | '/accept-invite'
@@ -454,6 +464,7 @@ export interface FileRouteTypes {
     | '/legal/license'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/admin/'
     | '/app/'
     | '/blog/'
     | '/api/auth/$'
@@ -461,7 +472,6 @@ export interface FileRouteTypes {
     | '/og/blog/$'
     | '/og/docs/$'
     | '/app/account/'
-    | '/app/admin/'
     | '/app/analytics/'
     | '/app/dashboard/'
     | '/app/logs/'
@@ -473,6 +483,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   AppRouteRoute: typeof AppRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
   AcceptInviteRoute: typeof AcceptInviteRoute
@@ -547,6 +558,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -567,6 +585,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/legal/terms': {
       id: '/legal/terms'
@@ -708,13 +733,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
-    '/app/admin/': {
-      id: '/app/admin/'
-      path: '/admin'
-      fullPath: '/app/admin/'
-      preLoaderRoute: typeof AppAdminIndexRouteImport
-      parentRoute: typeof AppRouteRoute
-    }
     '/app/account/': {
       id: '/app/account/'
       path: '/account'
@@ -767,10 +785,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
+
 interface AppRouteRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppAccountIndexRoute: typeof AppAccountIndexRoute
-  AppAdminIndexRoute: typeof AppAdminIndexRoute
   AppAnalyticsIndexRoute: typeof AppAnalyticsIndexRoute
   AppDashboardIndexRoute: typeof AppDashboardIndexRoute
   AppLogsIndexRoute: typeof AppLogsIndexRoute
@@ -781,7 +810,6 @@ interface AppRouteRouteChildren {
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppAccountIndexRoute: AppAccountIndexRoute,
-  AppAdminIndexRoute: AppAdminIndexRoute,
   AppAnalyticsIndexRoute: AppAnalyticsIndexRoute,
   AppDashboardIndexRoute: AppDashboardIndexRoute,
   AppLogsIndexRoute: AppLogsIndexRoute,
@@ -795,6 +823,7 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   AppRouteRoute: AppRouteRouteWithChildren,
   AboutRoute: AboutRoute,
   AcceptInviteRoute: AcceptInviteRoute,
