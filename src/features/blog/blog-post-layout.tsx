@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
+import { getAuthor } from '@/shared/authors'
 
 export interface BlogPostMeta {
   author: string
@@ -28,6 +29,7 @@ function formatDate(date: string): string {
 }
 
 export function BlogPostHeader({ meta }: { meta: BlogPostMeta }) {
+  const authorLink = getAuthor(meta.author).sameAs?.[0]
   return (
     <header className="border-b bg-muted/30">
       <div className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
@@ -50,7 +52,18 @@ export function BlogPostHeader({ meta }: { meta: BlogPostMeta }) {
           {meta.description}
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-muted-foreground text-sm">
-          <span>{meta.author}</span>
+          {authorLink ? (
+            <a
+              className="font-medium text-foreground hover:underline"
+              href={authorLink}
+              rel="author noreferrer"
+              target="_blank"
+            >
+              {meta.author}
+            </a>
+          ) : (
+            <span>{meta.author}</span>
+          )}
           <span aria-hidden="true">·</span>
           <time dateTime={meta.date}>{formatDate(meta.date)}</time>
           {meta.tags.length > 0 ? (

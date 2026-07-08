@@ -9,6 +9,12 @@ import { z } from 'zod'
 export const docs = defineDocs({
   dir: 'content/docs',
   docs: {
+    // Extend (don't replace) the default frontmatter schema so title/description/
+    // icon still validate; `updated` is an optional freshness date that flows into
+    // the docs TechArticle JSON-LD as dateModified and the sitemap as <lastmod>.
+    schema: frontmatterSchema.extend({
+      updated: z.string().optional(),
+    }),
     postprocess: {
       includeProcessedMarkdown: true,
     },
@@ -24,6 +30,9 @@ export const blog = defineCollections({
   schema: frontmatterSchema.extend({
     description: z.string(),
     date: z.string(),
+    // Optional last-edited date; defaults to `date` for BlogPosting dateModified
+    // and drives article:modified_time. Set it when a post is materially updated.
+    updated: z.string().optional(),
     author: z.string().default('Keenpix Team'),
     tags: z.array(z.string()).default([]),
     competitor: z.string().optional(),

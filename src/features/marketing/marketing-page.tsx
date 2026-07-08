@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/cn/utils'
+import { SOCIAL_X_URL } from '@/shared/authors'
 import { MARKETING_FAQ } from '@/shared/marketing-faq'
 import { REPOSITORY_URL } from '@/shared/repository'
 import { FrameworkLogos } from './framework-logos'
@@ -154,15 +155,19 @@ export function MarketingPage() {
 
       <main id="main-content">
         <section className="relative isolate overflow-hidden border-b bg-[#06101f] text-white">
-          <img
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 -z-10 h-full w-full object-cover opacity-60"
-            fetchPriority="high"
-            height="630"
-            src="/brand/keenpix-og.png"
-            width="1200"
-          />
+          <picture>
+            <source srcSet="/brand/keenpix-hero.avif" type="image/avif" />
+            <source srcSet="/brand/keenpix-hero.webp" type="image/webp" />
+            <img
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 -z-10 h-full w-full object-cover opacity-60"
+              fetchPriority="high"
+              height="630"
+              src="/brand/keenpix-og.png"
+              width="1200"
+            />
+          </picture>
           <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(6,16,31,0.96),rgba(6,16,31,0.82)_45%,rgba(6,16,31,0.28))]" />
           <div className="mx-auto grid min-h-[calc(100svh-10rem)] max-w-6xl content-center gap-10 px-6 py-16 sm:min-h-[560px] sm:py-20 lg:grid-cols-[1.05fr_0.95fr]">
             <div className="max-w-2xl">
@@ -522,6 +527,9 @@ Vary: Accept`}</CodeBlock>
             © 2026 keenpix · managed cloud + open-source self-host
           </span>
           <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <a className="hover:text-foreground" href="/about">
+              About
+            </a>
             <a className="hover:text-foreground" href="/blog">
               Blog
             </a>
@@ -541,6 +549,14 @@ Vary: Accept`}</CodeBlock>
               target="_blank"
             >
               GitHub
+            </a>
+            <a
+              className="hover:text-foreground"
+              href={SOCIAL_X_URL}
+              rel="noreferrer"
+              target="_blank"
+            >
+              X
             </a>
           </nav>
         </div>

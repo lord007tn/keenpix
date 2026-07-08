@@ -1,7 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { llms } from 'fumadocs-core/source'
 import { getAppUrl, isCloud } from '@/server/deployment'
+import { listBlogPosts } from '@/shared/blog-source'
 import { source } from '@/shared/docs-source'
+import { MARKETING_FAQ } from '@/shared/marketing-faq'
 
 // fumadocs attaches getText() to each page's data at runtime to expose the
 // processed Markdown body (enabled via includeProcessedMarkdown in
@@ -33,7 +35,7 @@ const generator = llms(source, {
   },
   renderDescription: (node) => {
     if (node.type === 'root') {
-      return 'Hosted documentation for the Keenpix self-hosted image optimization service.'
+      return 'Documentation for Keenpix — an image optimization CDN available as managed cloud or a self-hosted open-source engine.'
     }
 
     return typeof node.description === 'string' ? node.description : ''
@@ -64,18 +66,27 @@ export const Route = createFileRoute('/{$llmFile}.txt')({
 
 function llmsIndex() {
   const baseUrl = getAppUrl()
+  const blogList = listBlogPosts()
+    .map(
+      (post) => `- [${post.title}](${baseUrl}${post.url}): ${post.description}`,
+    )
+    .join('\n')
 
   return `${generator.index()}
 
+## Blog
+
+${blogList}
+
 ## Full Markdown
 
-- [Full documentation](${baseUrl}/llms-full.txt): all public Keenpix docs in one Markdown file.
+- [Full documentation](${baseUrl}/llms-full.txt): all public Keenpix docs, blog posts, and FAQ in one Markdown file.
 `
 }
 
 async function llmsFull() {
   const baseUrl = getAppUrl()
-  const sections = await Promise.all(
+  const docsSections = await Promise.all(
     source.getPages().map(async (page) => {
       const body = await processedMarkdown(page.data)
       const fallback = [
@@ -96,12 +107,37 @@ async function llmsFull() {
     }),
   )
 
+  // Blog posts don't opt into includeProcessedMarkdown, so summarize each by its
+  // description + canonical source rather than the full body.
+  const blogSections = listBlogPosts().map((post) =>
+    [
+      `## ${post.title}`,
+      '',
+      `Source: ${baseUrl}${post.url}`,
+      '',
+      post.description,
+      '',
+    ].join('\n'),
+  )
+
+  const faqSections = MARKETING_FAQ.map((item) =>
+    [`## ${item.question}`, '', item.answer, ''].join('\n'),
+  )
+
   return [
     '# Keenpix documentation',
     '',
-    'Complete hosted documentation for Keenpix, a self-hosted image optimization service.',
+    'Complete documentation for Keenpix, an image optimization CDN available as managed cloud or a self-hosted open-source engine.',
     '',
-    ...sections,
+    ...docsSections,
+    '# Keenpix blog',
+    '',
+    'Guides and honest comparisons (Cloudinary, imgix, ImageKit) from the Keenpix team.',
+    '',
+    ...blogSections,
+    '# Frequently asked questions',
+    '',
+    ...faqSections,
   ].join('\n')
 }
 

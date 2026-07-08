@@ -13,6 +13,7 @@ import { Route as Char123llmFileChar125DottxtRouteImport } from './routes/{$llmF
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
@@ -40,6 +41,7 @@ import { Route as AppAnalyticsIndexRouteImport } from './routes/app/analytics/in
 import { Route as AppAdminIndexRouteImport } from './routes/app/admin/index'
 import { Route as AppAccountIndexRouteImport } from './routes/app/account/index'
 import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
+import { Route as OgBlogSplatRouteImport } from './routes/og/blog/$'
 import { Route as ApiSdkSplatRouteImport } from './routes/api/sdk/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiInternalLogsStreamRouteImport } from './routes/api/internal/logs/stream'
@@ -64,6 +66,11 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
 const AcceptInviteRoute = AcceptInviteRouteImport.update({
   id: '/accept-invite',
   path: '/accept-invite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRouteRoute = AppRouteRouteImport.update({
@@ -201,6 +208,11 @@ const OgDocsSplatRoute = OgDocsSplatRouteImport.update({
   path: '/og/docs/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OgBlogSplatRoute = OgBlogSplatRouteImport.update({
+  id: '/og/blog/$',
+  path: '/og/blog/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSdkSplatRoute = ApiSdkSplatRouteImport.update({
   id: '/api/sdk/$',
   path: '/api/sdk/$',
@@ -226,6 +238,7 @@ const ApiInternalBillingReportUsageRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
+  '/about': typeof AboutRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -249,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/blog/': typeof BlogIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
+  '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account/': typeof AppAccountIndexRoute
   '/app/admin/': typeof AppAdminIndexRoute
@@ -262,6 +276,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -285,6 +300,7 @@ export interface FileRoutesByTo {
   '/blog': typeof BlogIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
+  '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account': typeof AppAccountIndexRoute
   '/app/admin': typeof AppAdminIndexRoute
@@ -300,6 +316,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
+  '/about': typeof AboutRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -323,6 +340,7 @@ export interface FileRoutesById {
   '/blog/': typeof BlogIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
+  '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account/': typeof AppAccountIndexRoute
   '/app/admin/': typeof AppAdminIndexRoute
@@ -339,6 +357,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/about'
     | '/accept-invite'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -362,6 +381,7 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/api/auth/$'
     | '/api/sdk/$'
+    | '/og/blog/$'
     | '/og/docs/$'
     | '/app/account/'
     | '/app/admin/'
@@ -375,6 +395,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/accept-invite'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -398,6 +419,7 @@ export interface FileRouteTypes {
     | '/blog'
     | '/api/auth/$'
     | '/api/sdk/$'
+    | '/og/blog/$'
     | '/og/docs/$'
     | '/app/account'
     | '/app/admin'
@@ -412,6 +434,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/app'
+    | '/about'
     | '/accept-invite'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -435,6 +458,7 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/api/auth/$'
     | '/api/sdk/$'
+    | '/og/blog/$'
     | '/og/docs/$'
     | '/app/account/'
     | '/app/admin/'
@@ -450,6 +474,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
+  AboutRoute: typeof AboutRoute
   AcceptInviteRoute: typeof AcceptInviteRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -472,6 +497,7 @@ export interface RootRouteChildren {
   BlogIndexRoute: typeof BlogIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiSdkSplatRoute: typeof ApiSdkSplatRoute
+  OgBlogSplatRoute: typeof OgBlogSplatRoute
   OgDocsSplatRoute: typeof OgDocsSplatRoute
   ApiInternalBillingReportUsageRoute: typeof ApiInternalBillingReportUsageRoute
   ApiInternalLogsStreamRoute: typeof ApiInternalLogsStreamRoute
@@ -505,6 +531,13 @@ declare module '@tanstack/react-router' {
       path: '/accept-invite'
       fullPath: '/accept-invite'
       preLoaderRoute: typeof AcceptInviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -696,6 +729,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OgDocsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/og/blog/$': {
+      id: '/og/blog/$'
+      path: '/og/blog/$'
+      fullPath: '/og/blog/$'
+      preLoaderRoute: typeof OgBlogSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/sdk/$': {
       id: '/api/sdk/$'
       path: '/api/sdk/$'
@@ -756,6 +796,7 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
+  AboutRoute: AboutRoute,
   AcceptInviteRoute: AcceptInviteRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
@@ -778,6 +819,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogIndexRoute: BlogIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiSdkSplatRoute: ApiSdkSplatRoute,
+  OgBlogSplatRoute: OgBlogSplatRoute,
   OgDocsSplatRoute: OgDocsSplatRoute,
   ApiInternalBillingReportUsageRoute: ApiInternalBillingReportUsageRoute,
   ApiInternalLogsStreamRoute: ApiInternalLogsStreamRoute,

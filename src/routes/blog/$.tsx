@@ -25,10 +25,12 @@ interface BlogLoaderData {
   date: string
   description: string
   jsonLd: ReturnType<typeof blogPostingJsonLd> | null
+  ogImage: string
   path: string
   selfHost: boolean
   tags: string[]
   title: string
+  updated: string
 }
 
 export const Route = createFileRoute('/blog/$')({
@@ -56,10 +58,26 @@ export const Route = createFileRoute('/blog/$')({
         ...seo({
           title,
           description,
-          image: absoluteUrl(BRAND_IMAGE_PATH),
+          image: loaderData?.ogImage ?? absoluteUrl(BRAND_IMAGE_PATH),
           url: canonicalUrl,
           type: 'article',
         }),
+        // article:* Open Graph tags for social platforms (Google reads dates from
+        // the BlogPosting JSON-LD instead). Emitted only with real loader data.
+        ...(loaderData
+          ? [
+              { property: 'article:published_time', content: loaderData.date },
+              {
+                property: 'article:modified_time',
+                content: loaderData.updated,
+              },
+              { property: 'article:author', content: loaderData.author },
+              ...loaderData.tags.map((tag) => ({
+                property: 'article:tag',
+                content: tag,
+              })),
+            ]
+          : []),
         ...(loaderData?.selfHost
           ? [{ name: 'robots', content: 'noindex,nofollow' }]
           : []),
@@ -84,16 +102,20 @@ const serverLoader = createServerFn({ method: 'GET' })
       { name: page.data.title, url: canonicalUrl },
     ]
 
+    const updated = page.data.updated ?? page.data.date
+
     return {
       author: page.data.author,
       canonicalUrl,
       competitor: page.data.competitor,
       date: page.data.date,
       description: page.data.description,
+      ogImage: `${getAppUrl()}/og/blog/${page.slugs.join('/')}`,
       path: page.path,
       selfHost,
       tags: page.data.tags,
       title: page.data.title,
+      updated,
       // Built here so the JSON-LD shares one source of truth with the page's
       // canonical URL; rendered as an SSR <script> in Page(). Suppressed on
       // self-host (the marketing surface is noindex there).
@@ -102,6 +124,7 @@ const serverLoader = createServerFn({ method: 'GET' })
         : blogPostingJsonLd({
             author: page.data.author,
             datePublished: page.data.date,
+            dateModified: updated,
             description: page.data.description,
             path: breadcrumbs,
             title: page.data.title,
