@@ -165,7 +165,9 @@ export function BillingPanel() {
   }
 
   const activePlan = data?.plan ?? null
-  const isEntitled = data?.status === 'active' || data?.status === 'trialing'
+  const internalPlan = data?.planSource === 'internal'
+  const isEntitled =
+    data?.status === 'active' || data?.status === 'trialing' || internalPlan
   const paymentIssue = data ? PAYMENT_ISSUE.has(data.status ?? '') : false
   const canManageBilling = Boolean(data?.hasBillingCustomer)
 
@@ -204,7 +206,7 @@ export function BillingPanel() {
             {data?.status ? (
               <>
                 <Badge variant={isEntitled ? 'success' : 'warning'}>
-                  {data.status}
+                  {internalPlan ? 'internal grant' : data.status}
                 </Badge>
                 {data.currentPeriodEnd ? (
                   <span className="text-muted-foreground text-sm">
@@ -233,7 +235,19 @@ export function BillingPanel() {
 
       {data ? <UsageCard data={data} /> : null}
 
-      {data?.orgId ? (
+      {internalPlan ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Checkout disabled</CardTitle>
+            <CardDescription>
+              This workspace has an internal admin-granted plan. It does not
+              create invoices or change billing records.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
+
+      {!internalPlan && data?.orgId ? (
         <PlanSelection
           activePlanId={isEntitled ? activePlan : null}
           hasPlan={Boolean(activePlan)}

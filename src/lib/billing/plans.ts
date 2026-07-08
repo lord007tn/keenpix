@@ -71,6 +71,12 @@ export const PLANS: Record<PlanId, Plan> = {
   },
 }
 
+const PLAN_RANK: Record<PlanId, number> = {
+  basic: 1,
+  pro: 2,
+  business: 3,
+}
+
 // The most-recent-only log window shown to plans without advanced logs (and the
 // self-host default is unlimited, so this only applies to gated cloud tiers).
 export const BASIC_LOG_LIMIT = 200
@@ -81,4 +87,8 @@ export function isPlanId(value: unknown): value is PlanId {
 
 export function getPlan(planId: string | null | undefined): Plan | null {
   return isPlanId(planId) ? PLANS[planId] : null
+}
+
+export function getPlanRank(plan: Plan | null | undefined) {
+  return plan ? PLAN_RANK[plan.id] : 0
 }
