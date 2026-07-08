@@ -5,6 +5,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import {
   Table,
@@ -45,6 +53,8 @@ export function AllowedHosts({
   )
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [confirmHost, setConfirmHost] = useState<AllowedHostStat | null>(null)
+  const [removing, setRemoving] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -93,15 +103,19 @@ export function AllowedHosts({
   }
 
   async function remove(host: string) {
+    setRemoving(true)
     try {
       await removeAllowedHostFn({
         data: allowedHostSchema.parse({ projectId, host }),
       })
       toast.success(`Removed ${host}`)
+      setConfirmHost(null)
       await load()
       await router.invalidate()
     } catch {
       toast.error('Could not remove host')
+    } finally {
+      setRemoving(false)
     }
   }
 
@@ -226,7 +240,7 @@ export function AllowedHosts({
                   {r.allowed ? (
                     <Button
                       aria-label={`Remove ${r.host}`}
-                      onClick={() => remove(r.host)}
+                      onClick={() => setConfirmHost(r)}
                       size="icon-sm"
                       variant="ghost"
                     >
@@ -258,6 +272,51 @@ export function AllowedHosts({
           </TableBody>
         </Table>
       </div>
+
+      <Dialog
+        onOpenChange={(next) => {
+          if (!next) {
+            setConfirmHost(null)
+          }
+        }}
+        open={confirmHost !== null}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove allowed host?</DialogTitle>
+            <DialogDescription>
+              keenpix will immediately stop serving images from{' '}
+              <span className="font-mono">{confirmHost?.host}</span>
+              {confirmHost && confirmHost.requests > 0
+                ? ` — it served ${compactNumber(confirmHost.requests)} requests in the last 30 days.`
+                : '.'}
+              {allowedCount === 1
+                ? ' This is the last allowed host, so every request to this project will be blocked.'
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setConfirmHost(null)}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={removing}
+              onClick={() => {
+                if (confirmHost) {
+                  remove(confirmHost.host)
+                }
+              }}
+              variant="destructive"
+            >
+              {removing ? 'Removing…' : 'Remove host'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
