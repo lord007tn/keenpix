@@ -6,12 +6,19 @@ const BASIC = /Basic/
 
 const isCloud = vi.hoisted(() => vi.fn())
 const getOrgPlan = vi.hoisted(() => vi.fn())
+const getOrgSubscription = vi.hoisted(() => vi.fn())
 const orgIsServable = vi.hoisted(() => vi.fn())
+const deliveredBytesSince = vi.hoisted(() => vi.fn())
 const projectCount = vi.hoisted(() => vi.fn())
 const memberCount = vi.hoisted(() => vi.fn())
 
 vi.mock('@/server/deployment', () => ({ isCloud }))
-vi.mock('@/data-access/subscriptions', () => ({ getOrgPlan, orgIsServable }))
+vi.mock('@/data-access/subscriptions', () => ({
+  getOrgPlan,
+  getOrgSubscription,
+  orgIsServable,
+}))
+vi.mock('@/data-access/usage', () => ({ deliveredBytesSince }))
 vi.mock('@/db', () => ({
   prisma: {
     project: { count: projectCount },
@@ -52,8 +59,34 @@ describe('quota — cloud enforcement', () => {
     // past_due: not an entitled plan (getOrgPlan null) but still servable.
     getOrgPlan.mockResolvedValue(null)
     orgIsServable.mockResolvedValue(true)
+    // No spend cap set → the cap check never blocks serving.
+    getOrgSubscription.mockResolvedValue({ plan: 'basic', spendCapCents: null })
     expect(await orgCanServe('org_a')).toBe(true)
     await expect(assertCanCreateProject('org_a')).rejects.toThrow(NEEDS_SUB)
+  })
+
+  it('stops serving once overage cost reaches the spend cap', async () => {
+    isCloud.mockReturnValue(true)
+    orgIsServable.mockResolvedValue(true)
+    const GB = 1024 ** 3
+    // Basic: 100 GB included, 8¢/GB overage; cap = 100¢ ($1).
+    getOrgSubscription.mockResolvedValue({
+      plan: 'basic',
+      spendCapCents: 100,
+      currentPeriodStart: new Date('2026-07-01T00:00:00Z'),
+    })
+    // 120 GB → 20 GB overage → 160¢ > 100¢ cap → serving blocked.
+    deliveredBytesSince.mockResolvedValue({
+      bytes: 120 * GB,
+      through: new Date(),
+    })
+    expect(await orgCanServe('org_a')).toBe(false)
+    // 105 GB → 5 GB overage → 40¢ ≤ 100¢ cap → still served.
+    deliveredBytesSince.mockResolvedValue({
+      bytes: 105 * GB,
+      through: new Date(),
+    })
+    expect(await orgCanServe('org_a')).toBe(true)
   })
 
   it('blocks a new project at the plan project limit', async () => {

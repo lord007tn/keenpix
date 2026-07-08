@@ -62,6 +62,11 @@ model Subscription {
   currentPeriodStart  DateTime?
   currentPeriodEnd    DateTime?
   overageAllowed      Boolean      @default(false)
+  // Customer-set hard spending cap on accrued overage cost per period, in cents.
+  // null = no cap (unlimited overage). Enforced by the serving gate: once the
+  // period's overage cost reaches this, the org stops being served. Not from
+  // Polar, so webhook upserts (which omit it) preserve it.
+  spendCapCents       Int?
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 

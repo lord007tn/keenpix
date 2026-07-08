@@ -17,3 +17,9 @@ export async function orgEntitledForServing(orgId: string): Promise<boolean> {
   cache.set(orgId, { at: now, entitled })
   return entitled
 }
+
+// Drop an org's cached entitlement so a billing/cap change takes effect on the
+// next request instead of waiting out the TTL (called after setting a spend cap).
+export function bustServingEntitlement(orgId: string) {
+  cache.delete(orgId)
+}
