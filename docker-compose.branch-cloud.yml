@@ -68,7 +68,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_KEENPIX_PUBLIC_URL: ${SERVICE_URL_APP_3000}
+        VITE_KEENPIX_PUBLIC_URL: ${VITE_KEENPIX_PUBLIC_URL:-http://localhost:3000}
         VERSION: ${SOURCE_COMMIT:-branch-cloud}
     restart: unless-stopped
     mem_limit: ${KEENPIX_MEM_LIMIT:-0}
@@ -83,15 +83,16 @@ services:
       mailpit:
         condition: service_started
     environment:
-      SERVICE_URL_APP_3000: ${SERVICE_URL_APP_3000}
-      SERVICE_URL_APP: ${SERVICE_URL_APP_3000}
+      SERVICE_URL_APP_3000: ${KEENPIX_APP_URL:-http://localhost:3000}
+      SERVICE_URL_APP: ${KEENPIX_APP_URL:-http://localhost:3000}
       NODE_ENV: production
       PORT: "3000"
       KEENPIX_MODE: cloud
       DATABASE_URL: postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_64_POSTGRES}@postgres:5432/${POSTGRES_DB:-keenpix_branch}
       BETTER_AUTH_SECRET: ${SERVICE_HEX_64_KEENPIX}
-      BETTER_AUTH_URL: ${SERVICE_URL_APP_3000}
-      KEENPIX_APP_URL: ${SERVICE_URL_APP_3000}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      KEENPIX_APP_URL: ${KEENPIX_APP_URL:-http://localhost:3000}
+      VITE_KEENPIX_PUBLIC_URL: ${VITE_KEENPIX_PUBLIC_URL:-http://localhost:3000}
       KEENPIX_SUPER_ADMIN_EMAIL: ${KEENPIX_SUPER_ADMIN_EMAIL}
       KEENPIX_SUPER_ADMIN_PASSWORD: ${KEENPIX_SUPER_ADMIN_PASSWORD}
       KEENPIX_RUN_MIGRATIONS: ${KEENPIX_RUN_MIGRATIONS:-true}
