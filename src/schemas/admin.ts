@@ -74,6 +74,8 @@ export const updateInternalPlanGrantSchema = z.object({
   orgId: nonEmptyStringSchema(),
   plan: internalPlanSchema,
   reason: z.string().trim().max(500, 'Use 500 characters or fewer.').optional(),
+  // Optional YYYY-MM-DD expiry; empty/omitted = no expiry (permanent grant).
+  expiresAt: z.string().optional(),
 })
 
 export const suspendOrgSchema = z.object({

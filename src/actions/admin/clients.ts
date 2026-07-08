@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import {
   listClientAccounts,
   setOrgSuspension as setOrgSuspensionDb,
@@ -31,6 +32,7 @@ export async function updateClientInternalPlan(input: {
   orgId: string
   plan: 'none' | 'basic' | 'pro' | 'business'
   reason?: string
+  expiresAt?: string
 }) {
   if (input.plan === 'none') {
     await removeInternalPlanGrant(input.orgId)
@@ -42,6 +44,10 @@ export async function updateClientInternalPlan(input: {
     plan: input.plan,
     reason: input.reason,
     grantedById: input.grantedById,
+    // End of the chosen day, so a grant is valid through its expiry date.
+    expiresAt: input.expiresAt
+      ? dayjs(input.expiresAt).endOf('day').toDate()
+      : null,
   })
   return { orgId: input.orgId, plan: input.plan }
 }

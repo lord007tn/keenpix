@@ -104,6 +104,8 @@ export function ClientManagement() {
   const [clients, setClients] = useState<ClientAccount[]>([])
   const [plans, setPlans] = useState<Record<string, InternalPlanValue>>({})
   const [reasons, setReasons] = useState<Record<string, string>>({})
+  const [expiries, setExpiries] = useState<Record<string, string>>({})
+  const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [confirmSuspend, setConfirmSuspend] = useState<{
@@ -129,6 +131,14 @@ export function ClientManagement() {
           data.map((client) => [client.id, client.internalGrant?.reason ?? '']),
         ),
       )
+      setExpiries(
+        Object.fromEntries(
+          data.map((client) => [
+            client.id,
+            client.internalGrant?.expiresAt?.slice(0, 10) ?? '',
+          ]),
+        ),
+      )
     } catch (error) {
       toast.error(getErrorMessage(error, 'Could not load clients'))
     } finally {
@@ -148,6 +158,7 @@ export function ClientManagement() {
           orgId: client.id,
           plan: plans[client.id] ?? 'none',
           reason: reasons[client.id] ?? '',
+          expiresAt: expiries[client.id] || undefined,
         },
       })
       toast.success('Internal plan updated')
@@ -189,6 +200,15 @@ export function ClientManagement() {
 
   const suspendVerb = confirmSuspend?.suspended ? 'Reactivate' : 'Suspend'
 
+  const query = search.trim().toLowerCase()
+  const filteredClients = query
+    ? clients.filter((client) =>
+        [client.name, client.slug, ...client.owners.map((o) => o.email)].some(
+          (value) => value.toLowerCase().includes(query),
+        ),
+      )
+    : clients
+
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -196,10 +216,19 @@ export function ClientManagement() {
           <UsersRoundIcon className="size-4" />
           <span>{clients.length} client organizations</span>
         </div>
-        <Button disabled={loading} onClick={load} size="sm" variant="outline">
-          <RefreshCcwIcon data-icon="inline-start" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Input
+            aria-label="Search clients"
+            className="w-56"
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, slug, or owner…"
+            value={search}
+          />
+          <Button disabled={loading} onClick={load} size="sm" variant="outline">
+            <RefreshCcwIcon data-icon="inline-start" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <Table containerClassName="rounded-md border">
@@ -221,19 +250,24 @@ export function ClientManagement() {
               </TableCell>
             </TableRow>
           ) : null}
-          {clients.length === 0 && !loading ? (
+          {!loading && filteredClients.length === 0 ? (
             <TableRow>
               <TableCell className="text-muted-foreground" colSpan={6}>
-                No client organizations found.
+                {query
+                  ? 'No clients match your search.'
+                  : 'No client organizations found.'}
               </TableCell>
             </TableRow>
           ) : null}
-          {clients.map((client) => {
+          {filteredClients.map((client) => {
             const source = client.effectivePlan?.source
+            const currentExpiry =
+              client.internalGrant?.expiresAt?.slice(0, 10) ?? ''
             const changed =
               (plans[client.id] ?? 'none') !== internalPlanValue(client) ||
               (reasons[client.id] ?? '') !==
-                (client.internalGrant?.reason ?? '')
+                (client.internalGrant?.reason ?? '') ||
+              (expiries[client.id] ?? '') !== currentExpiry
             const effPlan = getPlan(client.effectivePlan?.plan)
             const quotaPct =
               effPlan && effPlan.includedBandwidthBytes > 0
@@ -322,6 +356,18 @@ export function ClientManagement() {
                       }
                       placeholder="Reason"
                       value={reasons[client.id] ?? ''}
+                    />
+                    <Input
+                      aria-label={`${client.name} grant expiry`}
+                      onChange={(event) =>
+                        setExpiries((current) => ({
+                          ...current,
+                          [client.id]: event.target.value,
+                        }))
+                      }
+                      title="Grant expiry (optional)"
+                      type="date"
+                      value={expiries[client.id] ?? ''}
                     />
                   </div>
                 </TableCell>
