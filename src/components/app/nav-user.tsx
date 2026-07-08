@@ -1,10 +1,12 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import {
+  ArrowLeftIcon,
   BookOpenIcon,
   ChevronDownIcon,
   CreditCardIcon,
   LogOutIcon,
   MoonIcon,
+  ShieldIcon,
   SunIcon,
   TagIcon,
   UserIcon,
@@ -38,9 +40,11 @@ function initials(user: SessionUser): string {
 }
 
 export function NavUser({
+  admin = false,
   cloud,
   user,
 }: {
+  admin?: boolean
   cloud: boolean
   user: SessionUser
 }) {
@@ -104,6 +108,18 @@ export function NavUser({
             >
               <CreditCardIcon />
               Plan &amp; billing
+            </DropdownMenuItem>
+          ) : null}
+          {user.role === 'super_admin' && !admin ? (
+            <DropdownMenuItem render={<Link to="/admin" />}>
+              <ShieldIcon />
+              Admin dashboard
+            </DropdownMenuItem>
+          ) : null}
+          {user.role === 'super_admin' && admin ? (
+            <DropdownMenuItem render={<Link to="/app" />}>
+              <ArrowLeftIcon />
+              Back to app
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem

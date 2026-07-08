@@ -4,7 +4,6 @@ import {
   LayoutGridIcon,
   ScrollTextIcon,
   SettingsIcon,
-  ShieldIcon,
 } from 'lucide-react'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { NavUser } from '@/components/app/nav-user'
@@ -40,7 +39,6 @@ export function AppTopnav({
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const { projectId } = useProject()
-  const isSuperAdmin = user.role === 'super_admin'
 
   return (
     <header className="sticky top-0 z-20 flex flex-col border-b bg-background">
@@ -95,28 +93,6 @@ export function AppTopnav({
           />
           Settings
         </Link>
-
-        {/* Admin is the operator console — kept last so it sits after the
-            everyday tabs (Overview…Settings) for the super-admins who see it. */}
-        {isSuperAdmin ? (
-          <Link
-            className={tabClassName(pathname.startsWith('/app/admin'))}
-            search={(prev) => ({
-              ...prev,
-              project: projectId,
-              section: undefined,
-            })}
-            to="/app/admin"
-          >
-            <ShieldIcon
-              className={cn(
-                'size-4',
-                pathname.startsWith('/app/admin') && 'text-primary',
-              )}
-            />
-            Admin
-          </Link>
-        ) : null}
       </nav>
     </header>
   )

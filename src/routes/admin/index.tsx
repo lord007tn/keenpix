@@ -1,8 +1,4 @@
-import {
-  createFileRoute,
-  redirect,
-  useRouteContext,
-} from '@tanstack/react-router'
+import { createFileRoute, useRouteContext } from '@tanstack/react-router'
 import {
   ActivityIcon,
   CloudIcon,
@@ -24,7 +20,6 @@ import { CloudflareSettingsPanel } from '@/features/admin/cloudflare-settings'
 import { OperationsConfig } from '@/features/admin/operations-config'
 import { OperationsHealth } from '@/features/admin/operations-health'
 import { cn } from '@/lib/cn/utils'
-import { appPageHead } from '@/shared/seo'
 
 const SECTIONS = ['clients', 'operations', 'cdn'] as const
 type Section = (typeof SECTIONS)[number]
@@ -44,24 +39,11 @@ const SECTION_META: Record<Section, { label: string; icon: LucideIcon }> = {
 // (EMAIL_PROVIDER + provider vars), so it has no panel here. Operations config is
 // self-host-only (platform-managed in cloud); the CDN cache / Cloudflare edge
 // integration stays available to the super-admin in both modes. The server
-// guards enforce this split.
-export const Route = createFileRoute('/app/admin/')({
-  head: () =>
-    appPageHead(
-      'Admin',
-      'Keenpix operator console — instance operations, health, email, and CDN settings.',
-    ),
-  validateSearch: (
-    search: Record<string, unknown>,
-  ): { project?: string; section?: Section } => ({
-    project: typeof search.project === 'string' ? search.project : undefined,
+// guards enforce this split. Super-admin access is guarded by the /admin layout.
+export const Route = createFileRoute('/admin/')({
+  validateSearch: (search: Record<string, unknown>): { section?: Section } => ({
     section: isSection(search.section) ? search.section : undefined,
   }),
-  beforeLoad: ({ context }) => {
-    if (context.user?.role !== 'super_admin') {
-      throw redirect({ search: { project: undefined }, to: '/app/account' })
-    }
-  },
   component: AdminPage,
 })
 
@@ -93,7 +75,7 @@ function SubNavItem({
 }
 
 function AdminPage() {
-  const { cloud } = useRouteContext({ from: '/app' })
+  const { cloud } = useRouteContext({ from: '/admin' })
   const { section } = Route.useSearch()
   const navigate = Route.useNavigate()
 
