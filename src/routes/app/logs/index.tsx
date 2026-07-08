@@ -81,6 +81,7 @@ function LogsPage() {
   const projectName = new Map(projects.map((p) => [p.id, p.name]))
   const [logs, setLogs] = useState(initialLogs)
   const [live, setLive] = useState(true)
+  const [streamConnected, setStreamConnected] = useState(true)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [filter, setFilter] = useState('')
   const [debouncedFilter, setDebouncedFilter] = useState('')
@@ -135,9 +136,19 @@ function LogsPage() {
     if (project) {
       params.set('project', project)
     }
+    setStreamConnected(true)
     const source = new EventSource(
       `/api/internal/logs/stream${params.size ? `?${params}` : ''}`,
     )
+    source.onopen = () => setStreamConnected(true)
+    source.onerror = () => {
+      // The browser auto-reconnects transient drops (readyState CONNECTING); only
+      // a permanent close (e.g. auth 401/403 → CLOSED) needs a visible status so
+      // the feed never sits "Live" while silently dead.
+      if (source.readyState === EventSource.CLOSED) {
+        setStreamConnected(false)
+      }
+    }
     source.addEventListener('logs', (event) => {
       const rows = JSON.parse((event as MessageEvent).data) as LogRow[]
       if (rows.length === 0) {
@@ -247,6 +258,15 @@ function LogsPage() {
   // cache + latency + bytes — exactly one of project/domain renders.
   const columnCount = 10
 
+  // hasServerFilters uses the polling query (no EventSource), so treat it healthy.
+  const streamHealthy = streamConnected || hasServerFilters
+  let liveLabel = 'Paused'
+  let liveVariant: 'outline' | 'success' | 'warning' = 'outline'
+  if (live) {
+    liveLabel = streamHealthy ? 'Live' : 'Reconnecting…'
+    liveVariant = streamHealthy ? 'success' : 'warning'
+  }
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <PageHeader
@@ -255,12 +275,12 @@ function LogsPage() {
             <Button
               onClick={() => setLive((v) => !v)}
               size="sm"
-              variant={live ? 'success' : 'outline'}
+              variant={liveVariant}
             >
               <span
-                className={`size-1.5 rounded-full bg-current ${live ? 'animate-pulse' : ''}`}
+                className={`size-1.5 rounded-full bg-current ${live && streamHealthy ? 'animate-pulse' : ''}`}
               />
-              {live ? 'Live' : 'Paused'}
+              {liveLabel}
             </Button>
             <Button
               disabled={filtered.length === 0}
