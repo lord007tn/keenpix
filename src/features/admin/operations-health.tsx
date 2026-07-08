@@ -302,7 +302,7 @@ function ResourceTrends({
   )
 }
 
-export function OperationsHealth() {
+export function OperationsHealth({ cloud }: { cloud: boolean }) {
   const [health, setHealth] = useState<OperationsHealthData | null>(null)
   const [pending, setPending] = useState(false)
   const [maintenanceTarget, setMaintenanceTarget] =
@@ -558,15 +558,17 @@ export function OperationsHealth() {
             <Badge variant="secondary">
               {diskUsed}% of {humanBytes(health?.cache.diskMaxBytes ?? 0)}
             </Badge>
-            <Button
-              disabled={!!maintenanceTarget}
-              onClick={() => maintainCache('disk')}
-              size="sm"
-              variant="outline"
-            >
-              <Trash2Icon data-icon="inline-start" />
-              {maintenanceTarget === 'disk' ? 'Clearing...' : 'Clear disk'}
-            </Button>
+            {cloud ? null : (
+              <Button
+                disabled={!!maintenanceTarget}
+                onClick={() => maintainCache('disk')}
+                size="sm"
+                variant="outline"
+              >
+                <Trash2Icon data-icon="inline-start" />
+                {maintenanceTarget === 'disk' ? 'Clearing...' : 'Clear disk'}
+              </Button>
+            )}
           </div>
           <p className="text-muted-foreground text-xs">
             {diskEvictedFiles > 0
@@ -589,15 +591,19 @@ export function OperationsHealth() {
             <Badge variant="secondary">
               {memoryUsed}% of {humanBytes(health?.cache.memoryMaxBytes ?? 0)}
             </Badge>
-            <Button
-              disabled={!!maintenanceTarget}
-              onClick={() => maintainCache('memory')}
-              size="sm"
-              variant="outline"
-            >
-              <Trash2Icon data-icon="inline-start" />
-              {maintenanceTarget === 'memory' ? 'Clearing...' : 'Clear memory'}
-            </Button>
+            {cloud ? null : (
+              <Button
+                disabled={!!maintenanceTarget}
+                onClick={() => maintainCache('memory')}
+                size="sm"
+                variant="outline"
+              >
+                <Trash2Icon data-icon="inline-start" />
+                {maintenanceTarget === 'memory'
+                  ? 'Clearing...'
+                  : 'Clear memory'}
+              </Button>
+            )}
           </div>
         </Panel>
 
@@ -632,24 +638,26 @@ export function OperationsHealth() {
         </Panel>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-background p-3">
-        <div className="min-w-0">
-          <h3 className="font-medium text-sm">Cache maintenance</h3>
-          <p className="text-muted-foreground text-xs">
-            Clear hot memory entries, disk variants, or both when storage
-            pressure is high or after changing transform policy.
-          </p>
+      {cloud ? null : (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-background p-3">
+          <div className="min-w-0">
+            <h3 className="font-medium text-sm">Cache maintenance</h3>
+            <p className="text-muted-foreground text-xs">
+              Clear hot memory entries, disk variants, or both when storage
+              pressure is high or after changing transform policy.
+            </p>
+          </div>
+          <Button
+            disabled={!!maintenanceTarget}
+            onClick={() => maintainCache('all')}
+            size="sm"
+            variant="destructive"
+          >
+            <Trash2Icon data-icon="inline-start" />
+            {maintenanceTarget === 'all' ? 'Clearing...' : 'Clear all cache'}
+          </Button>
         </div>
-        <Button
-          disabled={!!maintenanceTarget}
-          onClick={() => maintainCache('all')}
-          size="sm"
-          variant="destructive"
-        >
-          <Trash2Icon data-icon="inline-start" />
-          {maintenanceTarget === 'all' ? 'Clearing...' : 'Clear all cache'}
-        </Button>
-      </div>
+      )}
 
       <ResourceTrends liveSeries={series} memLimitBytes={memLimit} />
 

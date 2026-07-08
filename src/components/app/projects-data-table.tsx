@@ -158,6 +158,14 @@ export function ProjectsDataTable({
                   }
                   key={r.id}
                   onClick={() => onSelect(r.original.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onSelect(r.original.id)
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                 >
                   {r.getVisibleCells().map((c) => (
                     <TableCell key={c.id}>

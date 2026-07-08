@@ -138,7 +138,7 @@ function AdminPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <OperationsHealth />
+                  <OperationsHealth cloud={cloud} />
                 </CardContent>
               </Card>
               {cloud ? null : (

@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { AppTopnav } from '@/components/app/app-topnav'
 import { AppNotFound, RouteError } from '@/components/app/error-page'
+import { ServingBanner } from '@/components/app/serving-banner'
 import { getSessionFn } from '@/functions/auth'
 import { getPublicConfigFn } from '@/functions/config'
 import { listProjectsFn } from '@/functions/projects'
@@ -49,6 +50,7 @@ function AppLayout() {
     <ProjectProvider projects={projects}>
       <div className="flex min-h-svh flex-col bg-background">
         <AppTopnav cloud={cloud} user={user} />
+        <ServingBanner cloud={cloud} />
         <main className="flex flex-1 flex-col overflow-auto" id="main-content">
           <Outlet />
         </main>
