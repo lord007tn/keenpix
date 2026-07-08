@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { TriangleAlertIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -12,10 +12,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { getErrorMessage } from '@/errors/common'
 import { PlanSelection } from '@/features/billing/plan-selection'
-import { getBillingStateFn } from '@/functions/billing'
+import { getBillingStateFn, setSpendCapFn } from '@/functions/billing'
 import { authClient } from '@/lib/auth/client'
 import { humanBytes } from '@/shared/format'
 
@@ -94,6 +96,12 @@ function UsageCard({ data }: { data: BillingData }) {
               period.
             </p>
           ) : null}
+          {!over && usage.includedBytes && pct >= 80 ? (
+            <p className="text-warning-text text-xs">
+              You’ve used {pct.toFixed(0)}% of your included bandwidth this
+              period.
+            </p>
+          ) : null}
         </div>
         {hasPlan ? (
           <div className="grid gap-6 sm:grid-cols-2">
@@ -109,6 +117,101 @@ function UsageCard({ data }: { data: BillingData }) {
             />
           </div>
         ) : null}
+      </CardContent>
+    </Card>
+  )
+}
+
+// Hard spending cap on overage: the customer sets a dollar ceiling and serving
+// stops once accrued overage reaches it (enforced by the serving gate). Delivers
+// the "no surprise bill" promise. Owner/admin-only; members see it read-only.
+function SpendCapCard({
+  canManage,
+  data,
+}: {
+  canManage: boolean
+  data: BillingData
+}) {
+  const queryClient = useQueryClient()
+  const cap = data.spendCapCents
+  const [value, setValue] = useState('')
+  const mutation = useMutation({
+    mutationFn: (spendCapCents: number | null) =>
+      setSpendCapFn({ data: { spendCapCents } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['billing-state'] })
+      setValue('')
+      toast.success('Spending cap updated')
+    },
+    onError: (error) =>
+      toast.error(getErrorMessage(error, 'Could not update the cap')),
+  })
+  const overageDollars = (data.usage.overageCostCents / 100).toFixed(2)
+
+  function save() {
+    const dollars = Number.parseFloat(value)
+    if (Number.isNaN(dollars) || dollars < 0) {
+      toast.error('Enter a cap in dollars (0 or more)')
+      return
+    }
+    mutation.mutate(Math.round(dollars * 100))
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Spending cap</CardTitle>
+        <CardDescription>
+          Stop serving images once overage charges this period reach your cap,
+          so a traffic spike or hotlink can never run up an unbounded bill.
+          Enforced within about an hour.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p className="text-muted-foreground text-sm">
+          {cap === null
+            ? 'No cap set — overage is unlimited at your plan rate.'
+            : `Cap: $${(cap / 100).toFixed(2)} of overage · $${overageDollars} used so far this period.`}
+        </p>
+        {canManage ? (
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="spend-cap">Overage cap (USD)</Label>
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground text-sm">$</span>
+                <Input
+                  className="w-32"
+                  id="spend-cap"
+                  inputMode="decimal"
+                  min={0}
+                  onChange={(e) => setValue(e.target.value)}
+                  placeholder={cap === null ? '50.00' : (cap / 100).toFixed(2)}
+                  type="number"
+                  value={value}
+                />
+              </div>
+            </div>
+            <Button
+              disabled={mutation.isPending || value.trim() === ''}
+              onClick={save}
+            >
+              {mutation.isPending ? 'Saving…' : 'Set cap'}
+            </Button>
+            {cap === null ? null : (
+              <Button
+                disabled={mutation.isPending}
+                onClick={() => mutation.mutate(null)}
+                variant="outline"
+              >
+                Remove cap
+              </Button>
+            )}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-xs">
+            Only owners and admins can change the spending cap.
+          </p>
+        )}
       </CardContent>
     </Card>
   )
@@ -170,6 +273,12 @@ export function BillingPanel() {
     data?.status === 'active' || data?.status === 'trialing' || internalPlan
   const paymentIssue = data ? PAYMENT_ISSUE.has(data.status ?? '') : false
   const canManageBilling = Boolean(data?.hasBillingCustomer)
+  const canManage = data?.canManage ?? false
+  const cap = data?.spendCapCents ?? null
+  const overageCents = data?.usage.overageCostCents ?? 0
+  const capReached = cap !== null && overageCents >= cap
+  const capNear = cap !== null && !capReached && overageCents >= cap * 0.8
+  const capDollars = cap === null ? '' : (cap / 100).toFixed(2)
 
   return (
     <div className="flex flex-col gap-6">
@@ -188,6 +297,28 @@ export function BillingPanel() {
             >
               {portalBusy ? 'Opening…' : 'Update payment method'}
             </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {capReached ? (
+        <Alert variant="destructive">
+          <TriangleAlertIcon />
+          <AlertTitle>Image delivery paused — spending cap reached</AlertTitle>
+          <AlertDescription>
+            You’ve reached your ${capDollars} overage cap for this period, so
+            images are no longer being served. Raise or remove the cap below to
+            resume delivery.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {capNear ? (
+        <Alert>
+          <TriangleAlertIcon />
+          <AlertTitle>Approaching your spending cap</AlertTitle>
+          <AlertDescription>
+            You’ve used ${(overageCents / 100).toFixed(2)} of your ${capDollars}{' '}
+            overage cap this period. Delivery pauses when you reach it.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -221,7 +352,7 @@ export function BillingPanel() {
               </span>
             )}
           </div>
-          {canManageBilling ? (
+          {canManage && canManageBilling ? (
             <Button
               disabled={portalBusy}
               onClick={openPortal}
@@ -235,6 +366,10 @@ export function BillingPanel() {
 
       {data ? <UsageCard data={data} /> : null}
 
+      {data && !internalPlan && activePlan ? (
+        <SpendCapCard canManage={canManage} data={data} />
+      ) : null}
+
       {internalPlan ? (
         <Card>
           <CardHeader>
@@ -247,12 +382,17 @@ export function BillingPanel() {
         </Card>
       ) : null}
 
-      {!internalPlan && data?.orgId ? (
+      {!internalPlan && data?.orgId && canManage ? (
         <PlanSelection
           activePlanId={isEntitled ? activePlan : null}
           hasPlan={Boolean(activePlan)}
           orgId={data.orgId}
         />
+      ) : null}
+      {!internalPlan && data?.orgId && !canManage ? (
+        <p className="text-muted-foreground text-sm">
+          Billing is managed by your organization’s owners and admins.
+        </p>
       ) : null}
     </div>
   )

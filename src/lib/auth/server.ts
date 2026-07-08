@@ -267,12 +267,19 @@ export const auth = betterAuth({
       const member = session
         ? await prisma.member.findFirst({
             where: { userId: session.user.id, organizationId: referenceId },
-            select: { id: true },
+            select: { role: true },
           })
         : null
       if (!member) {
         throw new APIError('FORBIDDEN', {
           message: 'You are not a member of that organization.',
+        })
+      }
+      // Billing is an owner/admin action: a plain member must not be able to
+      // subscribe, switch, or cancel the org's plan by POSTing checkout directly.
+      if (member.role !== 'owner' && member.role !== 'admin') {
+        throw new APIError('FORBIDDEN', {
+          message: 'Only organization owners and admins can manage billing.',
         })
       }
     }),

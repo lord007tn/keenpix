@@ -2,6 +2,7 @@ import { getActiveInternalPlanGrant } from '@/data-access/internal-plan-grants'
 import {
   getOrgSubscription,
   orgHasBillingCustomer,
+  setSubscriptionSpendCap,
 } from '@/data-access/subscriptions'
 import { billingUsageSnapshot } from '@/data-access/usage'
 import { getPlan, getPlanRank, type PlanId } from '@/lib/billing/plans'
@@ -38,6 +39,8 @@ export interface BillingState {
   plan: PlanId | null
   planName: string | null
   planSource: 'billing' | 'internal' | null
+  // Customer-set overage spending cap in cents, or null when no cap is set.
+  spendCapCents: number | null
   // Raw Polar status (active/trialing/past_due/canceled/…), or null.
   status: string | null
   usage: UsageState
@@ -101,6 +104,8 @@ export async function getBillingState(orgId: string): Promise<BillingState> {
     currentPeriodEnd: internallyEntitled
       ? null
       : (sub?.currentPeriodEnd?.toISOString() ?? null),
+    // Cap only applies to a real billing subscription (internal grants don't bill).
+    spendCapCents: internallyEntitled ? null : (sub?.spendCapCents ?? null),
     usage: {
       periodStart: periodStart.toISOString(),
       bandwidthBytes: snapshot.bytes,
@@ -111,4 +116,10 @@ export async function getBillingState(orgId: string): Promise<BillingState> {
       seats: { used: snapshot.seats, limit: plan?.maxSeats ?? null },
     },
   }
+}
+
+// Set or clear (null) the org's overage spending cap. The serving-gate cache is
+// busted by the caller (functions/billing) so this action stays data-access only.
+export function setSpendCap(orgId: string, spendCapCents: number | null) {
+  return setSubscriptionSpendCap(orgId, spendCapCents)
 }

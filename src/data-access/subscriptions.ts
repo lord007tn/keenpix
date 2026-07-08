@@ -17,6 +17,18 @@ export function getOrgSubscription(orgId: string) {
   return prisma.subscription.findUnique({ where: { orgId } })
 }
 
+// Set (or clear, with null) the customer's per-period overage spending cap.
+// Throws if the org has no subscription row — only subscribed orgs have a cap.
+export function setSubscriptionSpendCap(
+  orgId: string,
+  spendCapCents: number | null,
+) {
+  return prisma.subscription.update({
+    where: { orgId },
+    data: { spendCapCents },
+  })
+}
+
 // Whether an org may serve transforms right now, including the dunning grace.
 // Cloud-only concern; self-host never calls this (it always serves).
 export async function orgIsServable(orgId: string): Promise<boolean> {
