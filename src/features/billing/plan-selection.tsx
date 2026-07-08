@@ -9,6 +9,14 @@ import {
   CardDescription,
   CardHeader,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { getErrorMessage } from '@/errors/common'
 import { authClient } from '@/lib/auth/client'
 import { PLANS, type Plan, type PlanId } from '@/lib/billing/plans'
@@ -91,14 +99,19 @@ export function PlanSelection({
   activePlanId,
   hasPlan = false,
   compact = false,
+  usage,
 }: {
   orgId: string
   activePlanId?: PlanId | null
   hasPlan?: boolean
   compact?: boolean
+  // Current project/seat counts, so a downgrade can warn when they exceed the
+  // target plan's caps. Omitted on the onboarding (no-plan) path.
+  usage?: { projects: number; seats: number }
 }) {
   const [interval, setInterval] = useState<Interval>('month')
   const [busy, setBusy] = useState<PlanId | null>(null)
+  const [confirmPlan, setConfirmPlan] = useState<PlanId | null>(null)
 
   async function startCheckout(planId: PlanId) {
     setBusy(planId)
@@ -118,6 +131,24 @@ export function PlanSelection({
     } catch (error) {
       toast.error(getErrorMessage(error))
       setBusy(null)
+    }
+  }
+
+  const targetPlan = confirmPlan ? PLANS[confirmPlan] : null
+  const downgradeWarnings: string[] = []
+  if (targetPlan && usage) {
+    if (
+      targetPlan.maxProjects !== null &&
+      usage.projects > targetPlan.maxProjects
+    ) {
+      downgradeWarnings.push(
+        `${usage.projects} projects (this plan includes ${targetPlan.maxProjects})`,
+      )
+    }
+    if (usage.seats > targetPlan.maxSeats) {
+      downgradeWarnings.push(
+        `${usage.seats} seats (this plan includes ${targetPlan.maxSeats})`,
+      )
     }
   }
 
@@ -191,7 +222,15 @@ export function PlanSelection({
                 <Button
                   className="mt-auto"
                   disabled={isCurrent || busy === planId}
-                  onClick={() => startCheckout(planId)}
+                  onClick={() => {
+                    // Confirm a switch for an existing subscriber; go straight to
+                    // checkout on the first (no-plan) subscribe.
+                    if (hasPlan) {
+                      setConfirmPlan(planId)
+                    } else {
+                      startCheckout(planId)
+                    }
+                  }}
                   variant={highlight ? 'default' : 'outline'}
                 >
                   {checkoutLabel(
@@ -206,6 +245,51 @@ export function PlanSelection({
           )
         })}
       </div>
+
+      <Dialog
+        onOpenChange={(next) => {
+          if (!next) {
+            setConfirmPlan(null)
+          }
+        }}
+        open={confirmPlan !== null}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Switch to {targetPlan?.name}?</DialogTitle>
+            <DialogDescription>
+              You’ll continue to checkout to move to the {targetPlan?.name}{' '}
+              plan. The change takes effect immediately and billing is prorated.
+            </DialogDescription>
+          </DialogHeader>
+          {downgradeWarnings.length > 0 ? (
+            <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning-text">
+              You currently have {downgradeWarnings.join(' and ')}. Existing
+              ones keep working, but you won’t be able to add more until you’re
+              under the new limits.
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              onClick={() => setConfirmPlan(null)}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={busy !== null}
+              onClick={() => {
+                if (confirmPlan) {
+                  startCheckout(confirmPlan)
+                }
+              }}
+            >
+              {busy ? 'Redirecting…' : 'Continue to checkout'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
