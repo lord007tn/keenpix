@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { AppTopnav } from '@/components/app/app-topnav'
 import { AppNotFound, RouteError } from '@/components/app/error-page'
 import { ServingBanner } from '@/components/app/serving-banner'
-import { getSessionFn } from '@/functions/auth'
+import { getActiveOrgRoleFn, getSessionFn } from '@/functions/auth'
 import { getPublicConfigFn } from '@/functions/config'
 import { listProjectsFn } from '@/functions/projects'
 import { appPageHead } from '@/shared/seo'
@@ -27,8 +27,11 @@ export const Route = createFileRoute('/app')({
     }
     // `cloud` lets the app shell hide self-host-only surfaces (instance SMTP/
     // Cloudflare/operations config) for cloud tenants — defense-in-depth on top
-    // of the requireSelfHost server guard.
-    return { user, cloud: config.cloud }
+    // of the requireSelfHost server guard. `orgRole` (cloud only) drives client-
+    // side gating of org-scoped mutations so members aren't shown controls they
+    // can't use; the server guards still enforce it.
+    const orgRole = config.cloud ? await getActiveOrgRoleFn() : null
+    return { user, cloud: config.cloud, orgRole }
   },
   loader: () => listProjectsFn(),
   head: () => ({

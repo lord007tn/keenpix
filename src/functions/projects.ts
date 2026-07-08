@@ -2,8 +2,10 @@ import { createServerFn } from '@tanstack/react-start'
 import {
   addAllowedHost,
   createProject,
+  deleteProject,
   listProjects,
   removeAllowedHost,
+  updateProject,
   updateProjectSettings,
 } from '@/actions/projects'
 import {
@@ -15,7 +17,9 @@ import { assertCanCreateProject } from '@/lib/billing/quota'
 import {
   allowedHostSchema,
   createProjectSchema,
+  deleteProjectSchema,
   projectSettingsSchema,
+  updateProjectSchema,
 } from '@/schemas/projects'
 
 export const listProjectsFn = createServerFn({ method: 'GET' })
@@ -62,6 +66,38 @@ export const removeAllowedHostFn = createServerFn({ method: 'POST' })
       throw new Error('Project not found')
     }
     return { allowedOrigins: project.allowedOrigins }
+  })
+
+export const updateProjectFn = createServerFn({ method: 'POST' })
+  .inputValidator(updateProjectSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const project = await updateProject(
+      requireOrgAdmin(context),
+      data.projectId,
+      {
+        name: data.name,
+        origin: data.origin,
+      },
+    )
+    if (!project) {
+      throw new Error('Project not found')
+    }
+    return { id: project.id, name: project.name, origin: project.origin }
+  })
+
+export const deleteProjectFn = createServerFn({ method: 'POST' })
+  .inputValidator(deleteProjectSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const deleted = await deleteProject(
+      requireOrgAdmin(context),
+      data.projectId,
+    )
+    if (!deleted) {
+      throw new Error('Project not found')
+    }
+    return { deleted: true }
   })
 
 export const updateProjectSettingsFn = createServerFn({ method: 'POST' })
