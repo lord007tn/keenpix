@@ -17,13 +17,15 @@ export const Route = createFileRoute('/app')({
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
     project: typeof search.project === 'string' ? search.project : undefined,
   }),
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     const [user, config] = await Promise.all([
       getSessionFn(),
       getPublicConfigFn(),
     ])
     if (!user) {
-      throw redirect({ to: '/login' })
+      // Preserve where the user was headed so login can send them back there
+      // instead of dropping every deep link at the dashboard.
+      throw redirect({ to: '/login', search: { redirect: location.href } })
     }
     // `cloud` lets the app shell hide self-host-only surfaces (instance SMTP/
     // Cloudflare/operations config) for cloud tenants — defense-in-depth on top

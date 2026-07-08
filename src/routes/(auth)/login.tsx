@@ -12,12 +12,18 @@ import { Label } from '@/components/ui/label'
 import { getPublicConfigFn } from '@/functions/config'
 import { authClient } from '@/lib/auth/client'
 import { loginSchema } from '@/schemas/auth'
+import { safeRedirect } from '@/shared/safe-redirect'
 import { noIndexPageHead } from '@/shared/seo'
 import { getFieldError } from '@/utils/validation/form-errors'
 
 export const Route = createFileRoute('/(auth)/login')({
   // `cloud` drives whether self-serve sign-up is offered (self-host is invite-only).
   loader: () => getPublicConfigFn(),
+  // `redirect` is a validated same-origin path to return to after sign-in (set
+  // when a deep link / invite bounced through login); defaults to the dashboard.
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+    redirect: safeRedirect(search.redirect),
+  }),
   head: () =>
     noIndexPageHead(
       'Sign in',
@@ -28,6 +34,7 @@ export const Route = createFileRoute('/(auth)/login')({
 
 function LoginPage() {
   const { cloud } = Route.useLoaderData()
+  const { redirect } = Route.useSearch()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
   // When sign-in is blocked because the email isn't verified, we stash it so the
@@ -59,6 +66,12 @@ function LoginPage() {
         return
       }
       toast.success('Signed in')
+      if (redirect) {
+        // Full navigation to the validated same-origin target so its own search
+        // params (e.g. an invite id) load cleanly with the new session.
+        window.location.href = redirect
+        return
+      }
       navigate({ to: '/app/dashboard', search: { range: '30d' } })
     },
   })
@@ -71,7 +84,7 @@ function LoginPage() {
     try {
       const { error: err } = await authClient.sendVerificationEmail({
         email: unverifiedEmail,
-        callbackURL: '/app',
+        callbackURL: '/verify-email',
       })
       if (err) {
         toast.error(err.message ?? 'Could not send the email')

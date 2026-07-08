@@ -71,11 +71,20 @@ function AcceptInvitePage() {
     return (
       <>
         <p className="text-muted-foreground text-sm">
-          Sign in or create an account with the email your invitation was sent
-          to, then open this link again to accept.
+          Sign in with the email your invitation was sent to and you’ll return
+          here to accept. New to keenpix? Create an account, verify your email,
+          then open this link again.
         </p>
         <div className="flex justify-center gap-2">
-          <Button render={<Link to="/login" />} variant="outline">
+          <Button
+            render={
+              <Link
+                search={{ redirect: `/accept-invite?id=${id}` }}
+                to="/login"
+              />
+            }
+            variant="outline"
+          >
             Sign in
           </Button>
           <Button render={<Link to="/signup" />}>Create account</Button>
