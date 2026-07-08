@@ -1,4 +1,5 @@
 import { prisma } from '@/db'
+import { recordRequestEvent } from '@/lib/clickhouse/events'
 import { updateAnalyticsRollupForLog } from './analytics-rollups'
 
 export interface NewRequestLog {
@@ -20,8 +21,8 @@ export interface NewRequestLog {
 }
 
 export async function createRequestLog(log: NewRequestLog) {
-  await prisma.$transaction(async (tx) => {
-    const row = await tx.requestLog.create({
+  const row = await prisma.$transaction(async (tx) => {
+    const created = await tx.requestLog.create({
       data: {
         orgId: log.orgId,
         projectId: log.projectId,
@@ -39,16 +40,21 @@ export async function createRequestLog(log: NewRequestLog) {
         country: log.country ?? null,
         sourceHost: log.sourceHost ?? null,
       },
-      select: { ts: true },
+      select: { id: true, ts: true },
     })
-    await updateAnalyticsRollupForLog(tx, { ...log, ts: row.ts })
+    await updateAnalyticsRollupForLog(tx, { ...log, ts: created.ts })
+    return created
   })
+  // Best-effort mirror into ClickHouse for the advanced-logs tier, after the
+  // Postgres write commits so a rolled-back log is never mirrored. No-op unless
+  // ClickHouse is configured.
+  recordRequestEvent({ ...log, id: row.id, ts: row.ts })
 }
 
-// Cache hit counts for an org since a point in time. Scoped by orgId so the
-// query rides the [orgId, ts] index rather than scanning by timestamp alone.
-export async function getCacheHitStats(orgId: string, since: Date) {
-  const where = { orgId, ts: { gte: since } }
+// Operator-only cross-tenant cache-hit stats for the platform admin health view.
+// Deliberately NOT org-scoped — never use this for a tenant-facing read.
+export async function getCacheHitStatsAllOrgs(since: Date) {
+  const where = { ts: { gte: since } }
   const [totalRequests, cachedRequests] = await Promise.all([
     prisma.requestLog.count({ where }),
     prisma.requestLog.count({ where: { ...where, cached: true } }),

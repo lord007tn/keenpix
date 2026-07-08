@@ -1,0 +1,43 @@
+---
+title: Keenpix vs ImageKit — cheaper bandwidth and a real self-host option
+description: ImageKit is a solid bandwidth-priced image CDN, but it is closed-source and pricier at the edges. Keenpix undercuts it on overage, keeps transforms free, and is open source.
+date: "2026-07-02"
+author: Keenpix Team
+competitor: ImageKit
+tags: [comparison, pricing, image-cdn]
+---
+
+ImageKit is one of the closest competitors to Keenpix in philosophy: it also bills primarily on **bandwidth** rather than opaque credits. So this comparison is less about the pricing *model* and more about **price, transforms, and openness**.
+
+## Same meter, lower rate
+
+Both Keenpix and ImageKit charge on bandwidth delivered, which is the honest way to price an image CDN. The differences show up in the details:
+
+| | Keenpix | ImageKit |
+| --- | --- | --- |
+| Billing unit | Bandwidth delivered (GB) | Bandwidth delivered (GB) |
+| Transformations | Unlimited, free | Included |
+| Overage rate | $0.05–0.08/GB | Higher per-GB |
+| Entry price | $9/mo | Comparable-to-higher |
+| Self-host option | Yes (open source, AGPL) | No |
+| Hard spend cap | Yes, you set it | Limited |
+
+Keenpix is built to be **the cheapest managed image CDN** — overage lands in the $0.05–0.08/GB range, materially under most incumbents, with a single published rate and a hard cap you control.
+
+## Free transforms, honestly unlimited
+
+Keenpix never charges for transformations. Resize, crop, format conversion (AVIF, WebP, JPEG, PNG, GIF, HEIF, TIFF, SVG), and quality controls are all free on every plan, so aggressive optimization never costs you anything.
+
+## Open source is the real differentiator
+
+ImageKit is a closed, managed platform. **Keenpix is open source under AGPL.** You can run the same engine yourself with Docker, keep everything on your own infrastructure, and pay nothing — and you can start on managed cloud and migrate to self-host without changing your URLs.
+
+That is the guarantee no proprietary vendor can offer: if the managed product ever stops making sense, you are not trapped.
+
+## When ImageKit makes sense
+
+ImageKit ships a media library and DAM-style features, and a mature global edge network. If you want an all-in-one managed media library with a UI for non-developers today, it is a strong choice. Keenpix is deliberately focused: **optimize and deliver images fast, price it transparently, and let you self-host.**
+
+## Compare on your own traffic
+
+Point Keenpix at your existing origin, keep your URLs, and check the bandwidth meter against your current ImageKit bill. Or [self-host free](/docs/self-hosting) and pay nothing at all.

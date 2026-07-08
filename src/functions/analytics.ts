@@ -4,7 +4,7 @@ import {
   getAnalytics,
   getEdgeCacheStats,
 } from '@/actions/analytics'
-import { authMiddleware } from '@/lib/auth/guards'
+import { authMiddleware, requireActiveOrg } from '@/lib/auth/guards'
 import {
   allowedHostStatsSchema,
   analyticsInputSchema,
@@ -16,7 +16,7 @@ import {
 export const getAnalyticsFn = createServerFn({ method: 'GET' })
   .inputValidator(analyticsInputSchema)
   .middleware([authMiddleware])
-  .handler(({ data }) => getAnalytics(data))
+  .handler(({ data, context }) => getAnalytics(requireActiveOrg(context), data))
 
 // Cloudflare edge stats for the selected range, reconstructed from our persisted
 // rollups. Fetched on its own off the page's critical path so it never blocks the
@@ -24,9 +24,13 @@ export const getAnalyticsFn = createServerFn({ method: 'GET' })
 export const getEdgeCacheStatsFn = createServerFn({ method: 'GET' })
   .inputValidator(edgeCacheStatsSchema)
   .middleware([authMiddleware])
-  .handler(({ data }) => getEdgeCacheStats(data.range))
+  .handler(({ data, context }) =>
+    getEdgeCacheStats(data.range, context.role === 'super_admin'),
+  )
 
 export const getAllowedHostStatsFn = createServerFn({ method: 'GET' })
   .inputValidator(allowedHostStatsSchema)
   .middleware([authMiddleware])
-  .handler(({ data }) => getAllowedHostStats(data.projectId, data.range))
+  .handler(({ data, context }) =>
+    getAllowedHostStats(requireActiveOrg(context), data.projectId, data.range),
+  )

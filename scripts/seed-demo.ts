@@ -69,10 +69,10 @@ const int = (min: number, max: number) =>
 async function main() {
   console.log('Seeding demo data...')
 
-  await prisma.org.upsert({
+  await prisma.organization.upsert({
     where: { id: ORG_ID },
     update: {},
-    create: { id: ORG_ID, name: 'Keenpix' },
+    create: { id: ORG_ID, name: 'Keenpix', slug: 'default' },
   })
 
   for (const p of PROJECTS) {

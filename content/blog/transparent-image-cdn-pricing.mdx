@@ -1,0 +1,37 @@
+---
+title: Why we bill on bandwidth delivered, not transformations
+description: Credit systems and per-transform metering make image CDN bills unpredictable. Here's why Keenpix meters only bandwidth delivered at the edge — and how that keeps your bill honest.
+date: "2026-06-28"
+author: Keenpix Team
+tags: [pricing, philosophy, image-cdn]
+---
+
+Most image CDN bills are hard to predict because they meter the wrong thing. If you have ever been surprised by an invoice, this post explains the pricing philosophy behind Keenpix — and why we think metering **bandwidth delivered** is the only honest option.
+
+## The problem with per-transform and credit pricing
+
+When a CDN charges per transformation — or bundles transforms, storage, and delivery into "credits" — your bill becomes coupled to implementation details you do not control:
+
+- A responsive `srcset` with eight breakpoints generates eight derived images.
+- Adding a modern AVIF variant alongside WebP doubles the transform count.
+- A crawler or a hotlinker can hammer new variants you never intended to create.
+
+None of that reflects real value delivered to real users. It just makes the meter spin. The rational response — optimize *less* to save money — is exactly backwards for a product whose whole job is optimization.
+
+## What we meter instead
+
+Keenpix meters one thing: **bytes delivered at the edge**. That is the number that actually tracks value — it goes up when real visitors receive real images, and nothing else moves it.
+
+- **Transformations are free and unlimited.** Build as many variants as you want.
+- **One linear overage rate.** Published, per-GB, no pooled-credit math.
+- **A hard cap you set.** We never silently blow past your budget.
+
+## Why "delivered" and not "origin"
+
+We measure bandwidth at the **edge** — total bytes delivered to visitors — not just the traffic that reaches our origin servers. Edge caching means origin traffic is a small and unstable fraction of real delivery, so pricing on origin-only bytes would either under-reflect usage or force us to make it up elsewhere. Metering delivered bytes is the transparent choice: you are billed on exactly what your users received, and you can see it.
+
+## The result
+
+Optimizing aggressively — more formats, more breakpoints, higher quality where it matters — should *lower* your costs by shrinking bytes delivered, not raise them by spinning a transform meter. Billing on bandwidth delivered aligns our incentives with yours: we both win when your images are smaller.
+
+And if you would rather not be billed at all, you can always [self-host Keenpix free](/docs/self-hosting) — the same open-source engine on your own infrastructure.

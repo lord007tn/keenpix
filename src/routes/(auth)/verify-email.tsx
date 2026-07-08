@@ -1,0 +1,118 @@
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { CheckCircle2Icon } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
+import { KeenpixLogo } from '@/components/app/keenpix-logo'
+import { ModeToggle } from '@/components/theme/mode-toggle'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { authClient } from '@/lib/auth/client'
+import { noIndexPageHead } from '@/shared/seo'
+
+// Branded landing for the email-verification link. better-auth verifies the
+// token at its API endpoint and redirects here — with an `error` query param
+// when the link is expired/invalid, and cleanly (auto-signed-in) on success.
+export const Route = createFileRoute('/(auth)/verify-email')({
+  head: () =>
+    noIndexPageHead('Verify your email', 'Confirm your Keenpix email address.'),
+  validateSearch: (search: Record<string, unknown>): { error?: string } => ({
+    error: typeof search.error === 'string' ? search.error : undefined,
+  }),
+  component: VerifyEmailPage,
+})
+
+function VerifyEmailPage() {
+  const { error } = Route.useSearch()
+  const [email, setEmail] = useState('')
+  const [resending, setResending] = useState(false)
+  const failed = Boolean(error)
+
+  async function resend(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email.trim()) {
+      return
+    }
+    setResending(true)
+    try {
+      const { error: err } = await authClient.sendVerificationEmail({
+        email: email.trim(),
+        callbackURL: '/app',
+      })
+      if (err) {
+        toast.error(err.message ?? 'Could not send the email')
+        return
+      }
+      toast.success('Verification email sent — check your inbox')
+    } finally {
+      setResending(false)
+    }
+  }
+
+  return (
+    <main
+      className="relative flex min-h-svh items-center justify-center bg-muted/30 p-6"
+      id="main-content"
+    >
+      <div className="absolute top-4 right-4">
+        <ModeToggle />
+      </div>
+      <Card className="w-full max-w-sm">
+        <CardHeader className="items-center text-center">
+          <KeenpixLogo className="mb-2" />
+          <CardTitle>
+            {failed ? 'Verification link expired' : 'Email verified'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {failed ? (
+            <>
+              <p className="text-center text-muted-foreground text-sm">
+                This verification link is invalid or has expired. Enter your
+                email to get a new one.
+              </p>
+              <form className="flex flex-col gap-3" onSubmit={resend}>
+                <Label className="sr-only" htmlFor="email">
+                  Email address
+                </Label>
+                <Input
+                  autoComplete="email"
+                  autoFocus
+                  id="email"
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  type="email"
+                  value={email}
+                />
+                <Button disabled={resending || !email.trim()} type="submit">
+                  {resending ? 'Sending…' : 'Resend verification email'}
+                </Button>
+              </form>
+              <Link
+                className="text-center text-muted-foreground text-sm hover:text-foreground"
+                to="/login"
+              >
+                Back to sign in
+              </Link>
+            </>
+          ) : (
+            <>
+              <div className="flex flex-col items-center gap-2 text-center">
+                <CheckCircle2Icon className="size-8 text-primary" />
+                <p className="text-muted-foreground text-sm">
+                  Your email is confirmed. You’re all set.
+                </p>
+              </div>
+              <Button
+                render={<Link search={{ range: '30d' }} to="/app/dashboard" />}
+              >
+                Continue to keenpix
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </main>
+  )
+}

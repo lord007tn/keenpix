@@ -11,16 +11,100 @@ datasource db {
 
 // Keenpix domain models. Org-scoped so single-org self-hosting can grow into
 // multi-org SaaS without reshaping request logs and projects.
-model Org {
-  id        String    @id @default(cuid())
-  name      String
-  createdAt DateTime  @default(now())
-  projects  Project[]
+//
+// Doubles as the better-auth `organization` plugin table (slug/logo/metadata +
+// Member/Invitation). Self-host runs a single org; cloud is multi-tenant.
+model Organization {
+  id              String           @id @default(cuid())
+  name            String
+  slug            String           @unique
+  logo            String?
+  metadata        String?
+  createdAt       DateTime         @default(now())
+  projects        Project[]
+  members         Member[]
+  invitations     Invitation[]
+  billingCustomer BillingCustomer?
+  subscription    Subscription?
+}
+
+// Links a keenpix org to its Polar customer (cloud billing only). One per org.
+model BillingCustomer {
+  id              String       @id @default(cuid())
+  orgId           String       @unique
+  organization    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  // NOT unique: one Polar customer maps 1:1 to a user, and a user can own several
+  // orgs, so the same polarCustomerId legitimately backs multiple orgs' billing
+  // records. `orgId` is the unique key (one billing customer row per org).
+  polarCustomerId String
+  // Watermark for usage metering: delivered bytes with bucketStart at/after this
+  // instant have not yet been reported to Polar. The reporter sums the delta,
+  // ingests it, then advances this — so Polar's meter never double-counts.
+  lastUsageReportAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([polarCustomerId])
+}
+
+// Local snapshot of an org's Polar subscription → plan + billing period, read at
+// request time for entitlements/quotas so the hot path never calls Polar.
+// Upserted from Polar webhooks. `plan` is a PlanId (basic/pro/business) resolved
+// from the purchased product's metadata via src/lib/billing/plans.ts.
+model Subscription {
+  id                  String       @id @default(cuid())
+  orgId               String       @unique
+  organization        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  polarSubscriptionId String       @unique
+  plan                String
+  status              String
+  currentPeriodStart  DateTime?
+  currentPeriodEnd    DateTime?
+  overageAllowed      Boolean      @default(false)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([orgId])
+}
+
+// better-auth organization membership: which users belong to which org and
+// their org-level role (owner/admin/member). Distinct from the User.role
+// platform role used by the admin() plugin.
+model Member {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+// better-auth organization invitations (cloud org-member invites). Separate
+// from the self-host operator StaffInvitation flow.
+model Invitation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String       @default("pending")
+  teamId         String?
+  inviterId      String
+  inviter        User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([email])
 }
 
 model ApiKey {
-  id                  String    @id
-  configId            String    @default("default")
+  id                  String           @id
+  configId            String           @default("default")
   name                String?
   start               String?
   prefix              String?
@@ -29,16 +113,16 @@ model ApiKey {
   refillInterval      Int?
   refillAmount        Int?
   lastRefillAt        DateTime?
-  enabled             Boolean   @default(true)
-  rateLimitEnabled    Boolean   @default(true)
+  enabled             Boolean          @default(true)
+  rateLimitEnabled    Boolean          @default(true)
   rateLimitTimeWindow Int?
   rateLimitMax        Int?
-  requestCount        Int       @default(0)
+  requestCount        Int              @default(0)
   remaining           Int?
   lastRequest         DateTime?
   expiresAt           DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
   permissions         String?
   metadata            String?
   activities          ApiKeyActivity[]
@@ -67,24 +151,10 @@ model ApiKeyActivity {
   @@index([createdAt])
 }
 
-model SmtpSettings {
-  id        String   @id
-  enabled   Boolean  @default(false)
-  host      String?
-  port      Int      @default(587)
-  secure    Boolean  @default(false)
-  username  String?
-  password  String?
-  fromEmail String?
-  fromName  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model Project {
   id             String       @id @default(cuid())
   orgId          String
-  org            Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org            Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   name           String
   origin         String
   allowedOrigins String[]
@@ -132,25 +202,25 @@ model CloudflareSettings {
 }
 
 model RequestLog {
-  id        String   @id @default(cuid())
-  orgId     String
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  ts        DateTime @default(now())
-  path      String
-  width     Int?
-  quality   Int?
-  format    String
-  status    Int
-  cached    Boolean
-  latencyMs Float
-  bytesIn   Int
-  bytesOut  Int
+  id         String   @id @default(cuid())
+  orgId      String
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ts         DateTime @default(now())
+  path       String
+  width      Int?
+  quality    Int?
+  format     String
+  status     Int
+  cached     Boolean
+  latencyMs  Float
+  bytesIn    Int
+  bytesOut   Int
   // Bytes the optimizer trimmed off the origin original on this request
   // (max(0, bytesIn - bytesOut); 0 for cache hits, which never fetch origin).
-  bytesSaved Int     @default(0)
-  region    String?
-  country   String?
+  bytesSaved Int      @default(0)
+  region     String?
+  country    String?
   sourceHost String?
 
   @@index([ts])
@@ -250,19 +320,21 @@ model ResourceRollupHourly {
 
 // better-auth tables. Keep these names aligned with the auth adapter config.
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  emailVerified Boolean   @default(false)
+  id            String       @id @default(cuid())
+  email         String       @unique
+  emailVerified Boolean      @default(false)
   name          String?
   image         String?
-  role          String    @default("user")
-  banned        Boolean   @default(false)
+  role          String       @default("user")
+  banned        Boolean      @default(false)
   banReason     String?
   banExpires    DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   sessions      Session[]
   accounts      Account[]
+  members       Member[]
+  invitations   Invitation[]
 
   @@index([email])
 }
@@ -285,16 +357,17 @@ model StaffInvitation {
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  ipAddress String?
-  userAgent String?
-  impersonatedBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  token                String   @unique
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt            DateTime
+  ipAddress            String?
+  userAgent            String?
+  impersonatedBy       String?
+  activeOrganizationId String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   @@index([userId])
 }

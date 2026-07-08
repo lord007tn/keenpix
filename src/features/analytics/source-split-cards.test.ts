@@ -91,7 +91,7 @@ describe('reconciledCards — bandwidth saved', () => {
     const card = reconciledCards(edge, summary).find(
       (c) => c.label === 'Bandwidth saved',
     )
-    const edgeRow = card?.rows.find((r) => r.label === 'Cloudflare edge')
+    const edgeRow = card?.rows.find((r) => r.label === 'Edge')
 
     // Edge now carries an estimate instead of the "—" dash.
     expect(edgeRow?.source).toBe('edge')
@@ -115,7 +115,7 @@ describe('reconciledCards — bandwidth saved', () => {
     const card = reconciledCards(edge, summary).find(
       (c) => c.label === 'Bandwidth saved',
     )
-    const edgeRow = card?.rows.find((r) => r.label === 'Cloudflare edge')
+    const edgeRow = card?.rows.find((r) => r.label === 'Edge')
     expect(edgeRow?.value).toBe('~0 B · est.')
   })
 })

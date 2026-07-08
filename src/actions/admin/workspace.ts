@@ -5,7 +5,6 @@ import {
 } from '@/data-access/admin/api-keys'
 import { getPublicCloudflareSettings } from '@/data-access/admin/cloudflare'
 import { listInvitations } from '@/data-access/admin/invitations'
-import { getPublicSmtpSettings } from '@/data-access/admin/smtp'
 import { listStaffUsers } from '@/data-access/admin/staff'
 import { listProjects } from '@/data-access/projects'
 import { ACTIVITY_PAGE_SIZE } from '@/schemas/admin'
@@ -15,7 +14,6 @@ export async function getAdminWorkspace() {
   const [
     users,
     invitations,
-    smtp,
     cloudflare,
     apiKeys,
     apiKeyActivities,
@@ -24,7 +22,6 @@ export async function getAdminWorkspace() {
   ] = await Promise.all([
     listStaffUsers(),
     listInvitations(),
-    getPublicSmtpSettings(),
     getPublicCloudflareSettings(),
     listInternalApiKeys(INTERNAL_API_KEY_CONFIG),
     listApiKeyActivities(INTERNAL_API_KEY_CONFIG, 0, ACTIVITY_PAGE_SIZE),
@@ -34,7 +31,6 @@ export async function getAdminWorkspace() {
   return {
     users,
     invitations,
-    smtp,
     cloudflare,
     apiKeys,
     apiKeyActivities,

@@ -14,7 +14,7 @@ import { Suspense } from 'react'
 import { JsonLd } from '@/components/app/json-ld'
 import { getMDXComponents } from '@/components/mdx'
 import { docsSlugsSchema } from '@/schemas/docs'
-import { getAppUrl, isSelfHosted } from '@/server/deployment'
+import { getAppUrl, isCloud } from '@/server/deployment'
 import { source } from '@/shared/docs-source'
 import {
   absoluteUrl,
@@ -102,7 +102,7 @@ const serverLoader = createServerFn({ method: 'GET' })
       { name: 'Docs', url: `${getAppUrl()}/docs` },
       { name: page.data.title, url: canonicalUrl },
     ]
-    const selfHost = isSelfHosted()
+    const selfHost = !isCloud()
 
     return {
       breadcrumbs,

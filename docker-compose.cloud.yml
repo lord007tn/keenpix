@@ -1,0 +1,159 @@
+# Cloud deployment (keenpix.com) — multi-tenant + billing + analytics.
+#
+# Extends the self-host stack with: KEENPIX_MODE=cloud, a ClickHouse service for
+# advanced analytics/logs, an S3-compatible shared cache (maxio here; point at
+# Cloudflare R2 in production and drop the maxio service), and an hourly cron
+# that reports delivered bandwidth to Polar for metered billing.
+#
+# Set the secrets marked (required) in your environment / Coolify before deploy.
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    mem_limit: ${KEENPIX_PG_MEM_LIMIT:-0}
+    cpus: ${KEENPIX_PG_CPU_LIMIT:-0}
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-keenpix}
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_64_POSTGRES}
+    volumes:
+      - keenpix_pg18:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$SERVICE_USER_POSTGRES\" -d \"${POSTGRES_DB:-keenpix}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # Columnar store for advanced analytics + full-history logs (advanced tier).
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    environment:
+      - CLICKHOUSE_DB=${CLICKHOUSE_DATABASE:-keenpix}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD} # (required)
+    volumes:
+      - keenpix_clickhouse:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # Shared object-storage cache (S3-compatible). In production, prefer Cloudflare
+  # R2: set KEENPIX_CACHE_S3_ENDPOINT/keys to R2 and remove this service.
+  maxio:
+    image: ghcr.io/coollabsio/maxio:latest
+    command: serve
+    restart: unless-stopped
+    environment:
+      - MAXIO_ACCESS_KEY=${KEENPIX_CACHE_S3_ACCESS_KEY_ID} # (required)
+      - MAXIO_SECRET_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY} # (required)
+      - MAXIO_REGION=auto
+      - MAXIO_DEFAULT_BUCKETS=${KEENPIX_CACHE_S3_BUCKET:-keenpix-cache}
+    volumes:
+      - keenpix_maxio:/data
+
+  app:
+    image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
+    restart: unless-stopped
+    mem_limit: ${KEENPIX_MEM_LIMIT:-0}
+    cpus: ${KEENPIX_CPU_LIMIT:-0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      maxio:
+        condition: service_started
+    environment:
+      - SERVICE_URL_APP
+      - NODE_ENV=production
+      - PORT=3000
+      # Cloud mode: multi-tenant, self-signup, billing, quotas, shared cache.
+      - KEENPIX_MODE=cloud
+      - DATABASE_URL=postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_64_POSTGRES}@postgres:5432/${POSTGRES_DB:-keenpix}
+      - BETTER_AUTH_SECRET=${SERVICE_HEX_64_KEENPIX}
+      - BETTER_AUTH_URL=${SERVICE_URL_APP}
+      - KEENPIX_APP_URL=${SERVICE_URL_APP}
+      - KEENPIX_SUPER_ADMIN_EMAIL=${KEENPIX_SUPER_ADMIN_EMAIL:-admin@example.com}
+      - KEENPIX_SUPER_ADMIN_PASSWORD=${SERVICE_PASSWORD_64_ADMIN}
+      - KEENPIX_RUN_MIGRATIONS=${KEENPIX_RUN_MIGRATIONS:-true}
+      - KEENPIX_RUN_SEED=${KEENPIX_RUN_SEED:-false}
+      # ClickHouse (advanced analytics + logs).
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - CLICKHOUSE_DATABASE=${CLICKHOUSE_DATABASE:-keenpix}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      # Shared cache (maxio by default; override to Cloudflare R2 in production).
+      - KEENPIX_CACHE_S3_BUCKET=${KEENPIX_CACHE_S3_BUCKET:-keenpix-cache}
+      - KEENPIX_CACHE_S3_ENDPOINT=${KEENPIX_CACHE_S3_ENDPOINT:-http://maxio:9000}
+      - KEENPIX_CACHE_S3_REGION=${KEENPIX_CACHE_S3_REGION:-auto}
+      - KEENPIX_CACHE_S3_ACCESS_KEY_ID=${KEENPIX_CACHE_S3_ACCESS_KEY_ID}
+      - KEENPIX_CACHE_S3_SECRET_ACCESS_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY}
+      - KEENPIX_CACHE_DIR=/var/cache/keenpix
+      # Billing (Polar). Use the production org token + POLAR_SERVER=production.
+      - POLAR_TOKEN=${POLAR_TOKEN} # (required)
+      - POLAR_SERVER=${POLAR_SERVER:-production}
+      - POLAR_WEBHOOK_SECRET=${POLAR_WEBHOOK_SECRET} # (required)
+      # Transactional email: pick ONE provider. From-domain must be a verified
+      # sender for that provider. The app fails to boot if the selected
+      # provider's required vars are missing.
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-postmark} # postmark | resend | smtp
+      # postmark:
+      - POSTMARK_API_KEY=${POSTMARK_API_KEY:-}
+      - POSTMARK_FROM=${POSTMARK_FROM:-Keenpix <no-reply@keenpix.com>}
+      - POSTMARK_MESSAGE_STREAM=${POSTMARK_MESSAGE_STREAM:-outbound}
+      # resend:
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - RESEND_FROM=${RESEND_FROM:-Keenpix <no-reply@keenpix.com>}
+      # smtp:
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Keenpix}
+      # Usage-metering cron auth.
+      - CRON_SECRET=${CRON_SECRET} # (required)
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    expose:
+      - "3000"
+    volumes:
+      - keenpix_cache:/var/cache/keenpix
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--output", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+
+  # Hourly usage reporter → Polar meter (for overage billing). In Coolify you can
+  # replace this with a native Scheduled Task hitting the same endpoint.
+  usage-cron:
+    image: curlimages/curl:latest
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        while true; do
+          sleep 3600;
+          curl -s -X POST -H "Authorization: Bearer ${CRON_SECRET}"
+          http://app:3000/api/internal/billing/report-usage || true;
+        done
+
+volumes:
+  keenpix_pg18:
+  keenpix_clickhouse:
+  keenpix_maxio:
+  keenpix_cache:

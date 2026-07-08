@@ -75,10 +75,10 @@ function savedCard(
       hasEdge
         ? {
             source: 'edge',
-            label: 'Cloudflare edge',
+            label: 'Edge',
             value: `~${humanBytes(edgeSaved, 1)} · est.`,
           }
-        : { source: 'none', label: 'Cloudflare edge', value: '—' },
+        : { source: 'none', label: 'Edge', value: '—' },
       {
         source: 'origin',
         label: 'keenpix origin',
@@ -119,7 +119,7 @@ export function reconciledCards(
       rows: [
         {
           source: 'edge',
-          label: 'Cloudflare edge',
+          label: 'Edge',
           value: `${humanBytes(edge.bytesFromEdge, 1)} · ${Math.round(edgeBytesPct)}%`,
         },
         {
@@ -166,7 +166,7 @@ export function reconciledCards(
       rows: [
         {
           source: 'edge',
-          label: 'At Cloudflare edge',
+          label: 'At edge',
           value: `${edge.hitRate.toFixed(1)}%`,
         },
         {
@@ -184,7 +184,7 @@ function originOnlyCards(
   summary: CardSummary,
   deltas?: CardDeltas,
 ): SourceSplitCardProps[] {
-  const dash = { source: 'none', label: 'Cloudflare edge', value: '—' } as const
+  const dash = { source: 'none', label: 'Edge', value: '—' } as const
   // Of everything that reached keenpix, the split between disk-cache hits and
   // fresh optimizes.
   const diskHits = Math.round((summary.totalRequests * summary.hitRate) / 100)
@@ -284,8 +284,8 @@ export function SourceSplitCards({
             These cards show only what reached keenpix. Connect Cloudflare to
             split each metric between the edge and the origin and reveal the
             true end-to-end cache hit rate.{' '}
-            <Link search={{ section: 'cdn' }} to="/app/settings">
-              Connect in Settings → CDN cache
+            <Link search={{ section: 'cdn' }} to="/app/admin">
+              Connect in Admin → CDN cache
             </Link>
           </AlertDescription>
         </Alert>

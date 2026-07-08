@@ -8,21 +8,13 @@ import { PageHeader } from '@/components/app/page-header'
 import { ProjectsDataTable } from '@/components/app/projects-data-table'
 import { RecentActivity } from '@/components/app/recent-activity'
 import { RefreshingIndicator } from '@/components/app/refreshing-indicator'
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from '@/components/ui/empty'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { OperationsSummary } from '@/features/admin/operations-summary'
 import { ResponseLatencyCard } from '@/features/analytics/response-latency-card'
 import { DashboardBodySkeleton } from '@/features/analytics/skeletons'
 import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import { useDashboardQuery } from '@/features/analytics/use-dashboard-query'
 import { useEdgeStats } from '@/features/analytics/use-edge-stats'
-import { NewProjectDialog } from '@/features/projects/new-project-dialog'
+import { OnboardingChecklist } from '@/features/onboarding/onboarding-checklist'
 import { appPageHead } from '@/shared/seo'
 import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
@@ -64,7 +56,7 @@ function DashboardPage() {
   const { range } = search
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
-  const { user } = useRouteContext({ from: '/app' })
+  const { user, cloud } = useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
   // Stale-while-revalidate: the previous payload stays on screen while a new
   // range/project loads in the background; `isRefreshing` drives the indicator.
@@ -146,21 +138,34 @@ function DashboardPage() {
   // Edge is zone-wide, so it only reconciles at all-projects scope and only over
   // a window our captured history fully covers.
   const edgeGated = edgeConfigured && edge !== null && isAll && edgeCovered
-  const edgeNotConfigured = !(edgePending || edgeError || edgeConfigured)
+  // The edge/CDN dataset is whole-zone (aggregate across tenants). In cloud only
+  // the platform operator may see it; everyone sees it self-host. When it's not
+  // visible, no edge cards, notes, or connect prompt appear at all.
+  const canSeeEdge = !cloud || isSuperAdmin
+  // Only the operator can wire Cloudflare, so only the super-admin ever sees the
+  // "connect" prompt. Regular tenants (and cloud users, who never own the zone)
+  // just get the origin-only cards with no dead-end call to action.
+  const edgeNotConfigured =
+    isSuperAdmin && !(edgePending || edgeError || edgeConfigured)
   // A background capture is in flight and the reconciled split isn't on screen
   // yet — show the "preparing" indicator (and hold the note) until it lands.
   const edgePreparing = edgeRefreshing && !edgeGated
   let edgeNote: string | undefined
-  if (!(edgePending || edgePreparing || edgeGated || edgeNotConfigured)) {
+  if (
+    canSeeEdge &&
+    !(edgePending || edgePreparing || edgeGated || edgeNotConfigured)
+  ) {
     if (edgeError || !edge) {
-      edgeNote =
-        "Couldn't load Cloudflare edge data — check the token in Settings → CDN cache."
+      // Only the operator can act on a missing/broken token.
+      edgeNote = isSuperAdmin
+        ? "Couldn't load edge data — check the token in Admin → CDN cache."
+        : undefined
     } else if (isAll) {
       edgeNote =
-        'Cloudflare edge history is still accumulating — older data for this range isn’t available yet.'
+        'Edge history is still accumulating — older data for this range isn’t available yet.'
     } else {
       edgeNote =
-        'Cloudflare edge is whole-zone only — switch to All projects to see the source split.'
+        'Edge is whole-zone only — switch to All projects to see the source split.'
     }
   }
   const deltas = {
@@ -171,23 +176,8 @@ function DashboardPage() {
 
   if (projects.length === 0) {
     return (
-      <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>Create your first project</EmptyTitle>
-            <EmptyDescription>
-              A project points keenpix at one image origin. Add the source host
-              to its allowlist under Settings, then request{' '}
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-                /img/https://origin.example/photo.jpg?project=ID
-              </code>{' '}
-              — no API key required for transform URLs.
-            </EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            <NewProjectDialog />
-          </EmptyContent>
-        </Empty>
+      <div className="flex flex-1 flex-col">
+        <OnboardingChecklist cloud={cloud} hasProjects={false} />
       </div>
     )
   }
@@ -219,14 +209,9 @@ function DashboardPage() {
         />
       ) : null}
 
-      {isAll && isSuperAdmin ? (
-        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-          <RecentActivity logs={recentLogs} />
-          <OperationsSummary />
-        </div>
-      ) : (
-        <RecentActivity logs={recentLogs} />
-      )}
+      {/* Operator/instance health lives in the Admin console (/app/admin) only,
+          not on the tenant dashboard. */}
+      <RecentActivity logs={recentLogs} />
     </div>
   )
 }

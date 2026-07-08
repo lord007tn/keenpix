@@ -24,7 +24,7 @@ The app runs at <http://localhost:3000>.
 
 ## Self-Hosted Mode
 
-Docker images are app-only by default. Set `KEENPIX_SELF_HOST=true` when running a self-hosted instance so marketing pages, docs search, docs pages, LLM exports, and docs OG images are not served.
+Self-host is the default (`KEENPIX_MODE` unset or `selfhost`): the public marketing pages, LLM exports, and sitemap are not served, and self-signup/billing are off. Set `KEENPIX_MODE=cloud` only for the multi-tenant hosted product. There is no separate `KEENPIX_SELF_HOST` flag — self-host is simply "not cloud".
 
 ```bash
 docker compose up --build

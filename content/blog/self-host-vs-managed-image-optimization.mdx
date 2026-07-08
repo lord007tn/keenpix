@@ -1,0 +1,35 @@
+---
+title: Self-hosted vs managed image optimization — how to choose
+description: Should you self-host your image pipeline or use a managed CDN? A practical framework covering cost, control, compliance, and operational overhead — with Keenpix on both sides.
+date: "2026-06-24"
+author: Keenpix Team
+tags: [self-hosting, architecture, image-cdn]
+---
+
+One of the nice things about Keenpix is that you do not have to choose between self-hosted and managed permanently — it is the same engine either way. But you do have to start somewhere, so here is a practical framework for deciding.
+
+## Choose self-host when…
+
+- **You want zero per-GB cost.** The open-source engine is free under AGPL. You pay only for the infrastructure you already run.
+- **You have compliance or data-residency requirements.** Keeping the image pipeline inside your own VPC or region is straightforward when you own the deployment.
+- **You already operate infrastructure.** If you run Docker or a platform like Coolify, adding Keenpix (app + Postgres + cache) is a small lift.
+- **You want full control.** Put any edge cache in front of `/img/*`, tune limits, and own the whole path.
+
+The trade-off is operational: you run the database, the cache, and the upgrades.
+
+## Choose managed cloud when…
+
+- **You want it working in minutes.** Point Keenpix at your origin, keep your URLs, done.
+- **You would rather not run Postgres and a cache tier.** We handle scaling, the shared edge cache, and maintenance.
+- **You want built-in analytics and logs** without standing up another vendor.
+- **Predictable, transparent pricing beats zero-but-operational.** Plans start at $9/mo for 100 GB delivered, transforms free, one linear overage rate with a hard cap.
+
+## You can move between them
+
+Because the managed cloud and the self-host build share one engine and one URL scheme, you are never locked in. Start on managed cloud to move fast, and migrate to self-host later for cost or compliance — without rewriting your image URLs. Or start self-hosted and hand the operational load to us when you would rather focus elsewhere.
+
+## The short version
+
+If cost-at-zero and control matter most and you are comfortable operating a small stack, **self-host**. If speed-to-value and predictable pricing matter most, **managed cloud**. Either way you get the same fast, secure, modern-format image pipeline — and the freedom to change your mind.
+
+Ready? [Get started on managed cloud](/login) or [read the self-hosting guide](/docs/self-hosting).

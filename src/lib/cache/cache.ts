@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto'
 import { env } from '@/env/server'
+import { isCloud } from '@/server/deployment'
 import type { OutputFormat, TransformOptions } from '@/shared/transform'
-import type { CacheEntry } from './cache-store'
+import type { CacheEntry, CacheStore } from './cache-store'
 import { DiskCacheStore } from './disk-cache-store'
 import { MemoryCacheStore } from './memory-cache-store'
+import { S3CacheStore } from './s3-cache-store'
 
 const CACHE_DIR = env.KEENPIX_CACHE_DIR
 const MAX_BYTES = env.KEENPIX_CACHE_MAX_BYTES
@@ -12,6 +14,31 @@ const STALE_MS = env.KEENPIX_CACHE_STALE_MS
 
 const memoryCache = new MemoryCacheStore(MEMORY_MAX_BYTES)
 const diskCache = new DiskCacheStore(CACHE_DIR, MAX_BYTES)
+
+// Durable (L2) cache. Cloud with a configured bucket uses shared object storage
+// so every replica shares one warm cache; everything else uses local disk. The
+// memory store stays the per-instance L1 hot tier in both modes. Disk-specific
+// maintenance below (inspect/clear/limits) is self-host-only and stays on disk.
+function selectDurableCache(): CacheStore {
+  if (
+    isCloud() &&
+    env.KEENPIX_CACHE_S3_BUCKET &&
+    env.KEENPIX_CACHE_S3_ENDPOINT &&
+    env.KEENPIX_CACHE_S3_ACCESS_KEY_ID &&
+    env.KEENPIX_CACHE_S3_SECRET_ACCESS_KEY
+  ) {
+    return new S3CacheStore({
+      bucket: env.KEENPIX_CACHE_S3_BUCKET,
+      endpoint: env.KEENPIX_CACHE_S3_ENDPOINT,
+      region: env.KEENPIX_CACHE_S3_REGION,
+      accessKeyId: env.KEENPIX_CACHE_S3_ACCESS_KEY_ID,
+      secretAccessKey: env.KEENPIX_CACHE_S3_SECRET_ACCESS_KEY,
+    })
+  }
+  return diskCache
+}
+
+const durableCache = selectDurableCache()
 
 export interface TransformKeyInput {
   projectId: string
@@ -36,7 +63,7 @@ export async function readCacheEntry(key: string, format: OutputFormat) {
     return { ...hot, stale: isCacheEntryStale(hot) }
   }
 
-  const entry = await diskCache.getEntry(key, format)
+  const entry = await durableCache.getEntry(key, format)
   if (!entry) {
     return null
   }
@@ -50,7 +77,7 @@ export async function writeCache(
   data: Buffer,
   originalBytes: number,
 ) {
-  await diskCache.set(key, format, data, originalBytes)
+  await durableCache.set(key, format, data, originalBytes)
   await memoryCache.set(key, format, data, originalBytes)
 }
 

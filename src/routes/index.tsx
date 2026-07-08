@@ -3,20 +3,12 @@ import { JsonLd } from '@/components/app/json-ld'
 import { MarketingPage } from '@/features/marketing/marketing-page'
 import { SelfHostHome } from '@/features/marketing/self-host-home'
 import { getPublicConfigFn } from '@/functions/config'
-import {
-  absoluteUrl,
-  organizationJsonLd,
-  SITE_DESCRIPTION,
-  SITE_TITLE,
-  seo,
-  softwareApplicationJsonLd,
-  webSiteJsonLd,
-} from '@/shared/seo'
+import { absoluteUrl, SITE_DESCRIPTION, SITE_TITLE, seo } from '@/shared/seo'
 
 export const Route = createFileRoute('/')({
   loader: () => getPublicConfigFn(),
   head: ({ loaderData }) => {
-    if (loaderData?.selfHost) {
+    if (!loaderData?.cloud) {
       return {
         meta: [
           { title: 'Self-hosted Keenpix' },
@@ -43,19 +35,13 @@ export const Route = createFileRoute('/')({
 })
 
 function Home() {
-  const { selfHost } = Route.useLoaderData()
-  if (selfHost) {
+  const { cloud, jsonLd } = Route.useLoaderData()
+  if (!cloud) {
     return <SelfHostHome />
   }
   return (
     <>
-      <JsonLd
-        data={[
-          softwareApplicationJsonLd(),
-          organizationJsonLd(),
-          webSiteJsonLd(),
-        ]}
-      />
+      {jsonLd ? <JsonLd data={jsonLd} /> : null}
       <MarketingPage />
     </>
   )

@@ -56,7 +56,7 @@ async function seedSuperAdminUser() {
   })
 
   if (!SUPER_ADMIN_PASSWORD) {
-    return
+    return admin
   }
 
   const password = await hashPassword(SUPER_ADMIN_PASSWORD)
@@ -69,7 +69,7 @@ async function seedSuperAdminUser() {
       where: { id: credentialAccount.id },
       data: { accountId: admin.id, password },
     })
-    return
+    return admin
   }
 
   await prisma.account.create({
@@ -80,18 +80,30 @@ async function seedSuperAdminUser() {
       password,
     },
   })
+
+  return admin
 }
 
 async function main() {
   console.log('Seeding Keenpix...')
 
-  await prisma.org.upsert({
+  await prisma.organization.upsert({
     where: { id: ORG_ID },
     update: { name: 'Keenpix' },
-    create: { id: ORG_ID, name: 'Keenpix' },
+    create: { id: ORG_ID, name: 'Keenpix', slug: 'default' },
   })
 
-  await seedSuperAdminUser()
+  const admin = await seedSuperAdminUser()
+
+  // The super admin owns the default org (mirrors the migration backfill so a
+  // fresh install and an upgraded install converge on the same membership).
+  await prisma.member.upsert({
+    where: {
+      userId_organizationId: { userId: admin.id, organizationId: ORG_ID },
+    },
+    update: { role: 'owner' },
+    create: { organizationId: ORG_ID, userId: admin.id, role: 'owner' },
+  })
 
   console.log(`Seeded default org and super admin user ${SUPER_ADMIN_EMAIL}.`)
 }

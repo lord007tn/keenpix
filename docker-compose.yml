@@ -38,7 +38,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3000"
-      KEENPIX_SELF_HOST: "true"
+      # Self-host is the default (KEENPIX_MODE unset); no separate self-host flag.
       DATABASE_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-keenpix}"
       # Required for session signing. Compose refuses to start if this is unset,
       # so copied deployments cannot accidentally ship with a default secret.

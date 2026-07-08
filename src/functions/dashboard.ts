@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getDashboard } from '@/actions/dashboard'
-import { authMiddleware } from '@/lib/auth/guards'
+import { authMiddleware, requireActiveOrg } from '@/lib/auth/guards'
 import { dashboardInputSchema } from '@/schemas/analytics'
 
 // Dashboard payload is assembled server-side so every surface uses the same
@@ -8,4 +8,4 @@ import { dashboardInputSchema } from '@/schemas/analytics'
 export const getDashboardFn = createServerFn({ method: 'GET' })
   .inputValidator(dashboardInputSchema)
   .middleware([authMiddleware])
-  .handler(({ data }) => getDashboard(data))
+  .handler(({ data, context }) => getDashboard(requireActiveOrg(context), data))

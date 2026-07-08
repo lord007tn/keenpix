@@ -1,4 +1,8 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  useNavigate,
+  useRouteContext,
+} from '@tanstack/react-router'
 import {
   CloudIcon,
   GitCompareIcon,
@@ -182,6 +186,12 @@ function AnalyticsPage() {
   const search = Route.useSearch()
   const { range, format, status, domain } = search
   const navigate = useNavigate({ from: Route.fullPath })
+  const { cloud, user } = useRouteContext({ from: '/app' })
+  const isSuperAdmin = user.role === 'super_admin'
+  // The edge/CDN dataset is whole-zone (aggregate across tenants). In cloud only
+  // the platform operator may see it; everyone sees it self-host. When it's not
+  // visible, no edge cards, lenses, notes, or connect prompt appear at all.
+  const canSeeEdge = !cloud || isSuperAdmin
   const { currentProject, isAll, setProject } = useProject()
   // Stale-while-revalidate: the previous window stays on screen while a new
   // range/filter loads; `isRefreshing` drives the inline indicator.
@@ -327,21 +337,30 @@ function AnalyticsPage() {
   // muted hint. Both wait for the edge query to resolve so neither flashes while
   // it is still pending — and a failed fetch is "couldn't load" (handled by the
   // !edge note below), never a false "not configured".
-  const edgeNotConfigured = !(edgePending || edgeError || edgeConfigured)
+  // Only the operator can wire Cloudflare, so only the super-admin ever sees the
+  // connect CTA. Regular tenants get origin-only cards with no dead-end prompt.
+  const edgeNotConfigured =
+    isSuperAdmin && !(edgePending || edgeError || edgeConfigured)
   // A background capture is in flight and the reconciled split isn't on screen
   // yet — show the "preparing" indicator (and hold the note) until it lands.
   const edgePreparing = edgeRefreshing && !edgeGated
   let edgeNote: string | undefined
-  if (!(edgePending || edgePreparing || edgeGated || edgeNotConfigured)) {
+  if (
+    canSeeEdge &&
+    !(edgePending || edgePreparing || edgeGated || edgeNotConfigured)
+  ) {
     if (edgeError || !edge) {
-      edgeNote =
-        "Couldn't load Cloudflare edge data — check the token in Settings → CDN cache."
+      // A missing/broken token is only actionable by the operator, so only they
+      // get the "check the token" hint; other viewers get no edge note at all.
+      edgeNote = isSuperAdmin
+        ? "Couldn't load edge data — check the token in Admin → CDN cache."
+        : undefined
     } else if (edgeScopeOk) {
       edgeNote =
-        'Cloudflare edge history is still accumulating — older data for this range isn’t available yet.'
+        'Edge history is still accumulating — older data for this range isn’t available yet.'
     } else {
       edgeNote =
-        'Cloudflare edge is whole-zone only — switch to All projects with no filters to see the source split.'
+        'Edge is whole-zone only — switch to All projects with no filters to see the source split.'
     }
   }
 
@@ -349,17 +368,17 @@ function AnalyticsPage() {
   // edge to exist. Funnel always works (origin-only when edge is unavailable).
   const lensAvailable: Record<ChartLens, boolean> = {
     funnel: true,
-    compare: edgeGated,
-    edge: edgeConfigured && edge !== null,
+    compare: canSeeEdge && edgeGated,
+    edge: canSeeEdge && edgeConfigured && edge !== null,
   }
   const activeLens: ChartLens = lensAvailable[lens] ? lens : 'funnel'
   let lensDescription: string
   if (activeLens === 'compare') {
-    lensDescription = `Cloudflare edge vs keenpix, overlaid · last ${range}`
+    lensDescription = `Edge vs keenpix, overlaid · last ${range}`
   } else if (activeLens === 'edge') {
-    lensDescription = `Cloudflare edge, zone-wide · last ${range}`
+    lensDescription = `Edge, zone-wide · last ${range}`
   } else if (edgeGated) {
-    lensDescription = `Cloudflare edge → keenpix cache → live · last ${range}`
+    lensDescription = `Edge → keenpix cache → live · last ${range}`
   } else {
     lensDescription = `keenpix origin · last ${range}`
   }
@@ -403,39 +422,41 @@ function AnalyticsPage() {
             <CardDescription>{lensDescription}</CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-xs uppercase tracking-wide">
-                View
-              </span>
-              <Select
-                onValueChange={(v) => {
-                  if (isChartLens(v)) {
-                    setLens(v)
-                  }
-                }}
-                value={activeLens}
-              >
-                <SelectTrigger className="w-[8.5rem]" size="sm">
-                  <SelectValue>
-                    {(v) =>
-                      LENSES.find((l) => l.value === v)?.label ?? String(v)
+            {canSeeEdge ? (
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                  View
+                </span>
+                <Select
+                  onValueChange={(v) => {
+                    if (isChartLens(v)) {
+                      setLens(v)
                     }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {LENSES.map((l) => (
-                    <SelectItem
-                      disabled={!lensAvailable[l.value]}
-                      key={l.value}
-                      value={l.value}
-                    >
-                      <l.icon className="size-3.5" />
-                      {l.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                  }}
+                  value={activeLens}
+                >
+                  <SelectTrigger className="w-[8.5rem]" size="sm">
+                    <SelectValue>
+                      {(v) =>
+                        LENSES.find((l) => l.value === v)?.label ?? String(v)
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LENSES.map((l) => (
+                      <SelectItem
+                        disabled={!lensAvailable[l.value]}
+                        key={l.value}
+                        value={l.value}
+                      >
+                        <l.icon className="size-3.5" />
+                        {l.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-xs uppercase tracking-wide">
                 Metric

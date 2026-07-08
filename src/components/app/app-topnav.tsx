@@ -1,10 +1,10 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
-  ActivityIcon,
   ChartColumnIcon,
   LayoutGridIcon,
   ScrollTextIcon,
   SettingsIcon,
+  ShieldIcon,
 } from 'lucide-react'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { NavUser } from '@/components/app/nav-user'
@@ -31,7 +31,13 @@ function tabClassName(active: boolean): string {
   )
 }
 
-export function AppTopnav({ user }: { user: SessionUser }) {
+export function AppTopnav({
+  cloud,
+  user,
+}: {
+  cloud: boolean
+  user: SessionUser
+}) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const { projectId } = useProject()
   const isSuperAdmin = user.role === 'super_admin'
@@ -52,7 +58,7 @@ export function AppTopnav({ user }: { user: SessionUser }) {
           Docs
         </a>
         <ModeToggle />
-        <NavUser user={user} />
+        <NavUser cloud={cloud} user={user} />
       </div>
 
       <nav className="flex items-center gap-1 overflow-x-auto px-2">
@@ -72,25 +78,13 @@ export function AppTopnav({ user }: { user: SessionUser }) {
           )
         })}
 
-        {isSuperAdmin ? (
-          <Link
-            className={tabClassName(pathname.startsWith('/app/operations'))}
-            search={(prev) => ({ ...prev, project: projectId })}
-            to="/app/operations"
-          >
-            <ActivityIcon
-              className={cn(
-                'size-4',
-                pathname.startsWith('/app/operations') && 'text-primary',
-              )}
-            />
-            Operations
-          </Link>
-        ) : null}
-
         <Link
           className={tabClassName(pathname.startsWith('/app/settings'))}
-          search={(prev) => ({ ...prev, project: projectId })}
+          search={(prev) => ({
+            ...prev,
+            project: projectId,
+            section: undefined,
+          })}
           to="/app/settings"
         >
           <SettingsIcon
@@ -101,6 +95,28 @@ export function AppTopnav({ user }: { user: SessionUser }) {
           />
           Settings
         </Link>
+
+        {/* Admin is the operator console — kept last so it sits after the
+            everyday tabs (Overview…Settings) for the super-admins who see it. */}
+        {isSuperAdmin ? (
+          <Link
+            className={tabClassName(pathname.startsWith('/app/admin'))}
+            search={(prev) => ({
+              ...prev,
+              project: projectId,
+              section: undefined,
+            })}
+            to="/app/admin"
+          >
+            <ShieldIcon
+              className={cn(
+                'size-4',
+                pathname.startsWith('/app/admin') && 'text-primary',
+              )}
+            />
+            Admin
+          </Link>
+        ) : null}
       </nav>
     </header>
   )

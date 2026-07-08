@@ -2,8 +2,6 @@ import dayjs from 'dayjs'
 import { prisma } from '@/db'
 import type { Project, ProjectFit } from '@/shared/types'
 
-const DEFAULT_ORG = 'org_default'
-
 // Single source of truth for shaping a Prisma project row into the domain
 // Project. Writes validate defaultFit, so the cast holds at the boundary.
 function toProject(
@@ -30,10 +28,7 @@ function toProject(
 // Returns the id only when it belongs to a real project in the org, so an
 // unknown/stale ?project= id consistently collapses to "all projects" for both
 // the data scope and the rendered scope.
-export async function resolveProjectId(
-  id: string | undefined,
-  orgId = DEFAULT_ORG,
-) {
+export async function resolveProjectId(id: string | undefined, orgId: string) {
   if (!id) {
     return
   }
@@ -44,7 +39,7 @@ export async function resolveProjectId(
   return found?.id
 }
 
-export async function listProjects(orgId = DEFAULT_ORG) {
+export async function listProjects(orgId: string) {
   const rows = await prisma.project.findMany({
     where: { orgId },
     orderBy: { createdAt: 'asc' },
@@ -52,8 +47,23 @@ export async function listProjects(orgId = DEFAULT_ORG) {
   return rows.map(toProject)
 }
 
-export async function getProject(id: string, orgId = DEFAULT_ORG) {
+// Operator-only cross-tenant count for the platform admin health view. Deliberately
+// NOT org-scoped — never use this for a tenant-facing read.
+export function countAllProjects() {
+  return prisma.project.count()
+}
+
+export async function getProject(id: string, orgId: string) {
   const p = await prisma.project.findFirst({ where: { id, orgId } })
+  return p ? toProject(p) : undefined
+}
+
+// Org-agnostic lookup for the PUBLIC transform data plane (`/img/*`): a request
+// carries only a project id and is gated by the project's own allowlist, never a
+// session org. Never use this for UI/dashboard reads — those must be org-scoped
+// via getProject(id, orgId).
+export async function getProjectById(id: string) {
+  const p = await prisma.project.findFirst({ where: { id } })
   return p ? toProject(p) : undefined
 }
 
@@ -101,7 +111,7 @@ function deriveAllowedOriginsFromUrl(originUrl: string): string[] {
 export async function addAllowedOrigin(
   projectId: string,
   host: string,
-  orgId = DEFAULT_ORG,
+  orgId: string,
 ) {
   const p = await prisma.project.findFirst({ where: { id: projectId, orgId } })
   if (!p) {
@@ -120,7 +130,7 @@ export async function addAllowedOrigin(
 export async function removeAllowedOrigin(
   projectId: string,
   host: string,
-  orgId = DEFAULT_ORG,
+  orgId: string,
 ) {
   // Read-modify-write inside a transaction so a concurrent add/remove isn't lost
   // (Prisma has no atomic array-remove the way `push` is atomic for the add).
@@ -153,7 +163,7 @@ export interface ProjectSettingsPatch {
 export async function updateProjectSettings(
   projectId: string,
   patch: ProjectSettingsPatch,
-  orgId = DEFAULT_ORG,
+  orgId: string,
 ) {
   const p = await prisma.project.findFirst({ where: { id: projectId, orgId } })
   if (!p) {
