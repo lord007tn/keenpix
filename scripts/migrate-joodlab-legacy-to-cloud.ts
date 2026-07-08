@@ -80,12 +80,35 @@ async function copyKeysetRows(input: {
   sourceWhereParams?: unknown[]
   table: string
   target: pg.Client
+  targetResumeWhere?: string
+  targetResumeWhereParams?: unknown[]
   transform: (row: Record<string, unknown>) => Record<string, unknown>
 }) {
   let copied = 0
   let scanned = 0
   let lastOrder: unknown = null
   let lastId: unknown = null
+
+  if (!DRY_RUN) {
+    const targetFilters = input.targetResumeWhere
+      ? `where ${input.targetResumeWhere}`
+      : ''
+    const resume = await input.target.query(
+      `select ${quoteIdent(input.orderColumn)}, ${quoteIdent(input.keyColumn)}
+       from ${quoteIdent(input.table)}
+       ${targetFilters}
+       order by ${quoteIdent(input.orderColumn)} desc, ${quoteIdent(input.keyColumn)} desc
+       limit 1`,
+      input.targetResumeWhereParams ?? [],
+    )
+    if (resume.rows[0]) {
+      lastOrder = resume.rows[0][input.orderColumn]
+      lastId = resume.rows[0][input.keyColumn]
+      console.log(
+        `${input.table}: resuming after ${String(lastOrder)} / ${String(lastId)}`,
+      )
+    }
+  }
 
   while (true) {
     const params = [...(input.sourceWhereParams ?? [])]
@@ -377,6 +400,8 @@ async function main() {
         keyColumn: 'id',
         sourceWhere: '"orgId" = $1',
         sourceWhereParams: [SOURCE_ORG_ID],
+        targetResumeWhere: '"orgId" = $1',
+        targetResumeWhereParams: [targetOrgId],
         columns: [
           'id',
           'bucketStart',
@@ -424,6 +449,8 @@ async function main() {
         keyColumn: 'id',
         sourceWhere: '"orgId" = $1',
         sourceWhereParams: [SOURCE_ORG_ID],
+        targetResumeWhere: '"orgId" = $1',
+        targetResumeWhereParams: [targetOrgId],
         columns: [
           'id',
           'orgId',
