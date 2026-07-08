@@ -1,12 +1,35 @@
 import { useForm } from '@tanstack/react-form'
 import { useQuery } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { MailIcon, UserPlusIcon, UsersRoundIcon, XIcon } from 'lucide-react'
+import {
+  CrownIcon,
+  MailIcon,
+  MoreHorizontalIcon,
+  Trash2Icon,
+  UserPlusIcon,
+  UsersRoundIcon,
+  XIcon,
+} from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CardDescription } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -21,11 +44,16 @@ import { authClient } from '@/lib/auth/client'
 import { getFieldError } from '@/utils/validation/form-errors'
 
 // Org-member roles the UI offers on invite / role-change. `owner` is deliberately
-// excluded — ownership transfer is not a casual dropdown action.
+// excluded from the dropdowns — ownership transfer is a guarded, confirmed action.
 const ORG_ROLE_LABELS: Record<string, string> = {
   owner: 'Owner',
   admin: 'Admin',
   member: 'Member',
+}
+
+interface MemberTarget {
+  id: string
+  label: string
 }
 
 function roleLabel(role: string | null | undefined) {
@@ -61,13 +89,21 @@ export function TeamManagement() {
     },
   })
 
+  const [confirmRemove, setConfirmRemove] = useState<MemberTarget | null>(null)
+  const [confirmTransfer, setConfirmTransfer] = useState<MemberTarget | null>(
+    null,
+  )
+  const [busy, setBusy] = useState(false)
+
   const members = membersQuery.data?.members ?? []
   const invitations = (membersQuery.data?.invitations ?? []).filter(
     (invitation) => invitation.status === 'pending',
   )
+  const orgName = membersQuery.data?.name ?? ''
   const myRole = activeMemberQuery.data?.role ?? null
   const myMemberId = activeMemberQuery.data?.id
-  const canManage = myRole === 'owner' || myRole === 'admin'
+  const isOwner = myRole === 'owner'
+  const canManage = isOwner || myRole === 'admin'
 
   const inviteForm = useForm({
     defaultValues: { email: '', role: 'member' as 'member' | 'admin' },
@@ -101,16 +137,47 @@ export function TeamManagement() {
     membersQuery.refetch()
   }
 
-  async function removeMember(memberId: string, label: string) {
+  async function removeMember(target: MemberTarget) {
+    setBusy(true)
     const { error } = await authClient.organization.removeMember({
-      memberIdOrEmail: memberId,
+      memberIdOrEmail: target.id,
     })
+    setBusy(false)
     if (error) {
       toast.error(getErrorMessage(error, 'Could not remove member'))
       return
     }
-    toast.success(`Removed ${label}`)
+    setConfirmRemove(null)
+    toast.success(`Removed ${target.label}`)
     membersQuery.refetch()
+  }
+
+  // Ownership transfer: promote the target to owner, then step down to admin.
+  // Two owners exist between the calls, so stepping down is allowed (better-auth
+  // only blocks leaving the org without ANY owner).
+  async function transferOwnership(target: MemberTarget) {
+    setBusy(true)
+    try {
+      const promote = await authClient.organization.updateMemberRole({
+        memberId: target.id,
+        role: 'owner',
+      })
+      if (promote.error) {
+        toast.error(getErrorMessage(promote.error, 'Could not transfer'))
+        return
+      }
+      if (myMemberId) {
+        await authClient.organization.updateMemberRole({
+          memberId: myMemberId,
+          role: 'admin',
+        })
+      }
+      setConfirmTransfer(null)
+      toast.success(`Ownership transferred to ${target.label}`)
+      await Promise.all([membersQuery.refetch(), activeMemberQuery.refetch()])
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function cancelInvitation(invitationId: string, email: string) {
@@ -125,12 +192,171 @@ export function TeamManagement() {
     membersQuery.refetch()
   }
 
+  const orgForm = useForm({
+    defaultValues: { name: orgName },
+    onSubmit: async ({ value }) => {
+      const name = value.name.trim()
+      if (!name) {
+        toast.error('Enter an organization name.')
+        return
+      }
+      const { error } = await authClient.organization.update({
+        data: { name },
+      })
+      if (error) {
+        toast.error(getErrorMessage(error, 'Could not rename organization'))
+        return
+      }
+      toast.success('Organization renamed')
+      membersQuery.refetch()
+    },
+  })
+
+  function renderMembers() {
+    if (membersQuery.isPending) {
+      return <p className="p-3 text-muted-foreground text-sm">Loading…</p>
+    }
+    if (membersQuery.isError) {
+      return (
+        <div className="flex flex-col items-start gap-2 p-3">
+          <p className="text-destructive text-sm">Couldn’t load your team.</p>
+          <Button
+            onClick={() => membersQuery.refetch()}
+            size="sm"
+            variant="outline"
+          >
+            Try again
+          </Button>
+        </div>
+      )
+    }
+    if (members.length === 0) {
+      return (
+        <p className="p-3 text-muted-foreground text-sm">No members yet.</p>
+      )
+    }
+    return members.map((member) => {
+      const memberIsOwner = member.role === 'owner'
+      const isSelf = member.id === myMemberId
+      const manageable = canManage && !memberIsOwner && !isSelf
+      const label = member.user?.email ?? 'member'
+      return (
+        <div className="flex items-center gap-3 p-3" key={member.id}>
+          <UsersRoundIcon className="size-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-medium text-sm">
+              {member.user?.name || member.user?.email}
+            </div>
+            <div className="truncate text-muted-foreground text-xs">
+              {member.user?.email}
+            </div>
+          </div>
+          {manageable ? (
+            <Select
+              onValueChange={(v) => {
+                if (isAssignableRole(v)) {
+                  changeRole(member.id, v)
+                }
+              }}
+              value={member.role}
+            >
+              <SelectTrigger
+                aria-label={`Role for ${label}`}
+                className="w-28"
+                disabled={busy}
+              >
+                <SelectValue>{(value) => roleLabel(String(value))}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="member">{ORG_ROLE_LABELS.member}</SelectItem>
+                <SelectItem value="admin">{ORG_ROLE_LABELS.admin}</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <Badge variant={memberIsOwner ? 'success' : 'outline'}>
+              {roleLabel(member.role)}
+            </Badge>
+          )}
+          {manageable ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    aria-label={`Actions for ${label}`}
+                    size="icon-sm"
+                    variant="ghost"
+                  />
+                }
+              >
+                <MoreHorizontalIcon />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isOwner ? (
+                  <DropdownMenuItem
+                    onClick={() => setConfirmTransfer({ id: member.id, label })}
+                  >
+                    <CrownIcon />
+                    Transfer ownership
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem
+                  onClick={() => setConfirmRemove({ id: member.id, label })}
+                  variant="destructive"
+                >
+                  <Trash2Icon />
+                  Remove member
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+        </div>
+      )
+    })
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <CardDescription>
         Invite teammates to this organization and manage their roles. Owners and
         admins can invite and manage members; members have read access.
       </CardDescription>
+
+      {canManage ? (
+        <form
+          className="flex flex-col gap-1.5 sm:flex-row sm:items-end"
+          onSubmit={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            orgForm.handleSubmit()
+          }}
+        >
+          <orgForm.Field name="name">
+            {(field) => (
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label htmlFor="org-name">Organization name</Label>
+                <Input
+                  id="org-name"
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  value={field.state.value}
+                />
+              </div>
+            )}
+          </orgForm.Field>
+          <orgForm.Subscribe
+            selector={(state) => [state.isSubmitting, state.isDirty]}
+          >
+            {([isSubmitting, isDirty]) => (
+              <Button
+                disabled={isSubmitting || !isDirty}
+                type="submit"
+                variant="outline"
+              >
+                {isSubmitting ? 'Saving…' : 'Rename'}
+              </Button>
+            )}
+          </orgForm.Subscribe>
+        </form>
+      ) : null}
 
       {canManage ? (
         <form
@@ -223,78 +449,7 @@ export function TeamManagement() {
             <span className="font-medium text-sm">Members</span>
             <Badge variant="outline">{members.length}</Badge>
           </div>
-          <div className="divide-y rounded-md border">
-            {members.length === 0 ? (
-              <p className="p-3 text-muted-foreground text-sm">
-                {membersQuery.isPending ? 'Loading…' : 'No members yet.'}
-              </p>
-            ) : (
-              members.map((member) => {
-                const isOwner = member.role === 'owner'
-                const isSelf = member.id === myMemberId
-                const manageable = canManage && !isOwner && !isSelf
-                return (
-                  <div className="flex items-center gap-3 p-3" key={member.id}>
-                    <UsersRoundIcon className="size-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium text-sm">
-                        {member.user?.name || member.user?.email}
-                      </div>
-                      <div className="truncate text-muted-foreground text-xs">
-                        {member.user?.email}
-                      </div>
-                    </div>
-                    {manageable ? (
-                      <Select
-                        onValueChange={(v) => {
-                          if (isAssignableRole(v)) {
-                            changeRole(member.id, v)
-                          }
-                        }}
-                        value={member.role}
-                      >
-                        <SelectTrigger
-                          aria-label={`Role for ${member.user?.email}`}
-                          className="w-28"
-                        >
-                          <SelectValue>
-                            {(value) => roleLabel(String(value))}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="member">
-                            {ORG_ROLE_LABELS.member}
-                          </SelectItem>
-                          <SelectItem value="admin">
-                            {ORG_ROLE_LABELS.admin}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Badge variant={isOwner ? 'success' : 'outline'}>
-                        {roleLabel(member.role)}
-                      </Badge>
-                    )}
-                    {manageable ? (
-                      <Button
-                        aria-label={`Remove ${member.user?.email}`}
-                        onClick={() =>
-                          removeMember(
-                            member.id,
-                            member.user?.email ?? 'member',
-                          )
-                        }
-                        size="icon-sm"
-                        variant="ghost"
-                      >
-                        <XIcon />
-                      </Button>
-                    ) : null}
-                  </div>
-                )
-              })
-            )}
-          </div>
+          <div className="divide-y rounded-md border">{renderMembers()}</div>
         </div>
 
         <div className="flex min-w-0 flex-col gap-2">
@@ -341,6 +496,85 @@ export function TeamManagement() {
           </div>
         </div>
       </div>
+
+      <Dialog
+        onOpenChange={(next) => {
+          if (!next) {
+            setConfirmRemove(null)
+          }
+        }}
+        open={confirmRemove !== null}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove teammate?</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium">{confirmRemove?.label}</span> will
+              immediately lose access to this organization. You can re-invite
+              them later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setConfirmRemove(null)}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={busy}
+              onClick={() => {
+                if (confirmRemove) {
+                  removeMember(confirmRemove)
+                }
+              }}
+              variant="destructive"
+            >
+              {busy ? 'Removing…' : 'Remove'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        onOpenChange={(next) => {
+          if (!next) {
+            setConfirmTransfer(null)
+          }
+        }}
+        open={confirmTransfer !== null}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Transfer ownership?</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium">{confirmTransfer?.label}</span> will
+              become the owner of {orgName || 'this organization'} and you will
+              be demoted to admin. Only the owner can transfer ownership again.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setConfirmTransfer(null)}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={busy}
+              onClick={() => {
+                if (confirmTransfer) {
+                  transferOwnership(confirmTransfer)
+                }
+              }}
+            >
+              {busy ? 'Transferring…' : 'Transfer ownership'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
