@@ -36,6 +36,7 @@ export const Route = createFileRoute('/(auth)/signup')({
 function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [sentTo, setSentTo] = useState<string | null>(null)
+  const [resending, setResending] = useState(false)
   const form = useForm({
     defaultValues: { name: '', email: '', password: '' },
     validators: { onChange: signupSchema, onSubmit: signupSchema },
@@ -46,7 +47,9 @@ function SignupPage() {
         name: payload.name,
         email: payload.email,
         password: payload.password,
-        callbackURL: '/app',
+        // Land verification success/failure on the branded /verify-email page
+        // (which recovers expired links) instead of bouncing off /app to /login.
+        callbackURL: '/verify-email',
       })
       if (err) {
         setError(err.message ?? 'Could not create your account.')
@@ -58,6 +61,26 @@ function SignupPage() {
       toast.success('Account created — check your email to verify')
     },
   })
+
+  async function resendVerification() {
+    if (!sentTo) {
+      return
+    }
+    setResending(true)
+    try {
+      const { error: err } = await authClient.sendVerificationEmail({
+        email: sentTo,
+        callbackURL: '/verify-email',
+      })
+      if (err) {
+        toast.error(err.message ?? 'Could not resend the email')
+        return
+      }
+      toast.success('Verification email resent — check your inbox')
+    } finally {
+      setResending(false)
+    }
+  }
 
   return (
     <main
@@ -84,9 +107,25 @@ function SignupPage() {
                 We sent a verification link to <strong>{sentTo}</strong>. Click
                 it to activate your account, then sign in.
               </p>
-              <Button render={<Link to="/login" />} variant="outline">
-                Back to sign in
+              <Button
+                disabled={resending}
+                onClick={resendVerification}
+                variant="outline"
+              >
+                {resending ? 'Resending…' : 'Resend verification email'}
               </Button>
+              <div className="flex flex-col gap-1 text-muted-foreground text-sm">
+                <button
+                  className="hover:text-foreground"
+                  onClick={() => setSentTo(null)}
+                  type="button"
+                >
+                  Wrong email? Start over
+                </button>
+                <Link className="hover:text-foreground" to="/login">
+                  Back to sign in
+                </Link>
+              </div>
             </div>
           ) : (
             <>

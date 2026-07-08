@@ -25,9 +25,14 @@ export const Route = createFileRoute('/(auth)/verify-email')({
 
 function VerifyEmailPage() {
   const { error } = Route.useSearch()
+  // On success better-auth auto-signs-in and redirects here, so a live session is
+  // the real signal — never assume verified just because there's no error param
+  // (direct visits and consumed links land here too).
+  const { data: session } = authClient.useSession()
   const [email, setEmail] = useState('')
   const [resending, setResending] = useState(false)
   const failed = Boolean(error)
+  const verified = !failed && Boolean(session?.user)
 
   async function resend(e: React.FormEvent) {
     e.preventDefault()
@@ -38,7 +43,7 @@ function VerifyEmailPage() {
     try {
       const { error: err } = await authClient.sendVerificationEmail({
         email: email.trim(),
-        callbackURL: '/app',
+        callbackURL: '/verify-email',
       })
       if (err) {
         toast.error(err.message ?? 'Could not send the email')
@@ -48,6 +53,13 @@ function VerifyEmailPage() {
     } finally {
       setResending(false)
     }
+  }
+
+  let title = 'Verify your email'
+  if (failed) {
+    title = 'Verification link expired'
+  } else if (verified) {
+    title = 'Email verified'
   }
 
   return (
@@ -61,16 +73,25 @@ function VerifyEmailPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           <KeenpixLogo className="mb-2" />
-          <CardTitle>
-            {failed ? 'Verification link expired' : 'Email verified'}
-          </CardTitle>
+          <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {failed ? (
+          {verified ? (
+            <>
+              <div className="flex flex-col items-center gap-2 text-center">
+                <CheckCircle2Icon className="size-8 text-primary" />
+                <p className="text-muted-foreground text-sm">
+                  Your email is confirmed. You’re all set.
+                </p>
+              </div>
+              <Button render={<Link to="/app" />}>Continue to keenpix</Button>
+            </>
+          ) : (
             <>
               <p className="text-center text-muted-foreground text-sm">
-                This verification link is invalid or has expired. Enter your
-                email to get a new one.
+                {failed
+                  ? 'This verification link is invalid or has expired. Enter your email to get a new one.'
+                  : 'Enter your email and we will send a fresh verification link.'}
               </p>
               <form className="flex flex-col gap-3" onSubmit={resend}>
                 <Label className="sr-only" htmlFor="email">
@@ -95,20 +116,6 @@ function VerifyEmailPage() {
               >
                 Back to sign in
               </Link>
-            </>
-          ) : (
-            <>
-              <div className="flex flex-col items-center gap-2 text-center">
-                <CheckCircle2Icon className="size-8 text-primary" />
-                <p className="text-muted-foreground text-sm">
-                  Your email is confirmed. You’re all set.
-                </p>
-              </div>
-              <Button
-                render={<Link search={{ range: '30d' }} to="/app/dashboard" />}
-              >
-                Continue to keenpix
-              </Button>
             </>
           )}
         </CardContent>

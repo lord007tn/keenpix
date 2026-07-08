@@ -15,7 +15,13 @@ export function NameEditor({ initial }: { initial: string }) {
   async function save() {
     setPending(true)
     try {
-      await authClient.updateUser({ name: name.trim() })
+      // better-auth client methods resolve with { error } instead of throwing, so
+      // a try/catch alone would report a failed update as success.
+      const { error } = await authClient.updateUser({ name: name.trim() })
+      if (error) {
+        toast.error(getErrorMessage(error, 'Could not update name'))
+        return
+      }
       await router.invalidate()
       toast.success('Name updated')
     } catch (e) {

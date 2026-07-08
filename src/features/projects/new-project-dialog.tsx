@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label'
 import { getErrorMessage } from '@/errors/common'
 import { createProjectFn } from '@/functions/projects'
 import { createProjectSchema } from '@/schemas/projects'
+import { useProject } from '@/stores/project-context'
 import { getFieldError } from '@/utils/validation/form-errors'
 
 const DEFAULT_VALUES = {
@@ -34,6 +35,7 @@ export function NewProjectDialog({
   onOpenChange?: (open: boolean) => void
 }) {
   const router = useRouter()
+  const { setProject } = useProject()
   const isControlled = controlledOpen !== undefined
   const [internalOpen, setInternalOpen] = useState(false)
   const open = isControlled ? controlledOpen : internalOpen
@@ -48,8 +50,10 @@ export function NewProjectDialog({
       try {
         const project = await createProjectFn({ data: payload })
         toast.success(`Created project ${project.name}`)
-        // Refresh layout/dashboard loaders so the new project appears everywhere.
+        // Refresh layout/dashboard loaders so the new project appears everywhere,
+        // then switch scope to it so the user lands ready to add allowed hosts.
         await router.invalidate()
+        setProject(project.id)
         setOpen(false)
       } catch (e) {
         toast.error(getErrorMessage(e, 'Could not create project'))
