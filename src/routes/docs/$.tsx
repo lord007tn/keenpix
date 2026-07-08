@@ -118,6 +118,7 @@ const serverLoader = createServerFn({ method: 'GET' })
       jsonLd: selfHost
         ? null
         : docsJsonLd({
+            dateModified: page.data.updated,
             description: page.data.description,
             path: breadcrumbs,
             title: page.data.title,

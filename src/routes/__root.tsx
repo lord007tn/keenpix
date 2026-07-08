@@ -31,8 +31,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { name: 'application-name', content: SITE_NAME },
-      { name: 'theme-color', content: '#07111f' },
       { property: 'og:site_name', content: SITE_NAME },
+      { property: 'og:locale', content: 'en_US' },
       ...seo({
         title: SITE_TITLE,
         description: SITE_DESCRIPTION,
@@ -73,6 +73,18 @@ function RootDocument({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Static theme-color pair — kept out of route meta because HeadContent
+            dedupes meta by name and would otherwise collapse the two variants. */}
+        <meta
+          content="#ffffff"
+          media="(prefers-color-scheme: light)"
+          name="theme-color"
+        />
+        <meta
+          content="#07111f"
+          media="(prefers-color-scheme: dark)"
+          name="theme-color"
+        />
         <HeadContent />
       </head>
       <body>

@@ -13,7 +13,9 @@ export const Route = createFileRoute('/robots.txt')({
               'Allow: /',
               'Disallow: /api/',
               'Disallow: /app/',
-              'Disallow: /login',
+              // Auth pages (/login, /signup, …) are left crawlable so Googlebot can
+              // fetch them and honor their noindex meta, rather than surfacing a
+              // bare, snippet-less URL that a robots Disallow would leave indexable.
               `Sitemap: ${getAppUrl()}/sitemap.xml`,
               '',
             ].join('\n')

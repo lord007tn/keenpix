@@ -2,7 +2,7 @@
 title: Keenpix vs imgix — origin images, bandwidth, and what you actually pay
 description: imgix prices on origin images plus bandwidth with no self-host option. Keenpix bills on bandwidth delivered only, keeps transforms free, and is open source. A side-by-side look.
 date: "2026-07-04"
-author: Keenpix Team
+author: Raed Bahri
 competitor: imgix
 tags: [comparison, pricing, image-cdn]
 ---
@@ -24,6 +24,8 @@ Keenpix meters **bandwidth delivered at the edge** and nothing else. It does not
 | Self-host option | Yes (open source, AGPL) | No |
 | Entry price | $9/mo | Higher plan minimums |
 
+*imgix pricing referenced as of July 2026; check [imgix's current pricing](https://imgix.com/pricing) for the latest rates.*
+
 ## Free, unlimited transforms
 
 Both products give you a powerful URL-based transformation API — resize, crop, format conversion, quality, and more. The difference is the billing consequence: with Keenpix, **transformations never cost anything**, so building responsive `srcset` sets or adding modern AVIF/WebP variants has zero pricing impact.
@@ -37,6 +39,12 @@ For teams with compliance requirements, unpredictable budgets, or a preference f
 ## When imgix is the better fit
 
 imgix has years of edge-network maturity and a deep rendering feature set. If you are already deeply invested in its API and your origin-image economics work out in your favor, there may be no reason to switch. Keenpix competes on **price transparency, free transforms, and the self-host option** — not on out-feature-ing a mature incumbent on day one.
+
+## Related comparisons
+
+- [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) — credits vs bandwidth pricing.
+- [Keenpix vs ImageKit](/blog/keenpix-vs-imagekit) — two bandwidth-priced CDNs, compared.
+- [Why we bill on bandwidth delivered](/blog/transparent-image-cdn-pricing) — the pricing philosophy in full.
 
 ## See your real number
 

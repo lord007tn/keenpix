@@ -12,32 +12,55 @@ export const Route = createFileRoute('/sitemap.xml')({
           return new Response('Not found', { status: 404 })
         }
 
-        const urls = [
+        // Only HTML pages belong here; the llms*.txt endpoints are plain-text and
+        // are advertised via robots/link-alternate, not the XML sitemap. Blog
+        // entries carry a real <lastmod> from their frontmatter date (already a
+        // YYYY-MM-DD W3C datetime, so no timezone-shifting reformatting needed).
+        const staticUrls = [
           '/',
+          '/about',
           '/blog',
           '/legal/terms',
           '/legal/privacy',
           '/legal/dpa',
           '/legal/license',
-          '/llms.txt',
-          '/llms-full.txt',
-          ...source.getPages().map((page) => page.url),
+        ]
+        const entries = [
+          ...staticUrls.map((url) => ({ url, lastmod: undefined })),
+          ...source.getPages().map((page) => ({
+            url: page.url,
+            lastmod: page.data.updated,
+          })),
           ...blogSource
             .getPages()
             .filter((page) => !page.data.draft)
-            .map((page) => page.url),
+            .map((page) => ({ url: page.url, lastmod: page.data.date })),
         ]
         const origin = getAppUrl()
         const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls
-  .map(
-    (url) => `  <url>
-    <loc>${origin}${url}</loc>
-    <changefreq>${url === '/' ? 'weekly' : 'monthly'}</changefreq>
-    <priority>${url === '/' ? '1.0' : '0.7'}</priority>
-  </url>`,
-  )
+${entries
+  .map(({ url, lastmod }) => {
+    const isHome = url === '/'
+    const isLegal = url.startsWith('/legal')
+    let changefreq = 'monthly'
+    if (isHome) {
+      changefreq = 'weekly'
+    } else if (isLegal) {
+      changefreq = 'yearly'
+    }
+    let priority = '0.7'
+    if (isHome) {
+      priority = '1.0'
+    } else if (isLegal) {
+      priority = '0.3'
+    }
+    return `  <url>
+    <loc>${origin}${url}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}
+    <changefreq>${changefreq}</changefreq>
+    <priority>${priority}</priority>
+  </url>`
+  })
   .join('\n')}
 </urlset>
 `

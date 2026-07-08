@@ -3,6 +3,7 @@ import { ArrowRightIcon } from 'lucide-react'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { ModeToggle } from '@/components/theme/mode-toggle'
 import { buttonVariants } from '@/components/ui/button'
+import { SOCIAL_X_URL } from '@/shared/authors'
 import { REPOSITORY_URL } from '@/shared/repository'
 
 // Page-agnostic marketing chrome shared by the blog surface. Links resolve to
@@ -59,6 +60,9 @@ export function SiteFooter() {
           © 2026 keenpix · managed cloud + open-source self-host
         </span>
         <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+          <a className="hover:text-foreground" href="/about">
+            About
+          </a>
           <a className="hover:text-foreground" href="/docs">
             Documentation
           </a>
@@ -78,6 +82,14 @@ export function SiteFooter() {
             target="_blank"
           >
             GitHub
+          </a>
+          <a
+            className="hover:text-foreground"
+            href={SOCIAL_X_URL}
+            rel="noreferrer"
+            target="_blank"
+          >
+            X
           </a>
         </nav>
       </div>

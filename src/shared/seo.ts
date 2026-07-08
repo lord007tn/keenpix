@@ -1,14 +1,24 @@
 import { getAppUrl, getRepositoryUrl } from '@/server/deployment'
+import {
+  FOUNDER,
+  getAuthor,
+  SOCIAL_X_URL,
+  SUPPORT_EMAIL,
+} from '@/shared/authors'
 
 export const SITE_NAME = 'Keenpix'
 export const SITE_TITLE =
   'Keenpix — image optimization CDN with honest pricing, or self-host free'
+// Kept ~155 chars so the trailing self-host differentiator survives Google's SERP
+// snippet truncation (~160). Social cards allow ~200, so they still get it whole.
 export const SITE_DESCRIPTION =
-  'Keenpix optimizes and delivers your images in modern formats (AVIF, WebP) from one URL — transparent bandwidth pricing, unlimited transforms, no lock-in. Or self-host the open-source engine free.'
+  'Keenpix optimizes and delivers your images as AVIF/WebP from one URL — transparent bandwidth pricing, unlimited transforms, no lock-in. Or self-host free.'
 export const SITE_KEYWORDS =
   'image optimization CDN, image CDN, Cloudinary alternative, imgix alternative, ImageKit alternative, WebP, AVIF, sharp image transforms, self-hosted image optimization, open-source image CDN, bandwidth pricing'
 export const BRAND_IMAGE_PATH = '/brand/keenpix-og.png'
 const BRAND_ICON_PATH = '/logo512.png'
+// Twitter attribution handle reused across the card meta tags.
+const TWITTER_HANDLE = '@raedbahriworld'
 export const APP_VERSION = import.meta.env.VITE_APP_VERSION
 
 function pageTitle(title: string) {
@@ -37,6 +47,14 @@ export function seo({
   return [
     { title },
     { name: 'description', content: description },
+    // Enable large image previews + full snippets in Google and AI results. Pages
+    // that must not be indexed append their own robots:noindex after seo(), which
+    // wins via head deduplication (deepest/last descriptor with the same name).
+    {
+      name: 'robots',
+      content:
+        'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1',
+    },
     ...(keywords ? [{ name: 'keywords', content: keywords }] : []),
     { property: 'og:type', content: type },
     { property: 'og:title', content: title },
@@ -47,9 +65,12 @@ export function seo({
     { property: 'og:image:height', content: '630' },
     { property: 'og:image:alt', content: `${SITE_NAME} modular image mark` },
     { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:site', content: TWITTER_HANDLE },
+    { name: 'twitter:creator', content: TWITTER_HANDLE },
     { name: 'twitter:title', content: title },
     { name: 'twitter:description', content: description },
     { name: 'twitter:image', content: imageUrl },
+    { name: 'twitter:image:alt', content: `${SITE_NAME} modular image mark` },
   ]
 }
 
@@ -116,9 +137,22 @@ export function organizationJsonLd() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     '@id': ORGANIZATION_ID,
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      email: SUPPORT_EMAIL,
+    },
+    description: SITE_DESCRIPTION,
+    founder: {
+      '@type': 'Person',
+      name: FOUNDER.name,
+      ...(FOUNDER.sameAs ? { sameAs: FOUNDER.sameAs } : {}),
+    },
     logo: absoluteUrl(BRAND_ICON_PATH),
     name: SITE_NAME,
-    sameAs: [getRepositoryUrl()],
+    // Repo + official social profile give the Knowledge Graph corroborating
+    // signals to resolve and cite the Keenpix entity.
+    sameAs: [getRepositoryUrl(), SOCIAL_X_URL],
     url: absoluteUrl('/'),
   }
 }
@@ -130,9 +164,41 @@ export function webSiteJsonLd() {
     '@id': WEBSITE_ID,
     description: SITE_DESCRIPTION,
     image: absoluteUrl(BRAND_IMAGE_PATH),
+    inLanguage: 'en',
     name: SITE_NAME,
     publisher: { '@id': ORGANIZATION_ID },
     url: absoluteUrl('/'),
+  }
+}
+
+// Blog collection node for /blog so the listing is a first-class entity (a Blog
+// carrying its posts) rather than just a page of links — clearer for crawlers and
+// AI engines mapping the site's content.
+export function blogListingJsonLd(
+  posts: Array<{
+    date: string
+    description: string
+    title: string
+    url: string
+  }>,
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    '@id': `${absoluteUrl('/blog')}#blog`,
+    blogPost: posts.map((post) => ({
+      '@type': 'BlogPosting',
+      datePublished: post.date,
+      description: post.description,
+      headline: post.title,
+      url: post.url,
+    })),
+    description:
+      'Guides on image optimization, transparent bandwidth pricing, and how Keenpix compares to Cloudinary, imgix, and ImageKit.',
+    inLanguage: 'en',
+    name: `${SITE_NAME} Blog`,
+    publisher: { '@id': ORGANIZATION_ID },
+    url: absoluteUrl('/blog'),
   }
 }
 
@@ -158,6 +224,7 @@ export function faqPageJsonLd(
 export function blogPostingJsonLd({
   author,
   datePublished,
+  dateModified,
   description,
   path,
   title,
@@ -165,23 +232,36 @@ export function blogPostingJsonLd({
 }: {
   author: string
   datePublished: string
+  dateModified?: string
   description: string
   path: Array<{ name: string; url: string }>
   title: string
   url: string
 }) {
+  const person = getAuthor(author)
+  // A known byline (has sameAs) becomes a schema.org Person for author E-E-A-T;
+  // an unknown one stays an Organization so we never invent a fake identity.
+  const authorNode = person.sameAs?.length
+    ? {
+        '@type': 'Person',
+        name: person.name,
+        ...(person.role ? { jobTitle: person.role } : {}),
+        ...(person.bio ? { description: person.bio } : {}),
+        sameAs: person.sameAs,
+      }
+    : { '@type': 'Organization', name: person.name }
+
   return [
     {
       '@context': 'https://schema.org',
       '@type': 'BlogPosting',
-      author: {
-        '@type': 'Organization',
-        name: author,
-      },
+      author: authorNode,
       datePublished,
+      dateModified: dateModified ?? datePublished,
       description,
       headline: title,
       image: absoluteUrl(BRAND_IMAGE_PATH),
+      inLanguage: 'en',
       mainEntityOfPage: url,
       publisher: {
         '@type': 'Organization',
@@ -207,11 +287,13 @@ export function blogPostingJsonLd({
 }
 
 export function docsJsonLd({
+  dateModified,
   description,
   path,
   title,
   url,
 }: {
+  dateModified?: string
   description?: string
   path: Array<{ name: string; url: string }>
   title: string
@@ -226,9 +308,13 @@ export function docsJsonLd({
         '@type': 'Organization',
         name: SITE_NAME,
       },
+      // Only emitted when the doc's frontmatter carries an `updated` date, so we
+      // never stamp a fake freshness signal on undated reference pages.
+      ...(dateModified ? { dateModified } : {}),
       description,
       headline: title,
       image: absoluteUrl(BRAND_IMAGE_PATH),
+      inLanguage: 'en',
       isPartOf: {
         '@type': 'WebSite',
         name: 'Keenpix documentation',

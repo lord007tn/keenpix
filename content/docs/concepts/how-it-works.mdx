@@ -7,7 +7,7 @@ icon: Workflow
 Keenpix turns a URL into an optimized image. There's no build step and no SDK: the query
 string **is** the API.
 
-## The request lifecycle
+## What happens when you request an image?
 
 ```text
  Browser
@@ -43,7 +43,7 @@ Keenpix decodes the source once and runs a parameter-selected, safe pipeline:
    normalize, threshold, median, blur, and sharpen.
 4. **Re-encode** — to the negotiated `fmt` at the resolved quality.
 
-## Format negotiation
+## How does Keenpix choose the image format?
 
 When `fmt=auto` (or `fmt` is omitted) Keenpix reads the browser's `Accept` header and
 serves **AVIF → WebP → JPEG** in order of support, and sets `Vary: Accept`. Use

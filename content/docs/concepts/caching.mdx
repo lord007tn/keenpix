@@ -45,7 +45,7 @@ supports caching separate variants by `Accept`. On CDNs that do not, prefer expl
 predictability, but they also disable browser-based AVIF/WebP negotiation for that URL.
 `fmt=svg` is one of those explicit formats; `fmt=auto` never preserves SVG output.
 
-## Where it's stored
+## Where does Keenpix store cached images?
 
 The disk cache lives at `KEENPIX_CACHE_DIR` (default `./.keenpix-cache`). Writes are
 atomic (temp file + rename) so a crash mid-write can't serve a truncated image. See
