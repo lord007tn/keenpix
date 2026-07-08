@@ -1,11 +1,12 @@
 import { getAppUrl, getRepositoryUrl } from '@/server/deployment'
 
 export const SITE_NAME = 'Keenpix'
-export const SITE_TITLE = 'Keenpix - self-hosted image optimization'
+export const SITE_TITLE =
+  'Keenpix — image optimization CDN with honest pricing, or self-host free'
 export const SITE_DESCRIPTION =
-  'Self-hosted image optimization for teams: a fast, secure, open-source image pipeline with sharp transforms, disk caching, analytics, and one drop-in URL.'
+  'Keenpix optimizes and delivers your images in modern formats (AVIF, WebP) from one URL — transparent bandwidth pricing, unlimited transforms, no lock-in. Or self-host the open-source engine free.'
 export const SITE_KEYWORDS =
-  'Keenpix, self-hosted image optimization, open-source image CDN, sharp image transforms, image proxy, WebP, AVIF, Docker image optimizer'
+  'image optimization CDN, image CDN, Cloudinary alternative, imgix alternative, ImageKit alternative, WebP, AVIF, sharp image transforms, self-hosted image optimization, open-source image CDN, bandwidth pricing'
 export const BRAND_IMAGE_PATH = '/brand/keenpix-og.png'
 const BRAND_ICON_PATH = '/logo512.png'
 export const APP_VERSION = import.meta.env.VITE_APP_VERSION
@@ -93,9 +94,13 @@ export function softwareApplicationJsonLd() {
     image: absoluteUrl(BRAND_IMAGE_PATH),
     license: `${getRepositoryUrl()}/blob/master/LICENSE`,
     name: SITE_NAME,
+    // Free to self-host; managed cloud plans run $9–$29/mo. AggregateOffer lets
+    // search engines surface the price range as a rich result.
     offers: {
-      '@type': 'Offer',
-      price: '0',
+      '@type': 'AggregateOffer',
+      highPrice: '29',
+      lowPrice: '0',
+      offerCount: '4',
       priceCurrency: 'USD',
     },
     operatingSystem: 'Linux, macOS, Windows',
@@ -129,6 +134,76 @@ export function webSiteJsonLd() {
     publisher: { '@id': ORGANIZATION_ID },
     url: absoluteUrl('/'),
   }
+}
+
+// FAQPage for the marketing home. The Q&As MUST also be visible on the page —
+// Google requires it for FAQ rich results — so this is emitted alongside a visible
+// FAQ section, not on its own.
+export function faqPageJsonLd(
+  items: Array<{ answer: string; question: string }>,
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
+  }
+}
+
+// BlogPosting + breadcrumb graph for a single article. Dated and attributed
+// (unlike docs' TechArticle) so search engines can surface it as blog content.
+export function blogPostingJsonLd({
+  author,
+  datePublished,
+  description,
+  path,
+  title,
+  url,
+}: {
+  author: string
+  datePublished: string
+  description: string
+  path: Array<{ name: string; url: string }>
+  title: string
+  url: string
+}) {
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      author: {
+        '@type': 'Organization',
+        name: author,
+      },
+      datePublished,
+      description,
+      headline: title,
+      image: absoluteUrl(BRAND_IMAGE_PATH),
+      mainEntityOfPage: url,
+      publisher: {
+        '@type': 'Organization',
+        logo: {
+          '@type': 'ImageObject',
+          url: absoluteUrl(BRAND_ICON_PATH),
+        },
+        name: SITE_NAME,
+      },
+      url,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: path.map((item, index) => ({
+        '@type': 'ListItem',
+        item: item.url,
+        name: item.name,
+        position: index + 1,
+      })),
+    },
+  ]
 }
 
 export function docsJsonLd({

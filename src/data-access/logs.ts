@@ -11,15 +11,19 @@ export interface LogListFilters {
 }
 
 export async function listLogs({
+  orgId,
   filters,
   limit = 36,
   projectId,
 }: {
+  orgId: string
   filters?: LogListFilters
   limit?: number
   projectId?: string
-} = {}) {
-  const where: Prisma.RequestLogWhereInput = {}
+}) {
+  // Tenant scope first — every log row is org-scoped, so this bounds the query
+  // to the caller's org before any project/other filter narrows it further.
+  const where: Prisma.RequestLogWhereInput = { orgId }
   const search = filters?.search?.trim()
 
   if (projectId) {

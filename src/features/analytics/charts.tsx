@@ -91,7 +91,7 @@ function buildFunnelArea(
   if (view === 'bandwidth') {
     return {
       config: {
-        edgeBytes: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
+        edgeBytes: { label: 'Edge', color: 'var(--chart-1)' },
         originBytes: { label: 'keenpix origin', color: 'var(--chart-2)' },
       } satisfies ChartConfig,
       keys: ['edgeBytes', 'originBytes'],
@@ -104,7 +104,7 @@ function buildFunnelArea(
     // Cloudflare edge + keenpix disk, summing to the end-to-end hit rate.
     return {
       config: {
-        edgeShare: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
+        edgeShare: { label: 'Edge', color: 'var(--chart-1)' },
         diskShare: { label: 'keenpix cache', color: 'var(--chart-2)' },
       } satisfies ChartConfig,
       keys: ['edgeShare', 'diskShare'],
@@ -115,7 +115,7 @@ function buildFunnelArea(
   }
   return {
     config: {
-      edgeServed: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
+      edgeServed: { label: 'Edge', color: 'var(--chart-1)' },
       diskServed: { label: 'keenpix cache', color: 'var(--chart-2)' },
       liveProcessed: {
         label: 'Optimized live',
@@ -186,7 +186,7 @@ function buildCompareArea(view: AreaView): {
   if (view === 'bandwidth') {
     return {
       config: {
-        cfBytes: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
+        cfBytes: { label: 'Edge', color: 'var(--chart-1)' },
         kpBytes: { label: 'keenpix', color: 'var(--chart-2)' },
       },
       keys: ['cfBytes', 'kpBytes'],
@@ -196,7 +196,7 @@ function buildCompareArea(view: AreaView): {
   if (view === 'cache') {
     return {
       config: {
-        cfHitRate: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
+        cfHitRate: { label: 'Edge', color: 'var(--chart-1)' },
         kpHitRate: { label: 'keenpix disk', color: 'var(--chart-2)' },
       },
       keys: ['cfHitRate', 'kpHitRate'],
@@ -206,7 +206,7 @@ function buildCompareArea(view: AreaView): {
   }
   return {
     config: {
-      cfRequests: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
+      cfRequests: { label: 'Edge', color: 'var(--chart-1)' },
       kpRequests: { label: 'keenpix', color: 'var(--chart-2)' },
     },
     keys: ['cfRequests', 'kpRequests'],

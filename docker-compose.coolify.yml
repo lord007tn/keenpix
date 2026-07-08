@@ -35,7 +35,7 @@ services:
       - SERVICE_URL_APP
       - NODE_ENV=production
       - PORT=3000
-      - KEENPIX_SELF_HOST=true
+      # Self-host is the default (KEENPIX_MODE unset); no separate self-host flag.
       - DATABASE_URL=postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_64_POSTGRES}@postgres:5432/${POSTGRES_DB:-keenpix}
       - BETTER_AUTH_SECRET=${SERVICE_HEX_64_KEENPIX}
       - BETTER_AUTH_URL=${SERVICE_URL_APP}
@@ -53,6 +53,13 @@ services:
       - KEENPIX_MAX_DIMENSION=${KEENPIX_MAX_DIMENSION:-4096}
       - KEENPIX_ORIGIN_TIMEOUT_MS=${KEENPIX_ORIGIN_TIMEOUT_MS:-10000}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Transactional email: set EMAIL_PROVIDER to postmark | resend | smtp and
+      # fill the matching vars. Leave unset to disable email.
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-}
+      - POSTMARK_API_KEY=${POSTMARK_API_KEY:-}
+      - POSTMARK_FROM=${POSTMARK_FROM:-Keenpix <no-reply@keenpix.com>}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - RESEND_FROM=${RESEND_FROM:-Keenpix <no-reply@keenpix.com>}
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_SECURE=${SMTP_SECURE:-false}

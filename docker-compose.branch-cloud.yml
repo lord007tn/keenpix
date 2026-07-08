@@ -1,0 +1,149 @@
+# Branch cloud deployment for Coolify.
+#
+# This stack builds Keenpix from the selected Git branch instead of pulling the
+# published image. Use it for disposable/staging cloud-mode testing under the
+# Raed project in Coolify.
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    mem_limit: ${KEENPIX_PG_MEM_LIMIT:-0}
+    cpus: ${KEENPIX_PG_CPU_LIMIT:-0}
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-keenpix_branch}
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_64_POSTGRES}
+    volumes:
+      - keenpix_branch_pg18:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$SERVICE_USER_POSTGRES\" -d \"${POSTGRES_DB:-keenpix_branch}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    environment:
+      - CLICKHOUSE_DB=${CLICKHOUSE_DATABASE:-keenpix_branch}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-${SERVICE_PASSWORD_64_CLICKHOUSE}}
+    volumes:
+      - keenpix_branch_clickhouse:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  maxio:
+    image: ghcr.io/coollabsio/maxio:latest
+    command: serve
+    restart: unless-stopped
+    environment:
+      - MAXIO_ACCESS_KEY=${KEENPIX_CACHE_S3_ACCESS_KEY_ID:-${SERVICE_USER_S3}}
+      - MAXIO_SECRET_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY:-${SERVICE_PASSWORD_64_S3}}
+      - MAXIO_REGION=auto
+      - MAXIO_DEFAULT_BUCKETS=${KEENPIX_CACHE_S3_BUCKET:-keenpix-branch-cache}
+    volumes:
+      - keenpix_branch_maxio:/data
+
+  mailpit:
+    image: axllent/mailpit:v1.22
+    restart: unless-stopped
+    environment:
+      - SERVICE_URL_MAILPIT_8025
+    expose:
+      - "1025"
+      - "8025"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_KEENPIX_PUBLIC_URL: ${SERVICE_URL_APP_3000}
+        VERSION: ${SOURCE_COMMIT:-branch-cloud}
+    restart: unless-stopped
+    mem_limit: ${KEENPIX_MEM_LIMIT:-0}
+    cpus: ${KEENPIX_CPU_LIMIT:-0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      maxio:
+        condition: service_started
+      mailpit:
+        condition: service_started
+    environment:
+      - SERVICE_URL_APP_3000
+      - SERVICE_URL_APP=${SERVICE_URL_APP_3000}
+      - NODE_ENV=production
+      - PORT=3000
+      - KEENPIX_MODE=cloud
+      - DATABASE_URL=postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_64_POSTGRES}@postgres:5432/${POSTGRES_DB:-keenpix_branch}
+      - BETTER_AUTH_SECRET=${SERVICE_HEX_64_KEENPIX}
+      - BETTER_AUTH_URL=${SERVICE_URL_APP_3000}
+      - KEENPIX_APP_URL=${SERVICE_URL_APP_3000}
+      - KEENPIX_SUPER_ADMIN_EMAIL=${KEENPIX_SUPER_ADMIN_EMAIL:?admin@example.com}
+      - KEENPIX_SUPER_ADMIN_PASSWORD=${KEENPIX_SUPER_ADMIN_PASSWORD:-${SERVICE_PASSWORD_64_ADMIN}}
+      - KEENPIX_RUN_MIGRATIONS=${KEENPIX_RUN_MIGRATIONS:-true}
+      - KEENPIX_RUN_SEED=${KEENPIX_RUN_SEED:-false}
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - CLICKHOUSE_DATABASE=${CLICKHOUSE_DATABASE:-keenpix_branch}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-${SERVICE_PASSWORD_64_CLICKHOUSE}}
+      - KEENPIX_CACHE_S3_BUCKET=${KEENPIX_CACHE_S3_BUCKET:-keenpix-branch-cache}
+      - KEENPIX_CACHE_S3_ENDPOINT=${KEENPIX_CACHE_S3_ENDPOINT:-http://maxio:9000}
+      - KEENPIX_CACHE_S3_REGION=${KEENPIX_CACHE_S3_REGION:-auto}
+      - KEENPIX_CACHE_S3_ACCESS_KEY_ID=${KEENPIX_CACHE_S3_ACCESS_KEY_ID:-${SERVICE_USER_S3}}
+      - KEENPIX_CACHE_S3_SECRET_ACCESS_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY:-${SERVICE_PASSWORD_64_S3}}
+      - KEENPIX_CACHE_DIR=/var/cache/keenpix
+      - POLAR_TOKEN=${POLAR_TOKEN:?}
+      - POLAR_SERVER=${POLAR_SERVER:-sandbox}
+      - POLAR_WEBHOOK_SECRET=${POLAR_WEBHOOK_SECRET:?}
+      - EMAIL_PROVIDER=smtp
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
+      - SMTP_SECURE=false
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-no-reply@branch-cloud.keenpix.test}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Keenpix Branch Cloud}
+      - CRON_SECRET=${CRON_SECRET:-${SERVICE_PASSWORD_64_CRON}}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    expose:
+      - "3000"
+    volumes:
+      - keenpix_branch_cache:/var/cache/keenpix
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--output", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+
+  usage-cron:
+    image: curlimages/curl:latest
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        while true; do
+          sleep 3600;
+          curl -s -X POST -H "Authorization: Bearer ${CRON_SECRET:-${SERVICE_PASSWORD_64_CRON}}" http://app:3000/api/internal/billing/report-usage || true;
+        done
+
+volumes:
+  keenpix_branch_pg18:
+  keenpix_branch_clickhouse:
+  keenpix_branch_maxio:
+  keenpix_branch_cache:

@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { listLogs } from '@/actions/logs'
+import { readLogs } from '@/actions/logs'
+import { resolveActiveOrgId } from '@/lib/auth/active-org'
 import { auth } from '@/lib/auth/server'
 
 const STREAM_INTERVAL_MS = 2500
@@ -23,6 +24,17 @@ async function handleLogStream(request: Request) {
   if (!session?.user) {
     return new Response('Unauthorized', { status: 401 })
   }
+  // Scope the stream to the caller's org (self-host → org_default). Without an
+  // active org in cloud there is nothing to stream — and never another tenant's.
+  const orgId = resolveActiveOrgId(
+    (session.session as { activeOrganizationId?: string | null })
+      .activeOrganizationId,
+  )
+  if (!orgId) {
+    return new Response('No active organization', { status: 403 })
+  }
+  // Narrowed to a definite string for capture by the interval closure below.
+  const scopedOrgId = orgId
 
   const url = new URL(request.url)
   const project =
@@ -36,7 +48,7 @@ async function handleLogStream(request: Request) {
     start(controller) {
       async function writeRows() {
         try {
-          const rows = await listLogs(project, STREAM_FETCH_LIMIT)
+          const rows = await readLogs(scopedOrgId, project, STREAM_FETCH_LIMIT)
           const next = rows.filter((row) => !seen.has(row.id))
           for (const row of rows) {
             seen.add(row.id)

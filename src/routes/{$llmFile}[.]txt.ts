@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { llms } from 'fumadocs-core/source'
-import { getAppUrl, isSelfHosted } from '@/server/deployment'
+import { getAppUrl, isCloud } from '@/server/deployment'
 import { source } from '@/shared/docs-source'
 
 // fumadocs attaches getText() to each page's data at runtime to expose the
@@ -44,7 +44,7 @@ export const Route = createFileRoute('/{$llmFile}.txt')({
   server: {
     handlers: {
       GET: async ({ params }) => {
-        if (isSelfHosted()) {
+        if (!isCloud()) {
           return new Response('Not found', { status: 404 })
         }
 

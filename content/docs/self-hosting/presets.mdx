@@ -25,7 +25,6 @@ BETTER_AUTH_SECRET="<openssl rand -hex 32>"
 BETTER_AUTH_URL="http://localhost:3000"
 KEENPIX_SUPER_ADMIN_EMAIL="admin@example.com"
 KEENPIX_SUPER_ADMIN_PASSWORD="<a real password>"
-KEENPIX_SELF_HOST="true"
 ```
 
 - Plain `http` on localhost, so secure cookies stay off — fine for local only.
@@ -43,9 +42,9 @@ BETTER_AUTH_URL="https://keenpix.example.com"
 KEENPIX_APP_URL="https://keenpix.example.com"
 KEENPIX_SUPER_ADMIN_EMAIL="you@example.com"
 KEENPIX_SUPER_ADMIN_PASSWORD="<a real password>"
-KEENPIX_SELF_HOST="true"
 
-# Deliver staff invitations and OTP codes.
+# Deliver staff invitations and OTP codes via SMTP (or use postmark / resend).
+EMAIL_PROVIDER="smtp"
 SMTP_HOST="smtp.example.com"
 SMTP_PORT="587"
 SMTP_USER="..."
@@ -77,8 +76,8 @@ BETTER_AUTH_URL="https://admin.keenpix.example.com"
 KEENPIX_APP_URL="https://admin.keenpix.example.com"
 KEENPIX_SUPER_ADMIN_EMAIL="you@example.com"
 KEENPIX_SUPER_ADMIN_PASSWORD="<a real password>"
-KEENPIX_SELF_HOST="true"
 
+EMAIL_PROVIDER="smtp"
 SMTP_HOST="smtp.example.com"
 SMTP_PORT="587"
 SMTP_USER="..."

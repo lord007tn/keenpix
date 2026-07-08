@@ -1,0 +1,45 @@
+---
+title: Keenpix vs Cloudinary — a transparent, bandwidth-priced alternative
+description: Cloudinary bills on opaque "credits" that bundle transformations, storage, and bandwidth. Keenpix bills on one thing — bandwidth delivered — and lets you self-host. Here's an honest comparison.
+date: "2026-07-06"
+author: Keenpix Team
+competitor: Cloudinary
+tags: [comparison, pricing, image-cdn]
+---
+
+Cloudinary is the most established image and video CDN, and for good reason — it is genuinely capable. But if you have ever opened a Cloudinary invoice and tried to reverse-engineer *why* it costs what it costs, this comparison is for you.
+
+## The core difference: credits vs. bandwidth
+
+Cloudinary meters usage in **credits**. A single credit bundles together a mix of transformations, managed storage, and delivered bandwidth, and each of those consumes credits at a different rate. The result is a bill that is hard to predict and harder to explain: a viral asset, a bot crawl, or a new responsive-image breakpoint can quietly burn through a month's allotment.
+
+Keenpix meters exactly **one** thing: **bandwidth delivered at the edge**. Transformations are always unlimited and free. There are no per-transformation charges, no storage tier to reason about, and no pooled-credit math.
+
+| | Keenpix | Cloudinary |
+| --- | --- | --- |
+| Billing unit | Bandwidth delivered (GB) | Credits (bundled) |
+| Transformations | Unlimited, free | Consume credits |
+| Overage | One linear published rate ($0.05–0.08/GB) | Credit packs / plan upgrades |
+| Hard spend cap | Yes, you set it | Not really |
+| Self-host option | Yes (open source, AGPL) | No |
+| Entry price | $9/mo | $89/mo (after free tier) |
+
+## Predictable pricing
+
+Keenpix plans start at **$9/month for 100 GB delivered**, and every plan bills overage at a single, published, linear rate — between $0.05 and $0.08 per GB depending on tier. You set a hard cap and Keenpix will never silently blow past it.
+
+Because transforms are free, you never have to think about how many derived variants a responsive `srcset` generates, or whether adding an AVIF variant will move your bill. You optimize aggressively without being punished for it.
+
+## You can run it yourself
+
+This is the difference no amount of pricing tweaking can close: **Keenpix is open source**. The exact same engine that powers the managed cloud runs under AGPL, deployable with Docker on your own infrastructure, for free. If you ever want to leave the managed product — for cost, compliance, or control — you keep your URLs and your pipeline.
+
+Cloudinary has no self-host path. Your assets and transformation URLs live inside their platform.
+
+## When Cloudinary is still the right call
+
+We would rather earn trust than oversell, so: if you need **video** transcoding at scale, a full **digital asset manager** with approval workflows, or AI features like auto-tagging and content-aware cropping *today*, Cloudinary's breadth is real and Keenpix does not match it yet. Keenpix is focused on being the fastest, cheapest, most transparent way to **optimize and deliver images** — and to let you self-host when you want to.
+
+## Try it
+
+Point Keenpix at your existing S3, R2, or any origin, keep your URLs, and see your real bandwidth bill before you commit. Or [self-host it free](/docs/self-hosting) — same engine, your infrastructure.

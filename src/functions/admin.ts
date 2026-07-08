@@ -21,9 +21,12 @@ import {
   runCacheMaintenance,
   updateOperationsConfig,
 } from '@/actions/admin/operations'
-import { sendTestEmail, updateSmtpSettings } from '@/actions/admin/smtp'
 import { getAdminWorkspace } from '@/actions/admin/workspace'
-import { authMiddleware, requireSuperAdmin } from '@/lib/auth/guards'
+import {
+  authMiddleware,
+  requireSelfHost,
+  requireSuperAdmin,
+} from '@/lib/auth/guards'
 import {
   acceptInvitationSchema,
   apiActivityPageSchema,
@@ -34,8 +37,6 @@ import {
   operationsConfigSchema,
   resourceTrendSchema,
   revokeInvitationSchema,
-  sendTestEmailSchema,
-  smtpSettingsSchema,
 } from '@/schemas/admin'
 import { createApiKeySchema, disableApiKeySchema } from '@/schemas/api-keys'
 
@@ -66,6 +67,7 @@ export const runCacheMaintenanceFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
+    requireSelfHost()
     return runCacheMaintenance(data)
   })
 
@@ -73,6 +75,7 @@ export const getOperationsConfigFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .handler(({ context }) => {
     requireSuperAdmin(context)
+    requireSelfHost()
     return getOperationsConfig()
   })
 
@@ -89,6 +92,7 @@ export const updateOperationsConfigFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
+    requireSelfHost()
     return updateOperationsConfig({
       diskCacheMaxMb: data.diskCacheMaxMb,
       memoryCacheMaxMb: data.memoryCacheMaxMb,
@@ -120,6 +124,11 @@ export const createInvitationFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
+    // Staff invitations are the SELF-HOST operator flow: they add a user to the
+    // single shared org_default. In cloud this path creates a user with NO org
+    // membership (a permanently broken, org-less account), so it is self-host
+    // only — cloud team management is org-scoped via the organization plugin.
+    requireSelfHost()
     return createInvitation({
       email: data.email,
       role: data.role,
@@ -134,46 +143,31 @@ export const revokeInvitationFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
+    requireSelfHost()
     return revokeInvitation(data.id)
   })
 
 export const getInvitationFn = createServerFn({ method: 'GET' })
   .inputValidator(invitationTokenSchema)
-  .handler(({ data }) => getInvitation(data.token))
+  .handler(({ data }) => {
+    requireSelfHost()
+    return getInvitation(data.token)
+  })
 
 export const acceptInvitationFn = createServerFn({ method: 'POST' })
   .inputValidator(acceptInvitationSchema)
-  .handler(({ data }) => acceptInvitation(data))
-
-export const updateSmtpSettingsFn = createServerFn({ method: 'POST' })
-  .inputValidator(smtpSettingsSchema)
-  .middleware([authMiddleware])
-  .handler(({ context, data }) => {
-    requireSuperAdmin(context)
-    return updateSmtpSettings({
-      enabled: data.enabled,
-      host: data.host,
-      port: data.port,
-      secure: data.secure,
-      username: data.username,
-      password: data.password || undefined,
-      fromEmail: data.fromEmail,
-      fromName: data.fromName,
-    })
-  })
-
-export const sendTestEmailFn = createServerFn({ method: 'POST' })
-  .inputValidator(sendTestEmailSchema)
-  .middleware([authMiddleware])
-  .handler(({ context, data }) => {
-    requireSuperAdmin(context)
-    return sendTestEmail(data.to)
+  .handler(({ data }) => {
+    requireSelfHost()
+    return acceptInvitation(data)
   })
 
 export const updateCloudflareSettingsFn = createServerFn({ method: 'POST' })
   .inputValidator(cloudflareSettingsSchema)
   .middleware([authMiddleware])
   .handler(({ context, data }) => {
+    // Cloudflare edge analytics is a platform-operator integration, not per-tenant
+    // instance config, so unlike SMTP/cache it stays available to the super-admin
+    // in cloud too — they own the zone and toggle its visibility here.
     requireSuperAdmin(context)
     return updateCloudflareSettings({
       enabled: data.enabled,
@@ -187,6 +181,7 @@ export const updateCloudflareSettingsFn = createServerFn({ method: 'POST' })
 export const testCloudflareConnectionFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(({ context }) => {
+    // Same as updateCloudflareSettingsFn — operator integration, cloud-allowed.
     requireSuperAdmin(context)
     return testCloudflareConnection()
   })

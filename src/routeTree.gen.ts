@@ -12,25 +12,38 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as Char123llmFileChar125DottxtRouteImport } from './routes/{$llmFile}[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as LegalTermsRouteImport } from './routes/legal/terms'
+import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
+import { Route as LegalLicenseRouteImport } from './routes/legal/license'
+import { Route as LegalDpaRouteImport } from './routes/legal/dpa'
 import { Route as InviteTokenRouteImport } from './routes/invite/$token'
 import { Route as ImgSplatRouteImport } from './routes/img/$'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
+import { Route as BlogSplatRouteImport } from './routes/blog/$'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as authVerifyEmailRouteImport } from './routes/(auth)/verify-email'
+import { Route as authSignupRouteImport } from './routes/(auth)/signup'
+import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
+import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as AppSettingsIndexRouteImport } from './routes/app/settings/index'
 import { Route as AppOperationsIndexRouteImport } from './routes/app/operations/index'
 import { Route as AppLogsIndexRouteImport } from './routes/app/logs/index'
 import { Route as AppDashboardIndexRouteImport } from './routes/app/dashboard/index'
 import { Route as AppAnalyticsIndexRouteImport } from './routes/app/analytics/index'
+import { Route as AppAdminIndexRouteImport } from './routes/app/admin/index'
 import { Route as AppAccountIndexRouteImport } from './routes/app/account/index'
 import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
 import { Route as ApiSdkSplatRouteImport } from './routes/api/sdk/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiInternalLogsStreamRouteImport } from './routes/api/internal/logs/stream'
+import { Route as ApiInternalBillingReportUsageRouteImport } from './routes/api/internal/billing/report-usage'
 
 const Char123llmFileChar125DottxtRoute =
   Char123llmFileChar125DottxtRouteImport.update({
@@ -48,6 +61,11 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
   path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AcceptInviteRoute = AcceptInviteRouteImport.update({
+  id: '/accept-invite',
+  path: '/accept-invite',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRouteRoute = AppRouteRouteImport.update({
   id: '/app',
   path: '/app',
@@ -58,10 +76,35 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRouteRoute,
+} as any)
+const LegalTermsRoute = LegalTermsRouteImport.update({
+  id: '/legal/terms',
+  path: '/legal/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
+  id: '/legal/privacy',
+  path: '/legal/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalLicenseRoute = LegalLicenseRouteImport.update({
+  id: '/legal/license',
+  path: '/legal/license',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalDpaRoute = LegalDpaRouteImport.update({
+  id: '/legal/dpa',
+  path: '/legal/dpa',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
@@ -78,6 +121,11 @@ const DocsSplatRoute = DocsSplatRouteImport.update({
   path: '/docs/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogSplatRoute = BlogSplatRouteImport.update({
+  id: '/blog/$',
+  path: '/blog/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
   id: '/api/search',
   path: '/api/search',
@@ -88,9 +136,29 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const authVerifyEmailRoute = authVerifyEmailRouteImport.update({
+  id: '/(auth)/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authSignupRoute = authSignupRouteImport.update({
+  id: '/(auth)/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authResetPasswordRoute = authResetPasswordRouteImport.update({
+  id: '/(auth)/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const authLoginRoute = authLoginRouteImport.update({
   id: '/(auth)/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
+  id: '/(auth)/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
@@ -118,6 +186,11 @@ const AppAnalyticsIndexRoute = AppAnalyticsIndexRouteImport.update({
   path: '/analytics/',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppAccountIndexRoute = AppAccountIndexRouteImport.update({
   id: '/account/',
   path: '/account/',
@@ -143,77 +216,122 @@ const ApiInternalLogsStreamRoute = ApiInternalLogsStreamRouteImport.update({
   path: '/api/internal/logs/stream',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalBillingReportUsageRoute =
+  ApiInternalBillingReportUsageRouteImport.update({
+    id: '/api/internal/billing/report-usage',
+    path: '/api/internal/billing/report-usage',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
+  '/accept-invite': typeof AcceptInviteRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
+  '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
+  '/reset-password': typeof authResetPasswordRoute
+  '/signup': typeof authSignupRoute
+  '/verify-email': typeof authVerifyEmailRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/blog/$': typeof BlogSplatRoute
   '/docs/$': typeof DocsSplatRoute
   '/img/$': typeof ImgSplatRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/legal/dpa': typeof LegalDpaRoute
+  '/legal/license': typeof LegalLicenseRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/app/': typeof AppIndexRoute
+  '/blog/': typeof BlogIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account/': typeof AppAccountIndexRoute
+  '/app/admin/': typeof AppAdminIndexRoute
   '/app/analytics/': typeof AppAnalyticsIndexRoute
   '/app/dashboard/': typeof AppDashboardIndexRoute
   '/app/logs/': typeof AppLogsIndexRoute
   '/app/operations/': typeof AppOperationsIndexRoute
   '/app/settings/': typeof AppSettingsIndexRoute
+  '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/accept-invite': typeof AcceptInviteRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
+  '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
+  '/reset-password': typeof authResetPasswordRoute
+  '/signup': typeof authSignupRoute
+  '/verify-email': typeof authVerifyEmailRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/blog/$': typeof BlogSplatRoute
   '/docs/$': typeof DocsSplatRoute
   '/img/$': typeof ImgSplatRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/legal/dpa': typeof LegalDpaRoute
+  '/legal/license': typeof LegalLicenseRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/app': typeof AppIndexRoute
+  '/blog': typeof BlogIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account': typeof AppAccountIndexRoute
+  '/app/admin': typeof AppAdminIndexRoute
   '/app/analytics': typeof AppAnalyticsIndexRoute
   '/app/dashboard': typeof AppDashboardIndexRoute
   '/app/logs': typeof AppLogsIndexRoute
   '/app/operations': typeof AppOperationsIndexRoute
   '/app/settings': typeof AppSettingsIndexRoute
+  '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
+  '/accept-invite': typeof AcceptInviteRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
+  '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/login': typeof authLoginRoute
+  '/(auth)/reset-password': typeof authResetPasswordRoute
+  '/(auth)/signup': typeof authSignupRoute
+  '/(auth)/verify-email': typeof authVerifyEmailRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/blog/$': typeof BlogSplatRoute
   '/docs/$': typeof DocsSplatRoute
   '/img/$': typeof ImgSplatRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/legal/dpa': typeof LegalDpaRoute
+  '/legal/license': typeof LegalLicenseRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/app/': typeof AppIndexRoute
+  '/blog/': typeof BlogIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/app/account/': typeof AppAccountIndexRoute
+  '/app/admin/': typeof AppAdminIndexRoute
   '/app/analytics/': typeof AppAnalyticsIndexRoute
   '/app/dashboard/': typeof AppDashboardIndexRoute
   '/app/logs/': typeof AppLogsIndexRoute
   '/app/operations/': typeof AppOperationsIndexRoute
   '/app/settings/': typeof AppSettingsIndexRoute
+  '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
 }
 export interface FileRouteTypes {
@@ -221,90 +339,141 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/accept-invite'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/{$llmFile}.txt'
+    | '/forgot-password'
     | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/verify-email'
     | '/api/health'
     | '/api/search'
+    | '/blog/$'
     | '/docs/$'
     | '/img/$'
     | '/invite/$token'
+    | '/legal/dpa'
+    | '/legal/license'
+    | '/legal/privacy'
+    | '/legal/terms'
     | '/app/'
+    | '/blog/'
     | '/api/auth/$'
     | '/api/sdk/$'
     | '/og/docs/$'
     | '/app/account/'
+    | '/app/admin/'
     | '/app/analytics/'
     | '/app/dashboard/'
     | '/app/logs/'
     | '/app/operations/'
     | '/app/settings/'
+    | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/accept-invite'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/{$llmFile}.txt'
+    | '/forgot-password'
     | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/verify-email'
     | '/api/health'
     | '/api/search'
+    | '/blog/$'
     | '/docs/$'
     | '/img/$'
     | '/invite/$token'
+    | '/legal/dpa'
+    | '/legal/license'
+    | '/legal/privacy'
+    | '/legal/terms'
     | '/app'
+    | '/blog'
     | '/api/auth/$'
     | '/api/sdk/$'
     | '/og/docs/$'
     | '/app/account'
+    | '/app/admin'
     | '/app/analytics'
     | '/app/dashboard'
     | '/app/logs'
     | '/app/operations'
     | '/app/settings'
+    | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
   id:
     | '__root__'
     | '/'
     | '/app'
+    | '/accept-invite'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/{$llmFile}.txt'
+    | '/(auth)/forgot-password'
     | '/(auth)/login'
+    | '/(auth)/reset-password'
+    | '/(auth)/signup'
+    | '/(auth)/verify-email'
     | '/api/health'
     | '/api/search'
+    | '/blog/$'
     | '/docs/$'
     | '/img/$'
     | '/invite/$token'
+    | '/legal/dpa'
+    | '/legal/license'
+    | '/legal/privacy'
+    | '/legal/terms'
     | '/app/'
+    | '/blog/'
     | '/api/auth/$'
     | '/api/sdk/$'
     | '/og/docs/$'
     | '/app/account/'
+    | '/app/admin/'
     | '/app/analytics/'
     | '/app/dashboard/'
     | '/app/logs/'
     | '/app/operations/'
     | '/app/settings/'
+    | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
+  AcceptInviteRoute: typeof AcceptInviteRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Char123llmFileChar125DottxtRoute: typeof Char123llmFileChar125DottxtRoute
+  authForgotPasswordRoute: typeof authForgotPasswordRoute
   authLoginRoute: typeof authLoginRoute
+  authResetPasswordRoute: typeof authResetPasswordRoute
+  authSignupRoute: typeof authSignupRoute
+  authVerifyEmailRoute: typeof authVerifyEmailRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSearchRoute: typeof ApiSearchRoute
+  BlogSplatRoute: typeof BlogSplatRoute
   DocsSplatRoute: typeof DocsSplatRoute
   ImgSplatRoute: typeof ImgSplatRoute
   InviteTokenRoute: typeof InviteTokenRoute
+  LegalDpaRoute: typeof LegalDpaRoute
+  LegalLicenseRoute: typeof LegalLicenseRoute
+  LegalPrivacyRoute: typeof LegalPrivacyRoute
+  LegalTermsRoute: typeof LegalTermsRoute
+  BlogIndexRoute: typeof BlogIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiSdkSplatRoute: typeof ApiSdkSplatRoute
   OgDocsSplatRoute: typeof OgDocsSplatRoute
+  ApiInternalBillingReportUsageRoute: typeof ApiInternalBillingReportUsageRoute
   ApiInternalLogsStreamRoute: typeof ApiInternalLogsStreamRoute
 }
 
@@ -331,6 +500,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/accept-invite': {
+      id: '/accept-invite'
+      path: '/accept-invite'
+      fullPath: '/accept-invite'
+      preLoaderRoute: typeof AcceptInviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app': {
       id: '/app'
       path: '/app'
@@ -345,12 +521,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/': {
       id: '/app/'
       path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    '/legal/terms': {
+      id: '/legal/terms'
+      path: '/legal/terms'
+      fullPath: '/legal/terms'
+      preLoaderRoute: typeof LegalTermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/privacy': {
+      id: '/legal/privacy'
+      path: '/legal/privacy'
+      fullPath: '/legal/privacy'
+      preLoaderRoute: typeof LegalPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/license': {
+      id: '/legal/license'
+      path: '/legal/license'
+      fullPath: '/legal/license'
+      preLoaderRoute: typeof LegalLicenseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/dpa': {
+      id: '/legal/dpa'
+      path: '/legal/dpa'
+      fullPath: '/legal/dpa'
+      preLoaderRoute: typeof LegalDpaRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/invite/$token': {
       id: '/invite/$token'
@@ -373,6 +584,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/$': {
+      id: '/blog/$'
+      path: '/blog/$'
+      fullPath: '/blog/$'
+      preLoaderRoute: typeof BlogSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/search': {
       id: '/api/search'
       path: '/api/search'
@@ -387,11 +605,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(auth)/verify-email': {
+      id: '/(auth)/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof authVerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/signup': {
+      id: '/(auth)/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof authSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/reset-password': {
+      id: '/(auth)/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof authResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(auth)/login': {
       id: '/(auth)/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof authLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/forgot-password': {
+      id: '/(auth)/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof authForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/settings/': {
@@ -429,6 +675,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/app/admin/': {
+      id: '/app/admin/'
+      path: '/admin'
+      fullPath: '/app/admin/'
+      preLoaderRoute: typeof AppAdminIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/app/account/': {
       id: '/app/account/'
       path: '/account'
@@ -464,12 +717,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalLogsStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/billing/report-usage': {
+      id: '/api/internal/billing/report-usage'
+      path: '/api/internal/billing/report-usage'
+      fullPath: '/api/internal/billing/report-usage'
+      preLoaderRoute: typeof ApiInternalBillingReportUsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AppRouteRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppAccountIndexRoute: typeof AppAccountIndexRoute
+  AppAdminIndexRoute: typeof AppAdminIndexRoute
   AppAnalyticsIndexRoute: typeof AppAnalyticsIndexRoute
   AppDashboardIndexRoute: typeof AppDashboardIndexRoute
   AppLogsIndexRoute: typeof AppLogsIndexRoute
@@ -480,6 +741,7 @@ interface AppRouteRouteChildren {
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppAccountIndexRoute: AppAccountIndexRoute,
+  AppAdminIndexRoute: AppAdminIndexRoute,
   AppAnalyticsIndexRoute: AppAnalyticsIndexRoute,
   AppDashboardIndexRoute: AppDashboardIndexRoute,
   AppLogsIndexRoute: AppLogsIndexRoute,
@@ -494,18 +756,30 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
+  AcceptInviteRoute: AcceptInviteRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   Char123llmFileChar125DottxtRoute: Char123llmFileChar125DottxtRoute,
+  authForgotPasswordRoute: authForgotPasswordRoute,
   authLoginRoute: authLoginRoute,
+  authResetPasswordRoute: authResetPasswordRoute,
+  authSignupRoute: authSignupRoute,
+  authVerifyEmailRoute: authVerifyEmailRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSearchRoute: ApiSearchRoute,
+  BlogSplatRoute: BlogSplatRoute,
   DocsSplatRoute: DocsSplatRoute,
   ImgSplatRoute: ImgSplatRoute,
   InviteTokenRoute: InviteTokenRoute,
+  LegalDpaRoute: LegalDpaRoute,
+  LegalLicenseRoute: LegalLicenseRoute,
+  LegalPrivacyRoute: LegalPrivacyRoute,
+  LegalTermsRoute: LegalTermsRoute,
+  BlogIndexRoute: BlogIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiSdkSplatRoute: ApiSdkSplatRoute,
   OgDocsSplatRoute: OgDocsSplatRoute,
+  ApiInternalBillingReportUsageRoute: ApiInternalBillingReportUsageRoute,
   ApiInternalLogsStreamRoute: ApiInternalLogsStreamRoute,
 }
 export const routeTree = rootRouteImport

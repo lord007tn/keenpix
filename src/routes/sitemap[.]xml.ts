@@ -1,20 +1,31 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getAppUrl, isSelfHosted } from '@/server/deployment'
+import { getAppUrl, isCloud } from '@/server/deployment'
+import { blogSource } from '@/shared/blog-source'
 import { source } from '@/shared/docs-source'
 
 export const Route = createFileRoute('/sitemap.xml')({
   server: {
     handlers: {
       GET: () => {
-        if (isSelfHosted()) {
+        // No public sitemap for a self-host instance (!isCloud()).
+        if (!isCloud()) {
           return new Response('Not found', { status: 404 })
         }
 
         const urls = [
           '/',
+          '/blog',
+          '/legal/terms',
+          '/legal/privacy',
+          '/legal/dpa',
+          '/legal/license',
           '/llms.txt',
           '/llms-full.txt',
           ...source.getPages().map((page) => page.url),
+          ...blogSource
+            .getPages()
+            .filter((page) => !page.data.draft)
+            .map((page) => page.url),
         ]
         const origin = getAppUrl()
         const body = `<?xml version="1.0" encoding="UTF-8"?>

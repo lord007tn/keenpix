@@ -13,7 +13,7 @@ It is built for operators who want the important parts kept visible: project all
 - **Internal API keys** - trusted backend systems can manage projects, domains, and pipeline settings through authenticated JSON endpoints.
 - **Projects and origins** - each project owns its source host rules, settings, request logs, and analytics.
 - **Built-in analytics** - requests, bandwidth saved, cache hit rate, output formats, latency, top images, and source domains come from Postgres rollups fed by the request log; optional Cloudflare edge analytics show the cache layer in front.
-- **Self-host dashboard** - seeded super admin, staff invitations, project settings, API keys, SMTP configuration, Cloudflare edge analytics, and operational views.
+- **Self-host dashboard** - seeded super admin, staff invitations, project settings, API keys, Cloudflare edge analytics, and operational views. Transactional email is configured via `EMAIL_PROVIDER` (Postmark / Resend / SMTP) in the environment.
 - **Open-internet hardening** - allowlist checks, private/loopback/link-local/CGNAT blocking, IPv4-mapped IPv6 handling, DNS rebinding protection, response-size limits, decompression-bomb limits, and transform back-pressure.
 
 Stack: TanStack Start (React 19, SSR) · Prisma 7 + PostgreSQL · sharp · Docker. Apache-2.0 licensed.
@@ -47,7 +47,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-The app comes up on **http://localhost:3000** by default. Set `KEENPIX_PORT` to publish a different host port, `BETTER_AUTH_URL` to your public base URL, or `KEENPIX_IMAGE` to a pinned image tag/digest. Compose runs Postgres, applies migrations on boot, seeds the default org and super admin user, and exposes `/api/health` for the container healthcheck. Docker/self-host mode sets `KEENPIX_SELF_HOST=true`, so `/` shows a private self-host splash with links into `/app` and `/docs`; the dashboard, API, and docs are served, while public marketing and LLM export routes are not.
+The app comes up on **http://localhost:3000** by default. Set `KEENPIX_PORT` to publish a different host port, `BETTER_AUTH_URL` to your public base URL, or `KEENPIX_IMAGE` to a pinned image tag/digest. Compose runs Postgres, applies migrations on boot, seeds the default org and super admin user, and exposes `/api/health` for the container healthcheck. Self-host is the default (`KEENPIX_MODE` unset), so `/` shows a private self-host splash with links into `/app` and `/docs`; the dashboard, API, and docs are served, while public marketing and LLM export routes are not.
 
 The Docker image entrypoint accepts `start` (default), `migrate`, and `seed`. For normal installs, leave the default `start`; it applies migrations, seeds bootstrap data, then starts the app. Set `KEENPIX_RUN_MIGRATIONS=false` or `KEENPIX_RUN_SEED=false` only when an external deployment workflow owns those steps.
 
@@ -68,7 +68,7 @@ If an earlier Coolify deploy failed with a Postgres 18 message about existing da
 **First run (empty database):**
 1. Open http://localhost:3000 and sign in with `KEENPIX_SUPER_ADMIN_EMAIL` and `KEENPIX_SUPER_ADMIN_PASSWORD`.
 2. Create a **project** (its origin hostname is added to the allowlist automatically).
-3. In **Settings**, invite staff by copying an invitation link, and optionally configure SMTP to send invitation/test emails.
+3. In **Settings**, invite staff by copying an invitation link. To email those invitations, set `EMAIL_PROVIDER` (and its vars) in the environment.
 4. Add any other image hosts under **Allowed hosts**, and copy the **Project ID** (shown at the top of Settings).
 5. Request an image — **no API key**, just make sure the source host is allowlisted:
    ```bash
@@ -109,12 +109,13 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_ADMIN_EMAIL` / `KEENPIX_ADMIN_PASSWORD` | – | Legacy aliases for the super-admin bootstrap variables. |
 | `LOG_LEVEL` | – | Server log level (`info` by default). |
 | `VITE_KEENPIX_PUBLIC_URL` | – | Browser-facing app URL for local/source builds when it cannot be inferred from the browser origin. |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` | – | Optional SMTP fallback used only when Settings SMTP is disabled or incomplete. |
-| `SMTP_USER` / `SMTP_PASSWORD` | – | Optional fallback SMTP credentials. |
-| `SMTP_FROM_EMAIL` / `SMTP_FROM_NAME` | – | Optional fallback SMTP sender defaults. |
+| `EMAIL_PROVIDER` | – | Selects the one active email provider: `postmark`, `resend`, or `smtp`. Unset disables email. The selected provider's vars are validated at startup. |
+| `POSTMARK_API_KEY` / `POSTMARK_FROM` / `POSTMARK_MESSAGE_STREAM` | – | Postmark credentials (when `EMAIL_PROVIDER=postmark`). |
+| `RESEND_API_KEY` / `RESEND_FROM` | – | Resend credentials (when `EMAIL_PROVIDER=resend`). |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM_EMAIL` / `SMTP_FROM_NAME` | – | SMTP connection (when `EMAIL_PROVIDER=smtp`; `SMTP_HOST` + `SMTP_FROM_EMAIL` required). |
 | `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ZONE_ID` | – | Optional Cloudflare edge analytics fallback when Settings → CDN cache is not enabled. Token needs zone **Analytics → Read**. |
 | `CLOUDFLARE_HOST` | – | Optional hostname filter for Cloudflare edge analytics when one zone serves multiple `/img/*` hosts. |
-| `KEENPIX_SELF_HOST` | – | Set `true` to run app-only self-host mode. Docker images default this to `true`. |
+| `KEENPIX_MODE` | – | `selfhost` (default) or `cloud`. Self-host is single-tenant with no public marketing site, self-signup, or billing. |
 | `KEENPIX_RUN_MIGRATIONS` / `KEENPIX_RUN_SEED` | – | Docker entrypoint controls for running migrations and bootstrap seed before app start. Defaults to `true`. |
 | `KEENPIX_CACHE_DIR` | – | Disk cache location (default `./.keenpix-cache`). |
 | `KEENPIX_CACHE_MAX_BYTES` | – | LRU eviction cap. The app default is 2 GB; the Docker/Coolify compose files default to 8 GB for CDN-fronted origin-shield use. |

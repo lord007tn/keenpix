@@ -1,5 +1,5 @@
 import { useForm } from '@tanstack/react-form'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
@@ -9,12 +9,15 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getPublicConfigFn } from '@/functions/config'
 import { authClient } from '@/lib/auth/client'
 import { loginSchema } from '@/schemas/auth'
 import { noIndexPageHead } from '@/shared/seo'
 import { getFieldError } from '@/utils/validation/form-errors'
 
 export const Route = createFileRoute('/(auth)/login')({
+  // `cloud` drives whether self-serve sign-up is offered (self-host is invite-only).
+  loader: () => getPublicConfigFn(),
   head: () =>
     noIndexPageHead(
       'Sign in',
@@ -24,8 +27,14 @@ export const Route = createFileRoute('/(auth)/login')({
 })
 
 function LoginPage() {
+  const { cloud } = Route.useLoaderData()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
+  // When sign-in is blocked because the email isn't verified, we stash it so the
+  // user can resend the verification email without leaving this screen — cloud
+  // requires verification, so this is the primary recovery path for a lost email.
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null)
+  const [resending, setResending] = useState(false)
   const form = useForm({
     defaultValues: {
       email: '',
@@ -37,9 +46,15 @@ function LoginPage() {
     },
     onSubmit: async ({ value }) => {
       setError(null)
+      setUnverifiedEmail(null)
       const payload = loginSchema.parse(value)
       const { error: err } = await authClient.signIn.email(payload)
       if (err) {
+        if (err.code === 'EMAIL_NOT_VERIFIED' || err.status === 403) {
+          setUnverifiedEmail(payload.email)
+          setError('Verify your email before signing in.')
+          return
+        }
         setError(err.message ?? 'Could not sign in.')
         return
       }
@@ -47,6 +62,26 @@ function LoginPage() {
       navigate({ to: '/app/dashboard', search: { range: '30d' } })
     },
   })
+
+  async function resendVerification() {
+    if (!unverifiedEmail) {
+      return
+    }
+    setResending(true)
+    try {
+      const { error: err } = await authClient.sendVerificationEmail({
+        email: unverifiedEmail,
+        callbackURL: '/app',
+      })
+      if (err) {
+        toast.error(err.message ?? 'Could not send the email')
+        return
+      }
+      toast.success('Verification email sent — check your inbox')
+    } finally {
+      setResending(false)
+    }
+  }
 
   return (
     <main
@@ -66,7 +101,19 @@ function LoginPage() {
         <CardContent className="flex flex-col gap-4">
           {error ? (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription className="flex flex-col items-start gap-2">
+                {error}
+                {unverifiedEmail ? (
+                  <Button
+                    disabled={resending}
+                    onClick={resendVerification}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {resending ? 'Sending…' : 'Resend verification email'}
+                  </Button>
+                ) : null}
+              </AlertDescription>
             </Alert>
           ) : null}
 
@@ -157,6 +204,20 @@ function LoginPage() {
               )}
             </form.Subscribe>
           </form>
+          <Link
+            className="text-center text-muted-foreground text-sm hover:text-foreground"
+            to="/forgot-password"
+          >
+            Forgot your password?
+          </Link>
+          {cloud ? (
+            <Link
+              className="text-center text-muted-foreground text-sm hover:text-foreground"
+              to="/signup"
+            >
+              New to keenpix? Create an account
+            </Link>
+          ) : null}
         </CardContent>
       </Card>
     </main>

@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { AppTopnav } from '@/components/app/app-topnav'
 import { AppNotFound, RouteError } from '@/components/app/error-page'
 import { getSessionFn } from '@/functions/auth'
+import { getPublicConfigFn } from '@/functions/config'
 import { listProjectsFn } from '@/functions/projects'
 import { appPageHead } from '@/shared/seo'
 import { ProjectProvider } from '@/stores/project-context'
@@ -16,11 +17,17 @@ export const Route = createFileRoute('/app')({
     project: typeof search.project === 'string' ? search.project : undefined,
   }),
   beforeLoad: async () => {
-    const user = await getSessionFn()
+    const [user, config] = await Promise.all([
+      getSessionFn(),
+      getPublicConfigFn(),
+    ])
     if (!user) {
       throw redirect({ to: '/login' })
     }
-    return { user }
+    // `cloud` lets the app shell hide self-host-only surfaces (instance SMTP/
+    // Cloudflare/operations config) for cloud tenants — defense-in-depth on top
+    // of the requireSelfHost server guard.
+    return { user, cloud: config.cloud }
   },
   loader: () => listProjectsFn(),
   head: () => ({
@@ -37,11 +44,11 @@ export const Route = createFileRoute('/app')({
 
 function AppLayout() {
   const projects = Route.useLoaderData()
-  const { user } = Route.useRouteContext()
+  const { user, cloud } = Route.useRouteContext()
   return (
     <ProjectProvider projects={projects}>
       <div className="flex min-h-svh flex-col bg-background">
-        <AppTopnav user={user} />
+        <AppTopnav cloud={cloud} user={user} />
         <main className="flex flex-1 flex-col overflow-auto" id="main-content">
           <Outlet />
         </main>

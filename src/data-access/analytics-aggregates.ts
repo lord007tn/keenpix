@@ -28,11 +28,15 @@ export interface WindowOpts {
   filters?: AnalyticsFilters
   gte: Date
   lt?: Date
+  orgId: string
   projectId?: string
 }
 
 function whereFor(opts: WindowOpts): Prisma.AnalyticsRollupHourlyWhereInput {
+  // Tenant scope is mandatory and comes first: every rollup row is org-scoped,
+  // so no aggregate can sum another tenant's traffic.
   const where: Prisma.AnalyticsRollupHourlyWhereInput = {
+    orgId: opts.orgId,
     bucketStart: opts.lt ? { gte: opts.gte, lt: opts.lt } : { gte: opts.gte },
   }
   if (opts.projectId) {

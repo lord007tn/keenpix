@@ -1,12 +1,6 @@
 import dayjs from 'dayjs'
 import type { z } from 'zod'
-import {
-  aggregateRollupSummary,
-  groupRollupsByBucket,
-  groupRollupsByProject,
-} from '@/data-access/analytics-aggregates'
 import { rollupRangeMeta } from '@/data-access/analytics-rollups'
-import { listLogs } from '@/data-access/logs'
 import { listProjects } from '@/data-access/projects'
 import {
   latencyBinsFromAgg,
@@ -15,6 +9,8 @@ import {
   timeSeriesFromBuckets,
 } from '@/helpers/analytics/rollup-shapers'
 import type { dashboardInputSchema } from '@/schemas/analytics'
+import { withAnalyticsSource } from '../analytics/analytics-source'
+import { readLogs } from '../logs'
 
 // The Overview is a scope-aware bird's-eye: KPI trends, the request chart, and
 // recent activity follow the selected project; the project table and operations
@@ -23,9 +19,10 @@ import type { dashboardInputSchema } from '@/schemas/analytics'
 // Cloudflare edge data is fetched separately by the client so a slow round-trip
 // never blocks this render.
 export async function getDashboard(
+  orgId: string,
   input: z.output<typeof dashboardInputSchema>,
 ) {
-  const projects = await listProjects()
+  const projects = await listProjects(orgId)
   // Unknown/stale id means "all projects". Per-project comparison stats power
   // the all-projects table only, so skip them when scoped to one project.
   const project =
@@ -41,16 +38,23 @@ export async function getDashboard(
   const now = dayjs()
   const curGte = now.subtract(windowMs, 'millisecond').toDate()
   const prevGte = now.subtract(2 * windowMs, 'millisecond').toDate()
-  const cur = { gte: curGte, projectId: project }
-  const prev = { gte: prevGte, lt: curGte, projectId: project }
+  const cur = { gte: curGte, orgId, projectId: project }
+  const prev = { gte: prevGte, lt: curGte, orgId, projectId: project }
 
-  const [curSummary, curBuckets, prevSummary, recentLogs, projectGrouped] =
+  // recentLogs reads the log store (ClickHouse, Postgres fallback) via readLogs,
+  // and runs alongside — not inside — the analytics block so a ClickHouse
+  // fallback there never double-runs it.
+  const [[curSummary, curBuckets, prevSummary, projectGrouped], recentLogs] =
     await Promise.all([
-      aggregateRollupSummary(cur),
-      groupRollupsByBucket(cur),
-      aggregateRollupSummary(prev),
-      listLogs({ limit: 5, projectId: project }),
-      project ? Promise.resolve(null) : groupRollupsByProject(cur),
+      withAnalyticsSource(orgId, (source) =>
+        Promise.all([
+          source.aggregateRollupSummary(cur),
+          source.groupRollupsByBucket(cur),
+          source.aggregateRollupSummary(prev),
+          project ? Promise.resolve(null) : source.groupRollupsByProject(cur),
+        ]),
+      ),
+      readLogs(orgId, project, 5),
     ])
 
   const curStats = summarizeAgg(curSummary)

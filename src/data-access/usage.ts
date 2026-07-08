@@ -1,0 +1,59 @@
+import { prisma } from '@/db'
+
+// Start of the current UTC hour. Usage is reported only for COMPLETE hours
+// (bucketStart < this), so a partial in-flight hour is never under-counted — it's
+// picked up next cycle once complete.
+function currentHourStart(now: Date): Date {
+  return new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+      now.getUTCHours(),
+    ),
+  )
+}
+
+// Delivered bytes for an org over the complete hours in [since, currentHour),
+// read from the hourly rollups — always populated (written in the request-log
+// transaction), per-org, so billing never depends on the optional ClickHouse
+// tier. `through` is the exclusive upper bound to store as the next watermark.
+export async function deliveredBytesSince(
+  orgId: string,
+  since: Date | null,
+): Promise<{ bytes: number; through: Date }> {
+  const through = currentHourStart(new Date())
+  const agg = await prisma.analyticsRollupHourly.aggregate({
+    where: {
+      orgId,
+      bucketStart: since ? { gte: since, lt: through } : { lt: through },
+    },
+    _sum: { bytesOut: true },
+  })
+  return { bytes: Number(agg._sum.bytesOut ?? 0n), through }
+}
+
+// Period usage for the billing panel: delivered bytes since the period start,
+// plus the resource counts that plan limits apply to (projects, seats). One
+// round-trip so the billing UI can show a full usage picture.
+export async function billingUsageSnapshot(orgId: string, since: Date) {
+  const [delivered, projects, seats] = await Promise.all([
+    deliveredBytesSince(orgId, since),
+    prisma.project.count({ where: { orgId } }),
+    prisma.member.count({ where: { organizationId: orgId } }),
+  ])
+  return { bytes: delivered.bytes, projects, seats }
+}
+
+export function listUsageBillingCustomers() {
+  return prisma.billingCustomer.findMany({
+    select: { orgId: true, polarCustomerId: true, lastUsageReportAt: true },
+  })
+}
+
+export function markUsageReported(orgId: string, at: Date) {
+  return prisma.billingCustomer.update({
+    where: { orgId },
+    data: { lastUsageReportAt: at },
+  })
+}

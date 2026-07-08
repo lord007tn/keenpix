@@ -12,38 +12,46 @@ import type {
   internalProjectSettingsPatchSchema,
 } from '@/schemas/projects'
 
-const DEFAULT_ORG = 'org_default'
+// Every project use case is org-scoped: callers must pass the resolved active
+// org (UI: session active org; SDK: the key's org). There is no default — a
+// missing org is a compile error, not a silent fall-back to a shared tenant.
 
-export function listProjects() {
-  return listProjectsInDb(DEFAULT_ORG)
+export function listProjects(orgId: string) {
+  return listProjectsInDb(orgId)
 }
 
-export function getProject(id: string) {
-  return getProjectFromDb(id, DEFAULT_ORG)
+export function getProject(orgId: string, id: string) {
+  return getProjectFromDb(id, orgId)
 }
 
 export function createProject(
+  orgId: string,
   input: z.output<typeof internalCreateProjectSchema>,
 ) {
   return createProjectInDb({
-    orgId: DEFAULT_ORG,
+    orgId,
     name: input.name,
     origin: input.origin,
     allowedOrigins: input.allowedOrigins,
   })
 }
 
-export function addAllowedHost(projectId: string, host: string) {
-  return addAllowedOrigin(projectId, host, DEFAULT_ORG)
+export function addAllowedHost(orgId: string, projectId: string, host: string) {
+  return addAllowedOrigin(projectId, host, orgId)
 }
 
-export function removeAllowedHost(projectId: string, host: string) {
-  return removeAllowedOrigin(projectId, host, DEFAULT_ORG)
+export function removeAllowedHost(
+  orgId: string,
+  projectId: string,
+  host: string,
+) {
+  return removeAllowedOrigin(projectId, host, orgId)
 }
 
 export function updateProjectSettings(
+  orgId: string,
   projectId: string,
   patch: z.output<typeof internalProjectSettingsPatchSchema>,
 ) {
-  return updateProjectSettingsInDb(projectId, patch, DEFAULT_ORG)
+  return updateProjectSettingsInDb(projectId, patch, orgId)
 }

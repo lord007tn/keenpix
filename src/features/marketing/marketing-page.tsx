@@ -3,11 +3,11 @@ import {
   ArrowRightIcon,
   ChartColumnIcon,
   CheckCircle2Icon,
-  CpuIcon,
-  DatabaseIcon,
+  GitBranchIcon,
+  GlobeIcon,
   ImageIcon,
-  LayersIcon,
-  ShieldIcon,
+  SparklesIcon,
+  WalletIcon,
   ZapIcon,
 } from 'lucide-react'
 import { CodeBlock } from '@/components/app/code-block'
@@ -16,45 +16,48 @@ import { ModeToggle } from '@/components/theme/mode-toggle'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/cn/utils'
+import { MARKETING_FAQ } from '@/shared/marketing-faq'
 import { REPOSITORY_URL } from '@/shared/repository'
+import { FrameworkLogos } from './framework-logos'
 
 const FEATURES = [
   {
+    icon: WalletIcon,
+    title: 'No surprise bills',
+    body: 'One published, linear overage rate — no pooled credits, no per-transform metering, no account suspensions. Set a hard cap and we never blow past it.',
+  },
+  {
+    icon: GlobeIcon,
+    title: 'Optimize your origins',
+    body: 'Point Keenpix at your existing S3, R2, or any origin and keep your URLs. No re-upload, no DAM migration, no lock-in.',
+  },
+  {
     icon: ImageIcon,
     title: 'Modern formats from one URL',
-    body: 'Generate AVIF, WebP, JPEG, PNG, GIF, HEIF, TIFF, and explicit SVG output with Sharp/IPX-style controls.',
+    body: 'AVIF, WebP, JPEG, PNG, GIF, HEIF, TIFF, and SVG with Sharp/IPX-style controls — unlimited transforms on every plan.',
+  },
+  {
+    icon: SparklesIcon,
+    title: 'AI image tools (coming soon)',
+    body: 'Background removal, upscaling, and enhancement — usage-based, so you only pay for what you actually run.',
   },
   {
     icon: ChartColumnIcon,
     title: 'Analytics without another vendor',
-    body: 'Track requests, bandwidth saved, format mix, cache hit rate, top assets, and latency from the built-in request log.',
+    body: 'Requests, bandwidth delivered and saved, format mix, cache hit rate, top assets, and latency — built in.',
   },
   {
-    icon: ShieldIcon,
-    title: 'Allowlist-first security',
-    body: 'Per-project host allowlists, private network blocking, DNS rebinding checks, and response limits keep the proxy locked down.',
-  },
-  {
-    icon: DatabaseIcon,
-    title: 'Postgres-backed control plane',
-    body: 'Projects, settings, staff access, request logs, and analytics all live in a database you control.',
-  },
-  {
-    icon: LayersIcon,
-    title: 'Disk cache built for CDNs',
-    body: 'Keenpix stores transformed variants locally and serves immutable responses that CDN edges can cache aggressively.',
-  },
-  {
-    icon: CpuIcon,
-    title: 'Self-hosted operations',
-    body: 'Run the included Docker Compose stack, deploy with Coolify, and keep the image pipeline on your own infrastructure.',
+    icon: GitBranchIcon,
+    title: 'Open-source escape hatch',
+    body: 'Run the exact same engine yourself, free. Self-host with Docker and keep the whole pipeline on your own infrastructure.',
   },
 ]
 
 const METRICS = [
-  ['0 keys', 'source access is gated by allowlisted hosts'],
-  ['8 formats', 'raster output plus explicit SVG optimization'],
-  ['1 path', '/img/<source>?project=<id>&w=600'],
+  ['from $9/mo', 'or self-host free, forever'],
+  ['40–70%', 'smaller with AVIF & WebP'],
+  ['$0.05–0.08/GB', 'overage — 3–6× under rivals'],
 ]
 
 const PIPELINE_STEPS = [
@@ -62,6 +65,48 @@ const PIPELINE_STEPS = [
   'Fetch with SSRF, redirect, size, and timeout guards',
   'Transform with sharp and cache the exact variant',
   'Serve immutable output for CDN edge caching',
+]
+
+const PRICING = [
+  {
+    name: 'Basic',
+    price: '$9',
+    tagline: 'For a site or store getting started.',
+    highlights: [
+      '100 GB delivered / month',
+      'Unlimited transforms',
+      'Basic analytics + logs',
+      'Multiple projects & staff',
+      '$0.08/GB overage',
+    ],
+    featured: false,
+  },
+  {
+    name: 'Pro',
+    price: '$19',
+    tagline: 'Advanced analytics, custom domains, AI.',
+    highlights: [
+      '400 GB delivered / month',
+      'Advanced analytics + full logs',
+      'Custom domains',
+      '150 AI credits / month',
+      '$0.06/GB overage',
+    ],
+    featured: true,
+  },
+  {
+    name: 'Business',
+    price: '$29',
+    tagline: 'Higher volume and priority.',
+    highlights: [
+      '1 TB delivered / month',
+      'Unlimited projects',
+      'Priority queue · 1-yr retention',
+      '500 AI credits / month',
+      '$0.05/GB overage',
+    ],
+    featured: false,
+  },
 ]
 
 export function MarketingPage() {
@@ -74,13 +119,18 @@ export function MarketingPage() {
             <a className="hover:text-foreground" href="#product">
               Product
             </a>
-            <a className="hover:text-foreground" href="#pipeline">
-              Pipeline
+            <a className="hover:text-foreground" href="#pricing">
+              Pricing
             </a>
             <a className="hover:text-foreground" href="#self-host">
               Self-host
             </a>
-            <a href="/docs">Docs</a>
+            <a className="hover:text-foreground" href="/blog">
+              Blog
+            </a>
+            <a className="hover:text-foreground" href="/docs">
+              Docs
+            </a>
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <ModeToggle />
@@ -94,8 +144,8 @@ export function MarketingPage() {
             >
               Sign in
             </Link>
-            <Link className={buttonVariants({ size: 'sm' })} to="/login">
-              Dashboard
+            <Link className={buttonVariants({ size: 'sm' })} to="/signup">
+              Get started
               <ArrowRightIcon data-icon="inline-end" />
             </Link>
           </div>
@@ -119,24 +169,25 @@ export function MarketingPage() {
               <div className="mb-6 flex flex-wrap gap-2">
                 <Badge className="border-white/15 bg-white/10 text-white hover:bg-white/10">
                   <span className="size-1.5 animate-pulse rounded-full bg-emerald-300" />
-                  Apache-2.0 licensed
+                  Managed cloud
                 </Badge>
                 <Badge className="border-white/15 bg-white/10 text-white hover:bg-white/10">
-                  self-hosted
+                  Open-source self-host
                 </Badge>
               </div>
-              <h1 className="text-balance font-semibold text-5xl tracking-tight sm:text-6xl lg:text-7xl">
-                Keenpix
+              <h1 className="text-balance font-semibold text-4xl tracking-tight sm:text-5xl lg:text-6xl">
+                Optimized images, minus the surprise bill.
               </h1>
               <p className="mt-5 max-w-xl text-balance text-lg text-white/80 leading-relaxed sm:text-xl">
-                A fast, open-source image optimization layer you can host
-                yourself. Transform remote images with sharp, cache every
-                variant, and serve CDN-ready assets from one URL.
+                Keenpix transforms and delivers your images in modern formats
+                from one URL — with one honest, published price. No pooled
+                credits, no per-transform metering, no account suspensions. Or
+                self-host the whole thing, free.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link className={buttonVariants()} to="/login">
+                <Link className={buttonVariants()} to="/signup">
                   <ZapIcon data-icon="inline-start" />
-                  Start optimizing
+                  Get started
                 </Link>
                 <a
                   className={buttonVariants({
@@ -144,9 +195,9 @@ export function MarketingPage() {
                       'border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white',
                     variant: 'outline',
                   })}
-                  href="/docs"
+                  href="/docs/self-hosting"
                 >
-                  Read the docs
+                  Self-host free
                 </a>
               </div>
               <div className="mt-8 grid gap-3 text-sm sm:grid-cols-3">
@@ -196,6 +247,20 @@ export function MarketingPage() {
           </div>
         </section>
 
+        <section className="border-b bg-background" id="frameworks">
+          <div className="mx-auto max-w-6xl px-6 py-14">
+            <p className="text-center text-muted-foreground">
+              <span className="font-medium text-foreground">
+                No SDK — just a URL.
+              </span>{' '}
+              Keenpix drops into every framework you already use.
+            </p>
+            <div className="mt-10">
+              <FrameworkLogos />
+            </div>
+          </div>
+        </section>
+
         <section className="border-b bg-muted/30" id="product">
           <div className="mx-auto max-w-6xl px-6 py-20">
             <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -204,12 +269,13 @@ export function MarketingPage() {
                   Product
                 </span>
                 <h2 className="mt-2 max-w-2xl font-semibold text-3xl tracking-tight md:text-4xl">
-                  A practical image CDN core, packaged for your stack.
+                  A managed image CDN that stays honest.
                 </h2>
               </div>
               <p className="max-w-md text-muted-foreground leading-relaxed">
-                Keenpix keeps the public surface small: one transform endpoint,
-                strict source validation, and an admin dashboard for operations.
+                Optimize the images you already host, deliver them fast in
+                modern formats, and see exactly what you pay for — or run the
+                whole open-source engine yourself.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -233,7 +299,85 @@ export function MarketingPage() {
           </div>
         </section>
 
-        <section className="border-b" id="pipeline">
+        <section className="border-b" id="pricing">
+          <div className="mx-auto max-w-6xl px-6 py-20">
+            <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+              <div>
+                <span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                  Pricing
+                </span>
+                <h2 className="mt-2 max-w-2xl font-semibold text-3xl tracking-tight md:text-4xl">
+                  The cheapest managed image CDN. Or free forever.
+                </h2>
+              </div>
+              <p className="max-w-md text-muted-foreground leading-relaxed">
+                Every plan bills on bandwidth delivered — never per transform.
+                Overage is one linear published rate with a hard cap you set.
+                Two months free on annual.
+              </p>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-3">
+              {PRICING.map((tier) => (
+                <Card
+                  className={cn(
+                    'rounded-lg',
+                    tier.featured && 'ring-2 ring-primary',
+                  )}
+                  key={tier.name}
+                >
+                  <CardContent className="flex flex-col gap-5">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-lg">{tier.name}</h3>
+                      {tier.featured ? (
+                        <Badge className="bg-primary/12 text-primary hover:bg-primary/12">
+                          Most popular
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-semibold text-4xl tracking-tight">
+                        {tier.price}
+                      </span>
+                      <span className="text-muted-foreground text-sm">/mo</span>
+                    </div>
+                    <p className="text-muted-foreground text-sm">
+                      {tier.tagline}
+                    </p>
+                    <ul className="flex flex-col gap-2.5 text-sm">
+                      {tier.highlights.map((h) => (
+                        <li className="flex items-start gap-2.5" key={h}>
+                          <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-primary" />
+                          <span className="text-muted-foreground">{h}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Link
+                      className={buttonVariants({
+                        className: 'mt-1 w-full',
+                        variant: tier.featured ? 'default' : 'outline',
+                      })}
+                      to="/signup"
+                    >
+                      Get started
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <p className="mt-6 text-center text-muted-foreground text-sm">
+              Prefer to run it yourself?{' '}
+              <a
+                className="text-foreground underline"
+                href="/docs/self-hosting"
+              >
+                Self-host Keenpix free
+              </a>{' '}
+              — the same open-source engine, on your own infrastructure.
+            </p>
+          </div>
+        </section>
+
+        <section className="border-b bg-muted/30" id="pipeline">
           <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-20 lg:grid-cols-2">
             <div className="flex flex-col gap-4">
               <span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
@@ -275,15 +419,19 @@ Vary: Accept`}</CodeBlock>
           </div>
         </section>
 
-        <section className="bg-muted/30" id="self-host">
+        <section id="self-host">
           <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
                 Self-host
               </span>
               <h2 className="mt-2 font-semibold text-3xl tracking-tight md:text-4xl">
-                Own the image layer your product depends on.
+                Never locked in. Run the same engine yourself.
               </h2>
+              <p className="mt-4 text-muted-foreground leading-relaxed">
+                The Keenpix core is open source. Deploy it with Docker, keep the
+                image pipeline on your own infrastructure, and pay nothing.
+              </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               {[
@@ -314,15 +462,41 @@ Vary: Accept`}</CodeBlock>
           </div>
         </section>
 
-        <section className="border-y bg-background">
+        <section className="border-b" id="faq">
+          <div className="mx-auto max-w-4xl px-6 py-20">
+            <div className="mb-10 flex flex-col gap-3">
+              <span className="font-medium text-primary text-sm tracking-wide">
+                FAQ
+              </span>
+              <h2 className="font-semibold text-3xl tracking-tight md:text-4xl">
+                Frequently asked questions
+              </h2>
+            </div>
+            <dl className="flex flex-col divide-y">
+              {MARKETING_FAQ.map((item) => (
+                <div
+                  className="flex flex-col gap-2 py-6 first:pt-0 last:pb-0"
+                  key={item.question}
+                >
+                  <dt className="font-medium text-lg">{item.question}</dt>
+                  <dd className="text-muted-foreground leading-relaxed">
+                    {item.answer}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+
+        <section className="border-y bg-muted/30">
           <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-14 md:flex-row md:items-center">
             <div>
               <h2 className="font-semibold text-3xl tracking-tight">
-                Run Keenpix on your infrastructure.
+                Start delivering optimized images today.
               </h2>
               <p className="mt-2 max-w-xl text-muted-foreground">
-                Start with Docker locally, then put the same app behind your
-                preferred proxy or CDN.
+                Spin up a project in minutes on managed cloud, or self-host the
+                open-source engine — your call, no lock-in either way.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -332,8 +506,8 @@ Vary: Accept`}</CodeBlock>
               >
                 Self-hosting guide
               </a>
-              <Link className={buttonVariants()} to="/login">
-                Open dashboard
+              <Link className={buttonVariants()} to="/signup">
+                Get started
                 <ArrowRightIcon data-icon="inline-end" />
               </Link>
             </div>
@@ -344,10 +518,21 @@ Vary: Accept`}</CodeBlock>
       <footer className="border-t bg-muted/30">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-8 text-muted-foreground text-sm">
           <KeenpixLogo />
-          <span className="font-mono text-xs">© 2026 keenpix · Apache-2.0</span>
-          <nav className="flex items-center gap-4">
+          <span className="font-mono text-xs">
+            © 2026 keenpix · managed cloud + open-source self-host
+          </span>
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <a className="hover:text-foreground" href="/blog">
+              Blog
+            </a>
             <a className="hover:text-foreground" href="/docs">
-              Documentation
+              Docs
+            </a>
+            <a className="hover:text-foreground" href="/legal/terms">
+              Terms
+            </a>
+            <a className="hover:text-foreground" href="/legal/privacy">
+              Privacy
             </a>
             <a
               className="hover:text-foreground"

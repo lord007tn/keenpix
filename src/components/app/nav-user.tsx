@@ -2,6 +2,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import {
   BookOpenIcon,
   ChevronDownIcon,
+  CreditCardIcon,
   LogOutIcon,
   MoonIcon,
   SunIcon,
@@ -36,7 +37,13 @@ function initials(user: SessionUser): string {
   return (first + second).toUpperCase()
 }
 
-export function NavUser({ user }: { user: SessionUser }) {
+export function NavUser({
+  cloud,
+  user,
+}: {
+  cloud: boolean
+  user: SessionUser
+}) {
   const navigate = useNavigate()
   const { resolvedTheme, setTheme } = useTheme()
   const [pending, setPending] = useState(false)
@@ -89,6 +96,16 @@ export function NavUser({ user }: { user: SessionUser }) {
             <UserIcon />
             Account
           </DropdownMenuItem>
+          {cloud ? (
+            <DropdownMenuItem
+              render={
+                <Link search={{ section: 'billing' }} to="/app/account" />
+              }
+            >
+              <CreditCardIcon />
+              Plan &amp; billing
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem
             render={
               // biome-ignore lint/a11y/useAnchorContent: the icon + "Documentation" label are merged into the anchor by Base UI's render prop

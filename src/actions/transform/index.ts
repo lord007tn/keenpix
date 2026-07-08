@@ -1,7 +1,8 @@
-import { getProject } from '@/data-access/projects'
+import { getProjectById } from '@/data-access/projects'
 import { createRequestLog } from '@/data-access/request-logs'
 import { getTransformErrorStatus, TransformError } from '@/errors/transform'
 import { parseTransformParams } from '@/helpers/transform/params'
+import { orgEntitledForServing } from '@/lib/billing/service-gate'
 import { buildCacheKey, readCacheEntry, writeCache } from '@/lib/cache/cache'
 import { errorContext, logger } from '@/lib/logger/logger'
 import { fetchOriginImage } from '@/lib/origin/fetch-image'
@@ -164,9 +165,20 @@ export async function optimizeProjectImage({
   src,
   startedAt = performance.now(),
 }: OptimizeProjectImageInput) {
-  const project = await getProject(projectId)
+  // Public data plane: a transform request carries only a project id and is
+  // gated by the project's own allowlist, not a session org — so the lookup is
+  // org-agnostic (a project's images must serve regardless of the caller's org).
+  const project = await getProjectById(projectId)
   if (!project) {
     throw new TransformError('Unknown project', 404)
+  }
+  // Cloud only: an org with no active subscription can't serve traffic (no free
+  // tier). TTL-cached so the hot path stays fast; a no-op in self-host.
+  if (!(await orgEntitledForServing(project.orgId))) {
+    throw new TransformError(
+      'This project is not on an active plan. Ask the workspace owner to subscribe.',
+      402,
+    )
   }
 
   const transformOptions = parseTransformParams(searchParams, accept, {

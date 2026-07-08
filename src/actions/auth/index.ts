@@ -8,10 +8,18 @@ export async function getSessionUser() {
   if (!session?.user) {
     return null
   }
+  const { user } = session
   return {
-    id: session.user.id,
-    email: session.user.email,
-    name: session.user.name ?? null,
-    role: session.user.role ?? 'user',
+    id: user.id,
+    email: user.email,
+    emailVerified: user.emailVerified ?? false,
+    name: user.name ?? null,
+    image: user.image ?? null,
+    role: user.role ?? 'user',
+    // Serialize for the client boundary; better-auth returns a Date.
+    createdAt:
+      user.createdAt instanceof Date
+        ? user.createdAt.toISOString()
+        : (user.createdAt ?? null),
   }
 }

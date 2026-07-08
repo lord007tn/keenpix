@@ -30,32 +30,6 @@ export const revokeInvitationSchema = z.object({
   id: nonEmptyStringSchema(),
 })
 
-export const smtpSettingsSchema = z.object({
-  enabled: z.boolean(),
-  fromEmail: z.email('Enter a valid sender email.').or(z.literal('')),
-  fromName: z.string().trim().max(80, 'Use 80 characters or fewer.'),
-  host: z.string().trim().max(255, 'Use 255 characters or fewer.'),
-  password: z.string().max(500, 'Use 500 characters or fewer.'),
-  port: z
-    .string()
-    .refine((value) => value.trim() !== '', {
-      message: 'Enter an SMTP port.',
-    })
-    .refine((value) => Number.isInteger(Number(value)), {
-      message: 'Use a whole port number.',
-    })
-    .transform(Number)
-    .refine((value) => value >= 1 && value <= 65_535, {
-      message: 'Use a port from 1 to 65535.',
-    }),
-  secure: z.boolean(),
-  username: z.string().trim().max(255, 'Use 255 characters or fewer.'),
-})
-
-export const sendTestEmailSchema = z.object({
-  to: z.email('Enter a valid recipient email.'),
-})
-
 export const cloudflareSettingsSchema = z.object({
   apiToken: z.string().trim().max(200, 'Use 200 characters or fewer.'),
   enabled: z.boolean(),
@@ -96,8 +70,6 @@ export const apiActivityPageSchema = z.object({
 })
 
 export type CreateInvitationInput = z.input<typeof createInvitationSchema>
-export type SmtpSettingsInput = z.input<typeof smtpSettingsSchema>
-export type SendTestEmailInput = z.input<typeof sendTestEmailSchema>
 export type CacheMaintenanceInput = z.input<typeof cacheMaintenanceSchema>
 export type CloudflareSettingsFormInput = z.input<
   typeof cloudflareSettingsSchema

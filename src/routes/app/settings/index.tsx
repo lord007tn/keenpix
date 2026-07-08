@@ -1,14 +1,13 @@
 import { createFileRoute, useRouteContext } from '@tanstack/react-router'
 import {
-  CloudIcon,
+  CreditCardIcon,
   ImageIcon,
   InfoIcon,
   KeyRoundIcon,
   type LucideIcon,
-  MailIcon,
-  ServerIcon,
   ShieldIcon,
   UsersIcon,
+  UsersRoundIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/app/page-header'
@@ -22,26 +21,27 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { ApiKeyManagement } from '@/features/admin/api-key-management'
-import { CloudflareSettingsPanel } from '@/features/admin/cloudflare-settings'
-import { OperationsConfig } from '@/features/admin/operations-config'
-import { SmtpSettingsPanel } from '@/features/admin/smtp-settings'
 import { StaffManagement } from '@/features/admin/staff-management'
+import { BillingPanel } from '@/features/billing/billing-panel'
 import { AllowedHosts } from '@/features/projects/allowed-hosts'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { PipelineSettings } from '@/features/projects/pipeline-settings'
+import { TeamManagement } from '@/features/team/team-management'
 import { cn } from '@/lib/cn/utils'
 import { appPageHead } from '@/shared/seo'
 import { useProject } from '@/stores/project-context'
 
+// Instance operations/SMTP/CDN config lives in the Admin console (/app/admin),
+// not here — Settings is project config + per-org billing + workspace API
+// keys/staff.
 const SECTIONS = [
   'general',
   'pipeline',
   'security',
-  'config',
-  'cdn',
+  'billing',
+  'team',
   'api-keys',
   'staff',
-  'email',
 ] as const
 
 type Section = (typeof SECTIONS)[number]
@@ -54,11 +54,10 @@ const SECTION_META: Record<Section, { label: string; icon: LucideIcon }> = {
   general: { label: 'General', icon: InfoIcon },
   pipeline: { label: 'Pipeline', icon: ImageIcon },
   security: { label: 'Security', icon: ShieldIcon },
-  config: { label: 'Configuration', icon: ServerIcon },
-  cdn: { label: 'CDN cache', icon: CloudIcon },
+  billing: { label: 'Plan & billing', icon: CreditCardIcon },
+  team: { label: 'Team', icon: UsersRoundIcon },
   'api-keys': { label: 'API keys', icon: KeyRoundIcon },
   staff: { label: 'Staff', icon: UsersIcon },
-  email: { label: 'Email', icon: MailIcon },
 }
 
 // Settings is a single hub: per-project configuration (only when a project is
@@ -115,7 +114,7 @@ function SubNavGroup({ label }: { label: string }) {
 
 function SettingsPage() {
   const { currentProject, isAll, projects, setProject } = useProject()
-  const { user } = useRouteContext({ from: '/app' })
+  const { user, cloud } = useRouteContext({ from: '/app' })
   const { section } = Route.useSearch()
   const navigate = Route.useNavigate()
   const isSuperAdmin = user.role === 'super_admin'
@@ -123,10 +122,23 @@ function SettingsPage() {
   const projectSections: Section[] = currentProject
     ? ['general', 'pipeline', 'security']
     : []
-  const globalSections: Section[] = isSuperAdmin
-    ? ['config', 'cdn', 'api-keys', 'staff', 'email']
-    : []
-  const available = [...projectSections, ...globalSections]
+  // Billing + Team are per-org and cloud-only (self-host is single-tenant/free),
+  // shown to every member of the org, not just super admins.
+  const billingSections: Section[] = cloud ? ['billing'] : []
+  const teamSections: Section[] = cloud ? ['team'] : []
+  // Instance config (Operations/SMTP/CDN) lives in the Admin console. Workspace
+  // API keys remain for super admins in both modes; the self-host Staff invite
+  // flow is self-host only (cloud team management is the org-scoped Team section).
+  const superAdminSections: Section[] = cloud
+    ? ['api-keys']
+    : ['api-keys', 'staff']
+  const globalSections: Section[] = isSuperAdmin ? superAdminSections : []
+  const available = [
+    ...projectSections,
+    ...billingSections,
+    ...teamSections,
+    ...globalSections,
+  ]
   const active = section && available.includes(section) ? section : available[0]
 
   function goTo(next: Section) {
@@ -200,6 +212,32 @@ function SettingsPage() {
               <>
                 <SubNavGroup label={currentProject?.name ?? 'Project'} />
                 {projectSections.map((s) => (
+                  <SubNavItem
+                    active={active === s}
+                    key={s}
+                    onClick={() => goTo(s)}
+                    section={s}
+                  />
+                ))}
+              </>
+            ) : null}
+            {billingSections.length > 0 ? (
+              <>
+                <SubNavGroup label="Billing" />
+                {billingSections.map((s) => (
+                  <SubNavItem
+                    active={active === s}
+                    key={s}
+                    onClick={() => goTo(s)}
+                    section={s}
+                  />
+                ))}
+              </>
+            ) : null}
+            {teamSections.length > 0 ? (
+              <>
+                <SubNavGroup label="Organization" />
+                {teamSections.map((s) => (
                   <SubNavItem
                     active={active === s}
                     key={s}
@@ -320,35 +358,18 @@ function SettingsPage() {
             </Card>
           ) : null}
 
-          {active === 'config' ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Operations configuration</CardTitle>
-                <CardDescription>
-                  Instance-wide cache and transform limits. Cache caps apply to
-                  this running instance immediately; concurrency and queue depth
-                  are environment-configured.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <OperationsConfig />
-              </CardContent>
-            </Card>
-          ) : null}
+          {active === 'billing' ? <BillingPanel /> : null}
 
-          {active === 'cdn' ? (
+          {active === 'team' ? (
             <Card>
               <CardHeader>
-                <CardTitle>Cloudflare edge analytics</CardTitle>
+                <CardTitle>Team</CardTitle>
                 <CardDescription>
-                  Wire a Cloudflare API token so keenpix can show real edge
-                  cache hit-rate alongside its origin-shield figures. Edge hits
-                  are served before the origin, so they never reach keenpix on
-                  their own.
+                  Invite teammates to this organization and manage their roles.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <CloudflareSettingsPanel />
+                <TeamManagement />
               </CardContent>
             </Card>
           ) : null}
@@ -378,21 +399,6 @@ function SettingsPage() {
               </CardHeader>
               <CardContent>
                 <StaffManagement />
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {active === 'email' ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>SMTP connection</CardTitle>
-                <CardDescription>
-                  Credentials used when staff invitations are emailed. Save your
-                  changes, then send a test to confirm delivery.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <SmtpSettingsPanel />
               </CardContent>
             </Card>
           ) : null}

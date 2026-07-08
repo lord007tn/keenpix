@@ -27,7 +27,7 @@ const originConfig = {
 // cache, then optimized live. Only shown when edge + origin cover the same 24h
 // whole-zone window (see `funnel` at the call site).
 const funnelConfig = {
-  edgeServed: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
+  edgeServed: { label: 'Edge', color: 'var(--chart-1)' },
   diskServed: { label: 'keenpix cache', color: 'var(--chart-2)' },
   liveProcessed: { label: 'Optimized live', color: 'var(--muted-foreground)' },
 } satisfies ChartConfig
@@ -58,7 +58,7 @@ export function ChartAreaInteractive({
         <CardTitle>Requests over time</CardTitle>
         <CardDescription>
           {showFunnel
-            ? 'Across Cloudflare edge and keenpix · last 24h'
+            ? 'Across edge and keenpix · last 24h'
             : 'Cache hits vs live-optimized, this window'}
         </CardDescription>
       </CardHeader>
