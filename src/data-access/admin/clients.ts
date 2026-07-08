@@ -1,0 +1,157 @@
+import dayjs from 'dayjs'
+import { prisma } from '@/db'
+import { getPlan, getPlanRank } from '@/lib/billing/plans'
+
+const CLIENT_USAGE_DAYS = 30
+const ENTITLED_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing'])
+
+function numberFromBigInt(value: bigint | number | null | undefined) {
+  return Number(value ?? 0)
+}
+
+function cacheHitRate(cached: number, total: number) {
+  return total > 0 ? cached / total : 0
+}
+
+export async function listClientAccounts() {
+  const since = dayjs().subtract(CLIENT_USAGE_DAYS, 'day').toDate()
+  const [orgs, usageRows] = await Promise.all([
+    prisma.organization.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        createdAt: true,
+        members: {
+          orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
+          select: {
+            id: true,
+            role: true,
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+        subscription: {
+          select: {
+            plan: true,
+            status: true,
+            currentPeriodEnd: true,
+            overageAllowed: true,
+          },
+        },
+        internalPlanGrant: {
+          select: {
+            plan: true,
+            reason: true,
+            grantedById: true,
+            expiresAt: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+        _count: { select: { members: true, projects: true } },
+      },
+    }),
+    prisma.analyticsRollupHourly.groupBy({
+      by: ['orgId'],
+      where: { bucketStart: { gte: since } },
+      _max: { bucketStart: true },
+      _sum: {
+        requests: true,
+        cachedRequests: true,
+        bytesOut: true,
+        bytesSaved: true,
+      },
+    }),
+  ])
+  const usageByOrg = new Map(usageRows.map((row) => [row.orgId, row]))
+
+  return orgs.map((org) => {
+    const usage = usageByOrg.get(org.id)
+    const requests = usage?._sum.requests ?? 0
+    const cachedRequests = usage?._sum.cachedRequests ?? 0
+    const internalPlan = getPlan(org.internalPlanGrant?.plan)
+    const billingPlan = getPlan(org.subscription?.plan)
+    const billingActive = org.subscription
+      ? ENTITLED_SUBSCRIPTION_STATUSES.has(org.subscription.status)
+      : false
+    const billingEntitledPlan = billingActive ? billingPlan : null
+    const internalActive =
+      internalPlan &&
+      (!org.internalPlanGrant?.expiresAt ||
+        dayjs(org.internalPlanGrant.expiresAt).isAfter(dayjs()))
+    const internalWins =
+      Boolean(internalActive) &&
+      getPlanRank(internalPlan) > getPlanRank(billingEntitledPlan)
+    const effectivePlan = internalWins ? internalPlan : billingEntitledPlan
+    const effectivePlanSource =
+      effectivePlan && internalWins ? 'internal' : 'billing'
+
+    return {
+      id: org.id,
+      name: org.name,
+      slug: org.slug,
+      createdAt: dayjs(org.createdAt).toISOString(),
+      projects: org._count.projects,
+      seats: org._count.members,
+      owners: org.members
+        .filter((member) => member.role === 'owner')
+        .map((member) => ({
+          id: member.user.id,
+          email: member.user.email,
+          name: member.user.name,
+          platformRole: member.user.role,
+        })),
+      members: org.members.map((member) => ({
+        id: member.user.id,
+        email: member.user.email,
+        name: member.user.name,
+        orgRole: member.role,
+        platformRole: member.user.role,
+        createdAt: dayjs(member.user.createdAt).toISOString(),
+      })),
+      billing: {
+        plan: billingPlan?.id ?? null,
+        planName: billingPlan?.name ?? null,
+        status: org.subscription?.status ?? null,
+        currentPeriodEnd:
+          org.subscription?.currentPeriodEnd?.toISOString() ?? null,
+        overageAllowed: org.subscription?.overageAllowed ?? false,
+      },
+      internalGrant: org.internalPlanGrant
+        ? {
+            plan: internalPlan?.id ?? org.internalPlanGrant.plan,
+            planName: internalPlan?.name ?? org.internalPlanGrant.plan,
+            active: Boolean(internalActive),
+            reason: org.internalPlanGrant.reason,
+            grantedById: org.internalPlanGrant.grantedById,
+            expiresAt: org.internalPlanGrant.expiresAt?.toISOString() ?? null,
+            updatedAt: org.internalPlanGrant.updatedAt.toISOString(),
+          }
+        : null,
+      effectivePlan: effectivePlan
+        ? {
+            plan: effectivePlan.id,
+            planName: effectivePlan.name,
+            source: effectivePlanSource,
+          }
+        : null,
+      usage30d: {
+        requests,
+        cachedRequests,
+        cacheHitRate: cacheHitRate(cachedRequests, requests),
+        bandwidthBytes: numberFromBigInt(usage?._sum.bytesOut),
+        bytesSaved: numberFromBigInt(usage?._sum.bytesSaved),
+        lastTrafficAt: usage?._max.bucketStart?.toISOString() ?? null,
+      },
+    }
+  })
+}

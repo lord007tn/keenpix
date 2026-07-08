@@ -5,6 +5,10 @@ import {
   listApiKeyActivitiesPage,
 } from '@/actions/admin/api-keys'
 import {
+  getClientAccounts,
+  updateClientInternalPlan,
+} from '@/actions/admin/clients'
+import {
   testCloudflareConnection,
   updateCloudflareSettings,
 } from '@/actions/admin/cloudflare'
@@ -37,6 +41,7 @@ import {
   operationsConfigSchema,
   resourceTrendSchema,
   revokeInvitationSchema,
+  updateInternalPlanGrantSchema,
 } from '@/schemas/admin'
 import { createApiKeySchema, disableApiKeySchema } from '@/schemas/api-keys'
 
@@ -45,6 +50,26 @@ export const getAdminWorkspaceFn = createServerFn({ method: 'GET' })
   .handler(({ context }) => {
     requireSuperAdmin(context)
     return getAdminWorkspace()
+  })
+
+export const getClientAccountsFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(({ context }) => {
+    requireSuperAdmin(context)
+    return getClientAccounts()
+  })
+
+export const updateInternalPlanGrantFn = createServerFn({ method: 'POST' })
+  .inputValidator(updateInternalPlanGrantSchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return updateClientInternalPlan({
+      orgId: data.orgId,
+      plan: data.plan,
+      reason: data.reason,
+      grantedById: context.userId,
+    })
   })
 
 export const getApiKeyActivitiesFn = createServerFn({ method: 'GET' })

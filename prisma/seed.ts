@@ -105,6 +105,22 @@ async function main() {
     create: { organizationId: ORG_ID, userId: admin.id, role: 'owner' },
   })
 
+  await prisma.internalPlanGrant.upsert({
+    where: { orgId: ORG_ID },
+    update: {
+      plan: 'business',
+      reason: 'Default operator internal entitlement',
+      grantedById: admin.id,
+      expiresAt: null,
+    },
+    create: {
+      orgId: ORG_ID,
+      plan: 'business',
+      reason: 'Default operator internal entitlement',
+      grantedById: admin.id,
+    },
+  })
+
   console.log(`Seeded default org and super admin user ${SUPER_ADMIN_EMAIL}.`)
 }
 

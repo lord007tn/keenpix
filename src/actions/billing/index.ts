@@ -1,9 +1,10 @@
+import { getActiveInternalPlanGrant } from '@/data-access/internal-plan-grants'
 import {
   getOrgSubscription,
   orgHasBillingCustomer,
 } from '@/data-access/subscriptions'
 import { billingUsageSnapshot } from '@/data-access/usage'
-import { getPlan, type PlanId } from '@/lib/billing/plans'
+import { getPlan, getPlanRank, type PlanId } from '@/lib/billing/plans'
 
 const GB = 1024 ** 3
 
@@ -36,6 +37,7 @@ export interface BillingState {
   // The plan the org's subscription grants, or null when unsubscribed.
   plan: PlanId | null
   planName: string | null
+  planSource: 'billing' | 'internal' | null
   // Raw Polar status (active/trialing/past_due/canceled/…), or null.
   status: string | null
   usage: UsageState
@@ -52,12 +54,29 @@ function startOfMonthUtc(now: Date): Date {
 // Polar on the hot path, plus a period usage snapshot for the meter. Returns an
 // unsubscribed snapshot (usage still populated) when there's no row.
 export async function getBillingState(orgId: string): Promise<BillingState> {
-  const sub = await getOrgSubscription(orgId)
-  const plan = getPlan(sub?.plan)
+  const [sub, internalGrant] = await Promise.all([
+    getOrgSubscription(orgId),
+    getActiveInternalPlanGrant(orgId),
+  ])
+  const internalPlan = getPlan(internalGrant?.plan)
+  const billingPlan = getPlan(sub?.plan)
+  const billingEntitledPlan =
+    sub && ENTITLED.has(sub.status) ? billingPlan : null
+  const internalWins =
+    getPlanRank(internalPlan) > getPlanRank(billingEntitledPlan)
+  const plan = internalWins ? internalPlan : billingEntitledPlan
+  let planSource: BillingState['planSource'] = null
+  if (internalWins) {
+    planSource = 'internal'
+  } else if (billingEntitledPlan) {
+    planSource = 'billing'
+  }
   const entitled = Boolean(sub && ENTITLED.has(sub.status))
+  const internallyEntitled = Boolean(internalWins)
   // Measure usage over the paid period when subscribed, else the calendar month.
   const periodStart =
-    (entitled ? sub?.currentPeriodStart : null) ?? startOfMonthUtc(new Date())
+    (entitled && !internallyEntitled ? sub?.currentPeriodStart : null) ??
+    startOfMonthUtc(new Date())
   const [snapshot, hasBillingCustomer] = await Promise.all([
     billingUsageSnapshot(orgId, periodStart),
     orgHasBillingCustomer(orgId),
@@ -76,15 +95,18 @@ export async function getBillingState(orgId: string): Promise<BillingState> {
     orgId,
     plan: plan?.id ?? null,
     planName: plan?.name ?? null,
-    status: sub?.status ?? null,
+    planSource,
+    status: internallyEntitled ? 'internal' : (sub?.status ?? null),
     hasBillingCustomer,
-    currentPeriodEnd: sub?.currentPeriodEnd?.toISOString() ?? null,
+    currentPeriodEnd: internallyEntitled
+      ? null
+      : (sub?.currentPeriodEnd?.toISOString() ?? null),
     usage: {
       periodStart: periodStart.toISOString(),
       bandwidthBytes: snapshot.bytes,
       includedBytes,
       overageBytes,
-      overageCostCents,
+      overageCostCents: internallyEntitled ? 0 : overageCostCents,
       projects: { used: snapshot.projects, limit: plan?.maxProjects ?? null },
       seats: { used: snapshot.seats, limit: plan?.maxSeats ?? null },
     },

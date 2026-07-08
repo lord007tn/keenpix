@@ -1,5 +1,6 @@
 import { prisma } from '@/db'
-import { getPlan, type Plan } from '@/lib/billing/plans'
+import { getPlan, getPlanRank, type Plan } from '@/lib/billing/plans'
+import { getActiveInternalPlanGrant } from './internal-plan-grants'
 
 // Statuses that grant plan entitlements (features + quota). `trialing` is
 // included so a trial has full access; past_due/canceled/etc. fall through to
@@ -19,6 +20,10 @@ export function getOrgSubscription(orgId: string) {
 // Whether an org may serve transforms right now, including the dunning grace.
 // Cloud-only concern; self-host never calls this (it always serves).
 export async function orgIsServable(orgId: string): Promise<boolean> {
+  const grant = await getActiveInternalPlanGrant(orgId)
+  if (getPlan(grant?.plan)) {
+    return true
+  }
   const sub = await prisma.subscription.findUnique({
     where: { orgId },
     select: { status: true },
@@ -37,14 +42,21 @@ export async function orgHasBillingCustomer(orgId: string): Promise<boolean> {
 // The org's effective plan, or null when it has no entitled subscription. Cloud
 // gates a null-plan org; self-host never calls this (it runs unlimited).
 export async function getOrgPlan(orgId: string): Promise<Plan | null> {
-  const sub = await prisma.subscription.findUnique({
-    where: { orgId },
-    select: { plan: true, status: true },
-  })
+  const [grant, sub] = await Promise.all([
+    getActiveInternalPlanGrant(orgId),
+    prisma.subscription.findUnique({
+      where: { orgId },
+      select: { plan: true, status: true },
+    }),
+  ])
+  const grantedPlan = getPlan(grant?.plan)
   if (!(sub && ENTITLED.has(sub.status))) {
-    return null
+    return grantedPlan
   }
-  return getPlan(sub.plan)
+  const billingPlan = getPlan(sub.plan)
+  return getPlanRank(grantedPlan) > getPlanRank(billingPlan)
+    ? grantedPlan
+    : billingPlan
 }
 
 export interface SubscriptionSnapshot {

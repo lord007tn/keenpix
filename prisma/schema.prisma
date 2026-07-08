@@ -15,34 +15,35 @@ datasource db {
 // Doubles as the better-auth `organization` plugin table (slug/logo/metadata +
 // Member/Invitation). Self-host runs a single org; cloud is multi-tenant.
 model Organization {
-  id              String           @id @default(cuid())
-  name            String
-  slug            String           @unique
-  logo            String?
-  metadata        String?
-  createdAt       DateTime         @default(now())
-  projects        Project[]
-  members         Member[]
-  invitations     Invitation[]
-  billingCustomer BillingCustomer?
-  subscription    Subscription?
+  id                String             @id @default(cuid())
+  name              String
+  slug              String             @unique
+  logo              String?
+  metadata          String?
+  createdAt         DateTime           @default(now())
+  projects          Project[]
+  members           Member[]
+  invitations       Invitation[]
+  billingCustomer   BillingCustomer?
+  subscription      Subscription?
+  internalPlanGrant InternalPlanGrant?
 }
 
 // Links a keenpix org to its Polar customer (cloud billing only). One per org.
 model BillingCustomer {
-  id              String       @id @default(cuid())
-  orgId           String       @unique
-  organization    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  id                String       @id @default(cuid())
+  orgId             String       @unique
+  organization      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   // NOT unique: one Polar customer maps 1:1 to a user, and a user can own several
   // orgs, so the same polarCustomerId legitimately backs multiple orgs' billing
   // records. `orgId` is the unique key (one billing customer row per org).
-  polarCustomerId String
+  polarCustomerId   String
   // Watermark for usage metering: delivered bytes with bucketStart at/after this
   // instant have not yet been reported to Polar. The reporter sums the delta,
   // ingests it, then advances this — so Polar's meter never double-counts.
   lastUsageReportAt DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   @@index([polarCustomerId])
 }
@@ -65,6 +66,24 @@ model Subscription {
   updatedAt           DateTime     @updatedAt
 
   @@index([orgId])
+}
+
+// Operator-granted entitlement that bypasses checkout without changing Polar
+// customer/subscription rows. This is the admin-controlled source for test,
+// partner, and internal accounts that should have a cloud plan without a
+// financial subscription.
+model InternalPlanGrant {
+  id           String       @id @default(cuid())
+  orgId        String       @unique
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  plan         String
+  reason       String?
+  grantedById  String?
+  expiresAt    DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([expiresAt])
 }
 
 // better-auth organization membership: which users belong to which org and

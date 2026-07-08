@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { analyticsRangeSchema, nonEmptyStringSchema } from './common'
 
 const staffRoleSchema = z.enum(['admin', 'staff'])
+const internalPlanSchema = z.enum(['none', 'basic', 'pro', 'business'])
 
 const ZONE_ID_PATTERN = /^[a-f0-9]{32}$/i
 
@@ -69,8 +70,17 @@ export const apiActivityPageSchema = z.object({
   page: z.coerce.number().int().min(1).catch(1),
 })
 
+export const updateInternalPlanGrantSchema = z.object({
+  orgId: nonEmptyStringSchema(),
+  plan: internalPlanSchema,
+  reason: z.string().trim().max(500, 'Use 500 characters or fewer.').optional(),
+})
+
 export type CreateInvitationInput = z.input<typeof createInvitationSchema>
 export type CacheMaintenanceInput = z.input<typeof cacheMaintenanceSchema>
 export type CloudflareSettingsFormInput = z.input<
   typeof cloudflareSettingsSchema
+>
+export type UpdateInternalPlanGrantInput = z.input<
+  typeof updateInternalPlanGrantSchema
 >

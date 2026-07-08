@@ -8,6 +8,7 @@ import {
   CloudIcon,
   type LucideIcon,
   ServerIcon,
+  UsersRoundIcon,
 } from 'lucide-react'
 import { PageHeader } from '@/components/app/page-header'
 import { Badge } from '@/components/ui/badge'
@@ -18,13 +19,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { ClientManagement } from '@/features/admin/client-management'
 import { CloudflareSettingsPanel } from '@/features/admin/cloudflare-settings'
 import { OperationsConfig } from '@/features/admin/operations-config'
 import { OperationsHealth } from '@/features/admin/operations-health'
 import { cn } from '@/lib/cn/utils'
 import { appPageHead } from '@/shared/seo'
 
-const SECTIONS = ['operations', 'cdn'] as const
+const SECTIONS = ['clients', 'operations', 'cdn'] as const
 type Section = (typeof SECTIONS)[number]
 
 function isSection(value: unknown): value is Section {
@@ -32,6 +34,7 @@ function isSection(value: unknown): value is Section {
 }
 
 const SECTION_META: Record<Section, { label: string; icon: LucideIcon }> = {
+  clients: { label: 'Clients', icon: UsersRoundIcon },
   operations: { label: 'Operations', icon: ActivityIcon },
   cdn: { label: 'CDN cache', icon: CloudIcon },
 }
@@ -126,7 +129,22 @@ function AdminPage() {
           </nav>
         </aside>
 
-        <div className="flex min-w-0 max-w-3xl flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6">
+          {active === 'clients' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Clients</CardTitle>
+                <CardDescription>
+                  Review client organizations, aggregate usage, and internal
+                  plan grants.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ClientManagement />
+              </CardContent>
+            </Card>
+          ) : null}
+
           {active === 'operations' ? (
             <>
               <Card>

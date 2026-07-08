@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const getOrgSubscription = vi.hoisted(() => vi.fn())
+const getActiveInternalPlanGrant = vi.hoisted(() => vi.fn())
 const orgHasBillingCustomer = vi.hoisted(() => vi.fn())
 const billingUsageSnapshot = vi.hoisted(() => vi.fn())
 vi.mock('@/data-access/subscriptions', () => ({
   getOrgSubscription,
   orgHasBillingCustomer,
+}))
+vi.mock('@/data-access/internal-plan-grants', () => ({
+  getActiveInternalPlanGrant,
 }))
 vi.mock('@/data-access/usage', () => ({ billingUsageSnapshot }))
 
@@ -19,6 +23,7 @@ afterEach(() => {
 
 describe('getBillingState', () => {
   it('maps an active subscription onto the plan snapshot with usage + overage', async () => {
+    getActiveInternalPlanGrant.mockResolvedValue(null)
     const start = new Date('2026-07-01T00:00:00.000Z')
     const end = new Date('2026-08-01T00:00:00.000Z')
     getOrgSubscription.mockResolvedValue({
@@ -37,6 +42,7 @@ describe('getBillingState', () => {
     const state = await getBillingState('org_a')
     expect(state.plan).toBe('pro')
     expect(state.planName).toBe('Pro')
+    expect(state.planSource).toBe('billing')
     expect(state.status).toBe('active')
     expect(state.hasBillingCustomer).toBe(true)
     expect(state.currentPeriodEnd).toBe(end.toISOString())
@@ -49,6 +55,7 @@ describe('getBillingState', () => {
   })
 
   it('returns an unsubscribed snapshot (no allowance, no overage) when there is no row', async () => {
+    getActiveInternalPlanGrant.mockResolvedValue(null)
     getOrgSubscription.mockResolvedValue(null)
     orgHasBillingCustomer.mockResolvedValue(false)
     billingUsageSnapshot.mockResolvedValue({
@@ -58,6 +65,7 @@ describe('getBillingState', () => {
     })
     const state = await getBillingState('org_a')
     expect(state.plan).toBeNull()
+    expect(state.planSource).toBeNull()
     expect(state.status).toBeNull()
     expect(state.hasBillingCustomer).toBe(false)
     expect(state.usage.includedBytes).toBeNull()
@@ -68,6 +76,7 @@ describe('getBillingState', () => {
   })
 
   it('reports the raw status even when not entitled (e.g. past_due)', async () => {
+    getActiveInternalPlanGrant.mockResolvedValue(null)
     getOrgSubscription.mockResolvedValue({
       plan: 'basic',
       status: 'past_due',
@@ -78,12 +87,53 @@ describe('getBillingState', () => {
     billingUsageSnapshot.mockResolvedValue({ bytes: 0, projects: 0, seats: 1 })
     const state = await getBillingState('org_a')
     expect(state.status).toBe('past_due')
-    expect(state.plan).toBe('basic')
+    expect(state.plan).toBeNull()
+    expect(state.planSource).toBeNull()
     expect(state.currentPeriodEnd).toBeNull()
     // past_due isn't entitled, so usage falls back to the calendar month rather
     // than the stale subscription period.
     expect(state.usage.periodStart).not.toBe(
       new Date('2026-01-01T00:00:00.000Z').toISOString(),
     )
+  })
+
+  it('uses an internal grant as the effective plan without overage cost', async () => {
+    getActiveInternalPlanGrant.mockResolvedValue({ plan: 'business' })
+    getOrgSubscription.mockResolvedValue(null)
+    orgHasBillingCustomer.mockResolvedValue(false)
+    billingUsageSnapshot.mockResolvedValue({
+      bytes: 1200 * GB,
+      projects: 8,
+      seats: 3,
+    })
+    const state = await getBillingState('org_a')
+    expect(state.plan).toBe('business')
+    expect(state.planSource).toBe('internal')
+    expect(state.status).toBe('internal')
+    expect(state.hasBillingCustomer).toBe(false)
+    expect(state.usage.includedBytes).toBe(1000 * GB)
+    expect(state.usage.overageBytes).toBe(200 * GB)
+    expect(state.usage.overageCostCents).toBe(0)
+  })
+
+  it('keeps a higher paid plan effective when an internal grant is lower', async () => {
+    const start = new Date('2026-07-01T00:00:00.000Z')
+    getActiveInternalPlanGrant.mockResolvedValue({ plan: 'basic' })
+    getOrgSubscription.mockResolvedValue({
+      plan: 'pro',
+      status: 'active',
+      currentPeriodStart: start,
+      currentPeriodEnd: null,
+    })
+    orgHasBillingCustomer.mockResolvedValue(true)
+    billingUsageSnapshot.mockResolvedValue({
+      bytes: 0,
+      projects: 1,
+      seats: 1,
+    })
+    const state = await getBillingState('org_a')
+    expect(state.plan).toBe('pro')
+    expect(state.planSource).toBe('billing')
+    expect(state.status).toBe('active')
   })
 })
