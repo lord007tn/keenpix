@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link, useRouteContext } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import {
   ChevronDownIcon,
@@ -22,7 +22,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { getBillingStateFn } from '@/functions/billing'
 import { listLogsFn } from '@/functions/logs'
+import { BASIC_LOG_LIMIT, getPlan } from '@/lib/billing/plans'
 import { humanBytes } from '@/shared/format'
 import { appPageHead } from '@/shared/seo'
 import type { LogRow } from '@/shared/types'
@@ -79,6 +81,16 @@ function LogsPage() {
   const { project } = Route.useSearch()
   const { currentProject, isAll, projects } = useProject()
   const projectName = new Map(projects.map((p) => [p.id, p.name]))
+  const { cloud } = useRouteContext({ from: '/app' })
+  const { data: billing } = useQuery({
+    enabled: cloud,
+    queryFn: () => getBillingStateFn(),
+    queryKey: ['billing-state'],
+    staleTime: 30_000,
+  })
+  // Basic tier is capped at the most-recent BASIC_LOG_LIMIT with no search
+  // server-side, so surface that instead of presenting a full-history search.
+  const limitedLogs = cloud && !(getPlan(billing?.plan)?.advancedLogs ?? false)
   const [logs, setLogs] = useState(initialLogs)
   const [live, setLive] = useState(true)
   const [streamConnected, setStreamConnected] = useState(true)
@@ -328,6 +340,20 @@ function LogsPage() {
             </button>
           ) : null}
         </div>
+        {limitedLogs ? (
+          <p className="text-muted-foreground text-xs">
+            Your plan shows the most recent {BASIC_LOG_LIMIT} requests without
+            full search.{' '}
+            <Link
+              className="text-primary hover:underline"
+              search={{ section: 'billing' }}
+              to="/app/account"
+            >
+              Upgrade to Pro
+            </Link>{' '}
+            for full history and search.
+          </p>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <DataFilters
             fields={fields}

@@ -1,5 +1,7 @@
+import { useQuery } from '@tanstack/react-query'
 import {
   createFileRoute,
+  Link,
   useNavigate,
   useRouteContext,
 } from '@tanstack/react-router'
@@ -47,6 +49,8 @@ import { AnalyticsBodySkeleton } from '@/features/analytics/skeletons'
 import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import { useAnalyticsQuery } from '@/features/analytics/use-analytics-query'
 import { useEdgeStats } from '@/features/analytics/use-edge-stats'
+import { getBillingStateFn } from '@/functions/billing'
+import { getPlan } from '@/lib/billing/plans'
 import { compactNumber, humanBytes } from '@/shared/format'
 import { appPageHead } from '@/shared/seo'
 import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
@@ -194,6 +198,14 @@ function AnalyticsPage() {
   // visible, no edge cards, lenses, notes, or connect prompt appear at all.
   const canSeeEdge = !cloud || isSuperAdmin
   const { currentProject, isAll, setProject } = useProject()
+  const { data: billing } = useQuery({
+    enabled: cloud,
+    queryFn: () => getBillingStateFn(),
+    queryKey: ['billing-state'],
+    staleTime: 30_000,
+  })
+  const advancedAnalytics =
+    !cloud || (getPlan(billing?.plan)?.advancedAnalytics ?? false)
   // Stale-while-revalidate: the previous window stays on screen while a new
   // range/filter loads; `isRefreshing` drives the inline indicator.
   const { data, isPending, isFetching, isError, refetch } =
@@ -408,6 +420,20 @@ function AnalyticsPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       {header}
+
+      {advancedAnalytics ? null : (
+        <p className="text-muted-foreground text-sm">
+          You’re on core analytics.{' '}
+          <Link
+            className="text-primary hover:underline"
+            search={{ section: 'billing' }}
+            to="/app/account"
+          >
+            Upgrade to Pro
+          </Link>{' '}
+          for advanced analytics and longer history.
+        </p>
+      )}
 
       <section className="flex flex-col gap-3">
         <SourceSplitCards
