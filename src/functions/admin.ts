@@ -71,6 +71,7 @@ export const updateInternalPlanGrantFn = createServerFn({ method: 'POST' })
       orgId: data.orgId,
       plan: data.plan,
       reason: data.reason,
+      expiresAt: data.expiresAt,
       grantedById: context.userId,
     })
   })
