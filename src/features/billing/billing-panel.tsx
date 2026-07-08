@@ -387,6 +387,10 @@ export function BillingPanel() {
           activePlanId={isEntitled ? activePlan : null}
           hasPlan={Boolean(activePlan)}
           orgId={data.orgId}
+          usage={{
+            projects: data.usage.projects.used,
+            seats: data.usage.seats.used,
+          }}
         />
       ) : null}
       {!internalPlan && data?.orgId && !canManage ? (
