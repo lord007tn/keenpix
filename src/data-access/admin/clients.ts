@@ -2,6 +2,19 @@ import dayjs from 'dayjs'
 import { prisma } from '@/db'
 import { getPlan, getPlanRank } from '@/lib/billing/plans'
 
+// Operator kill-switch write: set suspendedAt/reason (suspend) or clear (both null
+// to reactivate). Enforced by the serving gate via isOrgSuspended.
+export function setOrgSuspension(
+  orgId: string,
+  suspendedAt: Date | null,
+  suspendedReason: string | null,
+) {
+  return prisma.organization.update({
+    where: { id: orgId },
+    data: { suspendedAt, suspendedReason },
+  })
+}
+
 const CLIENT_USAGE_DAYS = 30
 const ENTITLED_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing'])
 
@@ -23,6 +36,8 @@ export async function listClientAccounts() {
         name: true,
         slug: true,
         createdAt: true,
+        suspendedAt: true,
+        suspendedReason: true,
         members: {
           orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
           select: {
@@ -100,6 +115,8 @@ export async function listClientAccounts() {
       name: org.name,
       slug: org.slug,
       createdAt: dayjs(org.createdAt).toISOString(),
+      suspendedAt: org.suspendedAt?.toISOString() ?? null,
+      suspendedReason: org.suspendedReason,
       projects: org._count.projects,
       seats: org._count.members,
       owners: org.members

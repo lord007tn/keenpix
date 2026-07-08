@@ -6,6 +6,7 @@ import {
 } from '@/actions/admin/api-keys'
 import {
   getClientAccounts,
+  setOrgSuspension,
   updateClientInternalPlan,
 } from '@/actions/admin/clients'
 import {
@@ -31,6 +32,7 @@ import {
   requireSelfHost,
   requireSuperAdmin,
 } from '@/lib/auth/guards'
+import { bustServingEntitlement } from '@/lib/billing/service-gate'
 import {
   acceptInvitationSchema,
   apiActivityPageSchema,
@@ -41,6 +43,7 @@ import {
   operationsConfigSchema,
   resourceTrendSchema,
   revokeInvitationSchema,
+  suspendOrgSchema,
   updateInternalPlanGrantSchema,
 } from '@/schemas/admin'
 import { createApiKeySchema, disableApiKeySchema } from '@/schemas/api-keys'
@@ -70,6 +73,21 @@ export const updateInternalPlanGrantFn = createServerFn({ method: 'POST' })
       reason: data.reason,
       grantedById: context.userId,
     })
+  })
+
+export const setOrgSuspensionFn = createServerFn({ method: 'POST' })
+  .inputValidator(suspendOrgSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ context, data }) => {
+    requireSuperAdmin(context)
+    const result = await setOrgSuspension({
+      orgId: data.orgId,
+      suspended: data.suspended,
+      reason: data.reason,
+    })
+    // Kill-switch takes effect on the next request, not after the gate's TTL.
+    bustServingEntitlement(data.orgId)
+    return result
   })
 
 export const getApiKeyActivitiesFn = createServerFn({ method: 'GET' })

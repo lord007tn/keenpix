@@ -1,5 +1,6 @@
 import dayjs from 'dayjs'
 import {
+  BanIcon,
   RefreshCcwIcon,
   SaveIcon,
   ShieldCheckIcon,
@@ -9,6 +10,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -28,8 +37,10 @@ import {
 import { getErrorMessage } from '@/errors/common'
 import {
   getClientAccountsFn,
+  setOrgSuspensionFn,
   updateInternalPlanGrantFn,
 } from '@/functions/admin'
+import { getPlan } from '@/lib/billing/plans'
 import { compactNumber, humanBytes } from '@/shared/format'
 
 type ClientAccount = Awaited<ReturnType<typeof getClientAccountsFn>>[number]
@@ -68,6 +79,16 @@ function cacheRate(value: number) {
   return `${Math.round(value * 100)}%`
 }
 
+function quotaTone(pct: number) {
+  if (pct >= 100) {
+    return 'text-destructive'
+  }
+  if (pct >= 80) {
+    return 'text-warning-text'
+  }
+  return 'text-muted-foreground'
+}
+
 function ownerLabel(client: ClientAccount) {
   const owner = client.owners[0]
   if (!owner) {
@@ -85,6 +106,13 @@ export function ClientManagement() {
   const [reasons, setReasons] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
+  const [confirmSuspend, setConfirmSuspend] = useState<{
+    id: string
+    name: string
+    suspended: boolean
+  } | null>(null)
+  const [suspendReason, setSuspendReason] = useState('')
+  const [suspending, setSuspending] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -131,6 +159,36 @@ export function ClientManagement() {
     }
   }
 
+  async function handleSuspend() {
+    if (!confirmSuspend) {
+      return
+    }
+    setSuspending(true)
+    try {
+      await setOrgSuspensionFn({
+        data: {
+          orgId: confirmSuspend.id,
+          suspended: !confirmSuspend.suspended,
+          reason: suspendReason.trim() || undefined,
+        },
+      })
+      toast.success(
+        confirmSuspend.suspended
+          ? 'Organization reactivated'
+          : 'Organization suspended',
+      )
+      setConfirmSuspend(null)
+      setSuspendReason('')
+      await load()
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Could not update suspension'))
+    } finally {
+      setSuspending(false)
+    }
+  }
+
+  const suspendVerb = confirmSuspend?.suspended ? 'Reactivate' : 'Suspend'
+
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -152,7 +210,7 @@ export function ClientManagement() {
             <TableHead>Internal plan</TableHead>
             <TableHead>Usage 30d</TableHead>
             <TableHead>Workspace</TableHead>
-            <TableHead className="text-right">Save</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -176,6 +234,15 @@ export function ClientManagement() {
               (plans[client.id] ?? 'none') !== internalPlanValue(client) ||
               (reasons[client.id] ?? '') !==
                 (client.internalGrant?.reason ?? '')
+            const effPlan = getPlan(client.effectivePlan?.plan)
+            const quotaPct =
+              effPlan && effPlan.includedBandwidthBytes > 0
+                ? Math.round(
+                    (client.usage30d.bandwidthBytes /
+                      effPlan.includedBandwidthBytes) *
+                      100,
+                  )
+                : null
             return (
               <TableRow key={client.id}>
                 <TableCell className="min-w-56 whitespace-normal">
@@ -188,6 +255,9 @@ export function ClientManagement() {
                         (owner) => owner.platformRole === 'super_admin',
                       ) ? (
                         <ShieldCheckIcon className="size-4 shrink-0 text-primary" />
+                      ) : null}
+                      {client.suspendedAt ? (
+                        <Badge variant="destructive">Suspended</Badge>
                       ) : null}
                     </div>
                     <span className="truncate text-muted-foreground text-xs">
@@ -270,6 +340,11 @@ export function ClientManagement() {
                         {dayjs(client.usage30d.lastTrafficAt).format('MMM D')}
                       </span>
                     ) : null}
+                    {quotaPct === null ? null : (
+                      <span className={`text-xs ${quotaTone(quotaPct)}`}>
+                        {quotaPct}% of {effPlan?.name} quota
+                      </span>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -284,21 +359,82 @@ export function ClientManagement() {
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    disabled={!changed || saving === client.id}
-                    onClick={() => saveGrant(client)}
-                    size="sm"
-                    variant={changed ? 'default' : 'outline'}
-                  >
-                    <SaveIcon data-icon="inline-start" />
-                    {saving === client.id ? 'Saving' : 'Save'}
-                  </Button>
+                  <div className="flex flex-col items-end gap-2">
+                    <Button
+                      disabled={!changed || saving === client.id}
+                      onClick={() => saveGrant(client)}
+                      size="sm"
+                      variant={changed ? 'default' : 'outline'}
+                    >
+                      <SaveIcon data-icon="inline-start" />
+                      {saving === client.id ? 'Saving' : 'Save'}
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        setConfirmSuspend({
+                          id: client.id,
+                          name: client.name,
+                          suspended: Boolean(client.suspendedAt),
+                        })
+                      }
+                      size="sm"
+                      variant={client.suspendedAt ? 'outline' : 'destructive'}
+                    >
+                      <BanIcon data-icon="inline-start" />
+                      {client.suspendedAt ? 'Reactivate' : 'Suspend'}
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             )
           })}
         </TableBody>
       </Table>
+
+      <Dialog
+        onOpenChange={(next) => {
+          if (!next) {
+            setConfirmSuspend(null)
+            setSuspendReason('')
+          }
+        }}
+        open={confirmSuspend !== null}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{suspendVerb} organization?</DialogTitle>
+            <DialogDescription>
+              {confirmSuspend?.suspended
+                ? `${confirmSuspend?.name} will be served again immediately.`
+                : `${confirmSuspend?.name}'s images stop being served immediately. Use this for abuse, fraud, or non-payment.`}
+            </DialogDescription>
+          </DialogHeader>
+          {confirmSuspend?.suspended ? null : (
+            <Input
+              aria-label="Suspension reason"
+              onChange={(e) => setSuspendReason(e.target.value)}
+              placeholder="Reason (optional, internal)"
+              value={suspendReason}
+            />
+          )}
+          <DialogFooter>
+            <Button
+              onClick={() => setConfirmSuspend(null)}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={suspending}
+              onClick={handleSuspend}
+              variant={confirmSuspend?.suspended ? 'default' : 'destructive'}
+            >
+              {suspending ? 'Working…' : suspendVerb}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

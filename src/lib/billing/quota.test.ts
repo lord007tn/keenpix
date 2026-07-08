@@ -8,6 +8,7 @@ const isCloud = vi.hoisted(() => vi.fn())
 const getOrgPlan = vi.hoisted(() => vi.fn())
 const getOrgSubscription = vi.hoisted(() => vi.fn())
 const orgIsServable = vi.hoisted(() => vi.fn())
+const isOrgSuspended = vi.hoisted(() => vi.fn())
 const deliveredBytesSince = vi.hoisted(() => vi.fn())
 const projectCount = vi.hoisted(() => vi.fn())
 const memberCount = vi.hoisted(() => vi.fn())
@@ -16,6 +17,7 @@ vi.mock('@/server/deployment', () => ({ isCloud }))
 vi.mock('@/data-access/subscriptions', () => ({
   getOrgPlan,
   getOrgSubscription,
+  isOrgSuspended,
   orgIsServable,
 }))
 vi.mock('@/data-access/usage', () => ({ deliveredBytesSince }))
@@ -87,6 +89,13 @@ describe('quota — cloud enforcement', () => {
       through: new Date(),
     })
     expect(await orgCanServe('org_a')).toBe(true)
+  })
+
+  it('does not serve a suspended org even when otherwise servable', async () => {
+    isCloud.mockReturnValue(true)
+    isOrgSuspended.mockResolvedValue(true)
+    orgIsServable.mockResolvedValue(true)
+    expect(await orgCanServe('org_a')).toBe(false)
   })
 
   it('blocks a new project at the plan project limit', async () => {

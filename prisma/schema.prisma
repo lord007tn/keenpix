@@ -21,6 +21,11 @@ model Organization {
   logo              String?
   metadata          String?
   createdAt         DateTime           @default(now())
+  // Operator kill-switch: when set, the org stops being served (enforced in the
+  // serving gate) and shows as suspended in the operator console. For abuse,
+  // fraud, or non-payment.
+  suspendedAt       DateTime?
+  suspendedReason   String?
   projects          Project[]
   members           Member[]
   invitations       Invitation[]
