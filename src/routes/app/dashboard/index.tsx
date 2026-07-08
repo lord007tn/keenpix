@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/app/page-header'
 import { ProjectsDataTable } from '@/components/app/projects-data-table'
 import { RecentActivity } from '@/components/app/recent-activity'
 import { RefreshingIndicator } from '@/components/app/refreshing-indicator'
+import { Button } from '@/components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { ResponseLatencyCard } from '@/features/analytics/response-latency-card'
 import { DashboardBodySkeleton } from '@/features/analytics/skeletons'
@@ -60,7 +61,8 @@ function DashboardPage() {
   const isSuperAdmin = user.role === 'super_admin'
   // Stale-while-revalidate: the previous payload stays on screen while a new
   // range/project loads in the background; `isRefreshing` drives the indicator.
-  const { data, isPending, isFetching, isError } = useDashboardQuery(search)
+  const { data, isPending, isFetching, isError, refetch } =
+    useDashboardQuery(search)
   const isRefreshing = isFetching && !isPending
   // Cloudflare edge stats load off the critical path; the KPI edge split fills
   // in afterward. Range-aware now that we persist edge history.
@@ -114,9 +116,14 @@ function DashboardPage() {
       <div className="@container/main flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
         {header}
         {isError ? (
-          <p className="text-destructive text-sm">
-            Couldn’t load the overview — it will retry shortly.
-          </p>
+          <div className="flex flex-col items-start gap-3">
+            <p className="text-destructive text-sm">
+              Couldn’t load the overview.
+            </p>
+            <Button onClick={() => refetch()} size="sm" variant="outline">
+              Try again
+            </Button>
+          </div>
         ) : (
           <DashboardBodySkeleton />
         )}
