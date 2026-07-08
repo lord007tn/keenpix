@@ -151,6 +151,35 @@ export async function removeAllowedOrigin(
   return updated ? toProject(updated) : undefined
 }
 
+// Rename / re-point a project's origin. Org-scoped so a tenant can only edit its
+// own. The allowlist is left untouched — re-pointing the origin doesn't imply the
+// new host is allowed, so the user manages hosts explicitly under Security.
+export async function updateProject(
+  projectId: string,
+  orgId: string,
+  patch: { name?: string; origin?: string },
+) {
+  const p = await prisma.project.findFirst({ where: { id: projectId, orgId } })
+  if (!p) {
+    return
+  }
+  const updated = await prisma.project.update({
+    where: { id: projectId },
+    data: { name: patch.name ?? p.name, origin: patch.origin ?? p.origin },
+  })
+  return toProject(updated)
+}
+
+// Delete a project (org-scoped). Request logs cascade via their FK; the hourly
+// rollups (keyed by orgId, no FK) are retained so billing usage stays accurate.
+// Returns whether a row was actually deleted.
+export async function deleteProject(projectId: string, orgId: string) {
+  const result = await prisma.project.deleteMany({
+    where: { id: projectId, orgId },
+  })
+  return result.count > 0
+}
+
 export interface ProjectSettingsPatch {
   autoFormat?: boolean
   defaultDpr?: number

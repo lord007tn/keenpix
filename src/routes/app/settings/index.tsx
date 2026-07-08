@@ -9,10 +9,7 @@ import {
   UsersIcon,
   UsersRoundIcon,
 } from 'lucide-react'
-import { toast } from 'sonner'
 import { PageHeader } from '@/components/app/page-header'
-import { SettingRow } from '@/components/app/setting-row'
-import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -26,6 +23,7 @@ import { BillingPanel } from '@/features/billing/billing-panel'
 import { AllowedHosts } from '@/features/projects/allowed-hosts'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { PipelineSettings } from '@/features/projects/pipeline-settings'
+import { ProjectGeneral } from '@/features/projects/project-general'
 import { TeamManagement } from '@/features/team/team-management'
 import { cn } from '@/lib/cn/utils'
 import { appPageHead } from '@/shared/seo'
@@ -114,10 +112,12 @@ function SubNavGroup({ label }: { label: string }) {
 
 function SettingsPage() {
   const { currentProject, isAll, projects, setProject } = useProject()
-  const { user, cloud } = useRouteContext({ from: '/app' })
+  const { user, cloud, orgRole } = useRouteContext({ from: '/app' })
   const { section } = Route.useSearch()
   const navigate = Route.useNavigate()
   const isSuperAdmin = user.role === 'super_admin'
+  // Owner/admin may edit/delete projects; members get read-only (server enforces).
+  const canManageProject = !cloud || orgRole === 'owner' || orgRole === 'admin'
 
   const projectSections: Section[] = currentProject
     ? ['general', 'pipeline', 'security']
@@ -271,55 +271,11 @@ function SettingsPage() {
 
         <div className="min-w-0">
           {active === 'general' && currentProject ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>General</CardTitle>
-                <CardDescription>
-                  Identifiers and origin for this project.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="divide-y">
-                <SettingRow
-                  className="py-4 first:pt-0 last:pb-0 sm:items-start"
-                  description="Use this in your transform URLs: /img/<source-url>?project=<id>"
-                  label="Project ID"
-                >
-                  <div className="flex items-center gap-2">
-                    <code className="rounded bg-muted px-2 py-1 font-mono text-xs">
-                      {currentProject.id}
-                    </code>
-                    <Button
-                      onClick={() => {
-                        navigator.clipboard?.writeText(currentProject.id)
-                        toast.success('Project ID copied')
-                      }}
-                      size="sm"
-                      variant="outline"
-                    >
-                      Copy
-                    </Button>
-                  </div>
-                </SettingRow>
-                <SettingRow
-                  className="py-4 first:pt-0 last:pb-0 sm:items-start"
-                  description="The project's display name."
-                  label="Project name"
-                >
-                  <span className="text-sm sm:text-right">
-                    {currentProject.name}
-                  </span>
-                </SettingRow>
-                <SettingRow
-                  className="py-4 first:pt-0 last:pb-0 sm:items-start"
-                  description="Where keenpix fetches originals from."
-                  label="Origin"
-                >
-                  <code className="break-all font-mono text-muted-foreground text-xs">
-                    {currentProject.origin}
-                  </code>
-                </SettingRow>
-              </CardContent>
-            </Card>
+            <ProjectGeneral
+              canManage={canManageProject}
+              key={currentProject.id}
+              project={currentProject}
+            />
           ) : null}
 
           {active === 'pipeline' && currentProject ? (

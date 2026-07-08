@@ -46,6 +46,14 @@ export const createProjectSchema = z.object({
   origin: originUrlSchema,
 })
 
+export const updateProjectSchema = createProjectSchema.extend({
+  projectId: nonEmptyStringSchema(),
+})
+
+export const deleteProjectSchema = z.object({
+  projectId: nonEmptyStringSchema(),
+})
+
 const projectFitSchema = z.enum([
   'cover',
   'contain',

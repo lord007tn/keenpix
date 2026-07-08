@@ -2,9 +2,11 @@ import type { z } from 'zod'
 import {
   addAllowedOrigin,
   createProject as createProjectInDb,
+  deleteProject as deleteProjectFromDb,
   getProject as getProjectFromDb,
   listProjects as listProjectsInDb,
   removeAllowedOrigin,
+  updateProject as updateProjectInDb,
   updateProjectSettings as updateProjectSettingsInDb,
 } from '@/data-access/projects'
 import type {
@@ -54,4 +56,16 @@ export function updateProjectSettings(
   patch: z.output<typeof internalProjectSettingsPatchSchema>,
 ) {
   return updateProjectSettingsInDb(projectId, patch, orgId)
+}
+
+export function updateProject(
+  orgId: string,
+  projectId: string,
+  patch: { name?: string; origin?: string },
+) {
+  return updateProjectInDb(projectId, orgId, patch)
+}
+
+export function deleteProject(orgId: string, projectId: string) {
+  return deleteProjectFromDb(projectId, orgId)
 }
