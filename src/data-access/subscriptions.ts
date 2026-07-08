@@ -46,6 +46,16 @@ export async function orgIsServable(orgId: string): Promise<boolean> {
 // Whether the org has a linked Polar customer. A canceled/past_due org keeps its
 // customer, so this (not the active plan) gates the billing-portal button — they
 // still need to reach invoices and update payment.
+// Fast suspension check for the serving gate: an operator-suspended org must not
+// be served regardless of its subscription state.
+export async function isOrgSuspended(orgId: string): Promise<boolean> {
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: { suspendedAt: true },
+  })
+  return Boolean(org?.suspendedAt)
+}
+
 export async function orgHasBillingCustomer(orgId: string): Promise<boolean> {
   const count = await prisma.billingCustomer.count({ where: { orgId } })
   return count > 0

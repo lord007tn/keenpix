@@ -76,6 +76,12 @@ export const updateInternalPlanGrantSchema = z.object({
   reason: z.string().trim().max(500, 'Use 500 characters or fewer.').optional(),
 })
 
+export const suspendOrgSchema = z.object({
+  orgId: nonEmptyStringSchema(),
+  suspended: z.boolean(),
+  reason: z.string().trim().max(500, 'Use 500 characters or fewer.').optional(),
+})
+
 export type CreateInvitationInput = z.input<typeof createInvitationSchema>
 export type CacheMaintenanceInput = z.input<typeof cacheMaintenanceSchema>
 export type CloudflareSettingsFormInput = z.input<

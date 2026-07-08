@@ -1,6 +1,7 @@
 import {
   getOrgPlan,
   getOrgSubscription,
+  isOrgSuspended,
   orgIsServable,
 } from '@/data-access/subscriptions'
 import { deliveredBytesSince } from '@/data-access/usage'
@@ -68,6 +69,10 @@ export async function orgCanServe(orgId: string): Promise<boolean> {
   if (!isCloud()) {
     return true
   }
+  // Operator suspension is an unconditional kill-switch, checked before billing.
+  if (await isOrgSuspended(orgId)) {
+    return false
+  }
   const servable = await orgIsServable(orgId)
   if (!servable) {
     return false
@@ -81,7 +86,7 @@ export async function orgCanServe(orgId: string): Promise<boolean> {
 // real spend can overshoot the cap by up to ~1h of traffic. It's a runaway-bill
 // backstop, not a to-the-cent ceiling. A null cap, no billing plan, or no
 // subscription means no cap.
-export async function orgWithinSpendCap(orgId: string): Promise<boolean> {
+async function orgWithinSpendCap(orgId: string): Promise<boolean> {
   const sub = await getOrgSubscription(orgId)
   if (!sub || sub.spendCapCents === null) {
     return true
