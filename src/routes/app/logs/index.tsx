@@ -208,6 +208,15 @@ function LogsPage() {
     return true
   })
 
+  const hasActiveFilters =
+    Boolean(search) ||
+    formats.length > 0 ||
+    statuses.length > 0 ||
+    cacheStates.length > 0 ||
+    domains.length > 0
+  // Distinguish a brand-new project that has served nothing from a filter miss.
+  const noTraffic = !hasActiveFilters && visibleLogs.length === 0
+
   const fields = useMemo<FilterField[]>(() => {
     const f: FilterField[] = [
       { key: 'format', label: 'Format', options: formatOptions },
@@ -482,7 +491,17 @@ function LogsPage() {
                   className="py-14 text-center text-muted-foreground"
                   colSpan={columnCount}
                 >
-                  No requests match these filters.
+                  {noTraffic ? (
+                    <span className="flex flex-col items-center gap-1">
+                      <span>No requests yet.</span>
+                      <span className="text-xs">
+                        Requests appear here once your site serves images
+                        through keenpix.
+                      </span>
+                    </span>
+                  ) : (
+                    'No requests match these filters.'
+                  )}
                 </TableCell>
               </TableRow>
             ) : null}

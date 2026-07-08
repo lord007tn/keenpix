@@ -31,5 +31,6 @@ export function useAnalyticsQuery(params: {
     isPending: query.isPending,
     isFetching: query.isFetching,
     isError: query.isError,
+    refetch: query.refetch,
   }
 }

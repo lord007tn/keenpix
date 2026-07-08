@@ -14,6 +14,7 @@ import { BarList } from '@/components/app/bar-list'
 import { DataFilters, type FilterField } from '@/components/app/data-filters'
 import { PageHeader } from '@/components/app/page-header'
 import { RefreshingIndicator } from '@/components/app/refreshing-indicator'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -195,7 +196,8 @@ function AnalyticsPage() {
   const { currentProject, isAll, setProject } = useProject()
   // Stale-while-revalidate: the previous window stays on screen while a new
   // range/filter loads; `isRefreshing` drives the inline indicator.
-  const { data, isPending, isFetching, isError } = useAnalyticsQuery(search)
+  const { data, isPending, isFetching, isError, refetch } =
+    useAnalyticsQuery(search)
   const isRefreshing = isFetching && !isPending
   // Cloudflare edge stats load off the critical path; the edge cards/lenses
   // fill in afterward. Range-aware now that we persist edge history.
@@ -316,9 +318,12 @@ function AnalyticsPage() {
       <div className="flex flex-col gap-6 p-6">
         {header}
         {isError ? (
-          <p className="text-destructive text-sm">
-            Couldn’t load analytics — it will retry shortly.
-          </p>
+          <div className="flex flex-col items-start gap-3">
+            <p className="text-destructive text-sm">Couldn’t load analytics.</p>
+            <Button onClick={() => refetch()} size="sm" variant="outline">
+              Try again
+            </Button>
+          </div>
         ) : (
           <AnalyticsBodySkeleton />
         )}

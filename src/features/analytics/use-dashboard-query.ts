@@ -19,5 +19,6 @@ export function useDashboardQuery(params: {
     isPending: query.isPending,
     isFetching: query.isFetching,
     isError: query.isError,
+    refetch: query.refetch,
   }
 }
