@@ -279,6 +279,12 @@ export function BillingPanel() {
   const capReached = cap !== null && overageCents >= cap
   const capNear = cap !== null && !capReached && overageCents >= cap * 0.8
   const capDollars = cap === null ? '' : (cap / 100).toFixed(2)
+  // Set to cancel at period end: still active/serving until currentPeriodEnd, but
+  // won't renew — so the period-end date is an expiry, not a renewal.
+  const scheduledToCancel = Boolean(data?.cancelAtPeriodEnd)
+  const periodEndDate = data?.currentPeriodEnd
+    ? new Date(data.currentPeriodEnd).toLocaleDateString()
+    : null
 
   return (
     <div className="flex flex-col gap-6">
@@ -322,6 +328,22 @@ export function BillingPanel() {
           </AlertDescription>
         </Alert>
       ) : null}
+      {scheduledToCancel ? (
+        <Alert>
+          <TriangleAlertIcon />
+          <AlertTitle>Your plan is scheduled to cancel</AlertTitle>
+          <AlertDescription className="flex flex-col items-start gap-2">
+            {periodEndDate
+              ? `You’ll keep full access until ${periodEndDate}, then your subscription ends and won’t renew.`
+              : 'Your subscription won’t renew and ends at the close of the current period.'}
+            {canManage && canManageBilling ? (
+              <Button disabled={portalBusy} onClick={openPortal} size="sm">
+                {portalBusy ? 'Opening…' : 'Resume plan'}
+              </Button>
+            ) : null}
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -339,10 +361,10 @@ export function BillingPanel() {
                 <Badge variant={isEntitled ? 'success' : 'warning'}>
                   {internalPlan ? 'internal grant' : data.status}
                 </Badge>
-                {data.currentPeriodEnd ? (
+                {periodEndDate ? (
                   <span className="text-muted-foreground text-sm">
-                    {isEntitled ? 'Renews' : 'Ends'}{' '}
-                    {new Date(data.currentPeriodEnd).toLocaleDateString()}
+                    {isEntitled && !scheduledToCancel ? 'Renews' : 'Ends'}{' '}
+                    {periodEndDate}
                   </span>
                 ) : null}
               </>

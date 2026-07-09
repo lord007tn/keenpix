@@ -1,12 +1,12 @@
 import { checkout, polar, portal, webhooks } from '@polar-sh/better-auth'
-import { Polar } from '@polar-sh/sdk'
+import type { Polar } from '@polar-sh/sdk'
 import {
   upsertSubscription,
   upsertSubscriptionWithCustomer,
 } from '@/data-access/subscriptions'
 import { env } from '@/env/server'
 import { errorContext, logger } from '@/lib/logger/logger'
-import { isCloud } from '@/server/deployment'
+import { createPolarClient } from './polar-client'
 import {
   mapSubscriptionSnapshot,
   type PolarSubscriptionData,
@@ -77,13 +77,10 @@ async function resolveProducts(
 // with an access token configured, so self-host (and any cloud deploy without
 // billing credentials) never constructs a Polar client or mounts billing routes.
 export function buildPolarPlugin() {
-  if (!(isCloud() && env.POLAR_TOKEN)) {
+  const client = createPolarClient()
+  if (!client) {
     return null
   }
-  const client = new Polar({
-    accessToken: env.POLAR_TOKEN,
-    server: env.POLAR_SERVER ?? 'sandbox',
-  })
   const checkoutPlugin = checkout({
     products: () => resolveProducts(client),
     successUrl: env.POLAR_SUCCESS_URL ?? SUCCESS_URL,

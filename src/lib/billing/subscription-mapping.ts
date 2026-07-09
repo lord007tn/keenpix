@@ -5,6 +5,9 @@ import { getPlan } from '@/lib/billing/plans'
 // (not imported from the SDK) so the active/updated/canceled/revoked payloads
 // all flow through one mapper by structural typing.
 export interface PolarSubscriptionData {
+  // Polar's cancel_at_period_end. When true the subscription is set to end at
+  // currentPeriodEnd (status stays `active` until then), so it must NOT renew.
+  cancelAtPeriodEnd?: boolean | null
   currentPeriodEnd?: Date | string | null
   currentPeriodStart?: Date | string | null
   customer?: { externalId?: string | null; id?: string } | null
@@ -53,5 +56,6 @@ export function mapSubscriptionSnapshot(
     currentPeriodStart: toDate(sub.currentPeriodStart),
     currentPeriodEnd: toDate(sub.currentPeriodEnd),
     overageAllowed: false,
+    cancelAtPeriodEnd: Boolean(sub.cancelAtPeriodEnd),
   }
 }

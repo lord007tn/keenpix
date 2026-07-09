@@ -25,11 +25,22 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
+import {
+  catalogPricing,
+  type PlanId,
+  type PlanPricing,
+} from '@/lib/billing/plans'
 import { cn } from '@/lib/cn/utils'
 import { SOCIAL_X_URL } from '@/shared/authors'
 import { MARKETING_FAQ } from '@/shared/marketing-faq'
 import { REPOSITORY_URL } from '@/shared/repository'
 import { FrameworkLogos } from './framework-logos'
+
+// Drop a trailing `.00` so whole-dollar prices read as "$9" not "$9.00".
+const TRAILING_ZEROS = /\.00$/
+function formatUsd(cents: number): string {
+  return `$${(cents / 100).toFixed(2).replace(TRAILING_ZEROS, '')}`
+}
 
 const FEATURES = [
   {
@@ -64,8 +75,9 @@ const FEATURES = [
   },
 ]
 
-const METRICS = [
-  ['from $9/mo', 'or self-host free, forever'],
+// The lead "from $X/mo" metric is computed from live pricing in the component; the
+// rest are static product facts.
+const METRICS_TAIL = [
   ['40–70%', 'smaller with AVIF & WebP'],
   ['$0.05–0.08/GB', 'overage — 3–6× under rivals'],
 ]
@@ -77,10 +89,19 @@ const PIPELINE_STEPS = [
   'Serve immutable output for CDN edge caching',
 ]
 
-const PRICING = [
+// Price + interval come from live pricing (Polar, catalog fallback) keyed by
+// planId, so the marketing cards can never drift from the real charge. Only the
+// editorial tagline/highlights are static here.
+const PRICING: {
+  featured: boolean
+  highlights: string[]
+  name: string
+  planId: PlanId
+  tagline: string
+}[] = [
   {
     name: 'Basic',
-    price: '$9',
+    planId: 'basic',
     tagline: 'For a site or store getting started.',
     highlights: [
       '100 GB delivered / month',
@@ -93,7 +114,7 @@ const PRICING = [
   },
   {
     name: 'Pro',
-    price: '$19',
+    planId: 'pro',
     tagline: 'Advanced analytics and full log history.',
     highlights: [
       '400 GB delivered / month',
@@ -106,7 +127,7 @@ const PRICING = [
   },
   {
     name: 'Business',
-    price: '$29',
+    planId: 'business',
     tagline: 'Higher volume and priority.',
     highlights: [
       '1 TB delivered / month',
@@ -168,7 +189,17 @@ function MobileNav() {
   )
 }
 
-export function MarketingPage() {
+export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
+  // Loader provides live pricing; fall back to the catalog so the page always
+  // renders real numbers (and to satisfy the self-host-typed null).
+  const prices = pricing ?? catalogPricing()
+  const fromCents = Math.min(
+    ...PRICING.map((tier) => prices.plans[tier.planId].month.amountCents),
+  )
+  const metrics = [
+    [`from ${formatUsd(fromCents)}/mo`, 'or self-host free, forever'],
+    ...METRICS_TAIL,
+  ]
   return (
     <div className="min-h-svh bg-background">
       <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -259,7 +290,7 @@ export function MarketingPage() {
                 </a>
               </div>
               <div className="mt-8 grid gap-3 text-sm sm:grid-cols-3">
-                {METRICS.map(([value, label]) => (
+                {metrics.map(([value, label]) => (
                   <div className="border-white/10 border-t pt-3" key={value}>
                     <div className="font-mono font-semibold text-white">
                       {value}
@@ -394,7 +425,7 @@ export function MarketingPage() {
                     </div>
                     <div className="flex items-baseline gap-1">
                       <span className="font-semibold text-4xl tracking-tight">
-                        {tier.price}
+                        {formatUsd(prices.plans[tier.planId].month.amountCents)}
                       </span>
                       <span className="text-muted-foreground text-sm">/mo</span>
                     </div>

@@ -82,6 +82,10 @@ export async function getOrgPlan(orgId: string): Promise<Plan | null> {
 }
 
 export interface SubscriptionSnapshot {
+  // Mirrors Polar's cancel_at_period_end. Persisted on every webhook sync (the
+  // upserts below spread the whole snapshot), so the billing UI can distinguish
+  // "renews" from "ends" for an active-but-canceling subscription.
+  cancelAtPeriodEnd?: boolean
   currentPeriodEnd?: Date | null
   currentPeriodStart?: Date | null
   orgId: string

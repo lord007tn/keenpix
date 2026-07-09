@@ -30,6 +30,10 @@ export interface UsageState {
 }
 
 export interface BillingState {
+  // True when the subscription is set to cancel at period end: still active and
+  // serving until currentPeriodEnd, but it will NOT renew. Lets the UI say
+  // "Ends {date}" instead of "Renews {date}" and offer a resume affordance.
+  cancelAtPeriodEnd: boolean
   // ISO timestamp the current paid period ends (renewal/expiry), or null.
   currentPeriodEnd: string | null
   // True once the org has a Polar customer — gates the portal even when canceled.
@@ -101,6 +105,14 @@ export async function getBillingState(orgId: string): Promise<BillingState> {
     planSource,
     status: internallyEntitled ? 'internal' : (sub?.status ?? null),
     hasBillingCustomer,
+    // "Scheduled to cancel" only makes sense for a live subscription (active/
+    // trialing). Polar keeps cancel_at_period_end=true on the terminal
+    // revoked/canceled payload too, so gate on `entitled` — otherwise a
+    // long-churned org would show a "you'll keep access until {past date}" notice.
+    // Internal grants don't bill, so they never cancel-at-period-end.
+    cancelAtPeriodEnd: Boolean(
+      entitled && !internallyEntitled && sub?.cancelAtPeriodEnd,
+    ),
     currentPeriodEnd: internallyEntitled
       ? null
       : (sub?.currentPeriodEnd?.toISOString() ?? null),

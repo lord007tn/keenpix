@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { CheckIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -18,11 +19,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { getErrorMessage } from '@/errors/common'
+import { getPlanPricingFn } from '@/functions/pricing'
 import { authClient } from '@/lib/auth/client'
-import { PLANS, type Plan, type PlanId } from '@/lib/billing/plans'
+import {
+  catalogPricing,
+  PLANS,
+  type Plan,
+  type PlanId,
+  type PlanPricing,
+} from '@/lib/billing/plans'
 import { cn } from '@/lib/cn/utils'
 
 type Interval = 'month' | 'year'
+type PlanPrice = PlanPricing['plans'][PlanId]
 
 const GB = 1024 ** 3
 const PLAN_ORDER: PlanId[] = ['basic', 'pro', 'business']
@@ -47,13 +56,18 @@ function formatDomains(customDomains: number | null): string {
   return `${customDomains} custom domains`
 }
 
-// Annual billing is "2 months free": 12 months charged as 10. We show the
-// effective per-month figure so the toggle reads as a discount, not a bigger
-// number.
-function monthlyPrice(plan: Plan, interval: Interval): number {
-  return interval === 'year'
-    ? (plan.priceMonthlyUsd * 10) / 12
-    : plan.priceMonthlyUsd
+// Effective per-month dollars for the chosen interval. Annual shows the amortized
+// monthly figure (annual total / 12) so the toggle reads as a discount, not a
+// bigger number. Sourced from live Polar prices (or the catalog fallback), so the
+// displayed price always matches the real charge.
+function perMonthUsd(price: PlanPrice, interval: Interval): number {
+  const cents =
+    interval === 'year' ? price.year.amountCents / 12 : price.month.amountCents
+  return cents / 100
+}
+
+function formatUsd(dollars: number): string {
+  return dollars.toFixed(2).replace(TRAILING_ZEROS, '')
 }
 
 function planFeatures(plan: Plan): string[] {
@@ -117,6 +131,14 @@ export function PlanSelection({
   const [interval, setInterval] = useState<Interval>('month')
   const [busy, setBusy] = useState<PlanId | null>(null)
   const [confirmPlan, setConfirmPlan] = useState<PlanId | null>(null)
+  // Live Polar prices so the cards match the real charge; the catalog is the
+  // first-paint/self-host/offline fallback so a price never renders blank.
+  const { data: pricingData } = useQuery({
+    queryKey: ['plan-pricing'],
+    queryFn: () => getPlanPricingFn(),
+    staleTime: 10 * 60 * 1000,
+  })
+  const pricing = pricingData ?? catalogPricing()
 
   async function startCheckout(planId: PlanId) {
     setBusy(planId)
@@ -183,6 +205,7 @@ export function PlanSelection({
       <div className="grid gap-4 lg:grid-cols-3">
         {PLAN_ORDER.map((planId) => {
           const plan = PLANS[planId]
+          const price = pricing.plans[planId]
           const isCurrent = activePlanId === planId
           const highlight = planId === 'pro'
           return (
@@ -200,16 +223,13 @@ export function PlanSelection({
                 </div>
                 <div className="flex items-baseline gap-1 pt-2">
                   <span className="font-semibold text-3xl">
-                    $
-                    {monthlyPrice(plan, interval)
-                      .toFixed(2)
-                      .replace(TRAILING_ZEROS, '')}
+                    ${formatUsd(perMonthUsd(price, interval))}
                   </span>
                   <span className="text-muted-foreground text-sm">/mo</span>
                 </div>
                 {interval === 'year' ? (
                   <CardDescription>
-                    Billed ${plan.priceMonthlyUsd * 10}/year
+                    Billed ${formatUsd(price.year.amountCents / 100)}/year
                   </CardDescription>
                 ) : null}
               </CardHeader>

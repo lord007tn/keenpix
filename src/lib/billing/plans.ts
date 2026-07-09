@@ -71,6 +71,34 @@ export const PLANS: Record<PlanId, Plan> = {
   },
 }
 
+export interface PricePoint {
+  amountCents: number
+  currency: string
+}
+
+// Displayed pricing per plan for both billing intervals. `source` marks whether
+// the amounts came from live Polar products or this code catalog, so the UI can
+// render real charges when available and never blank when Polar is unreachable.
+export interface PlanPricing {
+  plans: Record<PlanId, { month: PricePoint; year: PricePoint }>
+  source: 'catalog' | 'polar'
+}
+
+// Pricing derived from this catalog: the monthly price, plus an annual total of
+// 10 months ("2 months free" — the app's annual convention). Used in self-host
+// and whenever live Polar prices are unavailable so prices never render blank.
+export function catalogPricing(): PlanPricing {
+  const plans = {} as PlanPricing['plans']
+  for (const id of Object.keys(PLANS) as PlanId[]) {
+    const monthly = PLANS[id].priceMonthlyUsd
+    plans[id] = {
+      month: { amountCents: monthly * 100, currency: 'usd' },
+      year: { amountCents: monthly * 10 * 100, currency: 'usd' },
+    }
+  }
+  return { source: 'catalog', plans }
+}
+
 const PLAN_RANK: Record<PlanId, number> = {
   basic: 1,
   pro: 2,
