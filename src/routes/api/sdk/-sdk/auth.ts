@@ -1,15 +1,22 @@
+import { DEFAULT_ORG_ID } from '@/lib/auth/active-org'
 import { auth } from '@/lib/auth/server'
+import { isCloud } from '@/server/deployment'
 import type { SdkApiActivityContext } from './activity'
 import { jsonError } from './responses'
 
 const INTERNAL_API_KEY_CONFIG = 'internal'
+
+export interface SdkApiKeyAccess {
+  orgId: string
+  projectId?: string
+}
 
 export async function verifySdkApiKey(
   request: Request,
   permission: 'read' | 'write',
   projectId?: string,
   activity?: SdkApiActivityContext,
-) {
+): Promise<SdkApiKeyAccess> {
   const key = getApiKey(request)
   if (!key) {
     throw jsonError('Missing API key', 401)
@@ -26,6 +33,14 @@ export async function verifySdkApiKey(
   if (result.valid) {
     const access = getApiKeyAccess(result.key)
     const apiKeyId = getApiKeyId(result.key)
+    // Resolve the org the key belongs to. Self-host legacy keys (no orgId) map to
+    // the single default org; a cloud key MUST carry its own orgId — there is no
+    // shared-tenant fallback, so an unattributed cloud key is rejected. Every
+    // downstream lookup is org-scoped, so a key can only ever touch its own org.
+    const orgId = access.orgId ?? (isCloud() ? undefined : DEFAULT_ORG_ID)
+    if (!orgId) {
+      throw jsonError('API key is not associated with an organization', 403)
+    }
     if (activity && apiKeyId) {
       activity.apiKeyId = apiKeyId
       activity.projectId = projectId ?? access.projectId
@@ -34,7 +49,7 @@ export async function verifySdkApiKey(
     if (access.projectId && projectId && access.projectId !== projectId) {
       throw jsonError('API key cannot access this project', 403)
     }
-    return access
+    return { orgId, projectId: access.projectId }
   }
 
   const status = result.error?.code === 'RATE_LIMIT_EXCEEDED' ? 429 : 401
@@ -53,28 +68,38 @@ function getApiKey(request: Request) {
   return request.headers.get('x-keenpix-api-key')?.trim()
 }
 
-function getApiKeyAccess(key: unknown) {
+function readMetadata(key: unknown): unknown {
   if (!(key && typeof key === 'object')) {
-    return {}
+    return null
   }
-
-  const metadata = Reflect.get(key, 'metadata')
-  if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
-    const projectId = Reflect.get(metadata, 'projectId')
-    return typeof projectId === 'string' && projectId.trim()
-      ? { projectId: projectId.trim() }
-      : {}
-  }
-
-  if (typeof metadata === 'string' && metadata.trim()) {
+  let metadata = Reflect.get(key, 'metadata')
+  for (let i = 0; i < 2; i++) {
+    if (typeof metadata !== 'string') {
+      break
+    }
     try {
-      return getApiKeyAccess({ metadata: JSON.parse(metadata) })
+      metadata = JSON.parse(metadata)
     } catch {
-      return {}
+      return null
     }
   }
+  return metadata
+}
 
-  return {}
+function getApiKeyAccess(key: unknown): { orgId?: string; projectId?: string } {
+  const metadata = readMetadata(key)
+  if (!(metadata && typeof metadata === 'object' && !Array.isArray(metadata))) {
+    return {}
+  }
+  const orgId = Reflect.get(metadata, 'orgId')
+  const projectId = Reflect.get(metadata, 'projectId')
+  return {
+    orgId: typeof orgId === 'string' && orgId.trim() ? orgId.trim() : undefined,
+    projectId:
+      typeof projectId === 'string' && projectId.trim()
+        ? projectId.trim()
+        : undefined,
+  }
 }
 
 function getApiKeyId(key: unknown) {

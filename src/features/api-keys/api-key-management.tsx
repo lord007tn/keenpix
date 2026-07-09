@@ -35,19 +35,19 @@ import {
 } from '@/components/ui/select'
 import { getErrorMessage } from '@/errors/common'
 import {
-  createApiKeyFn,
-  disableApiKeyFn,
-  getAdminWorkspaceFn,
-  getApiKeyActivitiesFn,
-} from '@/functions/admin'
+  createOrgApiKeyFn,
+  disableOrgApiKeyFn,
+  getOrgApiKeyActivitiesFn,
+  getOrgApiKeysFn,
+} from '@/functions/api-keys'
 import { ACTIVITY_PAGE_SIZE } from '@/schemas/admin'
 import { createApiKeySchema } from '@/schemas/api-keys'
 import { getFieldError } from '@/utils/validation/form-errors'
 
 const ALL_PROJECTS_SCOPE = '__all_projects__'
 
-type WorkspaceData = Awaited<ReturnType<typeof getAdminWorkspaceFn>>
-type CreatedApiKey = Awaited<ReturnType<typeof createApiKeyFn>>
+type WorkspaceData = Awaited<ReturnType<typeof getOrgApiKeysFn>>
+type CreatedApiKey = Awaited<ReturnType<typeof createOrgApiKeyFn>>
 type ActivityRow = WorkspaceData['apiKeyActivities'][number]
 
 function projectScopeLabel(
@@ -100,7 +100,7 @@ function CreateApiKeyDialog({
     },
     onSubmit: async ({ value }) => {
       try {
-        const created = await createApiKeyFn({
+        const created = await createOrgApiKeyFn({
           data: {
             name: value.name,
             projectId:
@@ -281,7 +281,7 @@ export function ApiKeyManagement() {
 
   const load = useCallback(async () => {
     try {
-      const data = await getAdminWorkspaceFn()
+      const data = await getOrgApiKeysFn()
       setWorkspace(data)
       setActivities(data.apiKeyActivities)
       setActivityTotal(data.apiKeyActivitiesTotal)
@@ -293,7 +293,7 @@ export function ApiKeyManagement() {
 
   async function changeActivityPage(next: number) {
     try {
-      const res = await getApiKeyActivitiesFn({ data: { page: next } })
+      const res = await getOrgApiKeyActivitiesFn({ data: { page: next } })
       setActivities(res.activities)
       setActivityTotal(res.total)
       setActivityPage(next)
@@ -322,8 +322,7 @@ export function ApiKeyManagement() {
                 lastRequest: created.lastRequest,
                 expiresAt: created.expiresAt,
                 createdAt: created.createdAt,
-                metadata: projectId ? { projectId } : null,
-                permissions: created.permissions,
+                projectId,
               },
               ...current.apiKeys,
             ],
@@ -345,7 +344,7 @@ export function ApiKeyManagement() {
         : current,
     )
     try {
-      await disableApiKeyFn({ data: { id } })
+      await disableOrgApiKeyFn({ data: { id } })
       toast.success('API key disabled')
     } catch (e) {
       setWorkspace(previous)
@@ -374,7 +373,7 @@ export function ApiKeyManagement() {
         ) : (
           apiKeys.map((apiKey) => {
             const start = [apiKey.prefix, apiKey.start].filter(Boolean).join('')
-            const projectId = apiKey.metadata?.projectId
+            const projectId = apiKey.projectId
             const scopeLabel = projectId
               ? (projects.find((project) => project.id === projectId)?.name ??
                 projectId)

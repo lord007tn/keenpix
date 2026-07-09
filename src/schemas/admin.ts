@@ -64,6 +64,11 @@ export const customerAccountSchema = z.object({
   orgId: nonEmptyStringSchema(),
 })
 
+export const customerAnalyticsSchema = z.object({
+  orgId: nonEmptyStringSchema(),
+  range: analyticsRangeSchema.catch('30d'),
+})
+
 export const updateInternalPlanGrantSchema = z.object({
   orgId: nonEmptyStringSchema(),
   plan: internalPlanSchema,
