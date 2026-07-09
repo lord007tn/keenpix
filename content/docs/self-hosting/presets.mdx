@@ -28,7 +28,9 @@ KEENPIX_SUPER_ADMIN_PASSWORD="<a real password>"
 ```
 
 - Plain `http` on localhost, so secure cookies stay off — fine for local only.
-- No SMTP needed: read the OTP code from `docker compose logs app`.
+- No email needed: self-host is invite-only. Sign in with
+  `KEENPIX_SUPER_ADMIN_EMAIL` / `KEENPIX_SUPER_ADMIN_PASSWORD` — no OTP or
+  verification for the bootstrap operator.
 
 ## Single-node production
 

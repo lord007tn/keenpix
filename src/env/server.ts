@@ -38,6 +38,13 @@ export const env = createEnv({
         requireVar('SMTP_HOST', value.SMTP_HOST, when)
         requireVar('SMTP_FROM_EMAIL', value.SMTP_FROM_EMAIL, when)
       }
+      // Any production deploy (self-host or cloud) needs a database and a real
+      // auth secret, or it boots green and then crashes on the first request.
+      if (value.NODE_ENV === 'production') {
+        const when = 'in a production build'
+        requireVar('DATABASE_URL', value.DATABASE_URL, when)
+        requireVar('BETTER_AUTH_SECRET', value.BETTER_AUTH_SECRET, when)
+      }
       // Multi-tenant cloud needs the full hosted stack or it boots green with
       // silently-dead signup (no email), billing, and serving (no Polar → 402s).
       if (value.KEENPIX_MODE === 'cloud') {

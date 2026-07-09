@@ -57,7 +57,10 @@ function LoginPage() {
       const payload = loginSchema.parse(value)
       const { error: err } = await authClient.signIn.email(payload)
       if (err) {
-        if (err.code === 'EMAIL_NOT_VERIFIED' || err.status === 403) {
+        // Only the unverified-email case gets the resend affordance. A banned or
+        // otherwise-403 account must NOT be told to "verify your email" — fall
+        // through so its real message (e.g. the ban reason) is shown.
+        if (err.code === 'EMAIL_NOT_VERIFIED') {
           setUnverifiedEmail(payload.email)
           setError('Verify your email before signing in.')
           return

@@ -41,7 +41,7 @@ export function SiteHeader() {
           >
             Sign in
           </Link>
-          <Link className={buttonVariants({ size: 'sm' })} to="/login">
+          <Link className={buttonVariants({ size: 'sm' })} to="/signup">
             Get started
             <ArrowRightIcon data-icon="inline-end" />
           </Link>
