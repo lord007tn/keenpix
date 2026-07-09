@@ -31,6 +31,7 @@ describe('getBillingState', () => {
       status: 'active',
       currentPeriodStart: start,
       currentPeriodEnd: end,
+      cancelAtPeriodEnd: true,
     })
     orgHasBillingCustomer.mockResolvedValue(true)
     // 450 GB used against Pro's 400 GB allowance → 50 GB overage at 6¢/GB.
@@ -45,6 +46,8 @@ describe('getBillingState', () => {
     expect(state.planSource).toBe('billing')
     expect(state.status).toBe('active')
     expect(state.hasBillingCustomer).toBe(true)
+    // Active but set to cancel → surfaced so the UI says "Ends", not "Renews".
+    expect(state.cancelAtPeriodEnd).toBe(true)
     expect(state.currentPeriodEnd).toBe(end.toISOString())
     expect(state.usage.periodStart).toBe(start.toISOString())
     expect(state.usage.includedBytes).toBe(400 * GB)
@@ -68,6 +71,7 @@ describe('getBillingState', () => {
     expect(state.planSource).toBeNull()
     expect(state.status).toBeNull()
     expect(state.hasBillingCustomer).toBe(false)
+    expect(state.cancelAtPeriodEnd).toBe(false)
     expect(state.usage.includedBytes).toBeNull()
     expect(state.usage.overageBytes).toBe(0)
     expect(state.usage.overageCostCents).toBe(0)
@@ -97,6 +101,26 @@ describe('getBillingState', () => {
     )
   })
 
+  it('does not report cancelAtPeriodEnd for a terminal subscription', async () => {
+    // Polar keeps cancel_at_period_end=true on the revoked/canceled payload after
+    // the period ends. Gating on entitlement stops the UI from showing a stale
+    // "you'll keep access until {past date}" notice for a churned org.
+    getActiveInternalPlanGrant.mockResolvedValue(null)
+    getOrgSubscription.mockResolvedValue({
+      plan: 'pro',
+      status: 'canceled',
+      currentPeriodStart: new Date('2026-05-01T00:00:00.000Z'),
+      currentPeriodEnd: new Date('2026-06-01T00:00:00.000Z'),
+      cancelAtPeriodEnd: true,
+    })
+    orgHasBillingCustomer.mockResolvedValue(true)
+    billingUsageSnapshot.mockResolvedValue({ bytes: 0, projects: 0, seats: 1 })
+    const state = await getBillingState('org_a')
+    expect(state.status).toBe('canceled')
+    expect(state.plan).toBeNull()
+    expect(state.cancelAtPeriodEnd).toBe(false)
+  })
+
   it('uses an internal grant as the effective plan without overage cost', async () => {
     getActiveInternalPlanGrant.mockResolvedValue({ plan: 'business' })
     getOrgSubscription.mockResolvedValue(null)
@@ -111,6 +135,8 @@ describe('getBillingState', () => {
     expect(state.planSource).toBe('internal')
     expect(state.status).toBe('internal')
     expect(state.hasBillingCustomer).toBe(false)
+    // Internal grants don't bill, so they never "cancel at period end".
+    expect(state.cancelAtPeriodEnd).toBe(false)
     expect(state.usage.includedBytes).toBe(1000 * GB)
     expect(state.usage.overageBytes).toBe(200 * GB)
     expect(state.usage.overageCostCents).toBe(0)

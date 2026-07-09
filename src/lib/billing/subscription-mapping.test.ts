@@ -24,11 +24,25 @@ describe('mapSubscriptionSnapshot', () => {
       currentPeriodStart: new Date('2026-07-01T00:00:00.000Z'),
       currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
       overageAllowed: false,
+      cancelAtPeriodEnd: false,
     })
   })
 
   it('passes the explicit status through (e.g. canceled)', () => {
     expect(mapSubscriptionSnapshot(base, 'canceled')?.status).toBe('canceled')
+  })
+
+  it('defaults cancelAtPeriodEnd to false when the payload omits it', () => {
+    expect(mapSubscriptionSnapshot(base, 'active')?.cancelAtPeriodEnd).toBe(
+      false,
+    )
+  })
+
+  it('mirrors cancel-at-period-end (active but not renewing)', () => {
+    // Polar keeps status `active` on a cancel-at-period-end sub; the flag is what
+    // distinguishes "ends {date}" from "renews {date}".
+    const sub = { ...base, cancelAtPeriodEnd: true }
+    expect(mapSubscriptionSnapshot(sub, 'active')?.cancelAtPeriodEnd).toBe(true)
   })
 
   it('resolves the org from metadata.referenceId when orgId is absent', () => {

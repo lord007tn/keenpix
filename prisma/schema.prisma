@@ -67,6 +67,10 @@ model Subscription {
   currentPeriodStart  DateTime?
   currentPeriodEnd    DateTime?
   overageAllowed      Boolean      @default(false)
+  // Mirrors Polar's cancel_at_period_end: the subscription stays `active` and
+  // serving until currentPeriodEnd, but will NOT renew. Drives the billing UI
+  // to say "Ends {date}" instead of "Renews {date}". Set on every webhook sync.
+  cancelAtPeriodEnd   Boolean      @default(false)
   // Customer-set hard spending cap on accrued overage cost per period, in cents.
   // null = no cap (unlimited overage). Enforced by the serving gate: once the
   // period's overage cost reaches this, the org stops being served. Not from

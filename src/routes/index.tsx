@@ -3,12 +3,19 @@ import { JsonLd } from '@/components/app/json-ld'
 import { MarketingPage } from '@/features/marketing/marketing-page'
 import { SelfHostHome } from '@/features/marketing/self-host-home'
 import { getPublicConfigFn } from '@/functions/config'
+import { getPlanPricingFn } from '@/functions/pricing'
 import { absoluteUrl, SITE_DESCRIPTION, SITE_TITLE, seo } from '@/shared/seo'
 
 export const Route = createFileRoute('/')({
-  loader: () => getPublicConfigFn(),
+  loader: async () => {
+    const config = await getPublicConfigFn()
+    // Marketing (and its live pricing) is cloud-only; skip the Polar-backed
+    // pricing call entirely in self-host.
+    const pricing = config.cloud ? await getPlanPricingFn() : null
+    return { config, pricing }
+  },
   head: ({ loaderData }) => {
-    if (!loaderData?.cloud) {
+    if (!loaderData?.config.cloud) {
       return {
         meta: [
           { title: 'Self-hosted Keenpix' },
@@ -35,14 +42,14 @@ export const Route = createFileRoute('/')({
 })
 
 function Home() {
-  const { cloud, jsonLd } = Route.useLoaderData()
-  if (!cloud) {
+  const { config, pricing } = Route.useLoaderData()
+  if (!config.cloud) {
     return <SelfHostHome />
   }
   return (
     <>
-      {jsonLd ? <JsonLd data={jsonLd} /> : null}
-      <MarketingPage />
+      {config.jsonLd ? <JsonLd data={config.jsonLd} /> : null}
+      <MarketingPage pricing={pricing} />
     </>
   )
 }
