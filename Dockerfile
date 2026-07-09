@@ -38,7 +38,6 @@ FROM runtime-deps AS runner
 ARG VERSION=0.1.0
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV KEENPIX_SELF_HOST=true
 ENV KEENPIX_CACHE_DIR=/var/cache/keenpix
 # sharp, DNS lookups, and fs share libuv's threadpool. Raise it so concurrent
 # transforms do not starve origin fetches. Must be set before Node starts.

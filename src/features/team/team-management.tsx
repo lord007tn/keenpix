@@ -166,14 +166,24 @@ export function TeamManagement() {
         toast.error(getErrorMessage(promote.error, 'Could not transfer'))
         return
       }
+      // The target is now an owner. If stepping ourselves down fails, the org
+      // has two owners — report that honestly rather than a clean success.
+      let demoteFailed = false
       if (myMemberId) {
-        await authClient.organization.updateMemberRole({
+        const demote = await authClient.organization.updateMemberRole({
           memberId: myMemberId,
           role: 'admin',
         })
+        demoteFailed = Boolean(demote.error)
       }
       setConfirmTransfer(null)
-      toast.success(`Ownership transferred to ${target.label}`)
+      if (demoteFailed) {
+        toast.warning(
+          `${target.label} is now an owner, but we couldn't step you down — you're still an owner too.`,
+        )
+      } else {
+        toast.success(`Ownership transferred to ${target.label}`)
+      }
       await Promise.all([membersQuery.refetch(), activeMemberQuery.refetch()])
     } finally {
       setBusy(false)
