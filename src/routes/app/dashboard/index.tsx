@@ -165,7 +165,7 @@ function DashboardPage() {
     if (edgeError || !edge) {
       // Only the operator can act on a missing/broken token.
       edgeNote = isSuperAdmin
-        ? "Couldn't load edge data — check the token in Admin → CDN cache."
+        ? "Couldn't load edge data — check the CLOUDFLARE_* env vars (Admin → Settings)."
         : undefined
     } else if (isAll) {
       edgeNote =

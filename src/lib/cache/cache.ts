@@ -11,6 +11,7 @@ const CACHE_DIR = env.KEENPIX_CACHE_DIR
 const MAX_BYTES = env.KEENPIX_CACHE_MAX_BYTES
 const MEMORY_MAX_BYTES = env.KEENPIX_MEMORY_CACHE_MAX_BYTES
 const STALE_MS = env.KEENPIX_CACHE_STALE_MS
+const CACHE_CONTROL = env.KEENPIX_CACHE_CONTROL
 
 const memoryCache = new MemoryCacheStore(MEMORY_MAX_BYTES)
 const diskCache = new DiskCacheStore(CACHE_DIR, MAX_BYTES)
@@ -53,8 +54,9 @@ export function buildCacheKey(input: TransformKeyInput): string {
 }
 
 // Long-lived immutable caching is what lets an outer CDN cache transform output.
+// Env-driven (KEENPIX_CACHE_CONTROL) so operators can tune edge/browser TTLs.
 export function cacheControl(): string {
-  return 'public, max-age=31536000, immutable'
+  return CACHE_CONTROL
 }
 
 export async function readCacheEntry(key: string, format: OutputFormat) {

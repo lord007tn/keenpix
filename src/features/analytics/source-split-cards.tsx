@@ -281,12 +281,10 @@ export function SourceSplitCards({
           <CloudIcon />
           <AlertTitle>Connect Cloudflare to see edge delivery</AlertTitle>
           <AlertDescription>
-            These cards show only what reached keenpix. Connect Cloudflare to
-            split each metric between the edge and the origin and reveal the
-            true end-to-end cache hit rate.{' '}
-            <Link search={{ section: 'cdn' }} to="/admin">
-              Connect in Admin → CDN cache
-            </Link>
+            These cards show only what reached keenpix. Set the CLOUDFLARE_* env
+            vars to split each metric between the edge and the origin and reveal
+            the true end-to-end cache hit rate.{' '}
+            <Link to="/admin/settings">View in Admin → Settings</Link>
           </AlertDescription>
         </Alert>
       ) : null}

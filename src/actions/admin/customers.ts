@@ -1,15 +1,20 @@
 import dayjs from 'dayjs'
 import {
-  listClientAccounts,
+  getCustomerAccount,
+  listCustomerAccounts,
   setOrgSuspension as setOrgSuspensionDb,
-} from '@/data-access/admin/clients'
+} from '@/data-access/admin/customers'
 import {
   removeInternalPlanGrant,
   setInternalPlanGrant,
 } from '@/data-access/internal-plan-grants'
 
-export function getClientAccounts() {
-  return listClientAccounts()
+export function getCustomerAccounts() {
+  return listCustomerAccounts()
+}
+
+export function getCustomerAccountById(orgId: string) {
+  return getCustomerAccount(orgId)
 }
 
 // Suspend (kill-switch) or reactivate a tenant org. Suspending stamps the time +
@@ -27,7 +32,7 @@ export async function setOrgSuspension(input: {
   return { suspended: input.suspended }
 }
 
-export async function updateClientInternalPlan(input: {
+export async function updateCustomerInternalPlan(input: {
   grantedById: string
   orgId: string
   plan: 'none' | 'basic' | 'pro' | 'business'
@@ -39,15 +44,21 @@ export async function updateClientInternalPlan(input: {
     return { orgId: input.orgId, plan: null }
   }
 
+  // End of the chosen day, so a grant is valid through its expiry date.
+  const expiresAt = input.expiresAt ? dayjs(input.expiresAt).endOf('day') : null
+  // Reject a past expiry — it would write an immediately-inactive grant, giving
+  // the operator a false "granted" with no effect. Belt-and-suspenders over the
+  // client-side block in the plan-change UI.
+  if (expiresAt && !expiresAt.isAfter(dayjs())) {
+    throw new Error('Grant expiry must be in the future.')
+  }
+
   await setInternalPlanGrant({
     orgId: input.orgId,
     plan: input.plan,
     reason: input.reason,
     grantedById: input.grantedById,
-    // End of the chosen day, so a grant is valid through its expiry date.
-    expiresAt: input.expiresAt
-      ? dayjs(input.expiresAt).endOf('day').toDate()
-      : null,
+    expiresAt: expiresAt ? expiresAt.toDate() : null,
   })
   return { orgId: input.orgId, plan: input.plan }
 }

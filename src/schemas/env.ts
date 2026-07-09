@@ -76,6 +76,13 @@ export const serverEnvSchema = {
     .int()
     .nonnegative()
     .default(64 * 1024 * 1024),
+  // The Cache-Control header emitted on transform responses. Long-lived +
+  // immutable by default so an outer CDN can cache transform output; override to
+  // tune edge/browser TTLs without a code change.
+  KEENPIX_CACHE_CONTROL: z
+    .string()
+    .min(1)
+    .default('public, max-age=31536000, immutable'),
   KEENPIX_MAX_ORIGIN_BYTES: z.coerce
     .number()
     .int()

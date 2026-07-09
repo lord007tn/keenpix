@@ -370,7 +370,7 @@ function AnalyticsPage() {
       // A missing/broken token is only actionable by the operator, so only they
       // get the "check the token" hint; other viewers get no edge note at all.
       edgeNote = isSuperAdmin
-        ? "Couldn't load edge data — check the token in Admin → CDN cache."
+        ? "Couldn't load edge data — check the CLOUDFLARE_* env vars (Admin → Settings)."
         : undefined
     } else if (edgeScopeOk) {
       edgeNote =
