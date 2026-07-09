@@ -1,4 +1,9 @@
 import { prisma } from '@/db'
+import type { Prisma } from '@/generated/prisma/client'
+
+// Accepts the global client or an interactive-transaction client, so the usage
+// reporter can run its reads/writes inside the advisory-locked transaction.
+type Db = Prisma.TransactionClient
 
 // Start of the current UTC hour. Usage is reported only for COMPLETE hours
 // (bucketStart < this), so a partial in-flight hour is never under-counted — it's
@@ -21,9 +26,10 @@ function currentHourStart(now: Date): Date {
 export async function deliveredBytesSince(
   orgId: string,
   since: Date | null,
+  db: Db = prisma,
 ): Promise<{ bytes: number; through: Date }> {
   const through = currentHourStart(new Date())
-  const agg = await prisma.analyticsRollupHourly.aggregate({
+  const agg = await db.analyticsRollupHourly.aggregate({
     where: {
       orgId,
       bucketStart: since ? { gte: since, lt: through } : { lt: through },
@@ -45,14 +51,14 @@ export async function billingUsageSnapshot(orgId: string, since: Date) {
   return { bytes: delivered.bytes, projects, seats }
 }
 
-export function listUsageBillingCustomers() {
-  return prisma.billingCustomer.findMany({
+export function listUsageBillingCustomers(db: Db = prisma) {
+  return db.billingCustomer.findMany({
     select: { orgId: true, polarCustomerId: true, lastUsageReportAt: true },
   })
 }
 
-export function markUsageReported(orgId: string, at: Date) {
-  return prisma.billingCustomer.update({
+export function markUsageReported(orgId: string, at: Date, db: Db = prisma) {
+  return db.billingCustomer.update({
     where: { orgId },
     data: { lastUsageReportAt: at },
   })

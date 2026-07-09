@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { defineNitroConfig } from 'nitro/config'
 
 /**
@@ -22,6 +23,18 @@ const SECURITY_HEADERS = {
 }
 
 export default defineNitroConfig({
+  // Match the app's `@` alias (Nitro's built-in `@` points at rootDir, but ours is
+  // `./src`) so these server plugins and their transitive `@/…` imports resolve.
+  alias: {
+    '@': fileURLToPath(new URL('./src', import.meta.url)),
+  },
+  // Lifecycle + observability plugins that wrap the h3 app: graceful-shutdown drains
+  // the transform queue on SIGTERM and marks us un-ready; request-log emits a
+  // structured access line per request.
+  plugins: [
+    './src/server/nitro/graceful-shutdown.ts',
+    './src/server/nitro/request-log.ts',
+  ],
   routeRules: {
     '/**': { headers: SECURITY_HEADERS },
   },

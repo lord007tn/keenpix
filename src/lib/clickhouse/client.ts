@@ -21,3 +21,26 @@ export function getClickhouseClient(): ClickHouseClient | null {
     : null
   return cached
 }
+
+// Best-effort readiness probe for the health endpoint. Returns null when
+// ClickHouse isn't configured (Postgres-only deployment); otherwise a reachable
+// flag. Never throws.
+export async function pingClickhouse(): Promise<{
+  ok: boolean
+  latencyMs: number
+} | null> {
+  const client = getClickhouseClient()
+  if (!client) {
+    return null
+  }
+  const start = performance.now()
+  try {
+    const result = await client.ping()
+    return {
+      ok: result.success === true,
+      latencyMs: Math.round(performance.now() - start),
+    }
+  } catch {
+    return { ok: false, latencyMs: Math.round(performance.now() - start) }
+  }
+}

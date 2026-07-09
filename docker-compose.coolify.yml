@@ -22,6 +22,10 @@ services:
   app:
     image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
     restart: unless-stopped
+    # Give the graceful shutdown room to run before Docker SIGKILLs: on SIGTERM the
+    # app marks itself un-ready (health → 503) and drains in-flight transforms
+    # (~25s budget + backstop). Must exceed SERVER_SHUTDOWN_TIMEOUT below.
+    stop_grace_period: ${KEENPIX_SHUTDOWN_GRACE:-30s}
     # Opt-in resource caps. Default 0 = no limit. Setting KEENPIX_MEM_LIMIT makes
     # the Operations page CPU/RAM gauges read against a real cgroup cap and lets
     # Docker enforce it. Note: too low a memory cap can get the app OOM-killed.
@@ -52,6 +56,9 @@ services:
       - KEENPIX_MAX_INPUT_PIXELS=${KEENPIX_MAX_INPUT_PIXELS:-50000000}
       - KEENPIX_MAX_DIMENSION=${KEENPIX_MAX_DIMENSION:-4096}
       - KEENPIX_ORIGIN_TIMEOUT_MS=${KEENPIX_ORIGIN_TIMEOUT_MS:-10000}
+      # Seconds srvx waits for in-flight HTTP requests to finish on SIGTERM before
+      # force-closing. Keep ≤ stop_grace_period so slow transforms can complete.
+      - SERVER_SHUTDOWN_TIMEOUT=${SERVER_SHUTDOWN_TIMEOUT:-25}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       # Transactional email: set EMAIL_PROVIDER to postmark | resend | smtp and
       # fill the matching vars. Leave unset to disable email.
