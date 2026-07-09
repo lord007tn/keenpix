@@ -141,11 +141,14 @@ services:
     restart: unless-stopped
     depends_on:
       app:
-        condition: service_healthy
+        condition: service_started
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >
         while true; do
+          until curl -fsS http://app:3000/api/health > /dev/null; do
+            sleep 10;
+          done;
           sleep 3600;
           curl -s -X POST -H "Authorization: Bearer ${CRON_SECRET}" http://app:3000/api/internal/billing/report-usage || true;
         done
