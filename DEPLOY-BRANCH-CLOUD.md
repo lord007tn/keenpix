@@ -28,11 +28,12 @@ Set these in Coolify before deploying:
 KEENPIX_SUPER_ADMIN_EMAIL=you@example.com
 POLAR_TOKEN=polar_oat_...
 POLAR_WEBHOOK_SECRET=whsec_...
-POLAR_SERVER=sandbox
+POLAR_SERVER=production
 ```
 
-`POLAR_TOKEN` and `POLAR_WEBHOOK_SECRET` should come from Polar sandbox for this
-testing service. The app will boot with generated Coolify values for Postgres,
+`POLAR_TOKEN` and `POLAR_WEBHOOK_SECRET` should come from the Polar environment
+matching the public domain you are testing. Production-domain deploys must use
+`POLAR_SERVER=production`. The app will boot with generated Coolify values for Postgres,
 Better Auth, ClickHouse, Maxio, the super-admin password, and the cron secret.
 
 Optional resource caps:
