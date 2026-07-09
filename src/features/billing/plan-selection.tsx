@@ -61,18 +61,23 @@ function planFeatures(plan: Plan): string[] {
     plan.maxProjects === null
       ? 'Unlimited projects'
       : `${plan.maxProjects} projects`
-  return [
+  const features = [
     `${formatBandwidth(plan.includedBandwidthBytes)} delivered / mo`,
     `$${(plan.overagePerGbCents / 100).toFixed(2)}/GB overage`,
     plan.advancedAnalytics ? 'Advanced analytics' : 'Core analytics',
     plan.advancedLogs ? 'Full log history + search' : 'Recent logs (last 200)',
     projects,
     `${plan.maxSeats} team seats`,
-    formatDomains(plan.customDomains),
-    plan.aiCreditsPerMonth > 0
-      ? `${plan.aiCreditsPerMonth} AI credits / mo`
-      : 'AI credits available as add-on',
   ]
+  // Custom domains + AI tools are on the roadmap but not shipped yet, so mark
+  // them "coming soon" rather than promising them at checkout.
+  if (plan.customDomains === null || plan.customDomains > 0) {
+    features.push(`${formatDomains(plan.customDomains)} (coming soon)`)
+  }
+  if (plan.aiCreditsPerMonth > 0) {
+    features.push(`${plan.aiCreditsPerMonth} AI credits / mo (coming soon)`)
+  }
+  return features
 }
 
 function checkoutLabel(

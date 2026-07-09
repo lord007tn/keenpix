@@ -8,7 +8,23 @@ import { defineNitroConfig } from 'nitro/config'
  * /api/keenpix fails with `fetch failed`. Marking it external leaves the import in
  * place so the real package loads from node_modules at runtime.
  */
+// Baseline security response headers on every route. HSTS is only honored by
+// browsers over HTTPS, so it's a safe no-op on local http. nosniff is critical
+// on /img/** (attacker-influenceable origin bytes, incl. SVG). Frame-ancestors
+// deny + Referrer-Policy harden the auth/billing surfaces against clickjacking
+// and referrer leakage. A full app-shell CSP is intentionally deferred (needs
+// per-route testing against the TanStack hydration inline scripts).
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'SAMEORIGIN',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
+}
+
 export default defineNitroConfig({
+  routeRules: {
+    '/**': { headers: SECURITY_HEADERS },
+  },
   rollupConfig: {
     external: [
       'undici',

@@ -47,6 +47,10 @@ export async function handleTransformRequest(
       startedAt,
     })
 
+    // SVG can carry script; even after SVGO optimization it is served with a
+    // locked-down CSP + nosniff so a malicious source SVG can't execute in the
+    // serving origin's context (stored-XSS / account-takeover guard).
+    const isSvg = result.format === 'svg'
     return new Response(new Uint8Array(result.body), {
       status: 200,
       headers: {
@@ -54,6 +58,15 @@ export async function handleTransformRequest(
         'content-length': String(result.body.byteLength),
         'cache-control': cacheControl(),
         vary: 'Accept',
+        'x-content-type-options': 'nosniff',
+        // Origin-shield cache status, for observability behind an outer CDN.
+        'x-keenpix-cache': result.cached ? 'HIT' : 'MISS',
+        ...(isSvg
+          ? {
+              'content-security-policy':
+                "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+            }
+          : {}),
       },
     })
   } catch (error) {

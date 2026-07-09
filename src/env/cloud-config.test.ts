@@ -11,6 +11,7 @@ const CLOUD_KEYS = [
   'POSTMARK_API_KEY',
   'POSTMARK_FROM',
   'POLAR_TOKEN',
+  'POLAR_SERVER',
   'POLAR_WEBHOOK_SECRET',
   'CRON_SECRET',
 ]
@@ -23,6 +24,7 @@ const FULL_CLOUD_ENV = {
   POSTMARK_API_KEY: 'token',
   POSTMARK_FROM: 'Keenpix <no-reply@keenpix.com>',
   POLAR_TOKEN: 'polar_oat_x',
+  POLAR_SERVER: 'production',
   POLAR_WEBHOOK_SECRET: 'whsec_x',
   CRON_SECRET: 'cron-x',
 }

@@ -348,7 +348,8 @@ export function BillingPanel() {
               </>
             ) : (
               <span className="text-muted-foreground text-sm">
-                Free while you evaluate — no card required to explore the app.
+                No active subscription. Choose a plan below to create a project
+                and start delivering images.
               </span>
             )}
           </div>
