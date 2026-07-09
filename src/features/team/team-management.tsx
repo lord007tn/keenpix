@@ -10,7 +10,7 @@ import {
   UsersRoundIcon,
   XIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { Badge } from '@/components/ui/badge'
@@ -221,6 +221,15 @@ export function TeamManagement() {
       membersQuery.refetch()
     },
   })
+
+  // orgName loads async, so useForm's initial defaultValues capture the empty
+  // string and the rename field renders blank. Seed it once the name arrives,
+  // but never clobber an in-progress edit.
+  useEffect(() => {
+    if (orgName && !orgForm.state.isDirty) {
+      orgForm.setFieldValue('name', orgName)
+    }
+  }, [orgName, orgForm])
 
   function renderMembers() {
     if (membersQuery.isPending) {
