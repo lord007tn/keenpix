@@ -16,6 +16,7 @@ import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import { useDashboardQuery } from '@/features/analytics/use-dashboard-query'
 import { useEdgeStats } from '@/features/analytics/use-edge-stats'
 import { OnboardingChecklist } from '@/features/onboarding/onboarding-checklist'
+import { QuickStart } from '@/features/onboarding/quick-start'
 import { appPageHead } from '@/shared/seo'
 import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
@@ -189,9 +190,18 @@ function DashboardPage() {
     )
   }
 
+  // A project exists but no traffic has landed yet — the new user needs to be
+  // shown how to actually call keenpix (with their real project id), not left
+  // staring at an all-zero dashboard.
+  const quickStartProject = currentProject ?? projects[0]
+
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
       {header}
+
+      {quickStartProject && kpis.requests.value === 0 ? (
+        <QuickStart project={quickStartProject} />
+      ) : null}
 
       <SourceSplitCards
         connect={edgeNotConfigured}

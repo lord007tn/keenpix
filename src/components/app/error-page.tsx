@@ -82,9 +82,12 @@ export function ServerErrorPage({ error }: ErrorComponentProps) {
     <ErrorPageShell>
       <ErrorMessage
         code="500"
+        // Never surface a raw server/DB error message to users in production
+        // (infra strings leak internals); keep it in dev for debugging.
         description={
-          error?.message ||
-          'An unexpected error occurred while loading this page.'
+          import.meta.env.DEV && error?.message
+            ? error.message
+            : 'An unexpected error occurred while loading this page.'
         }
         title="Something went wrong"
       />
@@ -132,7 +135,11 @@ export function RouteError({ error }: ErrorComponentProps) {
     <div className="flex min-h-[60svh] flex-col items-center justify-center gap-5 p-6 text-center">
       <ErrorMessage
         code="500"
-        description={error?.message || 'An unexpected error occurred.'}
+        description={
+          import.meta.env.DEV && error?.message
+            ? error.message
+            : 'An unexpected error occurred. Try again, or head back to your dashboard.'
+        }
         title="Something went wrong"
       />
       <Button onClick={() => router.invalidate()}>

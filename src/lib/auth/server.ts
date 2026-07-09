@@ -121,6 +121,9 @@ export const auth = betterAuth({
     // Cloud verifies emails (anti-abuse on open sign-up); self-host trusts
     // operator-created accounts.
     requireEmailVerification: isCloud(),
+    // A password reset is a compromise-recovery path, so kill every other
+    // session — an attacker holding a stolen session must not survive it.
+    revokeSessionsOnPasswordReset: true,
     sendResetPassword: ({ user, url }) =>
       sendAuthEmail({
         to: user.email,
@@ -172,17 +175,16 @@ export const auth = betterAuth({
           where: { userId: user.id, role: 'owner' },
           select: { organizationId: true },
         })
-        for (const { organizationId } of owned) {
-          const org = await prisma.organization.findUnique({
-            where: { id: organizationId },
-            include: {
-              subscription: { select: { status: true } },
-              members: { select: { userId: true } },
-            },
-          })
-          if (!org) {
-            continue
-          }
+        const orgs = await prisma.organization.findMany({
+          where: { id: { in: owned.map((m) => m.organizationId) } },
+          include: {
+            subscription: { select: { status: true } },
+            members: { select: { userId: true } },
+          },
+        })
+        // Two passes: validate EVERY owned org first, so a blocker on a later org
+        // can never leave an earlier org already deleted (irreversible data loss).
+        for (const org of orgs) {
           if (
             org.subscription &&
             LIVE_SUBSCRIPTION.has(org.subscription.status)
@@ -196,10 +198,14 @@ export const auth = betterAuth({
               message: `Transfer ownership of “${org.name}” to another member before deleting your account.`,
             })
           }
-          // Sole owner, no live billing — cascade removes its projects, members,
-          // subscription snapshot, and billing customer.
-          await prisma.organization.delete({ where: { id: org.id } })
         }
+        // All clear — tear down the solely-owned orgs in one transaction; each
+        // cascade removes its projects, members, subscription, billing customer.
+        await prisma.$transaction(
+          orgs.map((org) =>
+            prisma.organization.delete({ where: { id: org.id } }),
+          ),
+        )
       },
     },
   },

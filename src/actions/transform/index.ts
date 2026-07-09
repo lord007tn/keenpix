@@ -226,6 +226,7 @@ export async function optimizeProjectImage({
     return {
       body: result.out,
       format,
+      cached,
     }
   } catch (error) {
     status = getTransformErrorStatus(error)

@@ -48,6 +48,20 @@ export const env = createEnv({
         requireVar('POLAR_TOKEN', value.POLAR_TOKEN, when)
         requireVar('POLAR_WEBHOOK_SECRET', value.POLAR_WEBHOOK_SECRET, when)
         requireVar('CRON_SECRET', value.CRON_SECRET, when)
+        // POLAR_SERVER defaults to "sandbox"; require it explicitly in cloud so a
+        // prod deploy can't silently run checkout + metering against sandbox.
+        requireVar('POLAR_SERVER', value.POLAR_SERVER, when)
+        if (
+          value.NODE_ENV === 'production' &&
+          value.POLAR_SERVER === 'sandbox'
+        ) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['POLAR_SERVER'],
+            message:
+              'POLAR_SERVER must be "production" for a production cloud build (got "sandbox").',
+          })
+        }
       }
     }),
 })
