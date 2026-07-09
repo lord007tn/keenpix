@@ -129,7 +129,9 @@ export const Route = createFileRoute('/og/blog/$')({
             </div>
           </div>,
           {
-            format: 'webp',
+            // PNG, not WebP: several link unfurlers (LinkedIn, some Slack/Discord
+            // scrapers) reject WebP og:image and show no preview.
+            format: 'png',
             headers: {
               'cache-control': 'public, immutable, max-age=31536000',
             },

@@ -23,6 +23,20 @@ function startOfMonthUtc(now: Date): Date {
 
 const NO_SUBSCRIPTION =
   'An active subscription is required. Choose a plan under Settings → Plan & billing.'
+const PAYMENT_ISSUE =
+  'Your subscription has a payment issue. Update your payment method under Settings → Plan & billing to continue.'
+const DUNNING_STATUSES = new Set(['past_due', 'unpaid'])
+
+// A dunning customer (past_due/unpaid) has no entitled plan, but telling them "an
+// active subscription is required — choose a plan" is wrong and alarming. Give
+// them the payment-fix message instead of the never-subscribed one.
+async function noPlanError(orgId: string): Promise<Error> {
+  const sub = await getOrgSubscription(orgId)
+  if (sub && DUNNING_STATUSES.has(sub.status)) {
+    return new Error(PAYMENT_ISSUE)
+  }
+  return new Error(NO_SUBSCRIPTION)
+}
 
 export async function assertCanCreateProject(orgId: string): Promise<void> {
   if (!isCloud()) {
@@ -30,7 +44,7 @@ export async function assertCanCreateProject(orgId: string): Promise<void> {
   }
   const plan = await getOrgPlan(orgId)
   if (!plan) {
-    throw new Error(NO_SUBSCRIPTION)
+    throw await noPlanError(orgId)
   }
   if (plan.maxProjects === null) {
     return
@@ -49,7 +63,7 @@ export async function assertCanAddSeat(orgId: string): Promise<void> {
   }
   const plan = await getOrgPlan(orgId)
   if (!plan) {
-    throw new Error(NO_SUBSCRIPTION)
+    throw await noPlanError(orgId)
   }
   const count = await prisma.member.count({
     where: { organizationId: orgId },
