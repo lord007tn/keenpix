@@ -55,6 +55,22 @@ export class S3CacheStore implements CacheStore {
     return entry?.data ?? null
   }
 
+  // Best-effort reachability probe for the health endpoint. A HEAD on a key that
+  // (almost certainly) doesn't exist: any response < 500 (typically 404) proves
+  // the bucket endpoint is reachable and credentials sign; a network error or 5xx
+  // means it's degraded. Never throws.
+  async probe(): Promise<boolean> {
+    try {
+      const res = await this.client.fetch(
+        `${this.base}/.keenpix-health-probe`,
+        { method: 'HEAD' },
+      )
+      return res.status < 500
+    } catch {
+      return false
+    }
+  }
+
   async getEntry(
     key: string,
     format: OutputFormat,

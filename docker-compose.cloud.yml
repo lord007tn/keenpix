@@ -65,6 +65,10 @@ services:
     restart: unless-stopped
     mem_limit: ${KEENPIX_MEM_LIMIT:-0}
     cpus: ${KEENPIX_CPU_LIMIT:-0}
+    # Give the graceful shutdown room to run before Docker SIGKILLs: on SIGTERM the
+    # app marks itself un-ready (health → 503) and drains in-flight transforms
+    # (~25s budget + backstop). Must exceed SERVER_SHUTDOWN_TIMEOUT below.
+    stop_grace_period: ${KEENPIX_SHUTDOWN_GRACE:-30s}
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,6 +102,9 @@ services:
       - KEENPIX_CACHE_S3_ACCESS_KEY_ID=${KEENPIX_CACHE_S3_ACCESS_KEY_ID}
       - KEENPIX_CACHE_S3_SECRET_ACCESS_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY}
       - KEENPIX_CACHE_DIR=/var/cache/keenpix
+      # Seconds srvx waits for in-flight HTTP requests to finish on SIGTERM before
+      # force-closing. Keep ≤ stop_grace_period so slow transforms can complete.
+      - SERVER_SHUTDOWN_TIMEOUT=${SERVER_SHUTDOWN_TIMEOUT:-25}
       # Billing (Polar). Use the production org token + POLAR_SERVER=production.
       - POLAR_TOKEN=${POLAR_TOKEN} # (required)
       - POLAR_SERVER=${POLAR_SERVER:-production}

@@ -41,6 +41,19 @@ function selectDurableCache(): CacheStore {
 
 const durableCache = selectDurableCache()
 
+// Probe the durable (L2) cache tier for the health endpoint. Only meaningful for
+// the shared object-storage tier (cloud); local disk is always reachable, so it
+// returns null there and the health check skips it.
+export function probeDurableCache(): Promise<{
+  tier: 'object'
+  ok: boolean
+}> | null {
+  if (durableCache instanceof S3CacheStore) {
+    return durableCache.probe().then((ok) => ({ tier: 'object' as const, ok }))
+  }
+  return null
+}
+
 export interface TransformKeyInput {
   projectId: string
   transformOptions: TransformOptions
