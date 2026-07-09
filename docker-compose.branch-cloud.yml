@@ -115,7 +115,7 @@ services:
       # force-closing. Keep ≤ stop_grace_period so slow transforms can complete.
       SERVER_SHUTDOWN_TIMEOUT: "${SERVER_SHUTDOWN_TIMEOUT:-25}"
       POLAR_TOKEN: ${POLAR_TOKEN}
-      POLAR_SERVER: ${POLAR_SERVER:-production}
+      POLAR_SERVER: production
       POLAR_WEBHOOK_SECRET: ${POLAR_WEBHOOK_SECRET}
       EMAIL_PROVIDER: smtp
       SMTP_HOST: mailpit
