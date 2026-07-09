@@ -3,10 +3,8 @@ import {
   CreditCardIcon,
   ImageIcon,
   InfoIcon,
-  KeyRoundIcon,
   type LucideIcon,
   ShieldIcon,
-  UsersIcon,
   UsersRoundIcon,
 } from 'lucide-react'
 import { PageHeader } from '@/components/app/page-header'
@@ -17,8 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { ApiKeyManagement } from '@/features/admin/api-key-management'
-import { StaffManagement } from '@/features/admin/staff-management'
 import { BillingPanel } from '@/features/billing/billing-panel'
 import { AllowedHosts } from '@/features/projects/allowed-hosts'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
@@ -29,18 +25,10 @@ import { cn } from '@/lib/cn/utils'
 import { appPageHead } from '@/shared/seo'
 import { useProject } from '@/stores/project-context'
 
-// Instance operations/SMTP/CDN config lives in the Admin console (/admin),
-// not here — Settings is project config + per-org billing + workspace API
-// keys/staff.
-const SECTIONS = [
-  'general',
-  'pipeline',
-  'security',
-  'billing',
-  'team',
-  'api-keys',
-  'staff',
-] as const
+// Operator config (customers, operations, API keys, staff, CDN) lives in the
+// standalone Admin console (/admin), not here — Settings is per-project config
+// plus per-org billing and team.
+const SECTIONS = ['general', 'pipeline', 'security', 'billing', 'team'] as const
 
 type Section = (typeof SECTIONS)[number]
 
@@ -54,8 +42,6 @@ const SECTION_META: Record<Section, { label: string; icon: LucideIcon }> = {
   security: { label: 'Security', icon: ShieldIcon },
   billing: { label: 'Plan & billing', icon: CreditCardIcon },
   team: { label: 'Team', icon: UsersRoundIcon },
-  'api-keys': { label: 'API keys', icon: KeyRoundIcon },
-  staff: { label: 'Staff', icon: UsersIcon },
 }
 
 // Settings is a single hub: per-project configuration (only when a project is
@@ -64,7 +50,7 @@ export const Route = createFileRoute('/app/settings/')({
   head: () =>
     appPageHead(
       'Settings',
-      'Configure Keenpix project origins, image pipeline, allowed hosts, plus instance API keys, staff, and email.',
+      'Configure Keenpix project origins, image pipeline, allowed hosts, plus your plan and team.',
     ),
   validateSearch: (
     search: Record<string, unknown>,
@@ -112,10 +98,9 @@ function SubNavGroup({ label }: { label: string }) {
 
 function SettingsPage() {
   const { currentProject, isAll, projects, setProject } = useProject()
-  const { user, cloud, orgRole } = useRouteContext({ from: '/app' })
+  const { cloud, orgRole } = useRouteContext({ from: '/app' })
   const { section } = Route.useSearch()
   const navigate = Route.useNavigate()
-  const isSuperAdmin = user.role === 'super_admin'
   // Owner/admin may edit/delete projects; members get read-only (server enforces).
   const canManageProject = !cloud || orgRole === 'owner' || orgRole === 'admin'
 
@@ -123,22 +108,11 @@ function SettingsPage() {
     ? ['general', 'pipeline', 'security']
     : []
   // Billing + Team are per-org and cloud-only (self-host is single-tenant/free),
-  // shown to every member of the org, not just super admins.
+  // shown to every member of the org, not just super admins. Operator-only config
+  // (API keys, staff, operations, CDN) lives in the Admin console.
   const billingSections: Section[] = cloud ? ['billing'] : []
   const teamSections: Section[] = cloud ? ['team'] : []
-  // Instance config (Operations/SMTP/CDN) lives in the Admin console. Workspace
-  // API keys remain for super admins in both modes; the self-host Staff invite
-  // flow is self-host only (cloud team management is the org-scoped Team section).
-  const superAdminSections: Section[] = cloud
-    ? ['api-keys']
-    : ['api-keys', 'staff']
-  const globalSections: Section[] = isSuperAdmin ? superAdminSections : []
-  const available = [
-    ...projectSections,
-    ...billingSections,
-    ...teamSections,
-    ...globalSections,
-  ]
+  const available = [...projectSections, ...billingSections, ...teamSections]
   const active = section && available.includes(section) ? section : available[0]
 
   function goTo(next: Section) {
@@ -247,25 +221,6 @@ function SettingsPage() {
                 ))}
               </>
             ) : null}
-            {globalSections.length > 0 ? (
-              <>
-                <SubNavGroup label="Global" />
-                {globalSections.map((s) => (
-                  <SubNavItem
-                    active={active === s}
-                    key={s}
-                    onClick={() => goTo(s)}
-                    section={s}
-                  />
-                ))}
-                {isAll ? (
-                  <p className="px-2.5 pt-2 text-muted-foreground text-xs">
-                    Select a project (top bar) to edit its origin, pipeline, and
-                    allowlist.
-                  </p>
-                ) : null}
-              </>
-            ) : null}
           </nav>
         </aside>
 
@@ -326,35 +281,6 @@ function SettingsPage() {
               </CardHeader>
               <CardContent>
                 <TeamManagement />
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {active === 'api-keys' ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Internal API keys</CardTitle>
-                <CardDescription>
-                  Credentials for trusted backend integrations. These are not
-                  used by the public image transform endpoint.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ApiKeyManagement />
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {active === 'staff' ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Staff &amp; invitations</CardTitle>
-                <CardDescription>
-                  Invite teammates and review who can access this workspace.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <StaffManagement />
               </CardContent>
             </Card>
           ) : null}

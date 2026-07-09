@@ -41,10 +41,17 @@ import { Route as AppLogsIndexRouteImport } from './routes/app/logs/index'
 import { Route as AppDashboardIndexRouteImport } from './routes/app/dashboard/index'
 import { Route as AppAnalyticsIndexRouteImport } from './routes/app/analytics/index'
 import { Route as AppAccountIndexRouteImport } from './routes/app/account/index'
+import { Route as AdminStaffIndexRouteImport } from './routes/admin/staff/index'
+import { Route as AdminSettingsIndexRouteImport } from './routes/admin/settings/index'
+import { Route as AdminOperationsIndexRouteImport } from './routes/admin/operations/index'
+import { Route as AdminCustomersIndexRouteImport } from './routes/admin/customers/index'
+import { Route as AdminApiKeysIndexRouteImport } from './routes/admin/api-keys/index'
+import { Route as AdminAnalyticsIndexRouteImport } from './routes/admin/analytics/index'
 import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
 import { Route as OgBlogSplatRouteImport } from './routes/og/blog/$'
 import { Route as ApiSdkSplatRouteImport } from './routes/api/sdk/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AdminCustomersOrgIdIndexRouteImport } from './routes/admin/customers/$orgId/index'
 import { Route as ApiInternalLogsStreamRouteImport } from './routes/api/internal/logs/stream'
 import { Route as ApiInternalBillingReportUsageRouteImport } from './routes/api/internal/billing/report-usage'
 
@@ -209,6 +216,36 @@ const AppAccountIndexRoute = AppAccountIndexRouteImport.update({
   path: '/account/',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AdminStaffIndexRoute = AdminStaffIndexRouteImport.update({
+  id: '/staff/',
+  path: '/staff/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminSettingsIndexRoute = AdminSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminOperationsIndexRoute = AdminOperationsIndexRouteImport.update({
+  id: '/operations/',
+  path: '/operations/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminCustomersIndexRoute = AdminCustomersIndexRouteImport.update({
+  id: '/customers/',
+  path: '/customers/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminApiKeysIndexRoute = AdminApiKeysIndexRouteImport.update({
+  id: '/api-keys/',
+  path: '/api-keys/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAnalyticsIndexRoute = AdminAnalyticsIndexRouteImport.update({
+  id: '/analytics/',
+  path: '/analytics/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const OgDocsSplatRoute = OgDocsSplatRouteImport.update({
   id: '/og/docs/$',
   path: '/og/docs/$',
@@ -229,6 +266,12 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminCustomersOrgIdIndexRoute =
+  AdminCustomersOrgIdIndexRouteImport.update({
+    id: '/customers/$orgId/',
+    path: '/customers/$orgId/',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
 const ApiInternalLogsStreamRoute = ApiInternalLogsStreamRouteImport.update({
   id: '/api/internal/logs/stream',
   path: '/api/internal/logs/stream',
@@ -272,6 +315,12 @@ export interface FileRoutesByFullPath {
   '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
+  '/admin/analytics/': typeof AdminAnalyticsIndexRoute
+  '/admin/api-keys/': typeof AdminApiKeysIndexRoute
+  '/admin/customers/': typeof AdminCustomersIndexRoute
+  '/admin/operations/': typeof AdminOperationsIndexRoute
+  '/admin/settings/': typeof AdminSettingsIndexRoute
+  '/admin/staff/': typeof AdminStaffIndexRoute
   '/app/account/': typeof AppAccountIndexRoute
   '/app/analytics/': typeof AppAnalyticsIndexRoute
   '/app/dashboard/': typeof AppDashboardIndexRoute
@@ -280,6 +329,7 @@ export interface FileRoutesByFullPath {
   '/app/settings/': typeof AppSettingsIndexRoute
   '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
+  '/admin/customers/$orgId/': typeof AdminCustomersOrgIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -310,6 +360,12 @@ export interface FileRoutesByTo {
   '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
+  '/admin/analytics': typeof AdminAnalyticsIndexRoute
+  '/admin/api-keys': typeof AdminApiKeysIndexRoute
+  '/admin/customers': typeof AdminCustomersIndexRoute
+  '/admin/operations': typeof AdminOperationsIndexRoute
+  '/admin/settings': typeof AdminSettingsIndexRoute
+  '/admin/staff': typeof AdminStaffIndexRoute
   '/app/account': typeof AppAccountIndexRoute
   '/app/analytics': typeof AppAnalyticsIndexRoute
   '/app/dashboard': typeof AppDashboardIndexRoute
@@ -318,6 +374,7 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AppSettingsIndexRoute
   '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
+  '/admin/customers/$orgId': typeof AdminCustomersOrgIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -351,6 +408,12 @@ export interface FileRoutesById {
   '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
+  '/admin/analytics/': typeof AdminAnalyticsIndexRoute
+  '/admin/api-keys/': typeof AdminApiKeysIndexRoute
+  '/admin/customers/': typeof AdminCustomersIndexRoute
+  '/admin/operations/': typeof AdminOperationsIndexRoute
+  '/admin/settings/': typeof AdminSettingsIndexRoute
+  '/admin/staff/': typeof AdminStaffIndexRoute
   '/app/account/': typeof AppAccountIndexRoute
   '/app/analytics/': typeof AppAnalyticsIndexRoute
   '/app/dashboard/': typeof AppDashboardIndexRoute
@@ -359,6 +422,7 @@ export interface FileRoutesById {
   '/app/settings/': typeof AppSettingsIndexRoute
   '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
+  '/admin/customers/$orgId/': typeof AdminCustomersOrgIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -393,6 +457,12 @@ export interface FileRouteTypes {
     | '/api/sdk/$'
     | '/og/blog/$'
     | '/og/docs/$'
+    | '/admin/analytics/'
+    | '/admin/api-keys/'
+    | '/admin/customers/'
+    | '/admin/operations/'
+    | '/admin/settings/'
+    | '/admin/staff/'
     | '/app/account/'
     | '/app/analytics/'
     | '/app/dashboard/'
@@ -401,6 +471,7 @@ export interface FileRouteTypes {
     | '/app/settings/'
     | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
+    | '/admin/customers/$orgId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -431,6 +502,12 @@ export interface FileRouteTypes {
     | '/api/sdk/$'
     | '/og/blog/$'
     | '/og/docs/$'
+    | '/admin/analytics'
+    | '/admin/api-keys'
+    | '/admin/customers'
+    | '/admin/operations'
+    | '/admin/settings'
+    | '/admin/staff'
     | '/app/account'
     | '/app/analytics'
     | '/app/dashboard'
@@ -439,6 +516,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
+    | '/admin/customers/$orgId'
   id:
     | '__root__'
     | '/'
@@ -471,6 +549,12 @@ export interface FileRouteTypes {
     | '/api/sdk/$'
     | '/og/blog/$'
     | '/og/docs/$'
+    | '/admin/analytics/'
+    | '/admin/api-keys/'
+    | '/admin/customers/'
+    | '/admin/operations/'
+    | '/admin/settings/'
+    | '/admin/staff/'
     | '/app/account/'
     | '/app/analytics/'
     | '/app/dashboard/'
@@ -479,6 +563,7 @@ export interface FileRouteTypes {
     | '/app/settings/'
     | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
+    | '/admin/customers/$orgId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -740,6 +825,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAccountIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/admin/staff/': {
+      id: '/admin/staff/'
+      path: '/staff'
+      fullPath: '/admin/staff/'
+      preLoaderRoute: typeof AdminStaffIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/settings/': {
+      id: '/admin/settings/'
+      path: '/settings'
+      fullPath: '/admin/settings/'
+      preLoaderRoute: typeof AdminSettingsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/operations/': {
+      id: '/admin/operations/'
+      path: '/operations'
+      fullPath: '/admin/operations/'
+      preLoaderRoute: typeof AdminOperationsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/customers/': {
+      id: '/admin/customers/'
+      path: '/customers'
+      fullPath: '/admin/customers/'
+      preLoaderRoute: typeof AdminCustomersIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/api-keys/': {
+      id: '/admin/api-keys/'
+      path: '/api-keys'
+      fullPath: '/admin/api-keys/'
+      preLoaderRoute: typeof AdminApiKeysIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/analytics/': {
+      id: '/admin/analytics/'
+      path: '/analytics'
+      fullPath: '/admin/analytics/'
+      preLoaderRoute: typeof AdminAnalyticsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/og/docs/$': {
       id: '/og/docs/$'
       path: '/og/docs/$'
@@ -768,6 +895,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/customers/$orgId/': {
+      id: '/admin/customers/$orgId/'
+      path: '/customers/$orgId'
+      fullPath: '/admin/customers/$orgId/'
+      preLoaderRoute: typeof AdminCustomersOrgIdIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/api/internal/logs/stream': {
       id: '/api/internal/logs/stream'
       path: '/api/internal/logs/stream'
@@ -787,10 +921,24 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminAnalyticsIndexRoute: typeof AdminAnalyticsIndexRoute
+  AdminApiKeysIndexRoute: typeof AdminApiKeysIndexRoute
+  AdminCustomersIndexRoute: typeof AdminCustomersIndexRoute
+  AdminOperationsIndexRoute: typeof AdminOperationsIndexRoute
+  AdminSettingsIndexRoute: typeof AdminSettingsIndexRoute
+  AdminStaffIndexRoute: typeof AdminStaffIndexRoute
+  AdminCustomersOrgIdIndexRoute: typeof AdminCustomersOrgIdIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
+  AdminAnalyticsIndexRoute: AdminAnalyticsIndexRoute,
+  AdminApiKeysIndexRoute: AdminApiKeysIndexRoute,
+  AdminCustomersIndexRoute: AdminCustomersIndexRoute,
+  AdminOperationsIndexRoute: AdminOperationsIndexRoute,
+  AdminSettingsIndexRoute: AdminSettingsIndexRoute,
+  AdminStaffIndexRoute: AdminStaffIndexRoute,
+  AdminCustomersOrgIdIndexRoute: AdminCustomersOrgIdIndexRoute,
 }
 
 const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(

@@ -4,15 +4,13 @@ import {
   disableApiKey,
   listApiKeyActivitiesPage,
 } from '@/actions/admin/api-keys'
+import { getCdnConfig } from '@/actions/admin/cdn'
 import {
-  getClientAccounts,
+  getCustomerAccountById,
+  getCustomerAccounts,
   setOrgSuspension,
-  updateClientInternalPlan,
-} from '@/actions/admin/clients'
-import {
-  testCloudflareConnection,
-  updateCloudflareSettings,
-} from '@/actions/admin/cloudflare'
+  updateCustomerInternalPlan,
+} from '@/actions/admin/customers'
 import {
   acceptInvitation,
   createInvitation,
@@ -26,6 +24,7 @@ import {
   runCacheMaintenance,
   updateOperationsConfig,
 } from '@/actions/admin/operations'
+import { getPlatformAnalytics } from '@/actions/admin/platform-analytics'
 import { getAdminWorkspace } from '@/actions/admin/workspace'
 import {
   authMiddleware,
@@ -37,10 +36,11 @@ import {
   acceptInvitationSchema,
   apiActivityPageSchema,
   cacheMaintenanceSchema,
-  cloudflareSettingsSchema,
   createInvitationSchema,
+  customerAccountSchema,
   invitationTokenSchema,
   operationsConfigSchema,
+  platformAnalyticsSchema,
   resourceTrendSchema,
   revokeInvitationSchema,
   suspendOrgSchema,
@@ -55,25 +55,45 @@ export const getAdminWorkspaceFn = createServerFn({ method: 'GET' })
     return getAdminWorkspace()
   })
 
-export const getClientAccountsFn = createServerFn({ method: 'GET' })
+export const getCustomerAccountsFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .handler(({ context }) => {
     requireSuperAdmin(context)
-    return getClientAccounts()
+    return getCustomerAccounts()
+  })
+
+export const getCustomerAccountFn = createServerFn({ method: 'GET' })
+  .inputValidator(customerAccountSchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return getCustomerAccountById(data.orgId)
+  })
+
+export const getPlatformAnalyticsFn = createServerFn({ method: 'GET' })
+  .inputValidator(platformAnalyticsSchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return getPlatformAnalytics(data.range)
   })
 
 export const updateInternalPlanGrantFn = createServerFn({ method: 'POST' })
   .inputValidator(updateInternalPlanGrantSchema)
   .middleware([authMiddleware])
-  .handler(({ context, data }) => {
+  .handler(async ({ context, data }) => {
     requireSuperAdmin(context)
-    return updateClientInternalPlan({
+    const result = await updateCustomerInternalPlan({
       orgId: data.orgId,
       plan: data.plan,
       reason: data.reason,
       expiresAt: data.expiresAt,
       grantedById: context.userId,
     })
+    // A grant can change whether/what an org is served — take effect on the next
+    // request rather than after the serving gate's TTL.
+    bustServingEntitlement(data.orgId)
+    return result
   })
 
 export const setOrgSuspensionFn = createServerFn({ method: 'POST' })
@@ -89,6 +109,13 @@ export const setOrgSuspensionFn = createServerFn({ method: 'POST' })
     // Kill-switch takes effect on the next request, not after the gate's TTL.
     bustServingEntitlement(data.orgId)
     return result
+  })
+
+export const getCdnConfigFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(({ context }) => {
+    requireSuperAdmin(context)
+    return getCdnConfig()
   })
 
 export const getApiKeyActivitiesFn = createServerFn({ method: 'GET' })
@@ -203,29 +230,4 @@ export const acceptInvitationFn = createServerFn({ method: 'POST' })
   .handler(({ data }) => {
     requireSelfHost()
     return acceptInvitation(data)
-  })
-
-export const updateCloudflareSettingsFn = createServerFn({ method: 'POST' })
-  .inputValidator(cloudflareSettingsSchema)
-  .middleware([authMiddleware])
-  .handler(({ context, data }) => {
-    // Cloudflare edge analytics is a platform-operator integration, not per-tenant
-    // instance config, so unlike SMTP/cache it stays available to the super-admin
-    // in cloud too — they own the zone and toggle its visibility here.
-    requireSuperAdmin(context)
-    return updateCloudflareSettings({
-      enabled: data.enabled,
-      // A blank token means "keep the saved one"; only persist a real change.
-      apiToken: data.apiToken || undefined,
-      zoneId: data.zoneId,
-      host: data.host,
-    })
-  })
-
-export const testCloudflareConnectionFn = createServerFn({ method: 'POST' })
-  .middleware([authMiddleware])
-  .handler(({ context }) => {
-    // Same as updateCloudflareSettingsFn — operator integration, cloud-allowed.
-    requireSuperAdmin(context)
-    return testCloudflareConnection()
   })

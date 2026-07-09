@@ -8,6 +8,7 @@ export interface SessionUser {
   emailVerified: boolean
   id: string
   image: string | null
+  impersonatedBy: string | null
   name: string | null
   role: string
 }

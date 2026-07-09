@@ -4,8 +4,6 @@ import { analyticsRangeSchema, nonEmptyStringSchema } from './common'
 const staffRoleSchema = z.enum(['admin', 'staff'])
 const internalPlanSchema = z.enum(['none', 'basic', 'pro', 'business'])
 
-const ZONE_ID_PATTERN = /^[a-f0-9]{32}$/i
-
 export const createInvitationSchema = z.object({
   email: z.email('Enter a valid email address.'),
   expiresDays: z.number().int().min(1).max(30).optional(),
@@ -31,24 +29,16 @@ export const revokeInvitationSchema = z.object({
   id: nonEmptyStringSchema(),
 })
 
-export const cloudflareSettingsSchema = z.object({
-  apiToken: z.string().trim().max(200, 'Use 200 characters or fewer.'),
-  enabled: z.boolean(),
-  host: z.string().trim().max(255, 'Use 255 characters or fewer.'),
-  zoneId: z
-    .string()
-    .trim()
-    .refine((value) => value === '' || ZONE_ID_PATTERN.test(value), {
-      message: 'Zone ID is a 32-character hex string.',
-    }),
-})
-
 export const cacheMaintenanceSchema = z.object({
   target: z.enum(['all', 'disk', 'memory']),
 })
 
 export const resourceTrendSchema = z.object({
   range: analyticsRangeSchema.catch('24h'),
+})
+
+export const platformAnalyticsSchema = z.object({
+  range: analyticsRangeSchema.catch('30d'),
 })
 
 export const operationsConfigSchema = z.object({
@@ -70,6 +60,10 @@ export const apiActivityPageSchema = z.object({
   page: z.coerce.number().int().min(1).catch(1),
 })
 
+export const customerAccountSchema = z.object({
+  orgId: nonEmptyStringSchema(),
+})
+
 export const updateInternalPlanGrantSchema = z.object({
   orgId: nonEmptyStringSchema(),
   plan: internalPlanSchema,
@@ -86,9 +80,6 @@ export const suspendOrgSchema = z.object({
 
 export type CreateInvitationInput = z.input<typeof createInvitationSchema>
 export type CacheMaintenanceInput = z.input<typeof cacheMaintenanceSchema>
-export type CloudflareSettingsFormInput = z.input<
-  typeof cloudflareSettingsSchema
->
 export type UpdateInternalPlanGrantInput = z.input<
   typeof updateInternalPlanGrantSchema
 >
