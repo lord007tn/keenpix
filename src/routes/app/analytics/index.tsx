@@ -297,7 +297,10 @@ function AnalyticsPage() {
               }}
             />
           ) : null}
-          <RefreshingIndicator active={isRefreshing} />
+          <RefreshingIndicator
+            active={isRefreshing}
+            error={isError && Boolean(data)}
+          />
           <ToggleGroup
             onValueChange={(v: string[]) => {
               const next = v[0]

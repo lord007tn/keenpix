@@ -6,16 +6,25 @@ import {
   GitBranchIcon,
   GlobeIcon,
   ImageIcon,
+  MenuIcon,
   SparklesIcon,
   WalletIcon,
   ZapIcon,
 } from 'lucide-react'
+import { useState } from 'react'
 import { CodeBlock } from '@/components/app/code-block'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { ModeToggle } from '@/components/theme/mode-toggle'
 import { Badge } from '@/components/ui/badge'
-import { buttonVariants } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
 import { cn } from '@/lib/cn/utils'
 import { SOCIAL_X_URL } from '@/shared/authors'
 import { MARKETING_FAQ } from '@/shared/marketing-faq'
@@ -110,28 +119,72 @@ const PRICING = [
   },
 ]
 
+const NAV_LINKS = [
+  { href: '#product', label: 'Product' },
+  { href: '#pricing', label: 'Pricing' },
+  { href: '#self-host', label: 'Self-host' },
+  { href: '/blog', label: 'Blog' },
+  { href: '/docs', label: 'Docs' },
+]
+
+// Below md the header nav collapses to a hamburger drawer so phone visitors can
+// still reach pricing/docs/blog and sign in — not just the logo + Get started.
+function MobileNav() {
+  const [open, setOpen] = useState(false)
+  return (
+    <Sheet onOpenChange={setOpen} open={open}>
+      <SheetTrigger
+        render={
+          <Button
+            aria-label="Open menu"
+            className="md:hidden"
+            size="icon"
+            variant="ghost"
+          />
+        }
+      >
+        <MenuIcon />
+      </SheetTrigger>
+      <SheetContent className="w-72 gap-0" side="left">
+        <SheetHeader>
+          <SheetTitle>
+            <KeenpixLogo />
+          </SheetTitle>
+        </SheetHeader>
+        <nav className="flex flex-col gap-0.5 p-3">
+          {[...NAV_LINKS, { href: '/login', label: 'Sign in' }].map((link) => (
+            <a
+              className="rounded-md px-2 py-2 font-medium text-sm hover:bg-accent"
+              href={link.href}
+              key={link.href}
+              onClick={() => setOpen(false)}
+            >
+              {link.label}
+            </a>
+          ))}
+        </nav>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
 export function MarketingPage() {
   return (
     <div className="min-h-svh bg-background">
       <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-6">
+          <MobileNav />
           <KeenpixLogo />
           <nav className="ml-4 hidden gap-5 text-muted-foreground text-sm md:flex">
-            <a className="hover:text-foreground" href="#product">
-              Product
-            </a>
-            <a className="hover:text-foreground" href="#pricing">
-              Pricing
-            </a>
-            <a className="hover:text-foreground" href="#self-host">
-              Self-host
-            </a>
-            <a className="hover:text-foreground" href="/blog">
-              Blog
-            </a>
-            <a className="hover:text-foreground" href="/docs">
-              Docs
-            </a>
+            {NAV_LINKS.map((link) => (
+              <a
+                className="hover:text-foreground"
+                href={link.href}
+                key={link.href}
+              >
+                {link.label}
+              </a>
+            ))}
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <ModeToggle />
