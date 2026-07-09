@@ -45,7 +45,6 @@ import { Route as AdminStaffIndexRouteImport } from './routes/admin/staff/index'
 import { Route as AdminSettingsIndexRouteImport } from './routes/admin/settings/index'
 import { Route as AdminOperationsIndexRouteImport } from './routes/admin/operations/index'
 import { Route as AdminCustomersIndexRouteImport } from './routes/admin/customers/index'
-import { Route as AdminApiKeysIndexRouteImport } from './routes/admin/api-keys/index'
 import { Route as AdminAnalyticsIndexRouteImport } from './routes/admin/analytics/index'
 import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
 import { Route as OgBlogSplatRouteImport } from './routes/og/blog/$'
@@ -236,11 +235,6 @@ const AdminCustomersIndexRoute = AdminCustomersIndexRouteImport.update({
   path: '/customers/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminApiKeysIndexRoute = AdminApiKeysIndexRouteImport.update({
-  id: '/api-keys/',
-  path: '/api-keys/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
 const AdminAnalyticsIndexRoute = AdminAnalyticsIndexRouteImport.update({
   id: '/analytics/',
   path: '/analytics/',
@@ -316,7 +310,6 @@ export interface FileRoutesByFullPath {
   '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/admin/analytics/': typeof AdminAnalyticsIndexRoute
-  '/admin/api-keys/': typeof AdminApiKeysIndexRoute
   '/admin/customers/': typeof AdminCustomersIndexRoute
   '/admin/operations/': typeof AdminOperationsIndexRoute
   '/admin/settings/': typeof AdminSettingsIndexRoute
@@ -361,7 +354,6 @@ export interface FileRoutesByTo {
   '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/admin/analytics': typeof AdminAnalyticsIndexRoute
-  '/admin/api-keys': typeof AdminApiKeysIndexRoute
   '/admin/customers': typeof AdminCustomersIndexRoute
   '/admin/operations': typeof AdminOperationsIndexRoute
   '/admin/settings': typeof AdminSettingsIndexRoute
@@ -409,7 +401,6 @@ export interface FileRoutesById {
   '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/admin/analytics/': typeof AdminAnalyticsIndexRoute
-  '/admin/api-keys/': typeof AdminApiKeysIndexRoute
   '/admin/customers/': typeof AdminCustomersIndexRoute
   '/admin/operations/': typeof AdminOperationsIndexRoute
   '/admin/settings/': typeof AdminSettingsIndexRoute
@@ -458,7 +449,6 @@ export interface FileRouteTypes {
     | '/og/blog/$'
     | '/og/docs/$'
     | '/admin/analytics/'
-    | '/admin/api-keys/'
     | '/admin/customers/'
     | '/admin/operations/'
     | '/admin/settings/'
@@ -503,7 +493,6 @@ export interface FileRouteTypes {
     | '/og/blog/$'
     | '/og/docs/$'
     | '/admin/analytics'
-    | '/admin/api-keys'
     | '/admin/customers'
     | '/admin/operations'
     | '/admin/settings'
@@ -550,7 +539,6 @@ export interface FileRouteTypes {
     | '/og/blog/$'
     | '/og/docs/$'
     | '/admin/analytics/'
-    | '/admin/api-keys/'
     | '/admin/customers/'
     | '/admin/operations/'
     | '/admin/settings/'
@@ -853,13 +841,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCustomersIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/api-keys/': {
-      id: '/admin/api-keys/'
-      path: '/api-keys'
-      fullPath: '/admin/api-keys/'
-      preLoaderRoute: typeof AdminApiKeysIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
     '/admin/analytics/': {
       id: '/admin/analytics/'
       path: '/analytics'
@@ -922,7 +903,6 @@ declare module '@tanstack/react-router' {
 interface AdminRouteRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AdminAnalyticsIndexRoute: typeof AdminAnalyticsIndexRoute
-  AdminApiKeysIndexRoute: typeof AdminApiKeysIndexRoute
   AdminCustomersIndexRoute: typeof AdminCustomersIndexRoute
   AdminOperationsIndexRoute: typeof AdminOperationsIndexRoute
   AdminSettingsIndexRoute: typeof AdminSettingsIndexRoute
@@ -933,7 +913,6 @@ interface AdminRouteRouteChildren {
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AdminAnalyticsIndexRoute: AdminAnalyticsIndexRoute,
-  AdminApiKeysIndexRoute: AdminApiKeysIndexRoute,
   AdminCustomersIndexRoute: AdminCustomersIndexRoute,
   AdminOperationsIndexRoute: AdminOperationsIndexRoute,
   AdminSettingsIndexRoute: AdminSettingsIndexRoute,

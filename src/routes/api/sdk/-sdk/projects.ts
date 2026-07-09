@@ -8,35 +8,27 @@ import {
   updateProjectSettings,
 } from '@/actions/projects'
 import { prewarmProjectImages } from '@/actions/transform'
-import { DEFAULT_ORG_ID } from '@/lib/auth/active-org'
 import {
   allowedHostValueSchema,
   internalCreateProjectSchema,
   internalProjectSettingsPatchSchema,
   projectPrewarmSchema,
 } from '@/schemas/projects'
-import { isCloud } from '@/server/deployment'
 import type { SdkApiActivityContext } from './activity'
 import { verifySdkApiKey } from './auth'
 import { getPublicBaseUrl } from './request-url'
 import { json, jsonError, readJson } from './responses'
 
-// Org the SDK operates in. Self-host is single-org (org_default). Cloud needs
-// per-API-key org stamping (tracked milestone); until that lands the SDK fails
-// closed in cloud rather than defaulting to a shared tenant.
-function sdkOrgId(): string {
-  if (isCloud()) {
-    throw jsonError('SDK access is not yet available on cloud', 403)
-  }
-  return DEFAULT_ORG_ID
-}
+// The org the SDK operates in is resolved from the API key itself
+// (verifySdkApiKey → access.orgId), so every request is scoped to the key's own
+// tenant. Self-host keys map to the single default org; cloud keys carry theirs.
 
 export async function listProjectResources(
   request: Request,
   activity: SdkApiActivityContext,
 ) {
   const access = await verifySdkApiKey(request, 'read', undefined, activity)
-  const projects = await listProjects(sdkOrgId())
+  const projects = await listProjects(access.orgId)
   return json({
     projects: access.projectId
       ? projects.filter((project) => project.id === access.projectId)
@@ -53,7 +45,7 @@ export async function createProjectResource(
     return jsonError('API key cannot create projects', 403)
   }
   const input = internalCreateProjectSchema.parse(await readJson(request))
-  const project = await createProject(sdkOrgId(), input)
+  const project = await createProject(access.orgId, input)
   return json({ project }, { status: 201 })
 }
 
@@ -62,8 +54,8 @@ export async function getProjectResource(
   projectId: string,
   activity: SdkApiActivityContext,
 ) {
-  await verifySdkApiKey(request, 'read', projectId, activity)
-  const project = await getProject(sdkOrgId(), projectId)
+  const access = await verifySdkApiKey(request, 'read', projectId, activity)
+  const project = await getProject(access.orgId, projectId)
   return project ? json({ project }) : jsonError('Project not found', 404)
 }
 
@@ -72,8 +64,8 @@ export async function getProjectConfiguration(
   projectId: string,
   activity: SdkApiActivityContext,
 ) {
-  await verifySdkApiKey(request, 'read', projectId, activity)
-  const project = await getProject(sdkOrgId(), projectId)
+  const access = await verifySdkApiKey(request, 'read', projectId, activity)
+  const project = await getProject(access.orgId, projectId)
   if (!project) {
     return jsonError('Project not found', 404)
   }
@@ -149,11 +141,11 @@ export async function updateProjectSettingsResource(
   projectId: string,
   activity: SdkApiActivityContext,
 ) {
-  await verifySdkApiKey(request, 'write', projectId, activity)
+  const access = await verifySdkApiKey(request, 'write', projectId, activity)
   const patch = internalProjectSettingsPatchSchema.parse(
     await readJson(request),
   )
-  const project = await updateProjectSettings(sdkOrgId(), projectId, patch)
+  const project = await updateProjectSettings(access.orgId, projectId, patch)
   return project ? json({ project }) : jsonError('Project not found', 404)
 }
 
@@ -162,7 +154,12 @@ export async function prewarmProjectImagesResource(
   projectId: string,
   activity: SdkApiActivityContext,
 ) {
-  await verifySdkApiKey(request, 'write', projectId, activity)
+  const access = await verifySdkApiKey(request, 'write', projectId, activity)
+  // Ensure the project belongs to the key's org before warming its cache.
+  const target = await getProject(access.orgId, projectId)
+  if (!target) {
+    return jsonError('Project not found', 404)
+  }
   const input = projectPrewarmSchema.parse(await readJson(request))
   const sources = [...(input.sources ?? []), ...(input.src ? [input.src] : [])]
   const result = prewarmProjectImages({
@@ -191,11 +188,11 @@ export async function addProjectDomain(
   projectId: string,
   activity: SdkApiActivityContext,
 ) {
-  await verifySdkApiKey(request, 'write', projectId, activity)
+  const access = await verifySdkApiKey(request, 'write', projectId, activity)
   const { host } = z
     .object({ host: allowedHostValueSchema })
     .parse(await readJson(request))
-  const project = await addAllowedHost(sdkOrgId(), projectId, host)
+  const project = await addAllowedHost(access.orgId, projectId, host)
   return project ? json({ project }) : jsonError('Project not found', 404)
 }
 
@@ -204,9 +201,9 @@ export async function removeProjectDomain(
   projectId: string,
   activity: SdkApiActivityContext,
 ) {
-  await verifySdkApiKey(request, 'write', projectId, activity)
+  const access = await verifySdkApiKey(request, 'write', projectId, activity)
   const project = await removeAllowedHost(
-    sdkOrgId(),
+    access.orgId,
     projectId,
     await getProjectDomainFromRequest(request),
   )

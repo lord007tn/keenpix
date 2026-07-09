@@ -3,6 +3,7 @@ import {
   CreditCardIcon,
   ImageIcon,
   InfoIcon,
+  KeyRoundIcon,
   type LucideIcon,
   ShieldIcon,
   UsersRoundIcon,
@@ -15,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { ApiKeyManagement } from '@/features/api-keys/api-key-management'
 import { BillingPanel } from '@/features/billing/billing-panel'
 import { AllowedHosts } from '@/features/projects/allowed-hosts'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
@@ -25,10 +27,17 @@ import { cn } from '@/lib/cn/utils'
 import { appPageHead } from '@/shared/seo'
 import { useProject } from '@/stores/project-context'
 
-// Operator config (customers, operations, API keys, staff, CDN) lives in the
-// standalone Admin console (/admin), not here — Settings is per-project config
-// plus per-org billing and team.
-const SECTIONS = ['general', 'pipeline', 'security', 'billing', 'team'] as const
+// Operator config (customers, operations, staff, CDN) lives in the standalone
+// Admin console (/admin), not here — Settings is per-project config plus per-org
+// billing, team, and API keys.
+const SECTIONS = [
+  'general',
+  'pipeline',
+  'security',
+  'billing',
+  'team',
+  'api-keys',
+] as const
 
 type Section = (typeof SECTIONS)[number]
 
@@ -42,6 +51,7 @@ const SECTION_META: Record<Section, { label: string; icon: LucideIcon }> = {
   security: { label: 'Security', icon: ShieldIcon },
   billing: { label: 'Plan & billing', icon: CreditCardIcon },
   team: { label: 'Team', icon: UsersRoundIcon },
+  'api-keys': { label: 'API keys', icon: KeyRoundIcon },
 }
 
 // Settings is a single hub: per-project configuration (only when a project is
@@ -108,11 +118,18 @@ function SettingsPage() {
     ? ['general', 'pipeline', 'security']
     : []
   // Billing + Team are per-org and cloud-only (self-host is single-tenant/free),
-  // shown to every member of the org, not just super admins. Operator-only config
-  // (API keys, staff, operations, CDN) lives in the Admin console.
+  // shown to every member of the org. API keys are the org's JSON-API credentials
+  // (both modes), managed by owners/admins. Operator-only config (staff, ops, CDN)
+  // lives in the Admin console.
   const billingSections: Section[] = cloud ? ['billing'] : []
   const teamSections: Section[] = cloud ? ['team'] : []
-  const available = [...projectSections, ...billingSections, ...teamSections]
+  const apiKeySections: Section[] = canManageProject ? ['api-keys'] : []
+  const available = [
+    ...projectSections,
+    ...billingSections,
+    ...teamSections,
+    ...apiKeySections,
+  ]
   const active = section && available.includes(section) ? section : available[0]
 
   function goTo(next: Section) {
@@ -221,6 +238,19 @@ function SettingsPage() {
                 ))}
               </>
             ) : null}
+            {apiKeySections.length > 0 ? (
+              <>
+                <SubNavGroup label="Developers" />
+                {apiKeySections.map((s) => (
+                  <SubNavItem
+                    active={active === s}
+                    key={s}
+                    onClick={() => goTo(s)}
+                    section={s}
+                  />
+                ))}
+              </>
+            ) : null}
           </nav>
         </aside>
 
@@ -281,6 +311,21 @@ function SettingsPage() {
               </CardHeader>
               <CardContent>
                 <TeamManagement />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {active === 'api-keys' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>API keys</CardTitle>
+                <CardDescription>
+                  Credentials for managing this organization&apos;s projects,
+                  domains, and pipeline over the JSON API.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ApiKeyManagement />
               </CardContent>
             </Card>
           ) : null}

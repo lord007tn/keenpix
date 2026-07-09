@@ -1,13 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { PageHeader } from '@/components/app/page-header'
-import { CdnSettings } from '@/features/admin/cdn-settings'
+import { PlatformSettings } from '@/features/admin/platform-settings'
 import { appPageHead } from '@/shared/seo'
 
 export const Route = createFileRoute('/admin/settings/')({
   head: () =>
     appPageHead(
       'Settings',
-      'CDN and cache configuration for this deployment (environment-driven).',
+      'Deployment, cache, and CDN configuration for this instance.',
     ),
   component: SettingsAdminPage,
 })
@@ -16,10 +16,10 @@ function SettingsAdminPage() {
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
       <PageHeader
-        subtitle="CDN and cache configuration for this deployment. All values are set via environment variables."
+        subtitle="Deployment facts plus the effective cache and CDN configuration. Values are set via environment variables."
         title="Settings"
       />
-      <CdnSettings />
+      <PlatformSettings />
     </div>
   )
 }

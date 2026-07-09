@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
 import { PageHeader } from '@/components/app/page-header'
 import { StatCard } from '@/components/app/stat-card'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +30,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import {
   Table,
@@ -38,15 +40,30 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { getErrorMessage } from '@/errors/common'
 import { PlanChange } from '@/features/admin/plan-change'
-import { getCustomerAccountFn, setOrgSuspensionFn } from '@/functions/admin'
+import {
+  getCustomerAccountFn,
+  getCustomerAnalyticsFn,
+  setOrgSuspensionFn,
+} from '@/functions/admin'
 import { authClient } from '@/lib/auth/client'
 import { compactNumber, humanBytes } from '@/shared/format'
+import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 
 type CustomerAccount = NonNullable<
   Awaited<ReturnType<typeof getCustomerAccountFn>>
 >
+type CustomerAnalytics = Awaited<ReturnType<typeof getCustomerAnalyticsFn>>
+
+const RANGES: { value: AnalyticsRange; label: string }[] = [
+  { value: '90d', label: '90d' },
+  { value: '30d', label: '30d' },
+  { value: '7d', label: '7d' },
+  { value: '24h', label: '24h' },
+]
 
 function planBadgeVariant(source: string | undefined) {
   if (source === 'internal') {
@@ -58,8 +75,19 @@ function planBadgeVariant(source: string | undefined) {
   return 'outline' as const
 }
 
+function Fact({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-1.5 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right font-medium">{value}</span>
+    </div>
+  )
+}
+
 export function CustomerDetail({ orgId }: { orgId: string }) {
   const [customer, setCustomer] = useState<CustomerAccount | null>(null)
+  const [analytics, setAnalytics] = useState<CustomerAnalytics | null>(null)
+  const [range, setRange] = useState<AnalyticsRange>('30d')
   const [loading, setLoading] = useState(true)
   const [impersonating, setImpersonating] = useState(false)
   const [confirmSuspend, setConfirmSuspend] = useState(false)
@@ -80,6 +108,23 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    let active = true
+    setAnalytics(null)
+    getCustomerAnalyticsFn({ data: { orgId, range } })
+      .then((result) => {
+        if (active) {
+          setAnalytics(result)
+        }
+      })
+      .catch(() => {
+        // Non-fatal: the chart/KPI tiles just show their empty state.
+      })
+    return () => {
+      active = false
+    }
+  }, [orgId, range])
 
   const owner = customer?.owners[0]
 
@@ -109,7 +154,6 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
           pinned.error.message ?? 'Could not switch to this organization',
         )
       }
-      // Full reload into the tenant app as this customer's owner.
       window.location.assign('/app')
     } catch (error) {
       toast.error(getErrorMessage(error, 'Could not impersonate'))
@@ -154,7 +198,7 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
     return (
       <div className="flex flex-col gap-4 p-6">
         <Link
-          className="inline-flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
+          className="inline-flex w-fit items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
           to="/admin/customers"
         >
           <ArrowLeftIcon className="size-4" />
@@ -165,9 +209,9 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
     )
   }
 
-  const usage = customer.usage30d
   const suspended = Boolean(customer.suspendedAt)
   const suspendActionLabel = suspended ? 'Reactivate' : 'Suspend'
+  const summary = analytics?.summary
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -206,13 +250,13 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
                 variant={suspended ? 'outline' : 'destructive'}
               >
                 <BanIcon data-icon="inline-start" />
-                {suspended ? 'Reactivate' : 'Suspend'}
+                {suspendActionLabel}
               </Button>
             </>
           }
           eyebrow="Customer"
           subtitle={
-            <span className="flex flex-wrap items-center gap-2">
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <span className="font-mono text-xs">{customer.slug}</span>
               <span>·</span>
               <span>
@@ -237,124 +281,240 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
               {suspended ? (
                 <Badge variant="destructive">Suspended</Badge>
               ) : null}
+              <Badge variant={planBadgeVariant(customer.effectivePlan?.source)}>
+                {customer.effectivePlan?.planName ?? 'No plan'}
+              </Badge>
             </span>
           }
         />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Requests (30d)"
-          sub={`${compactNumber(usage.cachedRequests)} cached`}
-          value={compactNumber(usage.requests)}
-        />
-        <StatCard
-          label="Bandwidth (30d)"
-          sub="delivered"
-          value={humanBytes(usage.bandwidthBytes)}
-        />
-        <StatCard
-          label="Cache hit rate"
-          sub={`${humanBytes(usage.bytesSaved)} saved`}
-          value={`${Math.round(usage.cacheHitRate * 100)}%`}
-        />
-        <StatCard
-          label="Workspace"
-          sub={`${customer.seats} seats · last ${usage.lastTrafficAt ? dayjs(usage.lastTrafficAt).format('MMM D') : '—'}`}
-          value={`${customer.projects} projects`}
-        />
-      </div>
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="plan">Plan &amp; billing</TabsTrigger>
+          <TabsTrigger value="members">
+            Members
+            <Badge variant="outline">{customer.seats}</Badge>
+          </TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-col gap-1">
-              <CardTitle>Plan &amp; entitlements</CardTitle>
-              <CardDescription>
-                Set an operator internal plan grant. Billing is managed by the
-                customer via Polar.
-              </CardDescription>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <Badge variant={planBadgeVariant(customer.effectivePlan?.source)}>
-                {customer.effectivePlan?.planName ?? 'No plan'}
-              </Badge>
-              <span className="text-muted-foreground text-xs">
-                {customer.effectivePlan?.source
-                  ? `via ${customer.effectivePlan.source}`
-                  : 'not served'}
-                {customer.billing.status
-                  ? ` · billing ${customer.billing.status}`
-                  : ''}
-              </span>
-            </div>
+        <TabsContent className="flex flex-col gap-6 pt-4" value="overview">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-medium text-muted-foreground text-sm">
+              Usage
+            </span>
+            <ToggleGroup
+              onValueChange={(value: string[]) => {
+                const next = value[0]
+                if (isAnalyticsRange(next)) {
+                  setRange(next)
+                }
+              }}
+              size="sm"
+              value={[range]}
+              variant="outline"
+            >
+              {RANGES.map((option) => (
+                <ToggleGroupItem key={option.value} value={option.value}>
+                  {option.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
           </div>
-        </CardHeader>
-        <CardContent>
-          <PlanChange customer={customer} onSaved={load} />
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Members</CardTitle>
-          <CardDescription>
-            {customer.seats} member{customer.seats === 1 ? '' : 's'} in this
-            organization.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table containerClassName="rounded-md border">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Member</TableHead>
-                <TableHead>Org role</TableHead>
-                <TableHead>Platform</TableHead>
-                <TableHead>Joined</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {customer.members.length === 0 ? (
-                <TableRow>
-                  <TableCell className="text-muted-foreground" colSpan={4}>
-                    No members.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                customer.members.map((member) => (
-                  <TableRow key={member.id}>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">
-                          {member.name || member.email}
-                        </span>
-                        <span className="text-muted-foreground text-xs">
-                          {member.email}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{member.orgRole}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {member.platformRole === 'super_admin' ? (
-                        <Badge variant="info">super admin</Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">
-                          {member.platformRole}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-muted-foreground text-xs">
-                      {dayjs(member.createdAt).format('MMM D, YYYY')}
-                    </TableCell>
+          {summary ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                label="Requests"
+                sub={`${summary.hitRate.toFixed(0)}% cached`}
+                value={compactNumber(summary.totalRequests)}
+              />
+              <StatCard
+                label="Bandwidth delivered"
+                sub={`${humanBytes(summary.bandwidthSaved)} saved`}
+                value={humanBytes(summary.bandwidthOut)}
+              />
+              <StatCard
+                label="Cache hit rate"
+                sub={`${summary.savingsPct.toFixed(0)}% bytes saved`}
+                value={`${summary.hitRate.toFixed(1)}%`}
+              />
+              <StatCard
+                label="Avg latency"
+                sub={`p95 ${summary.p95}ms`}
+                value={`${summary.avg}ms`}
+              />
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {['a', 'b', 'c', 'd'].map((key) => (
+                <Skeleton className="h-24" key={key} />
+              ))}
+            </div>
+          )}
+
+          {analytics ? (
+            <ChartAreaInteractive data={analytics.series} />
+          ) : (
+            <Skeleton className="h-72" />
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick facts</CardTitle>
+            </CardHeader>
+            <CardContent className="divide-y">
+              <Fact label="Projects" value={customer.projects} />
+              <Fact label="Seats" value={customer.seats} />
+              <Fact
+                label="Last traffic"
+                value={
+                  customer.usage30d.lastTrafficAt
+                    ? dayjs(customer.usage30d.lastTrafficAt).format(
+                        'MMM D, YYYY',
+                      )
+                    : 'No traffic yet'
+                }
+              />
+              <Fact
+                label="Owner"
+                value={owner ? owner.name || owner.email : 'No owner'}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent className="flex flex-col gap-6 pt-4" value="plan">
+          <Card>
+            <CardHeader>
+              <CardTitle>Billing</CardTitle>
+              <CardDescription>
+                The customer manages their subscription via Polar; operators can
+                override it with an internal grant below.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="divide-y">
+              <Fact
+                label="Effective plan"
+                value={
+                  <Badge
+                    variant={planBadgeVariant(customer.effectivePlan?.source)}
+                  >
+                    {customer.effectivePlan?.planName ?? 'No plan'}
+                  </Badge>
+                }
+              />
+              <Fact
+                label="Source"
+                value={customer.effectivePlan?.source ?? 'not served'}
+              />
+              <Fact
+                label="Subscription status"
+                value={customer.billing.status ?? '—'}
+              />
+              <Fact
+                label="Current period ends"
+                value={
+                  customer.billing.currentPeriodEnd
+                    ? dayjs(customer.billing.currentPeriodEnd).format(
+                        'MMM D, YYYY',
+                      )
+                    : '—'
+                }
+              />
+              <Fact
+                label="Overage allowed"
+                value={customer.billing.overageAllowed ? 'Yes' : 'No'}
+              />
+              <Fact
+                label="Internal grant"
+                value={
+                  customer.internalGrant?.active
+                    ? `${customer.internalGrant.planName}${customer.internalGrant.expiresAt ? ` · until ${dayjs(customer.internalGrant.expiresAt).format('MMM D, YYYY')}` : ''}`
+                    : 'None'
+                }
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Internal plan grant</CardTitle>
+              <CardDescription>
+                A free operator override that wins over billing when it
+                out-ranks the paid plan. Takes effect immediately.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PlanChange customer={customer} onSaved={load} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent className="pt-4" value="members">
+          <Card>
+            <CardHeader>
+              <CardTitle>Members</CardTitle>
+              <CardDescription>
+                {customer.seats} member{customer.seats === 1 ? '' : 's'} in this
+                organization.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table containerClassName="rounded-md border">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Member</TableHead>
+                    <TableHead>Org role</TableHead>
+                    <TableHead>Platform</TableHead>
+                    <TableHead>Joined</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {customer.members.length === 0 ? (
+                    <TableRow>
+                      <TableCell className="text-muted-foreground" colSpan={4}>
+                        No members.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    customer.members.map((member) => (
+                      <TableRow key={member.id}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {member.name || member.email}
+                            </span>
+                            <span className="text-muted-foreground text-xs">
+                              {member.email}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{member.orgRole}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {member.platformRole === 'super_admin' ? (
+                            <Badge variant="info">super admin</Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">
+                              {member.platformRole}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-muted-foreground text-xs">
+                          {dayjs(member.createdAt).format('MMM D, YYYY')}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog
         onOpenChange={(next) => {

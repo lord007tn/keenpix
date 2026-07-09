@@ -2,7 +2,6 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import {
   ActivityIcon,
   ChartColumnIcon,
-  KeyRoundIcon,
   LayoutGridIcon,
   type LucideIcon,
   ShieldIcon,
@@ -28,7 +27,6 @@ const NAV: NavItem[] = [
   { to: '/admin/customers', label: 'Customers', icon: UsersRoundIcon },
   { to: '/admin/analytics', label: 'Analytics', icon: ChartColumnIcon },
   { to: '/admin/operations', label: 'Operations', icon: ActivityIcon },
-  { to: '/admin/api-keys', label: 'API keys', icon: KeyRoundIcon },
   { to: '/admin/staff', label: 'Staff', icon: UsersIcon, selfHostOnly: true },
   { to: '/admin/settings', label: 'Settings', icon: SlidersHorizontalIcon },
 ]

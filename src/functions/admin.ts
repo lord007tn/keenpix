@@ -1,10 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
-import {
-  createApiKey,
-  disableApiKey,
-  listApiKeyActivitiesPage,
-} from '@/actions/admin/api-keys'
-import { getCdnConfig } from '@/actions/admin/cdn'
+import { getPlatformConfig } from '@/actions/admin/cdn'
+import { getCustomerUsageSeries } from '@/actions/admin/customer-analytics'
 import {
   getCustomerAccountById,
   getCustomerAccounts,
@@ -34,10 +30,10 @@ import {
 import { bustServingEntitlement } from '@/lib/billing/service-gate'
 import {
   acceptInvitationSchema,
-  apiActivityPageSchema,
   cacheMaintenanceSchema,
   createInvitationSchema,
   customerAccountSchema,
+  customerAnalyticsSchema,
   invitationTokenSchema,
   operationsConfigSchema,
   platformAnalyticsSchema,
@@ -46,7 +42,6 @@ import {
   suspendOrgSchema,
   updateInternalPlanGrantSchema,
 } from '@/schemas/admin'
-import { createApiKeySchema, disableApiKeySchema } from '@/schemas/api-keys'
 
 export const getAdminWorkspaceFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
@@ -111,19 +106,19 @@ export const setOrgSuspensionFn = createServerFn({ method: 'POST' })
     return result
   })
 
-export const getCdnConfigFn = createServerFn({ method: 'GET' })
+export const getPlatformConfigFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .handler(({ context }) => {
     requireSuperAdmin(context)
-    return getCdnConfig()
+    return getPlatformConfig()
   })
 
-export const getApiKeyActivitiesFn = createServerFn({ method: 'GET' })
-  .inputValidator(apiActivityPageSchema)
+export const getCustomerAnalyticsFn = createServerFn({ method: 'GET' })
+  .inputValidator(customerAnalyticsSchema)
   .middleware([authMiddleware])
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
-    return listApiKeyActivitiesPage(data.page)
+    return getCustomerUsageSeries(data.orgId, data.range)
   })
 
 export const getOperationsHealthFn = createServerFn({ method: 'GET' })
@@ -168,26 +163,6 @@ export const updateOperationsConfigFn = createServerFn({ method: 'POST' })
       diskCacheMaxMb: data.diskCacheMaxMb,
       memoryCacheMaxMb: data.memoryCacheMaxMb,
     })
-  })
-
-export const createApiKeyFn = createServerFn({ method: 'POST' })
-  .inputValidator(createApiKeySchema)
-  .middleware([authMiddleware])
-  .handler(({ context, data }) => {
-    requireSuperAdmin(context)
-    return createApiKey({
-      name: data.name,
-      projectId: data.projectId,
-      userId: context.userId,
-    })
-  })
-
-export const disableApiKeyFn = createServerFn({ method: 'POST' })
-  .inputValidator(disableApiKeySchema)
-  .middleware([authMiddleware])
-  .handler(({ context, data }) => {
-    requireSuperAdmin(context)
-    return disableApiKey(data.id)
   })
 
 export const createInvitationFn = createServerFn({ method: 'POST' })
