@@ -19,7 +19,7 @@ export function SiteHeader() {
           <a className="hover:text-foreground" href="/#product">
             Product
           </a>
-          <a className="hover:text-foreground" href="/#pricing">
+          <a className="hover:text-foreground" href="/pricing">
             Pricing
           </a>
           <a className="hover:text-foreground" href="/blog">
@@ -62,6 +62,15 @@ export function SiteFooter() {
         <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
           <a className="hover:text-foreground" href="/about">
             About
+          </a>
+          <a className="hover:text-foreground" href="/pricing">
+            Pricing
+          </a>
+          <a className="hover:text-foreground" href="/compare">
+            Compare
+          </a>
+          <a className="hover:text-foreground" href="/changelog">
+            Changelog
           </a>
           <a className="hover:text-foreground" href="/docs">
             Documentation

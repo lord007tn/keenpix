@@ -38,6 +38,12 @@ export const blog = defineCollections({
     competitor: z.string().optional(),
     draft: z.boolean().default(false),
   }),
+  // Full post bodies flow into llms-full.txt — the comparison posts are the
+  // site's best GEO asset and must be visible to AI ingestion, not just their
+  // one-line descriptions.
+  postprocess: {
+    includeProcessedMarkdown: true,
+  },
 })
 
 export default defineConfig()

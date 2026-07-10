@@ -1,8 +1,11 @@
 # Deploying Keenpix branch cloud on Coolify
 
-Use this for a disposable/staging cloud-mode service under the **Raed** Coolify
-project. It builds from the selected Git branch and runs the cloud stack with
-Postgres, ClickHouse, an S3-compatible cache, Mailpit, and the usage cron.
+**This compose file runs the production keenpix.com deployment** (Coolify
+application `keenpix-branch-cloud` under the **Raed** project, built from the
+`cloud` branch, manual redeploys). It can also be pointed at any branch for a
+disposable staging copy. The stack: app, Postgres, ClickHouse, an S3-compatible
+cache, Mailpit (staging email sink), the hourly usage cron, and a daily
+Postgres backup job.
 
 ## Coolify resource
 
@@ -10,7 +13,7 @@ Postgres, ClickHouse, an S3-compatible cache, Mailpit, and the usage cron.
 2. Go to the **Raed** project.
 3. Create a new resource from the Keenpix Git repository.
 4. Build Pack: **Docker Compose**.
-5. Branch: the branch you want to test.
+5. Branch: `cloud` for production; any branch for staging.
 6. Base Directory: `/`.
 7. Docker Compose Location: `docker-compose.branch-cloud.yml`.
 8. Name the resource `keenpix-branch-cloud`.
@@ -32,9 +35,23 @@ POLAR_SERVER=production
 ```
 
 `POLAR_TOKEN` and `POLAR_WEBHOOK_SECRET` should come from the Polar environment
-matching the public domain you are testing. Production-domain deploys must use
-`POLAR_SERVER=production`. The app will boot with generated Coolify values for Postgres,
-Better Auth, ClickHouse, Maxio, the super-admin password, and the cron secret.
+matching the public domain. Production deploys must use
+`POLAR_SERVER=production` (the app refuses sandbox in production builds). The
+app boots with generated Coolify values for Postgres, Better Auth, ClickHouse,
+Maxio, the super-admin password, and the cron secret.
+
+**Email — production must override the Mailpit default.** Without this,
+verification, invite, usage-alert, and dunning emails go to the Mailpit sink
+and no customer ever sees them:
+
+```dotenv
+EMAIL_PROVIDER=postmark
+POSTMARK_API_KEY=...
+POSTMARK_FROM=no-reply@keenpix.com   # domain must be verified in Postmark
+```
+
+(Resend works too: `EMAIL_PROVIDER=resend` + `RESEND_API_KEY`/`RESEND_FROM`.)
+Staging can keep the default `EMAIL_PROVIDER=smtp` → Mailpit.
 
 Optional resource caps:
 
@@ -45,15 +62,47 @@ KEENPIX_CPU_LIMIT=1
 KEENPIX_PG_CPU_LIMIT=0.5
 ```
 
+## Backups and restore
+
+The `pg-backup` service writes a compressed `pg_dump` (`-Fc`) into the
+`keenpix_branch_pg_backups` volume every 24 hours and prunes dumps older than
+`KEENPIX_BACKUP_KEEP_DAYS` (default 14). Postgres is the money-critical store —
+users, orgs, subscriptions, and billing watermarks live there. The ClickHouse
+volume (analytics events) and cache volumes are rebuildable and are not backed
+up.
+
+**This protects against container/data-volume corruption, not disk or VM
+loss.** For offsite coverage, back the `keenpix_branch_pg_backups` volume up at
+the host level (Hetzner snapshots, restic/borg on the volume path, or a
+scheduled `rclone` sync to R2).
+
+Restore drill (run it once so it isn't theory):
+
+```bash
+# list available dumps
+docker compose -f docker-compose.branch-cloud.yml exec pg-backup ls -la /backups
+
+# restore INTO THE RUNNING DATABASE (destructive: --clean drops objects first)
+docker compose -f docker-compose.branch-cloud.yml exec pg-backup \
+  pg_restore --clean --if-exists -d "$PGDATABASE" /backups/keenpix-<ts>.dump
+
+# then restart the app so caches/entitlements reload
+```
+
+For a full rebuild: create fresh volumes, start only `postgres`, copy a dump in
+(`docker cp`), `pg_restore`, then start the rest of the stack.
+
 ## After deploy
 
 - App health: open the generated app URL and `/api/health`.
-- Email testing: open the generated Mailpit URL and watch signup, verification,
-  password reset, and invite emails.
-- Billing testing: configure the Polar sandbox webhook endpoint to
-  `<app-url>/api/auth/polar/webhooks`.
-- Usage cron: confirm `/api/internal/billing/report-usage` runs hourly in logs.
-
-This service is intentionally not production. Keep it on sandbox billing, do not
-point production customer traffic at it, and reset its volumes when a clean test
-database is needed.
+- Email: staging — open the Mailpit URL; production — send a signup and confirm
+  it arrives at a real inbox via Postmark.
+- Billing: configure the Polar webhook endpoint to
+  `<app-url>/api/auth/polar/webhooks` (subscribe it to `subscription.created`,
+  `active`, `updated`, `canceled`, `uncanceled`, AND `revoked` — `created`
+  carries the trial state and `uncanceled` clears a scheduled cancellation).
+- Usage cron: confirm `/api/internal/billing/report-usage` runs hourly in the
+  `usage-cron` logs (it also sweeps usage alerts, and prunes log retention at
+  03:00 UTC).
+- Backups: confirm a `keenpix-*.dump` appears in the `pg-backup` service logs
+  within the first day, and run the restore drill above once.
