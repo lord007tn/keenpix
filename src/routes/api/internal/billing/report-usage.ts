@@ -1,6 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { env } from '@/env/server'
 import { sendUsageAlerts } from '@/lib/billing/alerts'
+import {
+  pruneLogRetention,
+  shouldRunRetention,
+} from '@/lib/billing/log-retention'
 import { reportUsage } from '@/lib/billing/usage-reporter'
 import { errorContext, logger } from '@/lib/logger/logger'
 
@@ -28,7 +32,16 @@ async function handleReportUsage(request: Request): Promise<Response> {
     } catch (error) {
       logger.error(errorContext(error), 'usage alert sweep failed')
     }
-    return Response.json({ ...result, alerts })
+    // Once per UTC day, enforce per-plan log retention (Postgres + ClickHouse).
+    let retention = { orgs: 0, prunedRows: 0 }
+    if (shouldRunRetention(new Date())) {
+      try {
+        retention = await pruneLogRetention()
+      } catch (error) {
+        logger.error(errorContext(error), 'log retention prune failed')
+      }
+    }
+    return Response.json({ ...result, alerts, retention })
   } catch (error) {
     logger.error(errorContext(error), 'usage report job failed')
     return new Response('Usage report failed', { status: 500 })

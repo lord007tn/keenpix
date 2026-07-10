@@ -1,4 +1,5 @@
 import type { NitroAppPlugin } from 'nitro/types'
+import { flushRequestLogs } from '@/lib/analytics-buffer/buffer'
 import { logger } from '@/lib/logger/logger'
 import {
   beginShutdown,
@@ -19,6 +20,8 @@ async function handleSignal(signal: NodeJS.Signals): Promise<void> {
   beginShutdown()
   logger.info({ signal }, 'graceful shutdown: draining transform queue')
   await drainTransformQueue()
+  // Persist any buffered analytics (the drain above just produced some).
+  await flushRequestLogs()
   logger.info('graceful shutdown: drain complete')
   // srvx's own SIGTERM handler closes the HTTP server in parallel, so the process
   // usually exits on its own once both settle. This unref'd backstop force-exits if
@@ -40,6 +43,7 @@ const plugin: NitroAppPlugin = (nitroApp) => {
   nitroApp.hooks.hook('close', async () => {
     beginShutdown()
     await drainTransformQueue()
+    await flushRequestLogs()
   })
 }
 
