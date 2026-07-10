@@ -25,7 +25,18 @@ describe('mapSubscriptionSnapshot', () => {
       currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
       overageAllowed: false,
       cancelAtPeriodEnd: false,
+      polarModifiedAt: null,
     })
+  })
+
+  it('carries the payload modified_at as the ordering key', () => {
+    const snapshot = mapSubscriptionSnapshot(
+      { ...base, modifiedAt: '2026-07-10T11:00:00.000Z' },
+      'active',
+    )
+    expect(snapshot?.polarModifiedAt).toEqual(
+      new Date('2026-07-10T11:00:00.000Z'),
+    )
   })
 
   it('passes the explicit status through (e.g. canceled)', () => {

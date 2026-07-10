@@ -5,6 +5,7 @@ import {
   upsertSubscriptionWithCustomer,
 } from '@/data-access/subscriptions'
 import { env } from '@/env/server'
+import { notifyPaymentIssue } from '@/lib/billing/alerts'
 import { errorContext, logger } from '@/lib/logger/logger'
 import { createPolarClient } from './polar-client'
 import {
@@ -24,22 +25,37 @@ async function syncSubscription(
     return
   }
   const customerId = sub.customer?.id
+  let previousStatus: string | null = null
   if (customerId) {
-    await upsertSubscriptionWithCustomer(snapshot, customerId)
-    return
-  }
-  // No customer id on the payload: still record entitlement so a paying org
-  // isn't wrongly denied service, but log loudly — without a BillingCustomer the
-  // org won't be metered until an operator reconciles it.
-  await upsertSubscription(snapshot)
-  logger.error(
-    errorContext(
-      new Error(
-        `Polar subscription ${snapshot.polarSubscriptionId} for org ${snapshot.orgId} synced without a customer id`,
+    const result = await upsertSubscriptionWithCustomer(snapshot, customerId)
+    previousStatus = result.previousStatus
+  } else {
+    // No customer id on the payload: still record entitlement so a paying org
+    // isn't wrongly denied service, but log loudly — without a BillingCustomer
+    // the org won't be metered until an operator reconciles it.
+    const result = await upsertSubscription(snapshot)
+    previousStatus = result.previousStatus
+    logger.error(
+      errorContext(
+        new Error(
+          `Polar subscription ${snapshot.polarSubscriptionId} for org ${snapshot.orgId} synced without a customer id`,
+        ),
       ),
-    ),
-    'polar subscription missing customer id — org will not be metered',
-  )
+      'polar subscription missing customer id — org will not be metered',
+    )
+  }
+  // Heads-up email on ENTERING dunning. Never lets an email failure fail the
+  // webhook — Polar would retry the delivery and re-run the whole sync.
+  try {
+    await notifyPaymentIssue(
+      snapshot.orgId,
+      snapshot.currentPeriodStart ?? null,
+      snapshot.status,
+      previousStatus,
+    )
+  } catch (error) {
+    logger.error(errorContext(error), 'dunning notification failed')
+  }
 }
 
 const SUCCESS_URL = '/app/settings?section=billing'

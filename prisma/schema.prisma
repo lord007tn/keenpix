@@ -32,6 +32,22 @@ model Organization {
   billingCustomer   BillingCustomer?
   subscription      Subscription?
   internalPlanGrant InternalPlanGrant?
+  billingAlerts     BillingAlert[]
+}
+
+// One-shot billing notification ledger: one row per (org, kind, period). The
+// hourly usage cron and webhook sync insert here BEFORE emailing, so each
+// threshold (80%/100% usage, cap reached, payment failed) alerts exactly once
+// per billing period even across replicas and retries.
+model BillingAlert {
+  id           String       @id @default(cuid())
+  orgId        String
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  kind         String
+  periodStart  DateTime
+  sentAt       DateTime     @default(now())
+
+  @@unique([orgId, kind, periodStart])
 }
 
 // Links a keenpix org to its Polar customer (cloud billing only). One per org.
@@ -71,6 +87,10 @@ model Subscription {
   // serving until currentPeriodEnd, but will NOT renew. Drives the billing UI
   // to say "Ends {date}" instead of "Renews {date}". Set on every webhook sync.
   cancelAtPeriodEnd   Boolean      @default(false)
+  // Polar's modified_at from the last APPLIED webhook payload. Sync refuses to
+  // apply an event older than this, so a retried/delayed delivery can never
+  // overwrite newer state (e.g. resurrect a revoked subscription).
+  polarModifiedAt     DateTime?
   // Customer-set hard spending cap on accrued overage cost per period, in cents.
   // null = no cap (unlimited overage). Enforced by the serving gate: once the
   // period's overage cost reaches this, the org stops being served. Not from
