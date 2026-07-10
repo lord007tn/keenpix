@@ -32,11 +32,11 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 import {
-  catalogPricing,
-  PLANS,
-  type PlanId,
-  type PlanPricing,
-} from '@/lib/billing/plans'
+  PLAN_CARD_FEATURES,
+  PLAN_CARD_ORDER,
+  PLAN_TAGLINES,
+} from '@/features/marketing/plan-card-content'
+import { catalogPricing, PLANS, type PlanPricing } from '@/lib/billing/plans'
 import { cn } from '@/lib/cn/utils'
 import { SOCIAL_X_URL } from '@/shared/authors'
 import { MARKETING_FAQ } from '@/shared/marketing-faq'
@@ -96,67 +96,9 @@ const PIPELINE_STEPS = [
   'Serve immutable output for CDN edge caching',
 ]
 
-// Price + interval come from live pricing (Polar, catalog fallback) and the
-// numeric highlights derive from the plans catalog, so the marketing cards can
-// never drift from the real charge. Only the editorial taglines are static.
-const GB = 1024 ** 3
-
-function planGb(bytes: number): string {
-  const value = bytes / GB
-  return value >= 1000 ? `${value / 1000} TB` : `${value} GB`
-}
-
-function overageRate(planId: PlanId): string {
-  return `$${(PLANS[planId].overagePerGbCents / 100).toFixed(2)}/GB overage`
-}
-
-const PRICING: {
-  featured: boolean
-  highlights: string[]
-  name: string
-  planId: PlanId
-  tagline: string
-}[] = [
-  {
-    name: 'Basic',
-    planId: 'basic',
-    tagline: 'For a site or store getting started.',
-    highlights: [
-      `${planGb(PLANS.basic.includedBandwidthBytes)} delivered / month`,
-      'Unlimited transforms',
-      'Core analytics + live logs',
-      `${PLANS.basic.maxProjects} projects`,
-      overageRate('basic'),
-    ],
-    featured: false,
-  },
-  {
-    name: 'Pro',
-    planId: 'pro',
-    tagline: 'For production sites with real traffic.',
-    highlights: [
-      `${planGb(PLANS.pro.includedBandwidthBytes)} delivered / month`,
-      'Advanced analytics + full log search',
-      `${PLANS.pro.maxProjects} projects`,
-      `${PLANS.pro.logRetentionDays}-day log retention`,
-      overageRate('pro'),
-    ],
-    featured: true,
-  },
-  {
-    name: 'Business',
-    planId: 'business',
-    tagline: 'One plan for all your client sites.',
-    highlights: [
-      `${planGb(PLANS.business.includedBandwidthBytes)} delivered / month`,
-      'Unlimited projects',
-      'Advanced analytics + full log search',
-      `${PLANS.business.logRetentionDays}-day log retention`,
-      overageRate('business'),
-    ],
-    featured: false,
-  },
-]
+// Card content (order, taglines, cumulative feature lists) is shared with
+// /pricing via plan-card-content.ts; prices come from live Polar pricing with
+// the catalog as fallback — so the landing cards can never drift from checkout.
 
 const NAV_LINKS = [
   { href: '#product', label: 'Product' },
@@ -213,7 +155,7 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
   // renders real numbers (and to satisfy the self-host-typed null).
   const prices = pricing ?? catalogPricing()
   const fromCents = Math.min(
-    ...PRICING.map((tier) => prices.plans[tier.planId].month.amountCents),
+    ...PLAN_CARD_ORDER.map((planId) => prices.plans[planId].month.amountCents),
   )
   const metrics = [
     [`from ${formatUsd(fromCents)}/mo`, 'or self-host free, forever'],
@@ -500,64 +442,76 @@ Vary: Accept`}</CodeBlock>
                 default. 14-day free trial; two months free on annual.
               </p>
             </div>
-            <div className="grid gap-4 lg:grid-cols-3">
-              {PRICING.map((tier) => (
-                <Card
-                  className={cn(
-                    'rounded-lg',
-                    tier.featured && 'ring-2 ring-primary',
-                  )}
-                  key={tier.name}
-                >
-                  <CardContent className="flex flex-col gap-5">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-lg">{tier.name}</h3>
-                      {tier.featured ? (
-                        <Badge className="bg-primary/12 text-primary hover:bg-primary/12">
-                          Most popular
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-baseline gap-1">
-                        <span className="font-semibold text-4xl tracking-tight">
-                          {formatUsd(
-                            prices.plans[tier.planId].month.amountCents,
-                          )}
-                        </span>
-                        <span className="text-muted-foreground text-sm">
-                          /mo
-                        </span>
+            <div className="grid items-stretch gap-4 lg:grid-cols-3">
+              {PLAN_CARD_ORDER.map((planId) => {
+                const plan = PLANS[planId]
+                const card = PLAN_CARD_FEATURES[planId]
+                const featured = planId === 'pro'
+                return (
+                  <Card
+                    className={cn(
+                      'rounded-lg',
+                      featured && 'ring-2 ring-primary',
+                    )}
+                    key={planId}
+                  >
+                    <CardContent className="flex h-full flex-col gap-5">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-lg">{plan.name}</h3>
+                        {featured ? (
+                          <Badge className="bg-primary/12 text-primary hover:bg-primary/12">
+                            Most popular
+                          </Badge>
+                        ) : null}
                       </div>
-                      <p className="text-muted-foreground text-xs">
-                        or{' '}
-                        {formatUsd(prices.plans[tier.planId].year.amountCents)}
-                        /yr — 2 months free
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-baseline gap-1">
+                          <span className="font-semibold text-4xl tracking-tight">
+                            {formatUsd(prices.plans[planId].month.amountCents)}
+                          </span>
+                          <span className="text-muted-foreground text-sm">
+                            /mo
+                          </span>
+                        </div>
+                        <p className="text-muted-foreground text-xs">
+                          or {formatUsd(prices.plans[planId].year.amountCents)}
+                          /yr — 2 months free
+                        </p>
+                      </div>
+                      <p className="text-muted-foreground text-sm">
+                        {PLAN_TAGLINES[planId]}
                       </p>
-                    </div>
-                    <p className="text-muted-foreground text-sm">
-                      {tier.tagline}
-                    </p>
-                    <ul className="flex flex-col gap-2.5 text-sm">
-                      {tier.highlights.map((h) => (
-                        <li className="flex items-start gap-2.5" key={h}>
-                          <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-primary" />
-                          <span className="text-muted-foreground">{h}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <Link
-                      className={buttonVariants({
-                        className: 'mt-1 w-full',
-                        variant: tier.featured ? 'default' : 'outline',
-                      })}
-                      to="/signup"
-                    >
-                      Start free trial
-                    </Link>
-                  </CardContent>
-                </Card>
-              ))}
+                      {card.lead ? (
+                        <p className="font-medium text-foreground text-sm">
+                          {card.lead}
+                        </p>
+                      ) : null}
+                      <ul className="flex flex-col gap-2.5 text-sm">
+                        {card.features.map((feature) => (
+                          <li
+                            className="flex items-start gap-2.5"
+                            key={feature}
+                          >
+                            <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-primary" />
+                            <span className="text-muted-foreground">
+                              {feature}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      <Link
+                        className={buttonVariants({
+                          className: 'mt-auto w-full',
+                          variant: featured ? 'default' : 'outline',
+                        })}
+                        to="/signup"
+                      >
+                        Start free trial
+                      </Link>
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
             <p className="mt-6 text-center text-muted-foreground text-sm">
               Prefer to run it yourself?{' '}

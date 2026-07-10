@@ -20,9 +20,13 @@ import {
 } from '@/components/ui/table'
 import { SiteFooter, SiteHeader } from '@/features/blog/blog-chrome'
 import {
+  PLAN_CARD_FEATURES,
+  PLAN_CARD_ORDER,
+  PLAN_TAGLINES,
+} from '@/features/marketing/plan-card-content'
+import {
   catalogPricing,
   PLANS,
-  type PlanId,
   type PlanPricing,
   TRIAL,
 } from '@/lib/billing/plans'
@@ -31,7 +35,6 @@ import { cn } from '@/lib/cn/utils'
 type Interval = 'month' | 'year'
 
 const GB = 1024 ** 3
-const PLAN_ORDER: PlanId[] = ['basic', 'pro', 'business']
 const TRAILING_ZEROS = /\.00$/
 
 function gb(bytes: number): string {
@@ -80,6 +83,9 @@ export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
       'Yes. The entire engine — transform pipeline, dashboard, analytics, allowlists, signed URLs — is open source under AGPL-3.0 with no feature gates, no telemetry, and no CLA. You run it on your own infrastructure with one Docker Compose command and pay only for your own servers. The managed cloud exists for teams who would rather not operate it.',
   },
 ]
+
+// (Card content — order, taglines, features — lives in plan-card-content.ts,
+// shared with the landing page so the two card sets can never drift.)
 
 const MATRIX: Array<{
   feature: string
@@ -156,48 +162,6 @@ const MATRIX: Array<{
   },
 ]
 
-const TAGLINES: Record<PlanId, string> = {
-  basic: 'For a site or store getting started.',
-  pro: 'Advanced analytics and full log history.',
-  business: 'One plan for all your client sites.',
-}
-
-// Per-plan card features, cumulative ("Everything in X, plus") so each card
-// reads as an upgrade path instead of three near-identical lists. Numbers
-// derive from the plans catalog so the cards can never drift from checkout.
-const CARD_FEATURES: Record<PlanId, { features: string[]; lead?: string }> = {
-  basic: {
-    features: [
-      `${gb(PLANS.basic.includedBandwidthBytes)} delivered / month`,
-      'Unlimited transforms — AVIF, WebP + 6 more formats',
-      `${PLANS.basic.maxProjects} projects`,
-      'Bandwidth-saved, cache-hit & top-image analytics',
-      `Live request logs · ${PLANS.basic.logRetentionDays}-day retention`,
-      'Signed URLs + per-project allowlists',
-      `Spending cap on by default · $${(PLANS.basic.overagePerGbCents / 100).toFixed(2)}/GB overage`,
-    ],
-  },
-  pro: {
-    lead: 'Everything in Basic, plus:',
-    features: [
-      `${gb(PLANS.pro.includedBandwidthBytes)} delivered / month`,
-      'Advanced analytics — geo, latency percentiles, full history',
-      `Full log search · ${PLANS.pro.logRetentionDays}-day retention`,
-      `${PLANS.pro.maxProjects} projects`,
-      `Cheaper overage · $${(PLANS.pro.overagePerGbCents / 100).toFixed(2)}/GB, hard-capped`,
-    ],
-  },
-  business: {
-    lead: 'Everything in Pro, plus:',
-    features: [
-      `${gb(PLANS.business.includedBandwidthBytes)} delivered / month`,
-      'Unlimited projects',
-      `${PLANS.business.logRetentionDays}-day log retention`,
-      `Lowest overage · $${(PLANS.business.overagePerGbCents / 100).toFixed(2)}/GB, hard-capped`,
-    ],
-  },
-}
-
 export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
   const [interval, setInterval] = useState<Interval>('month')
   const prices = pricing ?? catalogPricing()
@@ -242,7 +206,7 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
             </div>
 
             <div className="mt-8 grid gap-4 text-left lg:grid-cols-3">
-              {PLAN_ORDER.map((planId) => {
+              {PLAN_CARD_ORDER.map((planId) => {
                 const plan = PLANS[planId]
                 const price = prices.plans[planId]
                 const monthlyCents =
@@ -274,15 +238,15 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
                         </p>
                       ) : null}
                       <p className="text-muted-foreground text-sm">
-                        {TAGLINES[planId]}
+                        {PLAN_TAGLINES[planId]}
                       </p>
-                      {CARD_FEATURES[planId].lead ? (
+                      {PLAN_CARD_FEATURES[planId].lead ? (
                         <p className="font-medium text-foreground text-sm">
-                          {CARD_FEATURES[planId].lead}
+                          {PLAN_CARD_FEATURES[planId].lead}
                         </p>
                       ) : null}
                       <ul className="flex flex-col gap-2 text-sm">
-                        {CARD_FEATURES[planId].features.map((feature) => (
+                        {PLAN_CARD_FEATURES[planId].features.map((feature) => (
                           <li className="flex items-start gap-2" key={feature}>
                             <CheckIcon className="mt-0.5 size-4 shrink-0 text-primary" />
                             <span className="text-muted-foreground">
@@ -336,7 +300,7 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
                   <TableRow>
                     <TableCell className="font-medium">Price</TableCell>
                     <TableCell>$0 · AGPL-3.0</TableCell>
-                    {PLAN_ORDER.map((planId) => (
+                    {PLAN_CARD_ORDER.map((planId) => (
                       <TableCell key={planId}>
                         ${PLANS[planId].priceMonthlyUsd}/mo
                       </TableCell>
