@@ -62,7 +62,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         sizes: '192x192',
       },
       { rel: 'manifest', href: '/manifest.json' },
-      { rel: 'alternate', type: 'text/plain', href: '/llms.txt' },
+      // NOTE: no /llms.txt alternate here — the llms routes are cloud-only, so
+      // the link is emitted by the (cloud-gated) home route instead of 404ing
+      // on every self-host page.
     ],
   }),
   notFoundComponent: NotFoundPage,

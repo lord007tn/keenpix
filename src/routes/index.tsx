@@ -30,7 +30,18 @@ export const Route = createFileRoute('/')({
     }
 
     return {
-      links: [{ rel: 'canonical', href: absoluteUrl('/') }],
+      links: [
+        { rel: 'canonical', href: absoluteUrl('/') },
+        // Cloud-only discovery links, kept off __root so self-host (where these
+        // routes 404) never advertises them.
+        { rel: 'alternate', type: 'text/plain', href: '/llms.txt' },
+        {
+          rel: 'alternate',
+          type: 'application/rss+xml',
+          href: '/blog/rss.xml',
+          title: 'Keenpix Blog',
+        },
+      ],
       meta: seo({
         title: SITE_TITLE,
         description: SITE_DESCRIPTION,

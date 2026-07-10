@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { llms } from 'fumadocs-core/source'
 import { getAppUrl, isCloud } from '@/server/deployment'
-import { listBlogPosts } from '@/shared/blog-source'
+import { blogSource, listBlogPosts } from '@/shared/blog-source'
 import { source } from '@/shared/docs-source'
 import { MARKETING_FAQ } from '@/shared/marketing-faq'
 
@@ -107,17 +107,23 @@ async function llmsFull() {
     }),
   )
 
-  // Blog posts don't opt into includeProcessedMarkdown, so summarize each by its
-  // description + canonical source rather than the full body.
-  const blogSections = listBlogPosts().map((post) =>
-    [
-      `## ${post.title}`,
-      '',
-      `Source: ${baseUrl}${post.url}`,
-      '',
-      post.description,
-      '',
-    ].join('\n'),
+  // Full post bodies (the comparison posts are the site's best GEO asset),
+  // falling back to the description if processing ever yields nothing.
+  const blogSections = await Promise.all(
+    blogSource
+      .getPages()
+      .filter((page) => !page.data.draft)
+      .map(async (page) => {
+        const body = await processedMarkdown(page.data)
+        return [
+          `## ${page.data.title}`,
+          '',
+          `Source: ${baseUrl}${page.url}`,
+          '',
+          body || page.data.description,
+          '',
+        ].join('\n')
+      }),
   )
 
   const faqSections = MARKETING_FAQ.map((item) =>

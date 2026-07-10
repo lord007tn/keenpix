@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/sheet'
 import {
   catalogPricing,
+  PLANS,
   type PlanId,
   type PlanPricing,
 } from '@/lib/billing/plans'
@@ -89,9 +90,20 @@ const PIPELINE_STEPS = [
   'Serve immutable output for CDN edge caching',
 ]
 
-// Price + interval come from live pricing (Polar, catalog fallback) keyed by
-// planId, so the marketing cards can never drift from the real charge. Only the
-// editorial tagline/highlights are static here.
+// Price + interval come from live pricing (Polar, catalog fallback) and the
+// numeric highlights derive from the plans catalog, so the marketing cards can
+// never drift from the real charge. Only the editorial taglines are static.
+const GB = 1024 ** 3
+
+function planGb(bytes: number): string {
+  const value = bytes / GB
+  return value >= 1000 ? `${value / 1000} TB` : `${value} GB`
+}
+
+function overageRate(planId: PlanId): string {
+  return `$${(PLANS[planId].overagePerGbCents / 100).toFixed(2)}/GB overage`
+}
+
 const PRICING: {
   featured: boolean
   highlights: string[]
@@ -104,11 +116,11 @@ const PRICING: {
     planId: 'basic',
     tagline: 'For a site or store getting started.',
     highlights: [
-      '100 GB delivered / month',
+      `${planGb(PLANS.basic.includedBandwidthBytes)} delivered / month`,
       'Unlimited transforms',
       'Basic analytics + logs',
       'Multiple projects & staff',
-      '$0.08/GB overage',
+      overageRate('basic'),
     ],
     featured: false,
   },
@@ -117,11 +129,11 @@ const PRICING: {
     planId: 'pro',
     tagline: 'Advanced analytics and full log history.',
     highlights: [
-      '400 GB delivered / month',
+      `${planGb(PLANS.pro.includedBandwidthBytes)} delivered / month`,
       'Advanced analytics + full logs',
-      '10 team seats · 25 projects',
+      `${PLANS.pro.maxSeats} team seats · ${PLANS.pro.maxProjects} projects`,
       'Custom domains (coming soon)',
-      '$0.06/GB overage',
+      overageRate('pro'),
     ],
     featured: true,
   },
@@ -130,11 +142,11 @@ const PRICING: {
     planId: 'business',
     tagline: 'One plan for all your client sites.',
     highlights: [
-      '1 TB delivered / month',
+      `${planGb(PLANS.business.includedBandwidthBytes)} delivered / month`,
       'Unlimited projects',
-      '1-year log retention',
-      '25 team seats',
-      '$0.05/GB overage',
+      `${PLANS.business.logRetentionDays}-day log retention`,
+      `${PLANS.business.maxSeats} team seats`,
+      overageRate('business'),
     ],
     featured: false,
   },
@@ -142,7 +154,7 @@ const PRICING: {
 
 const NAV_LINKS = [
   { href: '#product', label: 'Product' },
-  { href: '#pricing', label: 'Pricing' },
+  { href: '/pricing', label: 'Pricing' },
   { href: '#self-host', label: 'Self-host' },
   { href: '/blog', label: 'Blog' },
   { href: '/docs', label: 'Docs' },
@@ -613,6 +625,15 @@ Vary: Accept`}</CodeBlock>
           <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
             <a className="hover:text-foreground" href="/about">
               About
+            </a>
+            <a className="hover:text-foreground" href="/pricing">
+              Pricing
+            </a>
+            <a className="hover:text-foreground" href="/compare">
+              Compare
+            </a>
+            <a className="hover:text-foreground" href="/changelog">
+              Changelog
             </a>
             <a className="hover:text-foreground" href="/blog">
               Blog

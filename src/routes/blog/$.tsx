@@ -9,6 +9,7 @@ import { SiteFooter, SiteHeader } from '@/features/blog/blog-chrome'
 import { BlogPostCta, BlogPostHeader } from '@/features/blog/blog-post-layout'
 import { docsSlugsSchema } from '@/schemas/docs'
 import { getAppUrl, isCloud } from '@/server/deployment'
+import { getAuthor } from '@/shared/authors'
 import { blogSource } from '@/shared/blog-source'
 import {
   absoluteUrl,
@@ -20,6 +21,7 @@ import docsCss from '@/styles/docs.css?url'
 
 interface BlogLoaderData {
   author: string
+  authorUrl: string | null
   canonicalUrl: string
   competitor?: string
   date: string
@@ -71,7 +73,14 @@ export const Route = createFileRoute('/blog/$')({
                 property: 'article:modified_time',
                 content: loaderData.updated,
               },
-              { property: 'article:author', content: loaderData.author },
+              ...(loaderData.authorUrl
+                ? [
+                    {
+                      property: 'article:author',
+                      content: loaderData.authorUrl,
+                    },
+                  ]
+                : []),
               ...loaderData.tags.map((tag) => ({
                 property: 'article:tag',
                 content: tag,
@@ -106,6 +115,8 @@ const serverLoader = createServerFn({ method: 'GET' })
 
     return {
       author: page.data.author,
+      // OG expects article:author to be a profile URL, not a bare name.
+      authorUrl: getAuthor(page.data.author)?.sameAs?.[0] ?? null,
       canonicalUrl,
       competitor: page.data.competitor,
       date: page.data.date,
