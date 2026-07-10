@@ -9,6 +9,7 @@ All transform parameters are optional; out-of-range values are clamped, not reje
 | Param | Type | Range / values | Default | Description |
 | --- | --- | --- | --- | --- |
 | `project` | string | — | **required** | Project id (allowlist gates access) |
+| `sig` | string | base64url HMAC-SHA256 | required when the project enables [signed URLs](/docs/concepts/signed-urls) | Request signature over the source URL + sorted params |
 | `url` | URL | absolute `http`/`https` URL | — | Source image URL when not using the `/img/<source-url>` path form |
 | `w` / `h` | int | 1–5000 | bounded original | Target width/height (px) |
 | `resize` / `s` | string | `WIDTHxHEIGHT`, `WIDTH`, `xHEIGHT` | — | Compact size alias; explicit `w`/`h` win |

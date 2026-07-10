@@ -4,11 +4,14 @@ import {
   createProject as createProjectInDb,
   deleteProject as deleteProjectFromDb,
   getProject as getProjectFromDb,
+  getProjectSigning as getProjectSigningFromDb,
   listProjects as listProjectsInDb,
   removeAllowedOrigin,
   updateProject as updateProjectInDb,
   updateProjectSettings as updateProjectSettingsInDb,
+  updateProjectSigning as updateProjectSigningInDb,
 } from '@/data-access/projects'
+import { generateSigningSecret } from '@/lib/transform-signing/signing'
 import type {
   internalCreateProjectSchema,
   internalProjectSettingsPatchSchema,
@@ -68,4 +71,36 @@ export function updateProject(
 
 export function deleteProject(orgId: string, projectId: string) {
   return deleteProjectFromDb(projectId, orgId)
+}
+
+export function getProjectSigning(orgId: string, projectId: string) {
+  return getProjectSigningFromDb(projectId, orgId)
+}
+
+// Toggle URL signing. Enabling for the first time mints the project's secret;
+// disabling keeps it so signed integrations don't break on a re-enable.
+export async function updateProjectSigning(
+  orgId: string,
+  projectId: string,
+  requireSignedUrls: boolean,
+) {
+  const current = await getProjectSigningFromDb(projectId, orgId)
+  if (!current) {
+    return
+  }
+  const patch: { requireSignedUrls: boolean; signingSecret?: string } = {
+    requireSignedUrls,
+  }
+  if (requireSignedUrls && !current.signingSecret) {
+    patch.signingSecret = generateSigningSecret()
+  }
+  return updateProjectSigningInDb(projectId, orgId, patch)
+}
+
+// Mint a new secret, invalidating every URL signed with the old one. Callers
+// re-sign from the new secret shown in settings.
+export function rotateProjectSigningSecret(orgId: string, projectId: string) {
+  return updateProjectSigningInDb(projectId, orgId, {
+    signingSecret: generateSigningSecret(),
+  })
 }

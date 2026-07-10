@@ -100,6 +100,15 @@ export const projectSettingsSchema = z.object({
     .optional(),
 })
 
+export const projectSigningSchema = z.object({
+  projectId: nonEmptyStringSchema(),
+  requireSignedUrls: z.boolean(),
+})
+
+export const projectSigningReadSchema = z.object({
+  projectId: nonEmptyStringSchema(),
+})
+
 export const projectQualitySchema = z.object({
   defaultQuality: z
     .string()

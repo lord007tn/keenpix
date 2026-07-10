@@ -20,6 +20,9 @@ export interface Project {
   name: string
   orgId: string
   origin: string
+  // When true, /img requests must carry a valid `s=` HMAC signature. The secret
+  // itself is never on this shape — admins fetch it via getProjectSigningFn.
+  requireSignedUrls: boolean
   // false preserves metadata such as EXIF, GPS, and ICC profiles.
   stripMetadata: boolean
 }
