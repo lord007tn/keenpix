@@ -1,0 +1,82 @@
+---
+title: Signed URLs
+description: Optional HMAC signatures on transform URLs — hotlink and cache-busting protection on top of the allowlist.
+icon: FileSignature
+---
+
+By default, Keenpix transform URLs need **no API key**: access is gated by each project's
+source-host allowlist. That model keeps secrets out of your frontend entirely — but because the
+URLs are public, a third party who knows your project id could request your images with
+ever-changing junk query params, forcing cache misses and burning your bandwidth.
+
+**Signed URLs** close that hole. When a project requires signatures, every `/img` request must
+carry a valid `sig=` parameter — an HMAC computed with the project's signing secret — or it gets a
+`403`. Tampering with any parameter (or adding one) invalidates the signature, so cache-busting
+becomes impossible.
+
+<Callout>
+Signing is opt-in per project. If your images are on your own site behind your own CDN, the
+allowlist alone is usually enough — turn signing on when you serve valuable/high-traffic assets or
+have seen abusive traffic. Signing works identically on self-host and cloud.
+</Callout>
+
+## Enable it
+
+1. Open **Settings → Security → Signed URLs** and flip **Require signed URLs**. A signing secret
+   is generated for the project (owners/admins can view, copy, and rotate it).
+2. Add the signature to every transform URL your app generates (below).
+3. Unsigned or mis-signed requests now return `403`.
+
+## How to sign a URL
+
+The signature is **HMAC-SHA256, base64url-encoded (no padding)**, over this canonical message:
+
+```
+<source-url> + "\n" + <sorted-query>
+```
+
+- `<source-url>` is the raw source URL exactly as it appears in the path after `/img/`.
+- `<sorted-query>` is every query parameter **except `sig`** as `key=value` pairs, sorted
+  lexicographically, joined with `&`. Sorting makes the signature independent of parameter order.
+
+Append the digest as `sig=<signature>`.
+
+### Node.js
+
+```ts
+import { createHmac } from 'node:crypto'
+
+function signKeenpixUrl(
+  base: string, // e.g. https://keenpix.com
+  secret: string, // Settings → Security → Signed URLs
+  src: string, // https://cdn.example.com/photo.jpg
+  params: Record<string, string>, // { project: 'p_123', w: '800', fmt: 'webp' }
+) {
+  const sorted = Object.entries(params)
+    .map(([key, value]) => `${key}=${value}`)
+    .sort()
+    .join('&')
+  const signature = createHmac('sha256', secret)
+    .update(`${src}\n${sorted}`)
+    .digest('base64url')
+  const query = new URLSearchParams({ ...params, sig: signature })
+  return `${base}/img/${src}?${query}`
+}
+```
+
+Sign on your server (or at build time) — the secret must never ship to the browser.
+
+## Rotating the secret
+
+**Settings → Security → Signed URLs → Rotate** generates a new secret and immediately invalidates
+every URL signed with the old one. Rotate if the secret leaks, then redeploy your URL generation
+with the new value. Turning signing off keeps the secret stored, so re-enabling doesn't break
+existing signed integrations.
+
+## Notes
+
+- The `project` parameter is part of the signed message — a signature is only valid for the exact
+  project, source URL, and transform combination it was computed for.
+- Cached variants are unaffected: signing gates the request, not the cache key, so the same
+  transform signed twice serves from cache.
+- SDK prewarm requests are authenticated with an API key and don't need signatures.

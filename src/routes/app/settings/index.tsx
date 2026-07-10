@@ -22,6 +22,7 @@ import { AllowedHosts } from '@/features/projects/allowed-hosts'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { PipelineSettings } from '@/features/projects/pipeline-settings'
 import { ProjectGeneral } from '@/features/projects/project-general'
+import { SignedUrls } from '@/features/projects/signed-urls'
 import { TeamManagement } from '@/features/team/team-management'
 import { cn } from '@/lib/cn/utils'
 import { appPageHead } from '@/shared/seo'
@@ -280,23 +281,44 @@ function SettingsPage() {
           ) : null}
 
           {active === 'security' && currentProject ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Allowed hosts</CardTitle>
-                <CardDescription>
-                  keenpix only fetches from origins on this list — an empty list
-                  blocks every request, and no API key is needed for transform
-                  URLs. Per-host figures cover the last 30 days.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AllowedHosts
-                  initial={currentProject.allowedOrigins ?? []}
-                  key={currentProject.id}
-                  projectId={currentProject.id}
-                />
-              </CardContent>
-            </Card>
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Allowed hosts</CardTitle>
+                  <CardDescription>
+                    keenpix only fetches from origins on this list — an empty
+                    list blocks every request, and no API key is needed for
+                    transform URLs. Per-host figures cover the last 30 days.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AllowedHosts
+                    initial={currentProject.allowedOrigins ?? []}
+                    key={currentProject.id}
+                    projectId={currentProject.id}
+                  />
+                </CardContent>
+              </Card>
+              {canManageProject ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Signed URLs</CardTitle>
+                    <CardDescription>
+                      Optional hotlink protection on top of the allowlist:
+                      require an HMAC signature on every transform URL so third
+                      parties can’t run up your bandwidth with cache-busting
+                      requests.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <SignedUrls
+                      key={currentProject.id}
+                      projectId={currentProject.id}
+                    />
+                  </CardContent>
+                </Card>
+              ) : null}
+            </>
           ) : null}
 
           {active === 'billing' ? <BillingPanel /> : null}

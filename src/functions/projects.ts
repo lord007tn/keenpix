@@ -3,10 +3,13 @@ import {
   addAllowedHost,
   createProject,
   deleteProject,
+  getProjectSigning,
   listProjects,
   removeAllowedHost,
+  rotateProjectSigningSecret,
   updateProject,
   updateProjectSettings,
+  updateProjectSigning,
 } from '@/actions/projects'
 import {
   authMiddleware,
@@ -19,6 +22,8 @@ import {
   createProjectSchema,
   deleteProjectSchema,
   projectSettingsSchema,
+  projectSigningReadSchema,
+  projectSigningSchema,
   updateProjectSchema,
 } from '@/schemas/projects'
 
@@ -98,6 +103,49 @@ export const deleteProjectFn = createServerFn({ method: 'POST' })
       throw new Error('Project not found')
     }
     return { deleted: true }
+  })
+
+export const getProjectSigningFn = createServerFn({ method: 'GET' })
+  .inputValidator(projectSigningReadSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const signing = await getProjectSigning(
+      requireOrgAdmin(context),
+      data.projectId,
+    )
+    if (!signing) {
+      throw new Error('Project not found')
+    }
+    return signing
+  })
+
+export const updateProjectSigningFn = createServerFn({ method: 'POST' })
+  .inputValidator(projectSigningSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const signing = await updateProjectSigning(
+      requireOrgAdmin(context),
+      data.projectId,
+      data.requireSignedUrls,
+    )
+    if (!signing) {
+      throw new Error('Project not found')
+    }
+    return signing
+  })
+
+export const rotateProjectSigningSecretFn = createServerFn({ method: 'POST' })
+  .inputValidator(projectSigningReadSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const signing = await rotateProjectSigningSecret(
+      requireOrgAdmin(context),
+      data.projectId,
+    )
+    if (!signing) {
+      throw new Error('Project not found')
+    }
+    return signing
   })
 
 export const updateProjectSettingsFn = createServerFn({ method: 'POST' })

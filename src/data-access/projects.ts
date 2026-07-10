@@ -21,6 +21,7 @@ function toProject(
     maxWidth: p.maxWidth,
     defaultFit: p.defaultFit as ProjectFit,
     defaultDpr: p.defaultDpr,
+    requireSignedUrls: p.requireSignedUrls,
     createdAt: dayjs(p.createdAt).format('MMM DD, YYYY'),
   }
 }
@@ -61,10 +62,35 @@ export async function getProject(id: string, orgId: string) {
 // Org-agnostic lookup for the PUBLIC transform data plane (`/img/*`): a request
 // carries only a project id and is gated by the project's own allowlist, never a
 // session org. Never use this for UI/dashboard reads — those must be org-scoped
-// via getProject(id, orgId).
+// via getProject(id, orgId). Carries the signing secret (verification happens on
+// this path), which the shared Project shape deliberately omits.
 export async function getProjectById(id: string) {
   const p = await prisma.project.findFirst({ where: { id } })
-  return p ? toProject(p) : undefined
+  return p ? { ...toProject(p), signingSecret: p.signingSecret } : undefined
+}
+
+// The signing config an org admin manages: the toggle plus the secret itself.
+export async function getProjectSigning(projectId: string, orgId: string) {
+  const p = await prisma.project.findFirst({
+    where: { id: projectId, orgId },
+    select: { requireSignedUrls: true, signingSecret: true },
+  })
+  return p ?? undefined
+}
+
+export async function updateProjectSigning(
+  projectId: string,
+  orgId: string,
+  patch: { requireSignedUrls?: boolean; signingSecret?: string },
+) {
+  const result = await prisma.project.updateMany({
+    where: { id: projectId, orgId },
+    data: patch,
+  })
+  if (result.count === 0) {
+    return
+  }
+  return getProjectSigning(projectId, orgId)
 }
 
 const COLOR_PRESETS = [

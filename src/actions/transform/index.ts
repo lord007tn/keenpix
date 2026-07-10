@@ -10,6 +10,7 @@ import { assertAllowedOrigin, assertSafeOrigin } from '@/lib/origin/safe-origin'
 import { runQueuedJob } from '@/lib/queue/transform-queue'
 import { transformImage } from '@/lib/sharp/transform'
 import { optimizeSvgImage } from '@/lib/svg/optimize'
+import { verifyTransformSignature } from '@/lib/transform-signing/signing'
 import type { OutputFormat, TransformOptions } from '@/shared/transform'
 
 export interface OptimizeProjectImageInput {
@@ -20,6 +21,9 @@ export interface OptimizeProjectImageInput {
   searchParams: URLSearchParams
   src: string
   startedAt?: number
+  // True for authenticated internal callers (SDK prewarm) that never carry a
+  // URL signature; the public /img route always leaves this false.
+  trusted?: boolean
 }
 
 export interface PrewarmProjectImagesInput {
@@ -164,6 +168,7 @@ export async function optimizeProjectImage({
   searchParams,
   src,
   startedAt = performance.now(),
+  trusted = false,
 }: OptimizeProjectImageInput) {
   // Public data plane: a transform request carries only a project id and is
   // gated by the project's own allowlist, not a session org — so the lookup is
@@ -179,6 +184,15 @@ export async function optimizeProjectImage({
       'This project is not on an active plan. Ask the workspace owner to subscribe.',
       402,
     )
+  }
+  // Opt-in URL signing on top of the allowlist: blocks third parties from
+  // burning a project's metered bandwidth with cache-busting query strings.
+  // Trusted internal callers (SDK prewarm) are already authenticated.
+  if (project.requireSignedUrls && !trusted) {
+    const secret = project.signingSecret
+    if (!(secret && verifyTransformSignature(secret, src, searchParams))) {
+      throw new TransformError('Missing or invalid URL signature', 403)
+    }
   }
 
   const transformOptions = parseTransformParams(searchParams, accept, {
@@ -296,6 +310,9 @@ export function prewarmProjectImages({
           recordLog: false,
           searchParams,
           src,
+          // Prewarm arrives via the authenticated SDK API, not the public
+          // route, so it doesn't carry (or need) a URL signature.
+          trusted: true,
         })
       }),
     ),

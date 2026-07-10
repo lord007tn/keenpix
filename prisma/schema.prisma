@@ -222,6 +222,11 @@ model Project {
   maxWidth       Int?
   defaultFit     String       @default("cover")
   defaultDpr     Int          @default(1)
+  // Opt-in HMAC URL signing: when required, /img requests must carry a valid
+  // `s=` signature computed with the project's secret. The allowlist stays the
+  // baseline gate; signing adds hotlink/cache-busting protection on top.
+  requireSignedUrls Boolean   @default(false)
+  signingSecret  String?
   createdAt      DateTime     @default(now())
   requestLogs    RequestLog[]
 
