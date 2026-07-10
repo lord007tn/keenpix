@@ -22,7 +22,22 @@ const { basic, pro, business } = PLANS
 export const MARKETING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'How does Keenpix pricing work?',
-    answer: `Keenpix bills on one thing — bandwidth delivered at the edge — and never per transform. Managed cloud starts at $${basic.priceMonthlyUsd}/mo for ${gb(basic.includedBandwidthBytes)} delivered with unlimited transforms, and scales to Pro ($${pro.priceMonthlyUsd}/mo, ${gb(pro.includedBandwidthBytes)}) and Business ($${business.priceMonthlyUsd}/mo, ${gb(business.includedBandwidthBytes)}). Overage is a single published linear rate between ${cents(business.overagePerGbCents)} and ${cents(basic.overagePerGbCents)} per GB depending on tier, and every subscription starts with a hard spending cap (2× your plan price, adjustable or removable any time) so the bill can never surprise you. Transforms, responsive srcset variants, and modern formats are always free and unlimited, so optimizing aggressively lowers your bill instead of raising it. Prefer to pay nothing? Self-host the same open-source engine for free.`,
+    answer: `Keenpix bills on one thing — bandwidth delivered — and never per transform. Managed cloud starts at $${basic.priceMonthlyUsd}/mo for ${gb(basic.includedBandwidthBytes)} delivered with unlimited transforms, and scales to Pro ($${pro.priceMonthlyUsd}/mo, ${gb(pro.includedBandwidthBytes)}) and Business ($${business.priceMonthlyUsd}/mo, ${gb(business.includedBandwidthBytes)}). Overage is a single published linear rate between ${cents(business.overagePerGbCents)} and ${cents(basic.overagePerGbCents)} per GB depending on tier, and every subscription starts with a hard spending cap (2× your plan price, adjustable or removable any time) so the bill can never surprise you. Transforms, responsive srcset variants, and modern formats are always free and unlimited, so optimizing aggressively lowers your bill instead of raising it. Prefer to pay nothing? Self-host the same open-source engine for free.`,
+  },
+  {
+    question: 'What happens when I hit my spending cap?',
+    answer:
+      'Delivery pauses — you are never billed past the cap. Every subscription starts with the cap on by default at 2× your plan price, you get email alerts as you approach and reach it, and you can raise, lower, or remove it any time from billing settings. If you would rather never pause, remove the cap and pay the published linear overage rate instead. Images already cached at your CDN edge keep serving.',
+  },
+  {
+    question: 'Does Keenpix replace my CDN?',
+    answer:
+      'No — Keenpix is the image-optimization layer, designed to sit behind the CDN you already run. Every transformed image is served with immutable, year-long cache headers, so Cloudflare, Fastly, CloudFront, or any edge cache in front of /img/* serves repeat requests straight from the edge. You keep your CDN, your domain, and your existing setup; Keenpix makes every image it delivers smaller.',
+  },
+  {
+    question: 'How does Keenpix prevent abuse without API keys?',
+    answer:
+      'Every project has an origin allowlist: Keenpix only fetches from hosts you explicitly approve, so there is no API key to leak in your public image URLs and an empty allowlist fails closed. Fetching is SSRF-hardened — private and internal addresses are blocked, redirects are re-validated, and origin size and time are capped. For hotlink or cache-busting protection, enable HMAC-signed URLs per project and every request must carry a valid signature.',
   },
   {
     question: 'Is there a free trial?',

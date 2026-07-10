@@ -117,15 +117,6 @@ const MATRIX: Array<{
     ],
   },
   {
-    feature: 'Team seats',
-    values: [
-      'Unlimited',
-      String(PLANS.basic.maxSeats),
-      String(PLANS.pro.maxSeats),
-      String(PLANS.business.maxSeats),
-    ],
-  },
-  {
     feature: 'Analytics',
     values: ['Full (Postgres)', 'Core', 'Advanced', 'Advanced'],
   },
@@ -179,7 +170,7 @@ const CARD_FEATURES: Record<PlanId, { features: string[]; lead?: string }> = {
     features: [
       `${gb(PLANS.basic.includedBandwidthBytes)} delivered / month`,
       'Unlimited transforms — AVIF, WebP + 6 more formats',
-      `${PLANS.basic.maxProjects} projects · ${PLANS.basic.maxSeats} team seats`,
+      `${PLANS.basic.maxProjects} projects`,
       'Bandwidth-saved, cache-hit & top-image analytics',
       `Live request logs · ${PLANS.basic.logRetentionDays}-day retention`,
       'Signed URLs + per-project allowlists',
@@ -192,7 +183,7 @@ const CARD_FEATURES: Record<PlanId, { features: string[]; lead?: string }> = {
       `${gb(PLANS.pro.includedBandwidthBytes)} delivered / month`,
       'Advanced analytics — geo, latency percentiles, full history',
       `Full log search · ${PLANS.pro.logRetentionDays}-day retention`,
-      `${PLANS.pro.maxProjects} projects · ${PLANS.pro.maxSeats} team seats`,
+      `${PLANS.pro.maxProjects} projects`,
       `Cheaper overage · $${(PLANS.pro.overagePerGbCents / 100).toFixed(2)}/GB, hard-capped`,
     ],
   },
@@ -200,7 +191,7 @@ const CARD_FEATURES: Record<PlanId, { features: string[]; lead?: string }> = {
     lead: 'Everything in Pro, plus:',
     features: [
       `${gb(PLANS.business.includedBandwidthBytes)} delivered / month`,
-      `Unlimited projects · ${PLANS.business.maxSeats} team seats`,
+      'Unlimited projects',
       `${PLANS.business.logRetentionDays}-day log retention`,
       `Lowest overage · $${(PLANS.business.overagePerGbCents / 100).toFixed(2)}/GB, hard-capped`,
     ],

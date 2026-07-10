@@ -121,18 +121,11 @@ function UsageCard({ data }: { data: BillingData }) {
           ) : null}
         </div>
         {hasPlan ? (
-          <div className="grid gap-6 sm:grid-cols-2">
-            <QuotaRow
-              label="Projects"
-              limit={usage.projects.limit}
-              used={usage.projects.used}
-            />
-            <QuotaRow
-              label="Team seats"
-              limit={usage.seats.limit}
-              used={usage.seats.used}
-            />
-          </div>
+          <QuotaRow
+            label="Projects"
+            limit={usage.projects.limit}
+            used={usage.projects.used}
+          />
         ) : null}
       </CardContent>
     </Card>
