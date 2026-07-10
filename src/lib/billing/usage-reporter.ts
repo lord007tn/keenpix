@@ -1,11 +1,11 @@
 import {
   deliveredBytesSince,
+  listTrialingOrgIds,
   listUsageBillingCustomers,
   markUsageReported,
 } from '@/data-access/usage'
 import { prisma } from '@/db'
 import { env } from '@/env/server'
-import type { Prisma } from '@/generated/prisma/client'
 import { errorContext, logger } from '@/lib/logger/logger'
 import { isCloud } from '@/server/deployment'
 
@@ -23,6 +23,7 @@ const POLAR_API = {
 }
 
 export interface UsageReportResult {
+  failed: number
   ingested: number
   orgs: number
   skipped: boolean
@@ -51,39 +52,46 @@ async function ingestEvent(base: string, event: UsageEvent): Promise<void> {
   }
 }
 
-async function runReport(
-  db: Prisma.TransactionClient,
-): Promise<UsageReportResult> {
+// Runs on the GLOBAL prisma client (never the mutex transaction): each org's
+// watermark advance auto-commits immediately after that org's successful Polar
+// ingest. If every write shared one transaction, a later org's failure (or a
+// transaction timeout) would roll back watermarks whose external ingests already
+// succeeded — and the next run would meter those windows to Polar a second time.
+async function runReport(): Promise<UsageReportResult> {
   const base = POLAR_API[env.POLAR_SERVER ?? 'sandbox']
-  const customers = await listUsageBillingCustomers(db)
+  const customers = await listUsageBillingCustomers()
+  // Trial usage is free: skip the Polar ingest but still advance the watermark,
+  // so a converted org is billed from conversion — never for its trial window.
+  const trialing = new Set(await listTrialingOrgIds())
   let ingested = 0
-  // Per-org: report THIS org's delta, then advance ONLY its watermark. So a later
-  // org's failure never re-reports an org already ingested this run (the old
-  // batch-then-mark-all path re-ingested the whole window if a single mark threw).
+  let failed = 0
   for (const customer of customers) {
-    const { bytes, through } = await deliveredBytesSince(
-      customer.orgId,
-      customer.lastUsageReportAt,
-      db,
-    )
-    if (bytes > 0) {
-      try {
+    try {
+      const { bytes, through } = await deliveredBytesSince(
+        customer.orgId,
+        customer.lastUsageReportAt,
+      )
+      if (bytes > 0 && !trialing.has(customer.orgId)) {
         await ingestEvent(base, {
           name: 'bandwidth_delivered',
           customer_id: customer.polarCustomerId,
           metadata: { gb: bytes / GB, org_id: customer.orgId },
         })
-      } catch (error) {
-        // Stop before advancing this org's watermark so its window is retried
-        // next run; orgs already ingested+marked above stay reported exactly once.
-        logger.error(errorContext(error), 'polar usage ingest failed')
-        throw error
+        ingested += 1
       }
-      ingested += 1
+      // Committed durably right here — a later org's failure can't unwind it.
+      await markUsageReported(customer.orgId, through)
+    } catch (error) {
+      // This org's watermark did not advance, so its window is retried next run
+      // exactly once; keep going so one broken customer never stalls the rest.
+      failed += 1
+      logger.error(
+        { ...errorContext(error), orgId: customer.orgId },
+        'polar usage ingest failed for org',
+      )
     }
-    await markUsageReported(customer.orgId, through, db)
   }
-  return { ingested, orgs: customers.length, skipped: false }
+  return { failed, ingested, orgs: customers.length, skipped: false }
 }
 
 // Single-flight within this process (a manual trigger racing the scheduler) AND
@@ -98,7 +106,7 @@ let inFlight: Promise<UsageReportResult> | null = null
 // Polar isn't configured.
 export function reportUsage(): Promise<UsageReportResult> {
   if (!(isCloud() && env.POLAR_TOKEN)) {
-    return Promise.resolve({ ingested: 0, orgs: 0, skipped: true })
+    return Promise.resolve({ failed: 0, ingested: 0, orgs: 0, skipped: true })
   }
   if (inFlight) {
     return inFlight
@@ -109,15 +117,20 @@ export function reportUsage(): Promise<UsageReportResult> {
         // Only the replica that wins the advisory lock runs; any other concurrent
         // run no-ops (its window is picked up next cycle from the watermarks), so
         // a fanned-out or overlapping cron can never double-meter to Polar. The
-        // lock is transaction-scoped and auto-released on commit.
+        // lock is transaction-scoped and auto-released on commit. This
+        // transaction is ONLY the mutex — runReport() deliberately uses the
+        // global client so per-org watermarks commit as they land (see there).
         const locks = await tx.$queryRaw<{ locked: boolean }[]>`
           SELECT pg_try_advisory_xact_lock(${USAGE_LOCK_CLASS}, ${USAGE_LOCK_OBJ}) AS locked`
         if (!locks[0]?.locked) {
-          return { ingested: 0, orgs: 0, skipped: true }
+          return { failed: 0, ingested: 0, orgs: 0, skipped: true }
         }
-        return runReport(tx)
+        return runReport()
       },
-      { timeout: 120_000, maxWait: 10_000 },
+      // Generous ceiling: the mutex must outlive the full run (many customers x
+      // slow Polar). If it still expires, committed watermarks are unaffected —
+      // the next run resumes from them.
+      { timeout: 600_000, maxWait: 10_000 },
     )
     .finally(() => {
       inFlight = null

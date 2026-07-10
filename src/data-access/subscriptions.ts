@@ -1,5 +1,11 @@
 import { prisma } from '@/db'
-import { getPlan, getPlanRank, type Plan } from '@/lib/billing/plans'
+import type { Prisma } from '@/generated/prisma/client'
+import {
+  defaultSpendCapCents,
+  getPlan,
+  getPlanRank,
+  type Plan,
+} from '@/lib/billing/plans'
 import { getActiveInternalPlanGrant } from './internal-plan-grants'
 
 // Statuses that grant plan entitlements (features + quota). `trialing` is
@@ -91,18 +97,65 @@ export interface SubscriptionSnapshot {
   orgId: string
   overageAllowed?: boolean
   plan: string
+  // Polar's modified_at on the webhook payload — the ordering key for the
+  // stale-event guard below.
+  polarModifiedAt?: Date | null
   polarSubscriptionId: string
   status: string
 }
 
-// Webhook-facing upserts — keep the local snapshot in sync with Polar so the hot
-// path reads entitlements from Postgres, never Polar.
-export function upsertSubscription(input: SubscriptionSnapshot) {
-  return prisma.subscription.upsert({
+type Tx = Prisma.TransactionClient
+
+// Polar retries failed webhook deliveries, so events can arrive out of order.
+// Two guards keep the mirror truthful for the SAME subscription id:
+//   1. `revoked` is terminal — a late/retried non-revoked event can't resurrect
+//      an ended subscription (a NEW subscription id may still replace the row:
+//      that's the customer legitimately re-subscribing).
+//   2. An event whose modified_at is OLDER than the applied one is dropped.
+// Returns the previous status (for transition-triggered notifications) and
+// whether the snapshot was applied.
+export interface SubscriptionSyncResult {
+  applied: boolean
+  previousStatus: string | null
+}
+
+async function applySubscriptionSync(
+  db: Tx,
+  input: SubscriptionSnapshot,
+): Promise<SubscriptionSyncResult> {
+  const existing = await db.subscription.findUnique({
+    where: { orgId: input.orgId },
+    select: { polarModifiedAt: true, polarSubscriptionId: true, status: true },
+  })
+  const previousStatus = existing?.status ?? null
+  if (existing && existing.polarSubscriptionId === input.polarSubscriptionId) {
+    if (existing.status === 'revoked' && input.status !== 'revoked') {
+      return { applied: false, previousStatus }
+    }
+    if (
+      existing.polarModifiedAt &&
+      input.polarModifiedAt &&
+      input.polarModifiedAt < existing.polarModifiedAt
+    ) {
+      return { applied: false, previousStatus }
+    }
+  }
+  await db.subscription.upsert({
     where: { orgId: input.orgId },
     update: input,
-    create: input,
+    // A brand-new subscription starts with the default spend cap ("no surprise
+    // bill" is default-on); updates never touch the customer's own setting.
+    create: { ...input, spendCapCents: defaultSpendCapCents(input.plan) },
   })
+  return { applied: true, previousStatus }
+}
+
+// Webhook-facing upserts — keep the local snapshot in sync with Polar so the hot
+// path reads entitlements from Postgres, never Polar.
+export function upsertSubscription(
+  input: SubscriptionSnapshot,
+): Promise<SubscriptionSyncResult> {
+  return prisma.$transaction((tx) => applySubscriptionSync(tx, input))
 }
 
 // Mirror the subscription AND its billing-customer link in ONE transaction, so an
@@ -113,14 +166,13 @@ export function upsertSubscription(input: SubscriptionSnapshot) {
 export function upsertSubscriptionWithCustomer(
   input: SubscriptionSnapshot,
   polarCustomerId: string,
-) {
-  return prisma.$transaction([
-    prisma.subscription.upsert({
-      where: { orgId: input.orgId },
-      update: input,
-      create: input,
-    }),
-    prisma.billingCustomer.upsert({
+): Promise<SubscriptionSyncResult> {
+  return prisma.$transaction(async (tx) => {
+    const result = await applySubscriptionSync(tx, input)
+    if (!result.applied) {
+      return result
+    }
+    await tx.billingCustomer.upsert({
       where: { orgId: input.orgId },
       update: { polarCustomerId },
       // Start the usage watermark at creation time. Without this, the first cron
@@ -132,6 +184,7 @@ export function upsertSubscriptionWithCustomer(
         polarCustomerId,
         lastUsageReportAt: new Date(),
       },
-    }),
-  ])
+    })
+    return result
+  })
 }

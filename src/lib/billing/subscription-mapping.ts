@@ -13,6 +13,9 @@ export interface PolarSubscriptionData {
   customer?: { externalId?: string | null; id?: string } | null
   id: string
   metadata?: Record<string, unknown> | null
+  // Polar's modified_at — the ordering key the sync uses to drop stale retried
+  // deliveries. Optional because older payload shapes may omit it.
+  modifiedAt?: Date | string | null
   product?: { metadata?: Record<string, unknown> | null } | null
   status: string
 }
@@ -57,5 +60,6 @@ export function mapSubscriptionSnapshot(
     currentPeriodEnd: toDate(sub.currentPeriodEnd),
     overageAllowed: false,
     cancelAtPeriodEnd: Boolean(sub.cancelAtPeriodEnd),
+    polarModifiedAt: toDate(sub.modifiedAt),
   }
 }
