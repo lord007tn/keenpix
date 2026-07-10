@@ -11,7 +11,7 @@
   "background_color": "#07111F",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "/brand/keenpix-favicon.svg",
       "type": "image/svg+xml",
       "sizes": "any",
       "purpose": "any"
