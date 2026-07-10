@@ -82,7 +82,6 @@ function planFeatures(plan: Plan): string[] {
     plan.advancedAnalytics ? 'Advanced analytics' : 'Core analytics',
     plan.advancedLogs ? 'Full log history + search' : 'Recent logs (last 200)',
     projects,
-    `${plan.maxSeats} team seats`,
   ]
   // Custom domains + AI tools are on the roadmap but not shipped yet, so mark
   // them "coming soon" rather than promising them at checkout.
@@ -167,20 +166,15 @@ export function PlanSelection({
 
   const targetPlan = confirmPlan ? PLANS[confirmPlan] : null
   const downgradeWarnings: string[] = []
-  if (targetPlan && usage) {
-    if (
-      targetPlan.maxProjects !== null &&
-      usage.projects > targetPlan.maxProjects
-    ) {
-      downgradeWarnings.push(
-        `${usage.projects} projects (this plan includes ${targetPlan.maxProjects})`,
-      )
-    }
-    if (usage.seats > targetPlan.maxSeats) {
-      downgradeWarnings.push(
-        `${usage.seats} seats (this plan includes ${targetPlan.maxSeats})`,
-      )
-    }
+  if (
+    targetPlan &&
+    usage &&
+    targetPlan.maxProjects !== null &&
+    usage.projects > targetPlan.maxProjects
+  ) {
+    downgradeWarnings.push(
+      `${usage.projects} projects (this plan includes ${targetPlan.maxProjects})`,
+    )
   }
 
   return (

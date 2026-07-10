@@ -7,7 +7,7 @@ import {
   GlobeIcon,
   ImageIcon,
   MenuIcon,
-  SparklesIcon,
+  ShieldCheckIcon,
   WalletIcon,
   ZapIcon,
 } from 'lucide-react'
@@ -53,27 +53,27 @@ const FEATURES = [
   {
     icon: WalletIcon,
     title: 'No surprise bills',
-    body: 'One published, linear overage rate — no pooled credits, no per-transform metering, no account suspensions. Set a hard cap and we never blow past it.',
+    body: 'One published, linear overage rate — no pooled credits, no per-transform metering. A hard spending cap ships on by default, and delivery pauses at the cap instead of billing past it.',
   },
   {
     icon: GlobeIcon,
     title: 'Optimize your origins',
-    body: 'Point Keenpix at your existing S3, R2, or any origin and keep your URLs. No re-upload, no DAM migration, no lock-in.',
+    body: 'Point Keenpix at your existing S3, R2, or any origin and keep your URLs — it sits behind the CDN you already run. No re-upload, no asset-library migration, no lock-in.',
   },
   {
     icon: ImageIcon,
     title: 'Modern formats from one URL',
-    body: 'AVIF, WebP, JPEG, PNG, GIF, HEIF, TIFF, and SVG with Sharp/IPX-style controls — unlimited transforms on every plan.',
+    body: 'AVIF, WebP, JPEG, PNG, GIF, HEIF, TIFF, and SVG. Resize, crop, quality, and format from URL params — unlimited transforms on every plan.',
   },
   {
-    icon: SparklesIcon,
-    title: 'AI image tools (coming soon)',
-    body: 'Background removal, upscaling, and enhancement — usage-based, so you only pay for what you actually run.',
+    icon: ShieldCheckIcon,
+    title: 'No API keys to leak',
+    body: 'Per-project origin allowlists gate every request — nothing secret ships in your frontend. Add HMAC-signed URLs when you want hotlink protection, all on an SSRF-hardened pipeline.',
   },
   {
     icon: ChartColumnIcon,
     title: 'Analytics without another vendor',
-    body: 'Requests, bandwidth delivered and saved, format mix, cache hit rate, top assets, and latency — built in.',
+    body: 'Requests, bandwidth delivered and saved, format mix, cache hit rate, top assets, and latency — built in on every plan.',
   },
   {
     icon: GitBranchIcon,
@@ -124,8 +124,8 @@ const PRICING: {
     highlights: [
       `${planGb(PLANS.basic.includedBandwidthBytes)} delivered / month`,
       'Unlimited transforms',
-      'Basic analytics + logs',
-      'Multiple projects & staff',
+      'Core analytics + live logs',
+      `${PLANS.basic.maxProjects} projects`,
       overageRate('basic'),
     ],
     featured: false,
@@ -133,12 +133,12 @@ const PRICING: {
   {
     name: 'Pro',
     planId: 'pro',
-    tagline: 'Advanced analytics and full log history.',
+    tagline: 'For production sites with real traffic.',
     highlights: [
       `${planGb(PLANS.pro.includedBandwidthBytes)} delivered / month`,
-      'Advanced analytics + full logs',
-      `${PLANS.pro.maxSeats} team seats · ${PLANS.pro.maxProjects} projects`,
-      'Custom domains (coming soon)',
+      'Advanced analytics + full log search',
+      `${PLANS.pro.maxProjects} projects`,
+      `${PLANS.pro.logRetentionDays}-day log retention`,
       overageRate('pro'),
     ],
     featured: true,
@@ -150,8 +150,8 @@ const PRICING: {
     highlights: [
       `${planGb(PLANS.business.includedBandwidthBytes)} delivered / month`,
       'Unlimited projects',
+      'Advanced analytics + full log search',
       `${PLANS.business.logRetentionDays}-day log retention`,
-      `${PLANS.business.maxSeats} team seats`,
       overageRate('business'),
     ],
     featured: false,
@@ -164,6 +164,7 @@ const NAV_LINKS = [
   { href: '#self-host', label: 'Self-host' },
   { href: '/blog', label: 'Blog' },
   { href: '/docs', label: 'Docs' },
+  { href: REPOSITORY_URL, label: 'GitHub' },
 ]
 
 // Below md the header nav collapses to a hamburger drawer so phone visitors can
@@ -248,7 +249,7 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
               Sign in
             </Link>
             <Link className={buttonVariants({ size: 'sm' })} to="/signup">
-              Get started
+              Start free trial
               <ArrowRightIcon data-icon="inline-end" />
             </Link>
           </div>
@@ -307,6 +308,18 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
                   Self-host free
                 </a>
               </div>
+              <p className="mt-5 text-sm text-white/60">
+                In production today — Keenpix serves every image on{' '}
+                <a
+                  className="text-white/80 underline hover:text-white"
+                  href="https://joodlab.com"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  joodlab.com
+                </a>
+                .
+              </p>
               <div className="mt-8 grid gap-3 text-sm sm:grid-cols-3">
                 {metrics.map(([value, label]) => (
                   <div className="border-white/10 border-t pt-3" key={value}>
@@ -319,7 +332,7 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
               </div>
             </div>
             <div className="hidden items-end justify-end lg:flex">
-              <div className="w-full max-w-md border border-white/10 bg-background/10 p-5 shadow-2xl backdrop-blur-md">
+              <div className="w-full max-w-md rounded-lg border border-white/10 bg-background/10 p-5 shadow-2xl backdrop-blur-md">
                 <div className="flex items-center justify-between border-white/10 border-b pb-4">
                   <div className="font-medium text-sm text-white">
                     Transform request
@@ -329,11 +342,13 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
                   </Badge>
                 </div>
                 <div className="mt-5 space-y-4 font-mono text-sm">
-                  <div className="text-cyan-100">GET /img/https://...</div>
+                  <div className="text-cyan-100">
+                    GET /img/https://…/hero.jpg
+                  </div>
                   <div className="grid grid-cols-3 gap-2 text-xs">
-                    {['w=1200', 'fmt=webp', 'q=82'].map((param) => (
+                    {['w=1200', 'fmt=auto', 'q=82'].map((param) => (
                       <span
-                        className="border border-white/10 bg-white/10 px-2 py-2 text-center text-white/80"
+                        className="rounded-md border border-white/10 bg-white/10 px-2 py-2 text-center text-white/80"
                         key={param}
                       >
                         {param}
@@ -341,12 +356,32 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
                     ))}
                   </div>
                   <div className="space-y-3 pt-2">
-                    {PIPELINE_STEPS.map((step) => (
+                    {[
+                      'Allowlisted host validated',
+                      'Fetched with SSRF guards',
+                      'Transformed & variant cached',
+                      'Served immutable for your CDN',
+                    ].map((step) => (
                       <div className="flex items-start gap-3" key={step}>
                         <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-emerald-300" />
                         <span className="text-white/70">{step}</span>
                       </div>
                     ))}
+                  </div>
+                  <div className="border-white/10 border-t pt-4 text-xs">
+                    <div className="flex items-center justify-between text-white/60">
+                      <span>hero.jpg · original</span>
+                      <span>2.1 MB</span>
+                    </div>
+                    <div className="mt-2 h-1.5 w-full rounded-full bg-white/15">
+                      <div className="h-1.5 w-[23%] rounded-full bg-emerald-300" />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-emerald-200">
+                        hero.avif · delivered
+                      </span>
+                      <span className="text-white">480 KB · 77% smaller</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -406,85 +441,7 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
           </div>
         </section>
 
-        <section className="border-b" id="pricing">
-          <div className="mx-auto max-w-6xl px-6 py-20">
-            <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-              <div>
-                <span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
-                  Pricing
-                </span>
-                <h2 className="mt-2 max-w-2xl font-semibold text-3xl tracking-tight md:text-4xl">
-                  One honest meter. Or free forever.
-                </h2>
-              </div>
-              <p className="max-w-md text-muted-foreground leading-relaxed">
-                Every plan bills on bandwidth delivered — never per transform.
-                Overage is one linear published rate with a hard cap, on by
-                default. 14-day free trial; two months free on annual.
-              </p>
-            </div>
-            <div className="grid gap-4 lg:grid-cols-3">
-              {PRICING.map((tier) => (
-                <Card
-                  className={cn(
-                    'rounded-lg',
-                    tier.featured && 'ring-2 ring-primary',
-                  )}
-                  key={tier.name}
-                >
-                  <CardContent className="flex flex-col gap-5">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-lg">{tier.name}</h3>
-                      {tier.featured ? (
-                        <Badge className="bg-primary/12 text-primary hover:bg-primary/12">
-                          Most popular
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="font-semibold text-4xl tracking-tight">
-                        {formatUsd(prices.plans[tier.planId].month.amountCents)}
-                      </span>
-                      <span className="text-muted-foreground text-sm">/mo</span>
-                    </div>
-                    <p className="text-muted-foreground text-sm">
-                      {tier.tagline}
-                    </p>
-                    <ul className="flex flex-col gap-2.5 text-sm">
-                      {tier.highlights.map((h) => (
-                        <li className="flex items-start gap-2.5" key={h}>
-                          <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-primary" />
-                          <span className="text-muted-foreground">{h}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <Link
-                      className={buttonVariants({
-                        className: 'mt-1 w-full',
-                        variant: tier.featured ? 'default' : 'outline',
-                      })}
-                      to="/signup"
-                    >
-                      Start free trial
-                    </Link>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            <p className="mt-6 text-center text-muted-foreground text-sm">
-              Prefer to run it yourself?{' '}
-              <a
-                className="text-foreground underline"
-                href="/docs/self-hosting"
-              >
-                Self-host Keenpix free
-              </a>{' '}
-              — the same open-source engine, on your own infrastructure.
-            </p>
-          </div>
-        </section>
-
-        <section className="border-b bg-muted/30" id="pipeline">
+        <section className="border-b" id="pipeline">
           <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-20 lg:grid-cols-2">
             <div className="flex flex-col gap-4">
               <span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
@@ -526,7 +483,96 @@ Vary: Accept`}</CodeBlock>
           </div>
         </section>
 
-        <section id="self-host">
+        <section className="border-b bg-muted/30" id="pricing">
+          <div className="mx-auto max-w-6xl px-6 py-20">
+            <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+              <div>
+                <span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                  Pricing
+                </span>
+                <h2 className="mt-2 max-w-2xl font-semibold text-3xl tracking-tight md:text-4xl">
+                  One honest meter. Or free forever.
+                </h2>
+              </div>
+              <p className="max-w-md text-muted-foreground leading-relaxed">
+                Every plan bills on bandwidth delivered — never per transform.
+                Overage is one linear published rate with a hard cap, on by
+                default. 14-day free trial; two months free on annual.
+              </p>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-3">
+              {PRICING.map((tier) => (
+                <Card
+                  className={cn(
+                    'rounded-lg',
+                    tier.featured && 'ring-2 ring-primary',
+                  )}
+                  key={tier.name}
+                >
+                  <CardContent className="flex flex-col gap-5">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-lg">{tier.name}</h3>
+                      {tier.featured ? (
+                        <Badge className="bg-primary/12 text-primary hover:bg-primary/12">
+                          Most popular
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-semibold text-4xl tracking-tight">
+                          {formatUsd(
+                            prices.plans[tier.planId].month.amountCents,
+                          )}
+                        </span>
+                        <span className="text-muted-foreground text-sm">
+                          /mo
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground text-xs">
+                        or{' '}
+                        {formatUsd(prices.plans[tier.planId].year.amountCents)}
+                        /yr — 2 months free
+                      </p>
+                    </div>
+                    <p className="text-muted-foreground text-sm">
+                      {tier.tagline}
+                    </p>
+                    <ul className="flex flex-col gap-2.5 text-sm">
+                      {tier.highlights.map((h) => (
+                        <li className="flex items-start gap-2.5" key={h}>
+                          <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-primary" />
+                          <span className="text-muted-foreground">{h}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Link
+                      className={buttonVariants({
+                        className: 'mt-1 w-full',
+                        variant: tier.featured ? 'default' : 'outline',
+                      })}
+                      to="/signup"
+                    >
+                      Start free trial
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <p className="mt-6 text-center text-muted-foreground text-sm">
+              Prefer to run it yourself?{' '}
+              <a
+                className="text-foreground underline"
+                href="/docs/self-hosting"
+              >
+                Self-host Keenpix free
+              </a>{' '}
+              — the same open-source engine, on your own infrastructure.
+            </p>
+          </div>
+        </section>
+
+        <section className="border-b" id="self-host">
           <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
@@ -536,35 +582,56 @@ Vary: Accept`}</CodeBlock>
                 Never locked in. Run the same engine yourself.
               </h2>
               <p className="mt-4 text-muted-foreground leading-relaxed">
-                The Keenpix core is open source. Deploy it with Docker, keep the
-                image pipeline on your own infrastructure, and pay nothing.
+                The Keenpix engine is open source under AGPL — dashboard,
+                analytics, and signed URLs included, no telemetry, no CLA.
+                Deploy it with Docker, keep the image pipeline on your own
+                infrastructure, and pay nothing.
               </p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {[
-                [
-                  'Docker Compose',
-                  'App, Postgres, migrations, seed, and healthcheck.',
-                ],
-                [
-                  'Coolify ready',
-                  'A dedicated compose file with generated secrets.',
-                ],
-                [
-                  'CDN friendly',
-                  'Put any edge cache in front of /img/* and keep control.',
-                ],
-              ].map(([title, body]) => (
-                <div
-                  className="border-border border-l pl-4 text-sm"
-                  key={title}
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a className={buttonVariants()} href="/docs/self-hosting">
+                  Deploy with Docker
+                  <ArrowRightIcon data-icon="inline-end" />
+                </a>
+                <a
+                  className={buttonVariants({ variant: 'outline' })}
+                  href={REPOSITORY_URL}
+                  rel="noreferrer"
+                  target="_blank"
                 >
-                  <h3 className="font-semibold">{title}</h3>
-                  <p className="mt-2 text-muted-foreground leading-relaxed">
-                    {body}
-                  </p>
-                </div>
-              ))}
+                  View on GitHub
+                </a>
+              </div>
+            </div>
+            <div className="flex flex-col gap-6">
+              <CodeBlock>{`cp .env.example .env   # set secrets + admin login
+docker compose up -d   # app + Postgres, migrated and seeded
+open http://localhost:3000`}</CodeBlock>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {[
+                  [
+                    'Docker Compose',
+                    'App, Postgres, migrations, seed, and healthcheck.',
+                  ],
+                  [
+                    'Coolify ready',
+                    'A dedicated compose file with generated secrets.',
+                  ],
+                  [
+                    'CDN friendly',
+                    'Put any edge cache in front of /img/* and keep control.',
+                  ],
+                ].map(([title, body]) => (
+                  <div
+                    className="border-border border-l pl-4 text-sm"
+                    key={title}
+                  >
+                    <h3 className="font-semibold">{title}</h3>
+                    <p className="mt-2 text-muted-foreground leading-relaxed">
+                      {body}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -604,32 +671,33 @@ Vary: Accept`}</CodeBlock>
               </h2>
               <p className="mt-2 max-w-xl text-muted-foreground">
                 Spin up a project in minutes on managed cloud, or self-host the
-                open-source engine — your call, no lock-in either way.
+                open-source engine — no lock-in either way. Every plan starts
+                with a 14-day free trial, and trial usage is never billed.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
+              <Link className={buttonVariants()} to="/signup">
+                Start free trial
+                <ArrowRightIcon data-icon="inline-end" />
+              </Link>
               <a
                 className={buttonVariants({ variant: 'outline' })}
                 href="/docs/self-hosting"
               >
                 Self-hosting guide
               </a>
-              <Link className={buttonVariants()} to="/signup">
-                Get started
-                <ArrowRightIcon data-icon="inline-end" />
-              </Link>
             </div>
           </div>
         </section>
       </main>
 
       <footer className="border-t bg-muted/30">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-8 text-muted-foreground text-sm">
+        <div className="mx-auto flex max-w-6xl flex-col items-start gap-4 px-6 py-8 text-muted-foreground text-sm md:flex-row md:items-center md:justify-between">
           <KeenpixLogo />
-          <span className="font-mono text-xs">
+          <span className="font-mono text-xs md:order-last">
             © 2026 keenpix · managed cloud + open-source self-host
           </span>
-          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+          <nav className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <a className="hover:text-foreground" href="/about">
               About
             </a>
