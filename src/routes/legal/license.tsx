@@ -30,13 +30,22 @@ function LicensePage() {
 
       <h2>Engine license</h2>
       <p>
-        The Keenpix engine is licensed under the terms in the{' '}
+        The Keenpix engine is licensed under the{' '}
         <a href={LICENSE_URL} rel="noreferrer" target="_blank">
-          LICENSE file in the repository
+          GNU Affero General Public License v3.0 (AGPL-3.0)
         </a>
         . You are free to run it on your own infrastructure subject to that
-        license. See the <a href="/docs/self-hosting">self-hosting guide</a> to
-        deploy it with Docker.
+        license, including for commercial use. If you modify the engine and
+        offer it to others over a network, the AGPL requires you to share your
+        modifications' source. See the{' '}
+        <a href="/docs/self-hosting">self-hosting guide</a> to deploy it with
+        Docker.
+      </p>
+      <p>
+        Our promise: the self-host engine stays AGPL-licensed and free — no
+        rug-pull, no contributor license agreement, no features removed from
+        self-host to upsell the cloud. Releases published before the AGPL
+        relicense (v0.1.11 and earlier) remain available under Apache-2.0.
       </p>
 
       <h2>Cloud service</h2>
