@@ -77,12 +77,15 @@ export function toRequestEventRow(input: RequestEventInput): RequestEventRow {
   }
 }
 
-// Best-effort mirror of a request into ClickHouse for the advanced tier. Fire
-// and forget: a lost event must never fail the request, and Postgres RequestLog
-// remains the source of truth for the basic tier. No-op when unconfigured.
-export function recordRequestEvent(input: RequestEventInput): void {
+// Best-effort mirror of a batch of requests into ClickHouse for the advanced
+// tier. Fire and forget: a lost batch must never fail serving, and Postgres
+// RequestLog remains the source of truth for the basic tier. No-op when
+// unconfigured. Called with whole flush batches by the analytics buffer, so
+// ClickHouse sees few large inserts instead of one insert per request — exactly
+// how MergeTree wants to be fed.
+export function recordRequestEvents(inputs: RequestEventInput[]): void {
   const client = getClickhouseClient()
-  if (!client) {
+  if (!(client && inputs.length > 0)) {
     return
   }
   // Ensure the table exists once, then insert; both stay off the request's
@@ -91,7 +94,7 @@ export function recordRequestEvent(input: RequestEventInput): void {
     .then(() =>
       client.insert({
         table: 'request_events',
-        values: [toRequestEventRow(input)],
+        values: inputs.map(toRequestEventRow),
         format: 'JSONEachRow',
       }),
     )

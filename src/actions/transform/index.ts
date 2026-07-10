@@ -1,7 +1,7 @@
 import { getProjectById } from '@/data-access/projects'
-import { createRequestLog } from '@/data-access/request-logs'
 import { getTransformErrorStatus, TransformError } from '@/errors/transform'
 import { parseTransformParams } from '@/helpers/transform/params'
+import { enqueueRequestLog } from '@/lib/analytics-buffer/buffer'
 import { orgEntitledForServing } from '@/lib/billing/service-gate'
 import { buildCacheKey, readCacheEntry, writeCache } from '@/lib/cache/cache'
 import { errorContext, logger } from '@/lib/logger/logger'
@@ -253,7 +253,9 @@ export async function optimizeProjectImage({
     throw error
   } finally {
     if (recordLog) {
-      createRequestLog({
+      // Telemetry, not part of the response path: enqueues in memory and the
+      // analytics buffer batch-writes Postgres + ClickHouse off the hot path.
+      enqueueRequestLog({
         orgId: project.orgId,
         projectId: project.id,
         path: logPath(src),
@@ -271,8 +273,6 @@ export async function optimizeProjectImage({
         // original — persisted with the cache entry, so a hit knows it without
         // refetching — minus the optimized bytes served.
         bytesSaved: Math.max(0, originalBytes - bytesOut),
-      }).catch(() => {
-        // Request logging is telemetry, not part of the transform response path.
       })
     }
   }
