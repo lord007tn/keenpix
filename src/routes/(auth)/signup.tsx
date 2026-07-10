@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { getPublicConfigFn } from '@/functions/config'
 import { authClient } from '@/lib/auth/client'
 import { signupSchema } from '@/schemas/auth'
+import { safeRedirect } from '@/shared/safe-redirect'
 import { noIndexPageHead } from '@/shared/seo'
 import { getFieldError } from '@/utils/validation/form-errors'
 
@@ -25,6 +26,12 @@ export const Route = createFileRoute('/(auth)/signup')({
       throw redirect({ to: '/login' })
     }
   },
+  // `redirect` is a validated same-origin path to resume after email
+  // verification — set by invite acceptance so a brand-new invitee returns to
+  // the invite instead of hunting for the email again.
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+    redirect: safeRedirect(search.redirect),
+  }),
   head: () =>
     noIndexPageHead(
       'Create your account',
@@ -34,9 +41,15 @@ export const Route = createFileRoute('/(auth)/signup')({
 })
 
 function SignupPage() {
+  const { redirect: redirectTo } = Route.useSearch()
   const [error, setError] = useState<string | null>(null)
   const [sentTo, setSentTo] = useState<string | null>(null)
   const [resending, setResending] = useState(false)
+  // Land verification success/failure on the branded /verify-email page (which
+  // recovers expired links) and carry the post-verification destination.
+  const verifyCallback = redirectTo
+    ? `/verify-email?redirect=${encodeURIComponent(redirectTo)}`
+    : '/verify-email'
   const form = useForm({
     defaultValues: { name: '', email: '', password: '' },
     validators: { onChange: signupSchema, onSubmit: signupSchema },
@@ -47,9 +60,7 @@ function SignupPage() {
         name: payload.name,
         email: payload.email,
         password: payload.password,
-        // Land verification success/failure on the branded /verify-email page
-        // (which recovers expired links) instead of bouncing off /app to /login.
-        callbackURL: '/verify-email',
+        callbackURL: verifyCallback,
       })
       if (err) {
         setError(err.message ?? 'Could not create your account.')
@@ -70,7 +81,7 @@ function SignupPage() {
     try {
       const { error: err } = await authClient.sendVerificationEmail({
         email: sentTo,
-        callbackURL: '/verify-email',
+        callbackURL: verifyCallback,
       })
       if (err) {
         toast.error(err.message ?? 'Could not resend the email')

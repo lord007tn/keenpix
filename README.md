@@ -6,6 +6,8 @@ Keenpix is a self-hosted image optimization layer for teams that want the speed 
 
 It is built for operators who want the important parts kept visible: project allowlists, request logs, disk cache behavior, and deployment configuration all live in your own stack.
 
+Don't want to run it yourself? The same engine is available as a managed cloud at [keenpix.com](https://keenpix.com) — one bandwidth meter, unlimited transforms, 14-day free trial. The cloud funds the open-source work.
+
 ## What Keenpix ships
 
 - **Transform API** - `GET /img/https://origin.example/photo.jpg?project=...&w=...&fmt=...` resizes, crops, filters, re-encodes, negotiates modern formats, and returns immutable cache headers.

@@ -79,7 +79,7 @@ const FEATURES = [
 // rest are static product facts.
 const METRICS_TAIL = [
   ['40–70%', 'smaller with AVIF & WebP'],
-  ['$0.05–0.08/GB', 'overage — 3–6× under rivals'],
+  ['14 days', 'free trial — no charge until it ends'],
 ]
 
 const PIPELINE_STEPS = [
@@ -128,11 +128,11 @@ const PRICING: {
   {
     name: 'Business',
     planId: 'business',
-    tagline: 'Higher volume and priority.',
+    tagline: 'One plan for all your client sites.',
     highlights: [
       '1 TB delivered / month',
       'Unlimited projects',
-      'Priority queue · 1-yr retention',
+      '1-year log retention',
       '25 team seats',
       '$0.05/GB overage',
     ],
@@ -270,13 +270,13 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
               <p className="mt-5 max-w-xl text-balance text-lg text-white/80 leading-relaxed sm:text-xl">
                 Keenpix transforms and delivers your images in modern formats
                 from one URL — with one honest, published price. No pooled
-                credits, no per-transform metering, no account suspensions. Or
-                self-host the whole thing, free.
+                credits, no per-transform metering, and a hard spending cap you
+                control. Or self-host the whole thing, free.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link className={buttonVariants()} to="/signup">
                   <ZapIcon data-icon="inline-start" />
-                  Get started
+                  Start free trial
                 </Link>
                 <a
                   className={buttonVariants({
@@ -396,13 +396,13 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
                   Pricing
                 </span>
                 <h2 className="mt-2 max-w-2xl font-semibold text-3xl tracking-tight md:text-4xl">
-                  The cheapest managed image CDN. Or free forever.
+                  One honest meter. Or free forever.
                 </h2>
               </div>
               <p className="max-w-md text-muted-foreground leading-relaxed">
                 Every plan bills on bandwidth delivered — never per transform.
-                Overage is one linear published rate with a hard cap you set.
-                Two months free on annual.
+                Overage is one linear published rate with a hard cap, on by
+                default. 14-day free trial; two months free on annual.
               </p>
             </div>
             <div className="grid gap-4 lg:grid-cols-3">
@@ -447,7 +447,7 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
                       })}
                       to="/signup"
                     >
-                      Get started
+                      Start free trial
                     </Link>
                   </CardContent>
                 </Card>

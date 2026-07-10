@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { CheckCircle2Icon, CircleIcon, LockIcon } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
-import { CodeBlock } from '@/components/app/code-block'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -21,6 +20,7 @@ import {
 import { PlanSelection } from '@/features/billing/plan-selection'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { getBillingStateFn } from '@/functions/billing'
+import { PLANS, TRIAL } from '@/lib/billing/plans'
 import { cn } from '@/lib/cn/utils'
 
 // Pick a plan and check out inline, without leaving onboarding. Checkout attributes
@@ -29,13 +29,16 @@ function ChoosePlanDialog({ orgId }: { orgId: string }) {
   const [open, setOpen] = useState(false)
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger render={<Button size="sm" />}>Choose a plan</DialogTrigger>
+      <DialogTrigger render={<Button size="sm" />}>
+        Start your free trial
+      </DialogTrigger>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Choose your plan</DialogTitle>
           <DialogDescription>
-            Every plan bills on bandwidth delivered — never per transform.
-            Unlimited transforms, two months free on annual.
+            Every plan starts with a {TRIAL.days}-day free trial and bills on
+            bandwidth delivered — never per transform. Unlimited transforms, two
+            months free on annual.
           </DialogDescription>
         </DialogHeader>
         <PlanSelection orgId={orgId} />
@@ -105,7 +108,7 @@ export function OnboardingChecklist({
   cloud: boolean
   hasProjects: boolean
 }) {
-  const { data } = useQuery({
+  const { data, isError, isPending, refetch } = useQuery({
     queryKey: ['billing-state'],
     queryFn: () => getBillingStateFn(),
     enabled: cloud,
@@ -113,6 +116,31 @@ export function OnboardingChecklist({
   })
   const subscribed =
     !cloud || data?.status === 'active' || data?.status === 'trialing'
+
+  // The first step must never render action-less for a brand-new user: show a
+  // loading placeholder while billing state resolves and a retry when it fails
+  // — this is the exact moment churn is cheapest.
+  let planAction: ReactNode = null
+  if (data?.orgId) {
+    planAction = <ChoosePlanDialog orgId={data.orgId} />
+  } else if (isError) {
+    planAction = (
+      <div className="flex items-center gap-2">
+        <span className="text-destructive text-sm">
+          Couldn’t load your billing details.
+        </span>
+        <Button onClick={() => refetch()} size="sm" variant="outline">
+          Try again
+        </Button>
+      </div>
+    )
+  } else if (isPending) {
+    planAction = (
+      <Button disabled size="sm" variant="outline">
+        Loading…
+      </Button>
+    )
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
@@ -134,12 +162,10 @@ export function OnboardingChecklist({
         <CardContent className="divide-y">
           {cloud ? (
             <Step
-              action={
-                data?.orgId ? <ChoosePlanDialog orgId={data.orgId} /> : null
-              }
-              description="Cloud plans start at $9/mo for 100 GB delivered, with unlimited transforms."
+              action={planAction}
+              description={`Every plan starts with a ${TRIAL.days}-day free trial — trial usage is never billed, and plans start at $${PLANS.basic.priceMonthlyUsd}/mo with unlimited transforms.`}
               done={subscribed}
-              title="Choose a plan"
+              title="Start your free trial"
             />
           ) : null}
           <Step
@@ -157,21 +183,6 @@ export function OnboardingChecklist({
           />
         </CardContent>
       </Card>
-      {hasProjects ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Your transform URL</CardTitle>
-            <CardDescription>
-              Swap in your project id and an allowlisted source image.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CodeBlock>{`<img
-  src="https://keenpix.com/img/https://cdn.example.com/hero.jpg?project=<id>&w=1200&fmt=webp&q=82"
-  width="1200" height="800" alt="Hero" />`}</CodeBlock>
-          </CardContent>
-        </Card>
-      ) : null}
     </div>
   )
 }

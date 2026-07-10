@@ -347,7 +347,7 @@ function LogsPage() {
             <Link
               className="text-primary hover:underline"
               search={{ section: 'billing' }}
-              to="/app/account"
+              to="/app/settings"
             >
               Upgrade to Pro
             </Link>{' '}

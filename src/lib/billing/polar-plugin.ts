@@ -58,7 +58,9 @@ async function syncSubscription(
   }
 }
 
-const SUCCESS_URL = '/app/settings?section=billing'
+// Land back on the dashboard: a first-time subscriber resumes the onboarding
+// checklist there (step 1 now checked); an existing customer sees their KPIs.
+const SUCCESS_URL = '/app/dashboard'
 
 // Slug map the checkout endpoint resolves against, built live from the Polar
 // product catalog: each subscription product carries `plan` + `interval`

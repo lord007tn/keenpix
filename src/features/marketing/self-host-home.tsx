@@ -32,6 +32,18 @@ export function SelfHostHome() {
           Read docs
         </a>
       </div>
+      <p className="text-muted-foreground text-xs">
+        Prefer not to run it yourself? A managed cloud is available at{' '}
+        <a
+          className="underline underline-offset-2"
+          href="https://keenpix.com"
+          rel="noreferrer"
+          target="_blank"
+        >
+          keenpix.com
+        </a>
+        .
+      </p>
     </div>
   )
 }

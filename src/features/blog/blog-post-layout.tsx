@@ -101,8 +101,8 @@ export function BlogPostCta() {
           >
             Self-host free
           </a>
-          <Link className={buttonVariants()} to="/login">
-            Get started
+          <Link className={buttonVariants()} to="/signup">
+            Start free trial
             <ArrowRightIcon data-icon="inline-end" />
           </Link>
         </div>

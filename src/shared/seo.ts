@@ -1,3 +1,4 @@
+import { PLANS } from '@/lib/billing/plans'
 import { getAppUrl, getRepositoryUrl } from '@/server/deployment'
 import {
   FOUNDER,
@@ -115,11 +116,12 @@ export function softwareApplicationJsonLd() {
     image: absoluteUrl(BRAND_IMAGE_PATH),
     license: `${getRepositoryUrl()}/blob/master/LICENSE`,
     name: SITE_NAME,
-    // Free to self-host; managed cloud plans run $9–$29/mo. AggregateOffer lets
-    // search engines surface the price range as a rich result.
+    // Free to self-host; the managed-cloud ceiling comes from the plans catalog
+    // so this rich-result range can never drift from checkout. AggregateOffer
+    // lets search engines surface the price range as a rich result.
     offers: {
       '@type': 'AggregateOffer',
-      highPrice: '29',
+      highPrice: String(PLANS.business.priceMonthlyUsd),
       lowPrice: '0',
       offerCount: '4',
       priceCurrency: 'USD',

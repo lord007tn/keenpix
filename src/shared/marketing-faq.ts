@@ -1,12 +1,32 @@
+import { PLANS, TRIAL } from '@/lib/billing/plans'
+
 // Single source of truth for the marketing-home FAQ: rendered as a visible
 // section AND emitted as FAQPage structured data (Google requires the answers to
 // be visible on the page). Written to target high-intent queries ("Cloudinary
 // alternative", "image CDN pricing") and to be citable by AI search engines.
+// Every price/limit is derived from the plans catalog so this copy can never
+// drift from what checkout actually charges.
+const GB = 1024 ** 3
+
+function gb(bytes: number): string {
+  const value = bytes / GB
+  return value >= 1000 ? `${value / 1000} TB` : `${value} GB`
+}
+
+function cents(centsPerGb: number): string {
+  return `$${(centsPerGb / 100).toFixed(2)}`
+}
+
+const { basic, pro, business } = PLANS
+
 export const MARKETING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'How does Keenpix pricing work?',
-    answer:
-      'Keenpix bills on one thing — bandwidth delivered at the edge — and never per transform. Managed cloud starts at $9/mo for 100 GB delivered with unlimited transforms, and scales to Pro ($19/mo, 400 GB) and Business ($29/mo, 1 TB). Overage is a single published linear rate between $0.05 and $0.08 per GB depending on tier — typically 3–6× cheaper than credit-based rivals — and you set a hard spending cap so the bill can never surprise you. Transforms, responsive srcset variants, and modern formats are always free and unlimited, so optimizing aggressively lowers your bill instead of raising it. Prefer to pay nothing? Self-host the same open-source engine for free.',
+    answer: `Keenpix bills on one thing — bandwidth delivered at the edge — and never per transform. Managed cloud starts at $${basic.priceMonthlyUsd}/mo for ${gb(basic.includedBandwidthBytes)} delivered with unlimited transforms, and scales to Pro ($${pro.priceMonthlyUsd}/mo, ${gb(pro.includedBandwidthBytes)}) and Business ($${business.priceMonthlyUsd}/mo, ${gb(business.includedBandwidthBytes)}). Overage is a single published linear rate between ${cents(business.overagePerGbCents)} and ${cents(basic.overagePerGbCents)} per GB depending on tier, and every subscription starts with a hard spending cap (2× your plan price, adjustable or removable any time) so the bill can never surprise you. Transforms, responsive srcset variants, and modern formats are always free and unlimited, so optimizing aggressively lowers your bill instead of raising it. Prefer to pay nothing? Self-host the same open-source engine for free.`,
+  },
+  {
+    question: 'Is there a free trial?',
+    answer: `Yes — every plan starts with a ${TRIAL.days}-day free trial. You get the plan's full features with up to ${TRIAL.maxProjects} projects and ${gb(TRIAL.bandwidthBytes)} delivered, and trial usage is never billed. Your card isn't charged until the trial ends, Polar emails you before the first charge, and you can cancel anytime from billing settings.`,
   },
   {
     question: 'Is Keenpix a Cloudinary, imgix, or ImageKit alternative?',
@@ -21,7 +41,7 @@ export const MARKETING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Which image formats and transforms does Keenpix support?',
     answer:
-      'AVIF, WebP, JPEG, PNG, GIF, HEIF, TIFF, and SVG, with sharp/IPX-style resize, crop, quality, and format controls. Transforms are unlimited on every plan and requested with a single URL — no SDK required.',
+      'AVIF, WebP, JPEG, PNG, GIF, HEIF, TIFF, and SVG, with sharp/IPX-style resize, crop, quality, and format controls. Transforms are unlimited on every plan and requested with a single URL — no SDK required. Projects can optionally require HMAC-signed URLs for hotlink protection.',
   },
   {
     question: 'Can I self-host Keenpix?',
