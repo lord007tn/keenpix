@@ -16,7 +16,7 @@ It is built for operators who want the important parts kept visible: project all
 - **Self-host dashboard** - seeded super admin, staff invitations, project settings, API keys, Cloudflare edge analytics, and operational views. Transactional email is configured via `EMAIL_PROVIDER` (Postmark / Resend / SMTP) in the environment.
 - **Open-internet hardening** - allowlist checks, private/loopback/link-local/CGNAT blocking, IPv4-mapped IPv6 handling, DNS rebinding protection, response-size limits, decompression-bomb limits, and transform back-pressure.
 
-Stack: TanStack Start (React 19, SSR) · Prisma 7 + PostgreSQL · sharp · Docker. Apache-2.0 licensed.
+Stack: TanStack Start (React 19, SSR) · Prisma 7 + PostgreSQL · sharp · Docker. AGPL-3.0 licensed.
 
 ---
 
@@ -385,4 +385,6 @@ src/
 
 ## License
 
-[Apache License 2.0](./LICENSE).
+[GNU Affero General Public License v3.0](./LICENSE) (AGPL-3.0-only).
+
+The self-host engine stays AGPL and free — no rug-pull, no CLA, and no features removed from self-host to upsell the cloud. Releases published before the relicense (v0.1.11 and earlier) remain available under Apache-2.0.

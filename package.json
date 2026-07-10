@@ -4,7 +4,7 @@
   "description": "Open-source, self-hosted image optimization with a drop-in transform API, sharp, Postgres, disk caching, and analytics.",
   "private": true,
   "type": "module",
-  "license": "Apache-2.0",
+  "license": "AGPL-3.0-only",
   "homepage": "https://github.com/lord007tn/keenpix#readme",
   "repository": {
     "type": "git",
