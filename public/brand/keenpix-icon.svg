@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">Keenpix favicon</title>
-  <desc id="desc">Compact Keenpix modular image pipeline mark.</desc>
+  <title id="title">Keenpix icon</title>
+  <desc id="desc">Eight modular image tiles forming a circular optimization pipeline.</desc>
   <defs>
       <linearGradient id="icon-tile" x1="70" y1="60" x2="452" y2="472" gradientUnits="userSpaceOnUse">
         <stop stop-color="#0D2034" />

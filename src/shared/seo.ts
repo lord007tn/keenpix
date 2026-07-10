@@ -8,16 +8,15 @@ import {
 } from '@/shared/authors'
 
 export const SITE_NAME = 'Keenpix'
-export const SITE_TITLE =
-  'Keenpix — image optimization CDN with honest pricing, or self-host free'
+export const SITE_TITLE = 'Image optimization CDN with honest pricing | Keenpix'
 // Kept ~155 chars so the trailing self-host differentiator survives Google's SERP
 // snippet truncation (~160). Social cards allow ~200, so they still get it whole.
 export const SITE_DESCRIPTION =
   'Keenpix optimizes and delivers your images as AVIF/WebP from one URL — transparent bandwidth pricing, unlimited transforms, no lock-in. Or self-host free.'
 export const SITE_KEYWORDS =
   'image optimization CDN, image CDN, Cloudinary alternative, imgix alternative, ImageKit alternative, WebP, AVIF, sharp image transforms, self-hosted image optimization, open-source image CDN, bandwidth pricing'
-export const BRAND_IMAGE_PATH = '/brand/keenpix-og.png'
-const BRAND_ICON_PATH = '/logo512.png'
+export const BRAND_IMAGE_PATH = '/brand/keenpix-og-card.png'
+const BRAND_ICON_PATH = '/android-chrome-512x512.png'
 // Twitter attribution handle reused across the card meta tags.
 const TWITTER_HANDLE = '@raedbahriworld'
 export const APP_VERSION = import.meta.env.VITE_APP_VERSION
@@ -64,14 +63,21 @@ export function seo({
     { property: 'og:image', content: imageUrl },
     { property: 'og:image:width', content: '1200' },
     { property: 'og:image:height', content: '630' },
-    { property: 'og:image:alt', content: `${SITE_NAME} modular image mark` },
+    { property: 'og:image:type', content: 'image/png' },
+    {
+      property: 'og:image:alt',
+      content: `${SITE_NAME} — optimized images, minus the surprise bill`,
+    },
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:site', content: TWITTER_HANDLE },
     { name: 'twitter:creator', content: TWITTER_HANDLE },
     { name: 'twitter:title', content: title },
     { name: 'twitter:description', content: description },
     { name: 'twitter:image', content: imageUrl },
-    { name: 'twitter:image:alt', content: `${SITE_NAME} modular image mark` },
+    {
+      name: 'twitter:image:alt',
+      content: `${SITE_NAME} — optimized images, minus the surprise bill`,
+    },
   ]
 }
 
@@ -113,6 +119,14 @@ export function softwareApplicationJsonLd() {
     applicationCategory: 'DeveloperApplication',
     codeRepository: getRepositoryUrl(),
     description: SITE_DESCRIPTION,
+    featureList: [
+      'AVIF and WebP image optimization from one URL',
+      'Responsive resize, crop, quality, DPR, blur, and format transforms',
+      'Origin allowlists, SSRF hardening, and optional signed URLs',
+      'Memory, disk, and S3-compatible object-storage caching',
+      'Project analytics, request logs, and bandwidth-savings reporting',
+      'Managed cloud with unlimited transforms or free AGPL self-hosting',
+    ],
     image: absoluteUrl(BRAND_IMAGE_PATH),
     license: `${getRepositoryUrl()}/blob/master/LICENSE`,
     name: SITE_NAME,

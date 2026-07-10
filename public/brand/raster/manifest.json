@@ -1,0 +1,122 @@
+[
+  {
+    "source": "keenpix-favicon.svg",
+    "file": "public/brand/raster/favicon/favicon-16.png",
+    "width": 16,
+    "height": 16
+  },
+  {
+    "source": "keenpix-favicon.svg",
+    "file": "public/brand/raster/favicon/favicon-32.png",
+    "width": 32,
+    "height": 32
+  },
+  {
+    "source": "keenpix-favicon.svg",
+    "file": "public/brand/raster/favicon/favicon-48.png",
+    "width": 48,
+    "height": 48
+  },
+  {
+    "source": "keenpix-favicon.svg",
+    "file": "public/brand/raster/favicon/favicon-64.png",
+    "width": 64,
+    "height": 64
+  },
+  {
+    "source": "keenpix-app-icon.svg",
+    "file": "public/brand/raster/app-icon/apple-touch-icon-180.png",
+    "width": 180,
+    "height": 180
+  },
+  {
+    "source": "keenpix-app-icon.svg",
+    "file": "public/brand/raster/app-icon/mstile-150.png",
+    "width": 150,
+    "height": 150
+  },
+  {
+    "source": "keenpix-app-icon.svg",
+    "file": "public/brand/raster/app-icon/android-chrome-192.png",
+    "width": 192,
+    "height": 192
+  },
+  {
+    "source": "keenpix-app-icon.svg",
+    "file": "public/brand/raster/app-icon/android-chrome-512.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "source": "keenpix-app-icon.svg",
+    "file": "public/brand/raster/app-icon/app-icon-1024.png",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "source": "keenpix-icon.svg",
+    "file": "public/brand/raster/icon/keenpix-icon-64.png",
+    "width": 64,
+    "height": 64
+  },
+  {
+    "source": "keenpix-icon.svg",
+    "file": "public/brand/raster/icon/keenpix-icon-128.png",
+    "width": 128,
+    "height": 128
+  },
+  {
+    "source": "keenpix-icon.svg",
+    "file": "public/brand/raster/icon/keenpix-icon-256.png",
+    "width": 256,
+    "height": 256
+  },
+  {
+    "source": "keenpix-icon.svg",
+    "file": "public/brand/raster/icon/keenpix-icon-512.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "source": "keenpix-icon.svg",
+    "file": "public/brand/raster/icon/keenpix-icon-1024.png",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "source": "keenpix-social-avatar.svg",
+    "file": "public/brand/raster/social/keenpix-social-avatar-512.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "source": "keenpix-social-avatar.svg",
+    "file": "public/brand/raster/social/keenpix-social-avatar-1024.png",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "source": "keenpix-logo-horizontal.svg",
+    "file": "public/brand/raster/logo/keenpix-logo-horizontal.png",
+    "width": 1024,
+    "height": 256
+  },
+  {
+    "source": "keenpix-logo-horizontal-reverse.svg",
+    "file": "public/brand/raster/logo/keenpix-logo-horizontal-reverse.png",
+    "width": 1024,
+    "height": 256
+  },
+  {
+    "source": "keenpix-og-card.svg",
+    "file": "public/brand/raster/social/keenpix-og-card.png",
+    "width": 1200,
+    "height": 630
+  },
+  {
+    "source": "keenpix-og-card.svg",
+    "file": "public/brand/raster/social/keenpix-og-card.jpg",
+    "width": 1200,
+    "height": 630
+  }
+]

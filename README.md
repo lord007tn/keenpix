@@ -1,6 +1,6 @@
 # Keenpix
 
-![Keenpix brand image](./public/brand/keenpix-og.png)
+![Keenpix brand image](./public/brand/keenpix-og-card.png)
 
 Keenpix is a self-hosted image optimization layer for teams that want the speed of an image CDN without handing the pipeline to another service. Point it at an allowlisted origin, request one URL, and Keenpix fetches the image, transforms it with [sharp](https://sharp.pixelplumbing.com/), caches the variant to disk, records analytics, and serves a CDN-ready response.
 
