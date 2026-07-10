@@ -57,7 +57,7 @@ export function ServingBanner({ cloud }: { cloud: boolean }) {
           <Link
             className="font-medium underline"
             search={{ section: 'billing' }}
-            to="/app/account"
+            to="/app/settings"
           >
             Go to billing
           </Link>

@@ -108,7 +108,9 @@ export function usageAlertsFor(
     })
   }
   if (sub.spendCapCents !== null) {
-    const overageCostCents = Math.round((overageBytes / GB) * plan.overagePerGbCents)
+    const overageCostCents = Math.round(
+      (overageBytes / GB) * plan.overagePerGbCents,
+    )
     if (overageCostCents >= sub.spendCapCents) {
       alerts.push({
         kind: 'cap_reached',

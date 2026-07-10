@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authClient } from '@/lib/auth/client'
+import { safeRedirect } from '@/shared/safe-redirect'
 import { noIndexPageHead } from '@/shared/seo'
 
 // Branded landing for the email-verification link. better-auth verifies the
@@ -17,14 +18,18 @@ import { noIndexPageHead } from '@/shared/seo'
 export const Route = createFileRoute('/(auth)/verify-email')({
   head: () =>
     noIndexPageHead('Verify your email', 'Confirm your Keenpix email address.'),
-  validateSearch: (search: Record<string, unknown>): { error?: string } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { error?: string; redirect?: string } => ({
     error: typeof search.error === 'string' ? search.error : undefined,
+    // Same-origin path to resume after verification (e.g. an org invite).
+    redirect: safeRedirect(search.redirect),
   }),
   component: VerifyEmailPage,
 })
 
 function VerifyEmailPage() {
-  const { error } = Route.useSearch()
+  const { error, redirect: redirectTo } = Route.useSearch()
   // On success better-auth auto-signs-in and redirects here, so a live session is
   // the real signal — never assume verified just because there's no error param
   // (direct visits and consumed links land here too).
@@ -84,7 +89,17 @@ function VerifyEmailPage() {
                   Your email is confirmed. You’re all set.
                 </p>
               </div>
-              <Button render={<Link to="/app" />}>Continue to keenpix</Button>
+              {redirectTo ? (
+                <Button
+                  onClick={() => {
+                    window.location.href = redirectTo
+                  }}
+                >
+                  Continue
+                </Button>
+              ) : (
+                <Button render={<Link to="/app" />}>Continue to keenpix</Button>
+              )}
             </>
           ) : (
             <>
