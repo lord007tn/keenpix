@@ -11,12 +11,16 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as Char123llmFileChar125DottxtRouteImport } from './routes/{$llmFile}[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SelfHostedImageCdnRouteImport } from './routes/self-hosted-image-cdn'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as ChangelogRouteImport } from './routes/changelog'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CompareIndexRouteImport } from './routes/compare/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
@@ -27,6 +31,8 @@ import { Route as LegalDpaRouteImport } from './routes/legal/dpa'
 import { Route as InviteTokenRouteImport } from './routes/invite/$token'
 import { Route as ImgSplatRouteImport } from './routes/img/$'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
+import { Route as CompareSlugRouteImport } from './routes/compare/$slug'
+import { Route as BlogRssDotxmlRouteImport } from './routes/blog/rss[.]xml'
 import { Route as BlogSplatRouteImport } from './routes/blog/$'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
@@ -65,9 +71,24 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SelfHostedImageCdnRoute = SelfHostedImageCdnRouteImport.update({
+  id: '/self-hosted-image-cdn',
+  path: '/self-hosted-image-cdn',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
   id: '/robots.txt',
   path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangelogRoute = ChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcceptInviteRoute = AcceptInviteRouteImport.update({
@@ -93,6 +114,11 @@ const AdminRouteRoute = AdminRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareIndexRoute = CompareIndexRouteImport.update({
+  id: '/compare/',
+  path: '/compare/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
@@ -143,6 +169,16 @@ const ImgSplatRoute = ImgSplatRouteImport.update({
 const DocsSplatRoute = DocsSplatRouteImport.update({
   id: '/docs/$',
   path: '/docs/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareSlugRoute = CompareSlugRouteImport.update({
+  id: '/compare/$slug',
+  path: '/compare/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogRssDotxmlRoute = BlogRssDotxmlRouteImport.update({
+  id: '/blog/rss.xml',
+  path: '/blog/rss.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogSplatRoute = BlogSplatRouteImport.update({
@@ -284,7 +320,10 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/accept-invite': typeof AcceptInviteRoute
+  '/changelog': typeof ChangelogRoute
+  '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/self-hosted-image-cdn': typeof SelfHostedImageCdnRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
   '/forgot-password': typeof authForgotPasswordRoute
@@ -295,6 +334,8 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
   '/blog/$': typeof BlogSplatRoute
+  '/blog/rss.xml': typeof BlogRssDotxmlRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/docs/$': typeof DocsSplatRoute
   '/img/$': typeof ImgSplatRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -305,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
   '/blog/': typeof BlogIndexRoute
+  '/compare/': typeof CompareIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/blog/$': typeof OgBlogSplatRoute
@@ -328,7 +370,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/accept-invite': typeof AcceptInviteRoute
+  '/changelog': typeof ChangelogRoute
+  '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/self-hosted-image-cdn': typeof SelfHostedImageCdnRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
   '/forgot-password': typeof authForgotPasswordRoute
@@ -339,6 +384,8 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
   '/blog/$': typeof BlogSplatRoute
+  '/blog/rss.xml': typeof BlogRssDotxmlRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/docs/$': typeof DocsSplatRoute
   '/img/$': typeof ImgSplatRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -349,6 +396,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
   '/blog': typeof BlogIndexRoute
+  '/compare': typeof CompareIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/blog/$': typeof OgBlogSplatRoute
@@ -375,7 +423,10 @@ export interface FileRoutesById {
   '/app': typeof AppRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/accept-invite': typeof AcceptInviteRoute
+  '/changelog': typeof ChangelogRoute
+  '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/self-hosted-image-cdn': typeof SelfHostedImageCdnRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
@@ -386,6 +437,8 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
   '/blog/$': typeof BlogSplatRoute
+  '/blog/rss.xml': typeof BlogRssDotxmlRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/docs/$': typeof DocsSplatRoute
   '/img/$': typeof ImgSplatRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -396,6 +449,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
   '/blog/': typeof BlogIndexRoute
+  '/compare/': typeof CompareIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
   '/og/blog/$': typeof OgBlogSplatRoute
@@ -423,7 +477,10 @@ export interface FileRouteTypes {
     | '/app'
     | '/about'
     | '/accept-invite'
+    | '/changelog'
+    | '/pricing'
     | '/robots.txt'
+    | '/self-hosted-image-cdn'
     | '/sitemap.xml'
     | '/{$llmFile}.txt'
     | '/forgot-password'
@@ -434,6 +491,8 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/search'
     | '/blog/$'
+    | '/blog/rss.xml'
+    | '/compare/$slug'
     | '/docs/$'
     | '/img/$'
     | '/invite/$token'
@@ -444,6 +503,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/app/'
     | '/blog/'
+    | '/compare/'
     | '/api/auth/$'
     | '/api/sdk/$'
     | '/og/blog/$'
@@ -467,7 +527,10 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/accept-invite'
+    | '/changelog'
+    | '/pricing'
     | '/robots.txt'
+    | '/self-hosted-image-cdn'
     | '/sitemap.xml'
     | '/{$llmFile}.txt'
     | '/forgot-password'
@@ -478,6 +541,8 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/search'
     | '/blog/$'
+    | '/blog/rss.xml'
+    | '/compare/$slug'
     | '/docs/$'
     | '/img/$'
     | '/invite/$token'
@@ -488,6 +553,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/app'
     | '/blog'
+    | '/compare'
     | '/api/auth/$'
     | '/api/sdk/$'
     | '/og/blog/$'
@@ -513,7 +579,10 @@ export interface FileRouteTypes {
     | '/app'
     | '/about'
     | '/accept-invite'
+    | '/changelog'
+    | '/pricing'
     | '/robots.txt'
+    | '/self-hosted-image-cdn'
     | '/sitemap.xml'
     | '/{$llmFile}.txt'
     | '/(auth)/forgot-password'
@@ -524,6 +593,8 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/search'
     | '/blog/$'
+    | '/blog/rss.xml'
+    | '/compare/$slug'
     | '/docs/$'
     | '/img/$'
     | '/invite/$token'
@@ -534,6 +605,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/app/'
     | '/blog/'
+    | '/compare/'
     | '/api/auth/$'
     | '/api/sdk/$'
     | '/og/blog/$'
@@ -560,7 +632,10 @@ export interface RootRouteChildren {
   AppRouteRoute: typeof AppRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
   AcceptInviteRoute: typeof AcceptInviteRoute
+  ChangelogRoute: typeof ChangelogRoute
+  PricingRoute: typeof PricingRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SelfHostedImageCdnRoute: typeof SelfHostedImageCdnRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Char123llmFileChar125DottxtRoute: typeof Char123llmFileChar125DottxtRoute
   authForgotPasswordRoute: typeof authForgotPasswordRoute
@@ -571,6 +646,8 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSearchRoute: typeof ApiSearchRoute
   BlogSplatRoute: typeof BlogSplatRoute
+  BlogRssDotxmlRoute: typeof BlogRssDotxmlRoute
+  CompareSlugRoute: typeof CompareSlugRoute
   DocsSplatRoute: typeof DocsSplatRoute
   ImgSplatRoute: typeof ImgSplatRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -579,6 +656,7 @@ export interface RootRouteChildren {
   LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalTermsRoute: typeof LegalTermsRoute
   BlogIndexRoute: typeof BlogIndexRoute
+  CompareIndexRoute: typeof CompareIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiSdkSplatRoute: typeof ApiSdkSplatRoute
   OgBlogSplatRoute: typeof OgBlogSplatRoute
@@ -603,11 +681,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/self-hosted-image-cdn': {
+      id: '/self-hosted-image-cdn'
+      path: '/self-hosted-image-cdn'
+      fullPath: '/self-hosted-image-cdn'
+      preLoaderRoute: typeof SelfHostedImageCdnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/robots.txt': {
       id: '/robots.txt'
       path: '/robots.txt'
       fullPath: '/robots.txt'
       preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/changelog': {
+      id: '/changelog'
+      path: '/changelog'
+      fullPath: '/changelog'
+      preLoaderRoute: typeof ChangelogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/accept-invite': {
@@ -643,6 +742,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/': {
+      id: '/compare/'
+      path: '/compare'
+      fullPath: '/compare/'
+      preLoaderRoute: typeof CompareIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/': {
@@ -713,6 +819,20 @@ declare module '@tanstack/react-router' {
       path: '/docs/$'
       fullPath: '/docs/$'
       preLoaderRoute: typeof DocsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/$slug': {
+      id: '/compare/$slug'
+      path: '/compare/$slug'
+      fullPath: '/compare/$slug'
+      preLoaderRoute: typeof CompareSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/rss.xml': {
+      id: '/blog/rss.xml'
+      path: '/blog/rss.xml'
+      fullPath: '/blog/rss.xml'
+      preLoaderRoute: typeof BlogRssDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/$': {
@@ -954,7 +1074,10 @@ const rootRouteChildren: RootRouteChildren = {
   AppRouteRoute: AppRouteRouteWithChildren,
   AboutRoute: AboutRoute,
   AcceptInviteRoute: AcceptInviteRoute,
+  ChangelogRoute: ChangelogRoute,
+  PricingRoute: PricingRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
+  SelfHostedImageCdnRoute: SelfHostedImageCdnRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   Char123llmFileChar125DottxtRoute: Char123llmFileChar125DottxtRoute,
   authForgotPasswordRoute: authForgotPasswordRoute,
@@ -965,6 +1088,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiSearchRoute: ApiSearchRoute,
   BlogSplatRoute: BlogSplatRoute,
+  BlogRssDotxmlRoute: BlogRssDotxmlRoute,
+  CompareSlugRoute: CompareSlugRoute,
   DocsSplatRoute: DocsSplatRoute,
   ImgSplatRoute: ImgSplatRoute,
   InviteTokenRoute: InviteTokenRoute,
@@ -973,6 +1098,7 @@ const rootRouteChildren: RootRouteChildren = {
   LegalPrivacyRoute: LegalPrivacyRoute,
   LegalTermsRoute: LegalTermsRoute,
   BlogIndexRoute: BlogIndexRoute,
+  CompareIndexRoute: CompareIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiSdkSplatRoute: ApiSdkSplatRoute,
   OgBlogSplatRoute: OgBlogSplatRoute,
