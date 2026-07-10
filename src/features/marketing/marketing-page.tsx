@@ -15,6 +15,12 @@ import { useState } from 'react'
 import { CodeBlock } from '@/components/app/code-block'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { ModeToggle } from '@/components/theme/mode-toggle'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -573,19 +579,20 @@ Vary: Accept`}</CodeBlock>
                 Frequently asked questions
               </h2>
             </div>
-            <dl className="flex flex-col divide-y">
+            <Accordion>
               {MARKETING_FAQ.map((item) => (
-                <div
-                  className="flex flex-col gap-2 py-6 first:pt-0 last:pb-0"
-                  key={item.question}
-                >
-                  <dt className="font-medium text-lg">{item.question}</dt>
-                  <dd className="text-muted-foreground leading-relaxed">
-                    {item.answer}
-                  </dd>
-                </div>
+                <AccordionItem key={item.question} value={item.question}>
+                  <AccordionTrigger className="py-5 text-lg">
+                    {item.question}
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-base text-muted-foreground leading-relaxed">
+                      {item.answer}
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-            </dl>
+            </Accordion>
           </div>
         </section>
 
