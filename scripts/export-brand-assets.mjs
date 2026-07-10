@@ -303,6 +303,7 @@ const ico = await pngFilesToIco([
   path.join(rasterDir, 'favicon/favicon-48.png'),
 ])
 await writeFile(path.join(publicDir, 'favicon.ico'), ico)
+await writeFile(path.join(publicDir, 'keenpix-favicon.ico'), ico)
 
 const webManifest = {
   id: '/',
@@ -318,7 +319,7 @@ const webManifest = {
   background_color: colors.navy,
   icons: [
     {
-      src: '/favicon.svg',
+      src: '/brand/keenpix-favicon.svg',
       type: 'image/svg+xml',
       sizes: 'any',
       purpose: 'any',

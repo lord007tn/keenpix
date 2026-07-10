@@ -44,10 +44,14 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ],
     links: [
       { rel: 'stylesheet', href: appCss },
-      { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
       {
         rel: 'icon',
-        href: '/favicon.ico',
+        href: '/brand/keenpix-favicon.svg',
+        type: 'image/svg+xml',
+      },
+      {
+        rel: 'icon',
+        href: '/keenpix-favicon.ico',
         sizes: '48x48',
         type: 'image/x-icon',
       },
