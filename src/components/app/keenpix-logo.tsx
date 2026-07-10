@@ -15,7 +15,7 @@ export function KeenpixLogo({
           aria-hidden="true"
           className="size-full object-cover"
           height="32"
-          src="/favicon.svg"
+          src="/brand/keenpix-icon.svg"
           width="32"
         />
       </span>

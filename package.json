@@ -29,6 +29,7 @@
     "build:selfhost": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
     "start": "node .output/server/index.mjs",
     "preview": "vite preview",
+    "brand:export": "node scripts/export-brand-assets.mjs",
     "test": "vitest run",
     "smoke": "playwright test",
     "lint": "biome check",
