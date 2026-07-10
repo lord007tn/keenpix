@@ -206,7 +206,7 @@ Keenpix is remote-origin and project-allowlist oriented rather than a storage-pr
 | Status | When |
 |---|---|
 | **400** | Missing source URL or `?project`, or a malformed/non-http(s) URL |
-| **403** | Source host not on the project allowlist (or the allowlist is empty), or it resolves to a private/loopback/link-local/CGNAT/multicast address (incl. IPv4-mapped IPv6 and DNS-rebinding) |
+| **403** | Source host not on the project allowlist (or the allowlist is empty), it resolves to a private/loopback/link-local/CGNAT/multicast address (incl. IPv4-mapped IPv6 and DNS-rebinding), or the project requires signed URLs and `sig` is missing/invalid |
 | **404** | Unknown `project` id |
 | **413** | Origin image exceeds `KEENPIX_MAX_ORIGIN_BYTES` |
 | **502** | Origin unreachable, errored, returned a non-image body, or too many redirects |

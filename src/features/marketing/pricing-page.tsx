@@ -1,6 +1,12 @@
 import { Link } from '@tanstack/react-router'
 import { CheckIcon } from 'lucide-react'
 import { useState } from 'react'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -165,6 +171,42 @@ const TAGLINES: Record<PlanId, string> = {
   business: 'One plan for all your client sites.',
 }
 
+// Per-plan card features, cumulative ("Everything in X, plus") so each card
+// reads as an upgrade path instead of three near-identical lists. Numbers
+// derive from the plans catalog so the cards can never drift from checkout.
+const CARD_FEATURES: Record<PlanId, { features: string[]; lead?: string }> = {
+  basic: {
+    features: [
+      `${gb(PLANS.basic.includedBandwidthBytes)} delivered / month`,
+      'Unlimited transforms — AVIF, WebP + 6 more formats',
+      `${PLANS.basic.maxProjects} projects · ${PLANS.basic.maxSeats} team seats`,
+      'Bandwidth-saved, cache-hit & top-image analytics',
+      `Live request logs · ${PLANS.basic.logRetentionDays}-day retention`,
+      'Signed URLs + per-project allowlists',
+      `Spending cap on by default · $${(PLANS.basic.overagePerGbCents / 100).toFixed(2)}/GB overage`,
+    ],
+  },
+  pro: {
+    lead: 'Everything in Basic, plus:',
+    features: [
+      `${gb(PLANS.pro.includedBandwidthBytes)} delivered / month`,
+      'Advanced analytics — geo, latency percentiles, full history',
+      `Full log search · ${PLANS.pro.logRetentionDays}-day retention`,
+      `${PLANS.pro.maxProjects} projects · ${PLANS.pro.maxSeats} team seats`,
+      `Cheaper overage · $${(PLANS.pro.overagePerGbCents / 100).toFixed(2)}/GB, hard-capped`,
+    ],
+  },
+  business: {
+    lead: 'Everything in Pro, plus:',
+    features: [
+      `${gb(PLANS.business.includedBandwidthBytes)} delivered / month`,
+      `Unlimited projects · ${PLANS.business.maxSeats} team seats`,
+      `${PLANS.business.logRetentionDays}-day log retention`,
+      `Lowest overage · $${(PLANS.business.overagePerGbCents / 100).toFixed(2)}/GB, hard-capped`,
+    ],
+  },
+}
+
 export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
   const [interval, setInterval] = useState<Interval>('month')
   const prices = pricing ?? catalogPricing()
@@ -243,16 +285,13 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
                       <p className="text-muted-foreground text-sm">
                         {TAGLINES[planId]}
                       </p>
+                      {CARD_FEATURES[planId].lead ? (
+                        <p className="font-medium text-foreground text-sm">
+                          {CARD_FEATURES[planId].lead}
+                        </p>
+                      ) : null}
                       <ul className="flex flex-col gap-2 text-sm">
-                        {[
-                          `${gb(plan.includedBandwidthBytes)} delivered / mo`,
-                          'Unlimited transforms',
-                          `$${(plan.overagePerGbCents / 100).toFixed(2)}/GB overage, hard-capped`,
-                          plan.advancedAnalytics
-                            ? 'Advanced analytics + log search'
-                            : 'Core analytics + recent logs',
-                          `${plan.logRetentionDays}-day log retention`,
-                        ].map((feature) => (
+                        {CARD_FEATURES[planId].features.map((feature) => (
                           <li className="flex items-start gap-2" key={feature}>
                             <CheckIcon className="mt-0.5 size-4 shrink-0 text-primary" />
                             <span className="text-muted-foreground">
@@ -353,16 +392,20 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
             <h2 className="font-semibold text-2xl tracking-tight">
               Billing questions, answered honestly
             </h2>
-            <div className="mt-8 flex flex-col gap-8">
+            <Accordion className="mt-6">
               {PRICING_FAQ.map((item) => (
-                <div key={item.question}>
-                  <h3 className="font-semibold">{item.question}</h3>
-                  <p className="mt-2 text-muted-foreground leading-relaxed">
-                    {item.answer}
-                  </p>
-                </div>
+                <AccordionItem key={item.question} value={item.question}>
+                  <AccordionTrigger className="text-base">
+                    {item.question}
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {item.answer}
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-            </div>
+            </Accordion>
           </div>
         </section>
       </main>

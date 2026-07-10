@@ -35,6 +35,14 @@ Even for an allowed host, Keenpix refuses to become a proxy into your private ne
 - Concurrent transforms are bounded; excess load sheds with `503` rather than OOM.
 - sharp runs with a `limitInputPixels` ceiling and `failOn: 'truncated'`.
 
+## Hotlink and cache-busting protection
+
+The allowlist gates which **origins** Keenpix fetches from; it does not stop a
+third party from requesting your public transform URLs with junk query params
+to force cache misses. For that, enable **[signed URLs](/docs/concepts/signed-urls)**
+per project: every request must then carry a valid HMAC `sig=` parameter or it
+gets a `403`.
+
 ## Sign-in
 
 The dashboard is bootstrapped with a super admin account. Set
