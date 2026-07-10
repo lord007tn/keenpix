@@ -43,8 +43,10 @@ body*.txt
 *-validation-*.png
 clean-db-dashboard.png
 
-# Project docs that are not runtime MDX content
+# Project docs that are not runtime MDX content. CHANGELOG.md IS runtime
+# content — src/routes/changelog.tsx imports it with ?raw at build time.
 *.md
+!CHANGELOG.md
 docs
 extracted
 skills-lock.json
