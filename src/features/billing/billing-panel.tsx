@@ -19,6 +19,7 @@ import { getErrorMessage } from '@/errors/common'
 import { PlanSelection } from '@/features/billing/plan-selection'
 import { getBillingStateFn, setSpendCapFn } from '@/functions/billing'
 import { authClient } from '@/lib/auth/client'
+import { TRIAL } from '@/lib/billing/plans'
 import { humanBytes } from '@/shared/format'
 
 type BillingData = Awaited<ReturnType<typeof getBillingStateFn>>
@@ -30,6 +31,22 @@ function currentPlanBlurb(planName: string | null | undefined): string {
     return `You're on the ${planName} plan.`
   }
   return 'No active subscription. Choose a plan to start.'
+}
+
+// What the period-end date means: expiry for a canceling/lapsed subscription,
+// the first charge for a trial, a renewal otherwise.
+function periodEndLabel(
+  onTrial: boolean,
+  isEntitled: boolean,
+  scheduledToCancel: boolean,
+): string {
+  if (scheduledToCancel) {
+    return 'Ends'
+  }
+  if (onTrial) {
+    return 'Trial ends'
+  }
+  return isEntitled ? 'Renews' : 'Ends'
 }
 
 function QuotaRow({
@@ -170,8 +187,8 @@ function SpendCapCard({
       <CardContent className="flex flex-col gap-4">
         <p className="text-muted-foreground text-sm">
           {cap === null
-            ? 'No cap set — overage is unlimited at your plan rate.'
-            : `Cap: $${(cap / 100).toFixed(2)} of overage · $${overageDollars} used so far this period.`}
+            ? 'No cap set — overage is unlimited at your plan rate. New subscriptions start with a cap of 2× the plan price.'
+            : `Cap: $${(cap / 100).toFixed(2)} of overage · $${overageDollars} used so far this period. You'll get an email if you approach or reach it.`}
         </p>
         {canManage ? (
           <div className="flex flex-wrap items-end gap-2">
@@ -282,6 +299,7 @@ export function BillingPanel() {
   // Set to cancel at period end: still active/serving until currentPeriodEnd, but
   // won't renew — so the period-end date is an expiry, not a renewal.
   const scheduledToCancel = Boolean(data?.cancelAtPeriodEnd)
+  const onTrial = data?.status === 'trialing'
   const periodEndDate = data?.currentPeriodEnd
     ? new Date(data.currentPeriodEnd).toLocaleDateString()
     : null
@@ -328,6 +346,19 @@ export function BillingPanel() {
           </AlertDescription>
         </Alert>
       ) : null}
+      {onTrial && !scheduledToCancel ? (
+        <Alert>
+          <AlertTitle>You’re on a free trial</AlertTitle>
+          <AlertDescription>
+            Trial usage is free — up to {humanBytes(TRIAL.bandwidthBytes)}{' '}
+            delivered and {TRIAL.maxProjects} projects.{' '}
+            {periodEndDate
+              ? `Your first charge happens on ${periodEndDate}`
+              : 'Your first charge happens when the trial ends'}
+            ; cancel anytime before then from Manage billing.
+          </AlertDescription>
+        </Alert>
+      ) : null}
       {scheduledToCancel ? (
         <Alert>
           <TriangleAlertIcon />
@@ -363,7 +394,7 @@ export function BillingPanel() {
                 </Badge>
                 {periodEndDate ? (
                   <span className="text-muted-foreground text-sm">
-                    {isEntitled && !scheduledToCancel ? 'Renews' : 'Ends'}{' '}
+                    {periodEndLabel(onTrial, isEntitled, scheduledToCancel)}{' '}
                     {periodEndDate}
                   </span>
                 ) : null}

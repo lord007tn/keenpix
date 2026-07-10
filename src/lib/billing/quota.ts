@@ -6,7 +6,7 @@ import {
 } from '@/data-access/subscriptions'
 import { deliveredBytesSince } from '@/data-access/usage'
 import { prisma } from '@/db'
-import { getPlan } from '@/lib/billing/plans'
+import { getPlan, TRIAL } from '@/lib/billing/plans'
 import { isCloud } from '@/server/deployment'
 
 const GB = 1024 ** 3
@@ -45,6 +45,18 @@ export async function assertCanCreateProject(orgId: string): Promise<void> {
   const plan = await getOrgPlan(orgId)
   if (!plan) {
     throw await noPlanError(orgId)
+  }
+  const sub = await getOrgSubscription(orgId)
+  // A trial gets the plan's features with a bounded footprint; the full project
+  // allowance unlocks when the trial converts to a paid period.
+  if (sub?.status === 'trialing') {
+    const count = await prisma.project.count({ where: { orgId } })
+    if (count >= TRIAL.maxProjects) {
+      throw new Error(
+        `Your free trial includes up to ${TRIAL.maxProjects} projects. Your full ${plan.name} allowance unlocks when the trial converts.`,
+      )
+    }
+    return
   }
   if (plan.maxProjects === null) {
     return
@@ -91,18 +103,50 @@ export async function orgCanServe(orgId: string): Promise<boolean> {
   if (!servable) {
     return false
   }
-  return orgWithinSpendCap(orgId)
+  // Internal-grant orgs have no subscription row: no trial cap, no spend cap.
+  const sub = await getOrgSubscription(orgId)
+  if (!sub) {
+    return true
+  }
+  if (!(await orgWithinTrialAllowance(orgId, sub))) {
+    return false
+  }
+  return orgWithinSpendCap(orgId, sub)
+}
+
+interface ServingSubscription {
+  currentPeriodStart?: Date | null
+  plan: string
+  spendCapCents: number | null
+  status?: string
+}
+
+// Trial bandwidth cap. Trial usage is never metered to Polar, so this cap is the
+// platform's total exposure per trial: once a trialing org has delivered
+// TRIAL.bandwidthBytes this period, serving pauses until the trial converts.
+// Same ~1h approximation as the spend cap (hourly rollups + 60s gate cache).
+async function orgWithinTrialAllowance(
+  orgId: string,
+  sub: ServingSubscription,
+): Promise<boolean> {
+  if (sub.status !== 'trialing') {
+    return true
+  }
+  const periodStart = sub.currentPeriodStart ?? startOfMonthUtc(new Date())
+  const { bytes } = await deliveredBytesSince(orgId, periodStart)
+  return bytes <= TRIAL.bandwidthBytes
 }
 
 // Hard spending cap. Once an org's accrued overage cost this period reaches the
 // cap it set (in cents), it stops being served. Approximate by design — usage is
 // read from hourly rollups and the serving gate caches this decision for 60s — so
 // real spend can overshoot the cap by up to ~1h of traffic. It's a runaway-bill
-// backstop, not a to-the-cent ceiling. A null cap, no billing plan, or no
-// subscription means no cap.
-async function orgWithinSpendCap(orgId: string): Promise<boolean> {
-  const sub = await getOrgSubscription(orgId)
-  if (!sub || sub.spendCapCents === null) {
+// backstop, not a to-the-cent ceiling. A null cap or no billing plan means no cap.
+async function orgWithinSpendCap(
+  orgId: string,
+  sub: ServingSubscription,
+): Promise<boolean> {
+  if (sub.spendCapCents === null) {
     return true
   }
   const plan = getPlan(sub.plan)

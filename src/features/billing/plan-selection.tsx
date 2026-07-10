@@ -27,6 +27,7 @@ import {
   type Plan,
   type PlanId,
   type PlanPricing,
+  TRIAL,
 } from '@/lib/billing/plans'
 import { cn } from '@/lib/cn/utils'
 
@@ -106,7 +107,10 @@ function checkoutLabel(
   if (busy) {
     return 'Redirecting…'
   }
-  return hasPlan ? `Switch to ${planName}` : `Choose ${planName}`
+  // First subscription starts with the free trial; switches are immediate.
+  return hasPlan
+    ? `Switch to ${planName}`
+    : `Start ${TRIAL.days}-day free trial`
 }
 
 // The interval toggle + the three plan cards, with checkout wired to Polar. Shared
@@ -270,6 +274,16 @@ export function PlanSelection({
           )
         })}
       </div>
+
+      {hasPlan ? null : (
+        <p className="text-center text-muted-foreground text-sm">
+          Every plan starts with a {TRIAL.days}-day free trial — full plan
+          features, up to {TRIAL.maxProjects} projects and{' '}
+          {TRIAL.bandwidthBytes / GB} GB delivered, and trial usage is never
+          billed. Your card isn’t charged until the trial ends, and you can
+          cancel anytime.
+        </p>
+      )}
 
       <Dialog
         onOpenChange={(next) => {

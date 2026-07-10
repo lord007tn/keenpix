@@ -5,7 +5,7 @@ import {
   setSubscriptionSpendCap,
 } from '@/data-access/subscriptions'
 import { billingUsageSnapshot } from '@/data-access/usage'
-import { getPlan, getPlanRank, type PlanId } from '@/lib/billing/plans'
+import { getPlan, getPlanRank, type PlanId, TRIAL } from '@/lib/billing/plans'
 
 const GB = 1024 ** 3
 
@@ -89,14 +89,24 @@ export async function getBillingState(orgId: string): Promise<BillingState> {
     orgHasBillingCustomer(orgId),
   ])
 
-  const includedBytes = plan?.includedBandwidthBytes ?? null
+  // During a trial the honest numbers are the trial's: the serving allowance is
+  // TRIAL.bandwidthBytes (delivery pauses there) and nothing is billed — the
+  // usage cron skips trialing orgs — so overage must read as $0, not a
+  // projection against the plan allowance the org isn't paying for yet.
+  const trialing = Boolean(sub?.status === 'trialing' && !internalWins)
+  const includedBytes = trialing
+    ? TRIAL.bandwidthBytes
+    : (plan?.includedBandwidthBytes ?? null)
   const overageBytes =
-    includedBytes === null ? 0 : Math.max(0, snapshot.bytes - includedBytes)
+    trialing || includedBytes === null
+      ? 0
+      : Math.max(0, snapshot.bytes - includedBytes)
   // Match how Polar bills: we ingest fractional GB (bytes / GB), so overage is
   // charged on the fractional overage, not rounded up to whole GB.
-  const overageCostCents = plan
-    ? Math.round((overageBytes / GB) * plan.overagePerGbCents)
-    : 0
+  const overageCostCents =
+    plan && !trialing
+      ? Math.round((overageBytes / GB) * plan.overagePerGbCents)
+      : 0
 
   return {
     orgId,
@@ -124,7 +134,10 @@ export async function getBillingState(orgId: string): Promise<BillingState> {
       includedBytes,
       overageBytes,
       overageCostCents: internallyEntitled ? 0 : overageCostCents,
-      projects: { used: snapshot.projects, limit: plan?.maxProjects ?? null },
+      projects: {
+        used: snapshot.projects,
+        limit: trialing ? TRIAL.maxProjects : (plan?.maxProjects ?? null),
+      },
       seats: { used: snapshot.seats, limit: plan?.maxSeats ?? null },
     },
   }

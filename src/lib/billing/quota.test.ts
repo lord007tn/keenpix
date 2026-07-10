@@ -3,6 +3,7 @@ import { PLANS } from './plans'
 
 const NEEDS_SUB = /active subscription/i
 const BASIC = /Basic/
+const FREE_TRIAL = /free trial/i
 
 const isCloud = vi.hoisted(() => vi.fn())
 const getOrgPlan = vi.hoisted(() => vi.fn())
@@ -112,6 +113,44 @@ describe('quota — cloud enforcement', () => {
     getOrgPlan.mockResolvedValue(PLANS.business) // maxProjects: null
     projectCount.mockResolvedValue(9999)
     await expect(assertCanCreateProject('org_a')).resolves.toBeUndefined()
+  })
+
+  it('caps a trialing org at the trial project allowance, not the plan one', async () => {
+    isCloud.mockReturnValue(true)
+    getOrgPlan.mockResolvedValue(PLANS.business) // maxProjects: null (unlimited)
+    getOrgSubscription.mockResolvedValue({
+      plan: 'business',
+      status: 'trialing',
+    })
+    projectCount.mockResolvedValue(2) // TRIAL.maxProjects
+    await expect(assertCanCreateProject('org_a')).rejects.toThrow(FREE_TRIAL)
+    projectCount.mockResolvedValue(1)
+    await expect(assertCanCreateProject('org_a')).resolves.toBeUndefined()
+  })
+
+  it('pauses serving once a trialing org exceeds the trial bandwidth', async () => {
+    isCloud.mockReturnValue(true)
+    // clearAllMocks does not reset implementations — the suspended-org test
+    // above leaves isOrgSuspended resolving true unless overridden here.
+    isOrgSuspended.mockResolvedValue(false)
+    orgIsServable.mockResolvedValue(true)
+    const GB = 1024 ** 3
+    getOrgSubscription.mockResolvedValue({
+      plan: 'pro',
+      status: 'trialing',
+      spendCapCents: null,
+      currentPeriodStart: new Date('2026-07-01T00:00:00Z'),
+    })
+    deliveredBytesSince.mockResolvedValue({
+      bytes: 21 * GB, // over the 20 GB trial allowance
+      through: new Date(),
+    })
+    expect(await orgCanServe('org_a')).toBe(false)
+    deliveredBytesSince.mockResolvedValue({
+      bytes: 5 * GB,
+      through: new Date(),
+    })
+    expect(await orgCanServe('org_a')).toBe(true)
   })
 
   it('blocks a new seat at the plan seat limit', async () => {

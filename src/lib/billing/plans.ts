@@ -99,6 +99,16 @@ export function catalogPricing(): PlanPricing {
   return { source: 'catalog', plans }
 }
 
+// Free-trial guardrails: a trial gets the chosen plan's full features with a
+// bounded blast radius. Trial usage is never metered to Polar (the usage cron
+// skips trialing orgs), so the serving cap here is the platform's total
+// bandwidth exposure per trial.
+export const TRIAL = {
+  days: 14,
+  maxProjects: 2,
+  bandwidthBytes: 20 * GB,
+} as const
+
 const PLAN_RANK: Record<PlanId, number> = {
   basic: 1,
   pro: 2,
@@ -115,6 +125,16 @@ export function isPlanId(value: unknown): value is PlanId {
 
 export function getPlan(planId: string | null | undefined): Plan | null {
   return isPlanId(planId) ? PLANS[planId] : null
+}
+
+// The overage spending cap a NEW subscription starts with: 2x the plan's monthly
+// price. "No surprise bill" must be the default, not an opt-in a customer has to
+// discover — they can raise, lower, or remove it any time in billing settings.
+export function defaultSpendCapCents(
+  planId: string | null | undefined,
+): number | null {
+  const plan = getPlan(planId)
+  return plan ? plan.priceMonthlyUsd * 100 * 2 : null
 }
 
 export function getPlanRank(plan: Plan | null | undefined) {
