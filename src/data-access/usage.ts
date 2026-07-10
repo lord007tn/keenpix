@@ -57,6 +57,17 @@ export function listUsageBillingCustomers(db: Db = prisma) {
   })
 }
 
+// Orgs currently in a free trial. The usage reporter skips ingesting their
+// delivered bytes (trial usage is never billed) while still advancing their
+// watermark, so billing starts exactly at trial conversion.
+export async function listTrialingOrgIds(db: Db = prisma) {
+  const rows = await db.subscription.findMany({
+    where: { status: 'trialing' },
+    select: { orgId: true },
+  })
+  return rows.map((row) => row.orgId)
+}
+
 export function markUsageReported(orgId: string, at: Date, db: Db = prisma) {
   return db.billingCustomer.update({
     where: { orgId },
