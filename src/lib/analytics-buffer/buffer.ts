@@ -31,13 +31,14 @@ let flushing: Promise<void> | null = null
 export function enqueueRequestLog(log: NewRequestLog): void {
   buffer.push({ ...log, id: cuid(), ts: new Date() })
   if (buffer.length >= MAX_BUFFER) {
-    void flushRequestLogs()
+    // Fire-and-forget: flushRequestLogs never rejects (it logs and drops).
+    flushRequestLogs()
     return
   }
   if (!timer) {
     const t = setTimeout(() => {
       timer = null
-      void flushRequestLogs()
+      flushRequestLogs()
     }, FLUSH_INTERVAL_MS)
     t.unref?.()
     timer = t

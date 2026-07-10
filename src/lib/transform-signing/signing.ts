@@ -2,7 +2,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 
 // The query param carrying the signature on /img requests. NOT `s` — that is
 // already the compact `resize` alias in the transform params.
-export const SIGNATURE_PARAM = 'sig'
+const SIGNATURE_PARAM = 'sig'
 
 // Canonical message: the raw source URL, a newline, then every query param
 // except the signature itself as `key=value`, sorted — so the order params
