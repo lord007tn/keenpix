@@ -107,7 +107,7 @@ export const imagekitComparison = {
     },
     {
       feature: 'Custom delivery domain',
-      competitor: 'Yes (paid plans)',
+      competitor: 'Yes (Pro and Enterprise; not Lite)',
       keenpix: 'Not yet',
     },
   ],
@@ -173,12 +173,20 @@ export const imagekitComparison = {
     },
     {
       q: 'Can I self-host Keenpix?',
-      a: 'Yes. The engine is AGPL-3.0 — the same code that runs keenpix.com — with a one-command Docker or Coolify install, free forever, no CLA. Start on cloud and migrate to your own hardware whenever you like.',
+      a: 'Yes. The cloud release publishes the image engine under AGPL-3.0 and includes Docker/Coolify deployment files. Self-hosting has no Keenpix license fee, but you own infrastructure, updates, monitoring, and routing. The transform URL grammar can remain consistent when you control the hostname and migration path.',
     },
     {
       q: 'Do I have to re-upload my images to migrate?',
       a: "Only if they live exclusively in ImageKit's media library — then copy them to storage you control first. If your images are already on your own origin, migration is a URL rewrite: tr:w-400,f-auto path segments become ?w=400 query params, and format negotiation happens automatically.",
     },
+  ],
+  sources: [
+    { label: 'ImageKit plans', url: 'https://imagekit.io/plans' },
+    {
+      label: 'ImageKit pricing documentation',
+      url: 'https://imagekit.io/docs/how-pricing-works',
+    },
+    { label: 'Keenpix pricing', url: '/pricing' },
   ],
   pricingAsOf: 'July 2026',
 } satisfies ComparisonPageData

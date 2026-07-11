@@ -137,7 +137,7 @@ export const imgixComparison = {
     {
       title: 'An AGPL self-host exit, forever',
       detail:
-        "The managed cloud runs the same engine published under AGPL-3.0, installable with one Docker or Coolify command, with no CLA and no relicensing rug-pull possible. If pricing, policy, or compliance ever stops working for you, you take the identical pipeline in-house and keep your URLs. imgix has no equivalent — it's managed-only.",
+        'The cloud release publishes its image engine under AGPL-3.0 and includes Docker/Coolify deployment files. If pricing, policy, or compliance stops working for you, you can operate that version in-house. You still own infrastructure and routing; the URL grammar can remain consistent when you control the hostname. imgix is managed-only.',
     },
     {
       title: 'Analytics on every plan, not a premium add-on',
@@ -186,6 +186,15 @@ export const imgixComparison = {
       q: 'What does Keenpix not do?',
       a: "No video, no storage or DAM (it transforms and delivers from origins you already have), and custom domains aren't available yet. It's a young product from a solo founder — though it serves every image on joodlab.com in production, and the AGPL license means the engine can't be taken away from you.",
     },
+  ],
+  sources: [
+    { label: 'imgix pricing', url: 'https://www.imgix.com/pricing' },
+    {
+      label: 'imgix credit pricing FAQ',
+      url: 'https://www.imgix.com/pricing-faq',
+    },
+    { label: 'imgix payment policy', url: 'https://www.imgix.com/payments' },
+    { label: 'Keenpix pricing', url: '/pricing' },
   ],
   pricingAsOf: 'July 2026',
 } satisfies ComparisonPageData

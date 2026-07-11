@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { createSitemapXml } from '@/helpers/seo/sitemap/create-sitemap-xml'
 import { getAppUrl, isCloud } from '@/server/deployment'
 import { blogSource } from '@/shared/blog-source'
 import { source } from '@/shared/docs-source'
@@ -21,57 +22,39 @@ export const Route = createFileRoute('/sitemap.xml')({
           '/about',
           '/pricing',
           '/blog',
+          '/authors/raed-bahri',
           '/compare',
           '/compare/cloudinary-alternative',
           '/compare/imgix-alternative',
           '/compare/imagekit-alternative',
           '/compare/vercel-image-optimization-alternative',
           '/self-hosted-image-cdn',
+          '/methodology/comparisons',
+          '/security',
+          '/status',
+          '/support',
           '/changelog',
           '/legal/terms',
           '/legal/privacy',
           '/legal/dpa',
           '/legal/license',
         ]
+        const origin = getAppUrl()
         const entries = [
-          ...staticUrls.map((url) => ({ url, lastmod: undefined })),
+          ...staticUrls.map((url) => ({ url: `${origin}${url}` })),
           ...source.getPages().map((page) => ({
-            url: page.url,
+            url: `${origin}${page.url}`,
             lastmod: page.data.updated,
           })),
           ...blogSource
             .getPages()
             .filter((page) => !page.data.draft)
-            .map((page) => ({ url: page.url, lastmod: page.data.date })),
+            .map((page) => ({
+              url: `${origin}${page.url}`,
+              lastmod: page.data.updated ?? page.data.date,
+            })),
         ]
-        const origin = getAppUrl()
-        const body = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${entries
-  .map(({ url, lastmod }) => {
-    const isHome = url === '/'
-    const isLegal = url.startsWith('/legal')
-    let changefreq = 'monthly'
-    if (isHome) {
-      changefreq = 'weekly'
-    } else if (isLegal) {
-      changefreq = 'yearly'
-    }
-    let priority = '0.7'
-    if (isHome) {
-      priority = '1.0'
-    } else if (isLegal) {
-      priority = '0.3'
-    }
-    return `  <url>
-    <loc>${origin}${url}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}
-    <changefreq>${changefreq}</changefreq>
-    <priority>${priority}</priority>
-  </url>`
-  })
-  .join('\n')}
-</urlset>
-`
+        const body = createSitemapXml(entries)
 
         return new Response(body, {
           headers: {

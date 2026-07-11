@@ -20,7 +20,7 @@ export const Route = createFileRoute('/compare/')({
         ...seo({
           title: 'How Keenpix compares — honest image CDN comparisons',
           description:
-            'Keenpix vs Cloudinary, imgix, ImageKit, and Vercel Image Optimization: honest, dated pricing numbers, feature matrices, and when each competitor is the better choice.',
+            'Compare Keenpix with Cloudinary, imgix, ImageKit, and Vercel Image Optimization using dated pricing, feature matrices, and best-fit guidance.',
           url: canonicalUrl,
         }),
         ...(loaderData?.selfHost

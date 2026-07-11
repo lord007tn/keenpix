@@ -30,6 +30,21 @@ export const Route = createFileRoute('/og/blog/$')({
           return new Response('Not found', { status: 404 })
         }
 
+        let visualKind = 'pipeline'
+        if (page.data.competitor) {
+          visualKind = 'comparison'
+        } else if (page.data.tags.includes('responsive-images')) {
+          visualKind = 'responsive'
+        } else if (page.data.tags.includes('pricing')) {
+          visualKind = 'pricing'
+        } else if (page.data.tags.includes('self-hosting')) {
+          visualKind = 'deployment'
+        }
+        const accent =
+          visualKind === 'pricing' || visualKind === 'deployment'
+            ? '#34e58d'
+            : '#21c8f6'
+
         return new ImageResponse(
           <div
             style={{
@@ -47,7 +62,7 @@ export const Route = createFileRoute('/og/blog/$')({
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 36,
+                gap: 30,
                 width: '100%',
               }}
             >
@@ -97,34 +112,202 @@ export const Route = createFileRoute('/og/blog/$')({
               <div
                 style={{
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: 18,
+                  gap: 44,
+                  justifyContent: 'space-between',
                 }}
               >
                 <div
                   style={{
-                    fontSize: 68,
-                    fontWeight: 760,
-                    letterSpacing: 0,
-                    lineHeight: 1.05,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 18,
+                    maxWidth: 720,
                   }}
                 >
-                  {page.data.title}
-                </div>
-                {page.data.description ? (
                   <div
                     style={{
-                      color: '#cbd5e1',
-                      fontSize: 30,
-                      lineHeight: 1.25,
-                      maxWidth: 920,
+                      fontSize: 56,
+                      fontWeight: 760,
+                      letterSpacing: 0,
+                      lineHeight: 1.04,
                     }}
                   >
-                    {page.data.description.length > 120
-                      ? `${page.data.description.slice(0, 119).trimEnd()}…`
-                      : page.data.description}
+                    {page.data.title}
                   </div>
-                ) : null}
+                  {page.data.description ? (
+                    <div
+                      style={{
+                        color: '#cbd5e1',
+                        fontSize: 26,
+                        lineHeight: 1.25,
+                        maxWidth: 700,
+                      }}
+                    >
+                      {page.data.description.length > 105
+                        ? `${page.data.description.slice(0, 104).trimEnd()}…`
+                        : page.data.description}
+                    </div>
+                  ) : null}
+                </div>
+                <div
+                  style={{
+                    alignItems: 'center',
+                    alignSelf: 'stretch',
+                    background: '#0d2034',
+                    border: '2px solid #183651',
+                    borderRadius: 28,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 18,
+                    justifyContent: 'center',
+                    minWidth: 300,
+                    padding: 30,
+                  }}
+                >
+                  <div
+                    style={{
+                      color: accent,
+                      fontSize: 18,
+                      fontWeight: 700,
+                      letterSpacing: 2,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {visualKind}
+                  </div>
+                  {visualKind === 'responsive' ? (
+                    <div
+                      style={{
+                        alignItems: 'flex-end',
+                        display: 'flex',
+                        gap: 12,
+                      }}
+                    >
+                      {[74, 108, 148].map((height, index) => (
+                        <div
+                          key={height}
+                          style={{
+                            background: index === 2 ? accent : `${accent}55`,
+                            borderRadius: 10,
+                            height,
+                            width: 58 + index * 13,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                  {visualKind === 'pricing' ? (
+                    <div
+                      style={{
+                        alignItems: 'flex-end',
+                        display: 'flex',
+                        gap: 16,
+                        height: 160,
+                      }}
+                    >
+                      {[68, 112, 150].map((height) => (
+                        <div
+                          key={height}
+                          style={{
+                            background: accent,
+                            borderRadius: 999,
+                            height,
+                            opacity: height / 170,
+                            width: 42,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                  {visualKind === 'comparison' ? (
+                    <div style={{ display: 'flex', gap: 24 }}>
+                      {['#21c8f6', '#34e58d'].map((color) => (
+                        <div
+                          key={color}
+                          style={{
+                            alignItems: 'center',
+                            border: `2px solid ${color}`,
+                            borderRadius: 20,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 12,
+                            height: 150,
+                            justifyContent: 'center',
+                            width: 104,
+                          }}
+                        >
+                          {[36, 58, 44].map((width) => (
+                            <div
+                              key={width}
+                              style={{
+                                background: color,
+                                borderRadius: 999,
+                                height: 10,
+                                opacity: 0.85,
+                                width,
+                              }}
+                            />
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {visualKind === 'deployment' ? (
+                    <div
+                      style={{
+                        alignItems: 'center',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 18,
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: '#f8fafc',
+                          borderRadius: 12,
+                          height: 56,
+                          width: 56,
+                        }}
+                      />
+                      <div style={{ display: 'flex', gap: 42 }}>
+                        {['#21c8f6', '#34e58d'].map((color) => (
+                          <div
+                            key={color}
+                            style={{
+                              background: color,
+                              borderRadius: 14,
+                              height: 86,
+                              width: 86,
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {visualKind === 'pipeline' ? (
+                    <div
+                      style={{
+                        alignItems: 'center',
+                        display: 'flex',
+                        gap: 12,
+                      }}
+                    >
+                      {['#f8fafc', '#21c8f6', '#079ed4', '#34e58d'].map(
+                        (color, index) => (
+                          <div
+                            key={color}
+                            style={{
+                              background: color,
+                              borderRadius: 12,
+                              height: 46 + index * 16,
+                              width: 46 + index * 16,
+                            }}
+                          />
+                        ),
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
           </div>,

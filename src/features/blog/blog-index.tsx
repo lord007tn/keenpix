@@ -1,44 +1,42 @@
+import dayjs from 'dayjs'
 import { ArrowRightIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import type { BlogListItem } from '@/shared/blog-source'
 import { SiteFooter, SiteHeader } from './blog-chrome'
 
-function formatDate(date: string): string {
-  const parsed = new Date(date)
-  if (Number.isNaN(parsed.getTime())) {
-    return date
-  }
-  // Format in UTC so SSR and client agree — the dates are date-only strings
-  // (UTC midnight), and a local timezone would shift the day and mismatch.
-  return parsed.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'UTC',
-  })
-}
-
 function PostCard({ post }: { post: BlogListItem }) {
   return (
     <a
-      className="group flex flex-col gap-3 rounded-lg border bg-card p-6 transition-colors hover:border-ring/60 hover:bg-muted/40"
+      className="group flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card transition-colors hover:border-ring/60 hover:bg-muted/40"
       href={post.url}
     >
-      <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs">
-        <time dateTime={post.date}>{formatDate(post.date)}</time>
-        {post.competitor ? (
-          <Badge variant="secondary">vs {post.competitor}</Badge>
-        ) : null}
-      </div>
-      <h3 className="text-balance font-semibold text-lg leading-snug group-hover:text-primary">
-        {post.title}
-      </h3>
-      <p className="line-clamp-3 text-muted-foreground text-sm leading-relaxed">
-        {post.description}
-      </p>
-      <div className="mt-auto flex items-center gap-1 pt-1 font-medium text-primary text-sm">
-        Read more
-        <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
+      <img
+        alt={post.imageAlt}
+        className="aspect-[40/21] w-full border-b object-cover"
+        height={630}
+        loading="lazy"
+        src={post.image}
+        width={1200}
+      />
+      <div className="flex flex-col gap-3 p-6 pt-5">
+        <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs">
+          <time dateTime={post.date}>
+            {dayjs(post.date).format('MMMM D, YYYY')}
+          </time>
+          {post.competitor ? (
+            <Badge variant="secondary">vs {post.competitor}</Badge>
+          ) : null}
+        </div>
+        <h3 className="text-balance font-semibold text-lg leading-snug group-hover:text-primary">
+          {post.title}
+        </h3>
+        <p className="line-clamp-3 text-muted-foreground text-sm leading-relaxed">
+          {post.description}
+        </p>
+        <div className="mt-auto flex items-center gap-1 pt-1 font-medium text-primary text-sm">
+          Read more
+          <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
+        </div>
       </div>
     </a>
   )

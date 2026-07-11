@@ -1,0 +1,115 @@
+---
+title: "Image CDN vs traditional CDN: caching and transforms"
+description: A traditional CDN caches existing files. An image CDN creates optimized variants and then caches them. Compare responsibilities, costs, and use cases.
+date: "2026-07-11"
+author: Raed Bahri
+tags: [image-cdn, cdn, architecture]
+image: /og/blog/image-cdn-vs-traditional-cdn.png?v=2026-07-11
+imageAlt: Traditional CDN cache path compared with an image transformation pipeline
+---
+
+The shortest accurate distinction is this: **a traditional CDN caches and delivers an existing file, while an image CDN can transform a source image into a requested variant before caching and delivering it**. A traditional CDN does not become an image optimizer merely because it serves images. An image CDN still relies on CDN principles for distribution and caching.
+
+This is not an either-or purchase in every architecture. A transformation service can sit behind a general-purpose CDN, so the edge handles repeat delivery while the image layer handles a cache miss and creates the variant.
+
+## Responsibility matrix
+
+| Responsibility | Traditional CDN | Image CDN |
+| --- | --- | --- |
+| Cache an existing URL response | Core responsibility | Usually included or paired with an edge CDN |
+| Resize to a requested width | Not inherent | Core image operation |
+| Convert AVIF/WebP based on browser support | Not inherent | Common capability |
+| Crop, fit, rotate, or adjust quality | Not inherent | Common capability |
+| Protect and fetch a remote image origin | General origin controls | Image-aware origin and SSRF controls required |
+| Generate responsive variants | Must be created elsewhere | Generated on demand or ahead of time |
+| Global edge delivery | Core responsibility | Provider-dependent; may use a bundled or external CDN |
+| Cache invalidation | URL/header/purge rules | Same concerns plus transformation-key normalization |
+
+“Not inherent” is deliberate wording. Some CDN vendors sell image transformation as an additional product. In that case, evaluate the CDN service and image service as separate responsibilities even if they share a dashboard.
+
+## A traditional CDN request
+
+Suppose a page requests `/images/hero.jpg`. On a cache miss, the CDN retrieves that URL from the configured origin, stores the response according to caching rules, and sends it to the user. A later request for the same cache key can reuse the cached object.
+
+If `hero.jpg` is 2400 pixels wide, every user receives that file unless the application or origin provides another URL. The CDN can compress HTTP responses where appropriate, but it does not normally decode the JPEG, resize its pixels, and encode an AVIF simply because the device is smaller.
+
+## An image CDN request
+
+An image URL adds transformation intent, for example:
+
+```text
+/img/https://origin.example.com/hero.jpg?w=800&fmt=auto&q=75
+```
+
+On a transformation cache miss, the image layer validates the origin, fetches the source, resizes it to 800 pixels, chooses or applies an output format, encodes it, and stores that result under a normalized cache key. A CDN can then cache the generated response at the edge.
+
+The transformation creates more possible cache objects. Width, height, crop, quality, DPR, format, and other parameters can multiply variants, so a production design needs limits and URL signing. “Unlimited transformations” in a price list does not remove the operational need to control arbitrary combinations.
+
+## Where should each cache live?
+
+There may be several caches:
+
+1. browser cache on the visitor's device;
+2. edge cache in a traditional CDN;
+3. generated-variant cache near the transformation service;
+4. original image storage or an origin cache.
+
+The best result is not necessarily the most caches. Each layer needs coherent `Cache-Control`, stable URLs, and an invalidation strategy. If an image changes without its URL changing, a year-long immutable response can keep stale content alive. Versioned asset URLs are simpler than purging every layer reliably.
+
+The [MDN Cache-Control reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cache-Control) documents the response directives shared by both architectures. Provider-specific cache keys and purge semantics still require provider documentation and testing.
+
+## How billing models differ
+
+A traditional CDN commonly meters delivered data, requests, or both. An image service may meter any combination of transformations, unique source images, generated variants, storage, cache operations, or delivered bandwidth. Bundling the products does not make those meters equivalent.
+
+Compare a real workload rather than an abstract unit price:
+
+- number and average size of source images;
+- responsive widths and device-pixel-ratio variants;
+- format variants;
+- monthly requests and delivered bytes after edge-cache hits;
+- source-change and invalidation frequency;
+- cold-transform traffic;
+- limits, overage rules, and failure behavior.
+
+Do not label one provider “cheapest” without publishing those assumptions. Negotiated contracts, region, cache hit rate, and legacy plans can reverse a simple table.
+
+## When a traditional CDN is enough
+
+A traditional CDN may be enough when a build pipeline already creates every required format and width, image URLs are content-hashed, assets change only on deployment, and the application emits correct responsive markup. This approach is particularly attractive for a small static library because it removes runtime image processing from the delivery path.
+
+It may also be enough when images are already tiny and correctly sized. Adding a transformation dependency to save a negligible number of bytes creates complexity without a meaningful user benefit.
+
+## When an image CDN adds value
+
+An image CDN is more useful when sources arrive after build time, a catalog is large, many frameworks need one URL grammar, or a team cannot predict every required dimension. It can also centralize format negotiation, quality policy, origin controls, and delivery analytics.
+
+The tradeoff is a new production dependency. You need a behavior for cache misses, upstream failures, abuse, spending limits, migrations, and provider outages. A self-hosted transform service changes who owns those problems; it does not make them disappear.
+
+## Can you use both?
+
+Yes. A common architecture is:
+
+```text
+browser → edge CDN → image transformation service → protected image origin
+```
+
+The edge answers repeat requests. The image service creates a variant only when needed. The protected origin stores the master. This separation lets a team keep an existing CDN while choosing a different transform layer, but only if cache headers and host routing are configured correctly.
+
+Keenpix is designed around that separation: it transforms and caches images from allowlisted origins and can sit behind a CDN you already operate. That is a product design statement, not evidence that it is the right architecture for every site.
+
+## Decision checklist
+
+Choose the smallest system that meets the requirement:
+
+- If variants are known at build time, test a build pipeline plus traditional CDN first.
+- If images or requested sizes are dynamic, test an image CDN with representative traffic.
+- If you already use a CDN's image add-on, model that add-on separately from ordinary cache delivery.
+- If exit control matters, document how URLs and source assets move before adoption.
+- In every case, measure rendered dimensions, transferred bytes, cache hit rate, failures, and user-visible loading.
+
+For a deeper lifecycle explanation, read [what is an image CDN?](/blog/what-is-an-image-cdn). For browser markup and sizing, use the [responsive image CDN guide](/blog/responsive-image-cdn-guide).
+
+## Sources and verification
+
+This article was checked on July 11, 2026 against [web.dev's image CDN overview](https://web.dev/articles/image-cdns), the [MDN HTTP caching guide](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching), and the [MDN Cache-Control reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cache-Control). The architecture and cost examples are qualitative and do not claim measured Keenpix or competitor performance.

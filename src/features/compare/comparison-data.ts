@@ -14,6 +14,7 @@ export interface ComparisonPageData {
   pricingAsOf: string
   pricingRows: Array<{ scenario: string; competitor: string; keenpix: string }>
   slug: string
+  sources: Array<{ label: string; url: string }>
   switchReasons: Array<{ title: string; detail: string }>
   title: string
   verdict: string

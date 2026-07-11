@@ -59,6 +59,42 @@ export function AboutPage() {
           </div>
         </section>
 
+        <section className="border-b bg-muted/30">
+          <div className="mx-auto max-w-3xl px-6 py-14">
+            <h2 className="font-semibold text-2xl tracking-tight">
+              Verify the product before you trust it
+            </h2>
+            <p className="mt-3 text-muted-foreground leading-relaxed">
+              Keenpix does not publish customer counts, uptime percentages,
+              certifications, or benchmark results until the underlying evidence
+              can be inspected. Start with the public source, current release
+              history, security model, service-status guidance, and editorial
+              method below.
+            </p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {[
+                { href: '/security', label: 'Security and data handling' },
+                { href: '/status', label: 'Service status and incidents' },
+                { href: '/support', label: 'Support and corrections' },
+                {
+                  href: '/methodology/comparisons',
+                  label: 'Comparison methodology',
+                },
+                { href: '/changelog', label: 'Product changelog' },
+                { href: '/legal/dpa', label: 'Data processing agreement' },
+              ].map((item) => (
+                <a
+                  className="rounded-lg border bg-card p-4 font-medium text-sm hover:border-ring/60"
+                  href={item.href}
+                  key={item.href}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className="border-b">
           <div className="mx-auto max-w-3xl px-6 py-14">
             <h2 className="font-semibold text-2xl tracking-tight">

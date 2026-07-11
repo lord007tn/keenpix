@@ -46,7 +46,7 @@ export const MARKETING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Is Keenpix a Cloudinary, imgix, or ImageKit alternative?',
     answer:
-      'Yes. Keenpix is a lighter, cheaper image-CDN alternative to Cloudinary, imgix, and ImageKit. It optimizes and delivers images from your existing S3, R2, or origin with transparent bandwidth-only pricing and no per-transform credits or origin-image counts to reason about. Unlike Cloudinary’s bundled credits or imgix’s origin-image model, you pay only for bytes delivered, with a hard cap you control. And it is the only one of the four you can also self-host as open source under AGPL — the identical engine on your own infrastructure — so there is never any vendor lock-in.',
+      'Yes. Keenpix is a focused image-CDN alternative to Cloudinary, imgix, and ImageKit. It optimizes and delivers images from your existing S3, R2, or origin with bandwidth-based pricing and no per-transform credits or origin-image counts. You pay for bytes delivered, with a hard cap you control. Keenpix can also be self-hosted under AGPL-3.0, so teams that accept the operational responsibility can run the engine on their own infrastructure.',
   },
   {
     question: 'Do I have to migrate or re-upload my images?',
@@ -66,6 +66,6 @@ export const MARKETING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'How much smaller are images with Keenpix?',
     answer:
-      'Modern formats like AVIF and WebP typically cut image weight 40–70% versus the same image as JPEG or PNG, and Keenpix negotiates the best format each browser supports (AVIF → WebP → JPEG) from a single URL. On top of format conversion you get resize, quality, and DPR controls, so you ship exactly the pixels each device needs. Keenpix then reports the exact bytes saved per project in its built-in analytics — and because you are billed on bandwidth delivered, that saving shows up directly on your invoice.',
+      'There is no honest universal savings percentage. The result depends on the source image, output dimensions, format, quality, and content. Keenpix can negotiate AVIF, WebP, or a compatible fallback from one URL, and resize, quality, and DPR controls help avoid sending unnecessary pixels. Project analytics report source and delivered bytes so you can measure the result on your own images before treating it as a performance or cost claim.',
   },
 ]

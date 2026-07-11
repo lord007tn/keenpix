@@ -6,7 +6,11 @@ import { Suspense } from 'react'
 import { JsonLd } from '@/components/app/json-ld'
 import { getMDXComponents } from '@/components/mdx'
 import { SiteFooter, SiteHeader } from '@/features/blog/blog-chrome'
-import { BlogPostCta, BlogPostHeader } from '@/features/blog/blog-post-layout'
+import {
+  BlogPostCta,
+  BlogPostHeader,
+  BlogPostTrust,
+} from '@/features/blog/blog-post-layout'
 import { docsSlugsSchema } from '@/schemas/docs'
 import { getAppUrl, isCloud } from '@/server/deployment'
 import { getAuthor } from '@/shared/authors'
@@ -26,6 +30,8 @@ interface BlogLoaderData {
   competitor?: string
   date: string
   description: string
+  image: string
+  imageAlt: string
   jsonLd: ReturnType<typeof blogPostingJsonLd> | null
   ogImage: string
   path: string
@@ -112,16 +118,22 @@ const serverLoader = createServerFn({ method: 'GET' })
     ]
 
     const updated = page.data.updated ?? page.data.date
+    const image = page.data.image
+    const author = getAuthor(page.data.author)
 
     return {
       author: page.data.author,
       // OG expects article:author to be a profile URL, not a bare name.
-      authorUrl: getAuthor(page.data.author)?.sameAs?.[0] ?? null,
+      authorUrl: author.profilePath
+        ? `${getAppUrl()}${author.profilePath}`
+        : (author.sameAs?.[0] ?? null),
       canonicalUrl,
       competitor: page.data.competitor,
       date: page.data.date,
       description: page.data.description,
-      ogImage: `${getAppUrl()}/og/blog/${page.slugs.join('/')}`,
+      image,
+      imageAlt: page.data.imageAlt,
+      ogImage: `${getAppUrl()}${image}`,
       path: page.path,
       selfHost,
       tags: page.data.tags,
@@ -137,6 +149,7 @@ const serverLoader = createServerFn({ method: 'GET' })
             datePublished: page.data.date,
             dateModified: updated,
             description: page.data.description,
+            image: `${getAppUrl()}${image}`,
             path: breadcrumbs,
             title: page.data.title,
             url: canonicalUrl,
@@ -154,13 +167,17 @@ const clientLoader = browserCollections.blog.createClientLoader({
             competitor: frontmatter.competitor,
             date: frontmatter.date,
             description: frontmatter.description,
+            image: frontmatter.image,
+            imageAlt: frontmatter.imageAlt,
             tags: frontmatter.tags,
             title: frontmatter.title,
+            updated: frontmatter.updated,
           }}
         />
         <article className="prose mx-auto max-w-3xl px-6 py-10">
           <MDX components={getMDXComponents()} />
         </article>
+        <BlogPostTrust authorName={frontmatter.author} />
         <BlogPostCta />
       </>
     )
