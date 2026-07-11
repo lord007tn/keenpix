@@ -26,10 +26,15 @@ export async function sendPostmarkMail(input: MailInput): Promise<void> {
       MessageStream: env.POSTMARK_MESSAGE_STREAM,
     }),
   })
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '')
-    throw new Error(
-      `Postmark send failed (${res.status}): ${detail.slice(0, 300)}`,
-    )
+  const result = (await res.json().catch(() => null)) as {
+    ErrorCode?: unknown
+  } | null
+  if (!res.ok || result?.ErrorCode !== 0) {
+    const code =
+      typeof result?.ErrorCode === 'number' ? `, code ${result.ErrorCode}` : ''
+    // Postmark error messages can contain the recipient address (for example,
+    // an inactive-recipient response). Keep PII out of application logs while
+    // retaining the HTTP/API codes operators need to investigate in Postmark.
+    throw new Error(`Postmark send failed (${res.status}${code})`)
   }
 }

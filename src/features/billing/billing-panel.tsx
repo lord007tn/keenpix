@@ -17,8 +17,11 @@ import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { getErrorMessage } from '@/errors/common'
 import { PlanSelection } from '@/features/billing/plan-selection'
-import { getBillingStateFn, setSpendCapFn } from '@/functions/billing'
-import { authClient } from '@/lib/auth/client'
+import {
+  createBillingPortalSessionFn,
+  getBillingStateFn,
+  setSpendCapFn,
+} from '@/functions/billing'
 import { TRIAL } from '@/lib/billing/plans'
 import { humanBytes } from '@/shared/format'
 
@@ -242,15 +245,12 @@ export function BillingPanel() {
   async function openPortal() {
     setPortalBusy(true)
     try {
-      const result = await authClient.customer.portal()
-      const url = result?.data?.url
+      const { url } = await createBillingPortalSessionFn()
       if (url) {
         window.location.href = url
         return
       }
-      if (result?.error) {
-        throw new Error(result.error.message ?? 'Could not open billing portal')
-      }
+      throw new Error('Could not open billing portal')
     } catch (error) {
       toast.error(getErrorMessage(error))
       setPortalBusy(false)
@@ -434,10 +434,6 @@ export function BillingPanel() {
           activePlanId={isEntitled ? activePlan : null}
           hasPlan={Boolean(activePlan)}
           orgId={data.orgId}
-          usage={{
-            projects: data.usage.projects.used,
-            seats: data.usage.seats.used,
-          }}
         />
       ) : null}
       {!internalPlan && data?.orgId && !canManage ? (

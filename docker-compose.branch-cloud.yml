@@ -69,6 +69,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_KEENPIX_PUBLIC_URL: ${VITE_KEENPIX_PUBLIC_URL:-http://localhost:3000}
+        VITE_GTM_CONTAINER_ID: ${VITE_GTM_CONTAINER_ID:-}
         VERSION: ${SOURCE_COMMIT:-branch-cloud}
     restart: unless-stopped
     mem_limit: ${KEENPIX_MEM_LIMIT:-0}
@@ -97,6 +98,7 @@ services:
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
       KEENPIX_APP_URL: ${KEENPIX_APP_URL:-http://localhost:3000}
       VITE_KEENPIX_PUBLIC_URL: ${VITE_KEENPIX_PUBLIC_URL:-http://localhost:3000}
+      VITE_GTM_CONTAINER_ID: ${VITE_GTM_CONTAINER_ID:-}
       KEENPIX_SUPER_ADMIN_EMAIL: ${KEENPIX_SUPER_ADMIN_EMAIL}
       KEENPIX_SUPER_ADMIN_PASSWORD: ${KEENPIX_SUPER_ADMIN_PASSWORD}
       KEENPIX_RUN_MIGRATIONS: ${KEENPIX_RUN_MIGRATIONS:-true}

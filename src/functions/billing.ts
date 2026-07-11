@@ -1,5 +1,9 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getBillingState, setSpendCap } from '@/actions/billing'
+import {
+  createBillingPortalSession,
+  getBillingState,
+  setSpendCap,
+} from '@/actions/billing'
 import {
   authMiddleware,
   requireActiveOrg,
@@ -34,3 +38,12 @@ export const setSpendCapFn = createServerFn({ method: 'POST' })
     // rather than after the gate's TTL.
     bustServingEntitlement(orgId)
   })
+
+// Owner/admin-only organization billing portal. The action resolves the Polar
+// customer linked to the active org so portal access is not tied to whichever
+// individual user happened to complete the first checkout.
+export const createBillingPortalSessionFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .handler(({ context }) =>
+    createBillingPortalSession(requireOrgAdmin(context)),
+  )

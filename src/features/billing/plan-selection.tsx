@@ -10,16 +10,9 @@ import {
   CardDescription,
   CardHeader,
 } from '@/components/ui/card'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { getErrorMessage } from '@/errors/common'
 import { getPlanPricingFn } from '@/functions/pricing'
+import { trackEvent } from '@/lib/analytics/client'
 import { authClient } from '@/lib/auth/client'
 import {
   catalogPricing,
@@ -98,7 +91,6 @@ function checkoutLabel(
   isCurrent: boolean,
   busy: boolean,
   hasPlan: boolean,
-  planName: string,
 ): string {
   if (isCurrent) {
     return 'Current plan'
@@ -106,34 +98,28 @@ function checkoutLabel(
   if (busy) {
     return 'Redirecting…'
   }
-  // First subscription starts with the free trial; switches are immediate.
   return hasPlan
-    ? `Switch to ${planName}`
+    ? 'Manage in billing portal'
     : `Start ${TRIAL.days}-day free trial`
 }
 
 // The interval toggle + the three plan cards, with checkout wired to Polar. Shared
 // by the billing settings panel and the onboarding "choose a plan" dialog so the
-// pricing UI and checkout logic never diverge. Checkout attributes the
-// subscription to `orgId` server-side (the checkout guard rejects a foreign org).
+// pricing UI and checkout logic never diverge. Checkout attributes the resulting
+// subscription to the active `orgId` supplied by the authenticated app surface.
 export function PlanSelection({
   orgId,
   activePlanId,
   hasPlan = false,
   compact = false,
-  usage,
 }: {
   orgId: string
   activePlanId?: PlanId | null
   hasPlan?: boolean
   compact?: boolean
-  // Current project/seat counts, so a downgrade can warn when they exceed the
-  // target plan's caps. Omitted on the onboarding (no-plan) path.
-  usage?: { projects: number; seats: number }
 }) {
   const [interval, setInterval] = useState<Interval>('month')
   const [busy, setBusy] = useState<PlanId | null>(null)
-  const [confirmPlan, setConfirmPlan] = useState<PlanId | null>(null)
   // Live Polar prices so the cards match the real charge; the catalog is the
   // first-paint/self-host/offline fallback so a price never renders blank.
   const { data: pricingData } = useQuery({
@@ -152,6 +138,10 @@ export function PlanSelection({
       })
       const url = result?.data?.url
       if (url) {
+        trackEvent('begin_checkout', {
+          plan: planId,
+          billing_interval: interval,
+        })
         window.location.href = url
         return
       }
@@ -162,19 +152,6 @@ export function PlanSelection({
       toast.error(getErrorMessage(error))
       setBusy(null)
     }
-  }
-
-  const targetPlan = confirmPlan ? PLANS[confirmPlan] : null
-  const downgradeWarnings: string[] = []
-  if (
-    targetPlan &&
-    usage &&
-    targetPlan.maxProjects !== null &&
-    usage.projects > targetPlan.maxProjects
-  ) {
-    downgradeWarnings.push(
-      `${usage.projects} projects (this plan includes ${targetPlan.maxProjects})`,
-    )
   }
 
   return (
@@ -244,24 +221,11 @@ export function PlanSelection({
                 )}
                 <Button
                   className="mt-auto"
-                  disabled={isCurrent || busy === planId}
-                  onClick={() => {
-                    // Confirm a switch for an existing subscriber; go straight to
-                    // checkout on the first (no-plan) subscribe.
-                    if (hasPlan) {
-                      setConfirmPlan(planId)
-                    } else {
-                      startCheckout(planId)
-                    }
-                  }}
+                  disabled={isCurrent || busy === planId || hasPlan}
+                  onClick={() => startCheckout(planId)}
                   variant={highlight ? 'default' : 'outline'}
                 >
-                  {checkoutLabel(
-                    isCurrent,
-                    busy === planId,
-                    hasPlan,
-                    plan.name,
-                  )}
+                  {checkoutLabel(isCurrent, busy === planId, hasPlan)}
                 </Button>
               </CardContent>
             </Card>
@@ -278,51 +242,12 @@ export function PlanSelection({
           cancel anytime.
         </p>
       )}
-
-      <Dialog
-        onOpenChange={(next) => {
-          if (!next) {
-            setConfirmPlan(null)
-          }
-        }}
-        open={confirmPlan !== null}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Switch to {targetPlan?.name}?</DialogTitle>
-            <DialogDescription>
-              You’ll continue to checkout to move to the {targetPlan?.name}{' '}
-              plan. The change takes effect immediately and billing is prorated.
-            </DialogDescription>
-          </DialogHeader>
-          {downgradeWarnings.length > 0 ? (
-            <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning-text">
-              You currently have {downgradeWarnings.join(' and ')}. Existing
-              ones keep working, but you won’t be able to add more until you’re
-              under the new limits.
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button
-              onClick={() => setConfirmPlan(null)}
-              type="button"
-              variant="outline"
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={busy !== null}
-              onClick={() => {
-                if (confirmPlan) {
-                  startCheckout(confirmPlan)
-                }
-              }}
-            >
-              {busy ? 'Redirecting…' : 'Continue to checkout'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {hasPlan ? (
+        <p className="text-center text-muted-foreground text-sm">
+          Change plans from Manage billing above. Polar applies the configured
+          proration rules and keeps one subscription for this workspace.
+        </p>
+      ) : null}
     </div>
   )
 }

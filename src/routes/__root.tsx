@@ -1,3 +1,4 @@
+import interLatin from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url'
 import type { QueryClient } from '@tanstack/react-query'
 import {
   createRootRouteWithContext,
@@ -6,7 +7,9 @@ import {
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
+import { AnalyticsConsent } from '@/components/app/analytics-consent'
 import { NotFoundPage } from '@/components/app/error-page'
+import { WebVitalsReporter } from '@/components/app/web-vitals-reporter'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -43,6 +46,13 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       }),
     ],
     links: [
+      {
+        rel: 'preload',
+        href: interLatin,
+        as: 'font',
+        type: 'font/woff2',
+        crossOrigin: 'anonymous',
+      },
       { rel: 'stylesheet', href: appCss },
       {
         rel: 'icon',
@@ -111,6 +121,8 @@ function RootDocument({ children }: { children: ReactNode }) {
           <TooltipProvider>{children}</TooltipProvider>
           <Toaster richColors />
         </ThemeProvider>
+        <AnalyticsConsent />
+        <WebVitalsReporter />
         {import.meta.env.DEV ? <Devtools /> : null}
         <Scripts />
       </body>

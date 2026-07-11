@@ -33,7 +33,7 @@ export const Route = createFileRoute('/(auth)/login')({
 })
 
 function LoginPage() {
-  const { cloud } = Route.useLoaderData()
+  const { cloud, googleAuth } = Route.useLoaderData()
   const { redirect } = Route.useSearch()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
@@ -115,6 +115,21 @@ function LoginPage() {
         </CardHeader>
 
         <CardContent className="flex flex-col gap-4">
+          {googleAuth ? (
+            <Button
+              onClick={() =>
+                authClient.signIn.social({
+                  provider: 'google',
+                  callbackURL: redirect ?? '/app/dashboard?range=30d',
+                  errorCallbackURL: '/login',
+                })
+              }
+              type="button"
+              variant="outline"
+            >
+              Continue with Google
+            </Button>
+          ) : null}
           {error ? (
             <Alert variant="destructive">
               <AlertDescription className="flex flex-col items-start gap-2">

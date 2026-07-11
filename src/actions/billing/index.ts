@@ -1,11 +1,14 @@
 import { getActiveInternalPlanGrant } from '@/data-access/internal-plan-grants'
 import {
+  getBillingCustomer,
   getOrgSubscription,
   orgHasBillingCustomer,
   setSubscriptionSpendCap,
 } from '@/data-access/subscriptions'
 import { billingUsageSnapshot } from '@/data-access/usage'
 import { getPlan, getPlanRank, type PlanId, TRIAL } from '@/lib/billing/plans'
+import { createPolarClient } from '@/lib/billing/polar-client'
+import { getAppUrl } from '@/server/deployment'
 
 const GB = 1024 ** 3
 
@@ -147,4 +150,28 @@ export async function getBillingState(orgId: string): Promise<BillingState> {
 // busted by the caller (functions/billing) so this action stays data-access only.
 export function setSpendCap(orgId: string, spendCapCents: number | null) {
   return setSubscriptionSpendCap(orgId, spendCapCents)
+}
+
+// Create the portal session from the org's mirrored Polar customer id, not the
+// current user's Better Auth id. Billing belongs to the organization: another
+// owner/admin must be able to recover payment or invoices even when a different
+// member originally completed checkout.
+export async function createBillingPortalSession(orgId: string) {
+  const [client, customer] = await Promise.all([
+    Promise.resolve(createPolarClient()),
+    getBillingCustomer(orgId),
+  ])
+  if (!client) {
+    throw new Error('Billing is not configured for this deployment.')
+  }
+  if (!customer) {
+    throw new Error(
+      'No billing account is linked to this workspace. Contact support if you previously subscribed.',
+    )
+  }
+  const session = await client.customerSessions.create({
+    customerId: customer.polarCustomerId,
+    returnUrl: `${getAppUrl()}/app/account?section=billing`,
+  })
+  return { url: session.customerPortalUrl }
 }

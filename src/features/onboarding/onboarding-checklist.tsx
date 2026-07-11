@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { CheckCircle2Icon, CircleIcon, LockIcon } from 'lucide-react'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -20,6 +20,7 @@ import {
 import { PlanSelection } from '@/features/billing/plan-selection'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { getBillingStateFn } from '@/functions/billing'
+import { trackFunnelMilestone } from '@/lib/analytics/client'
 import { PLANS, TRIAL } from '@/lib/billing/plans'
 import { cn } from '@/lib/cn/utils'
 
@@ -116,6 +117,14 @@ export function OnboardingChecklist({
   })
   const subscribed =
     !cloud || data?.status === 'active' || data?.status === 'trialing'
+
+  useEffect(() => {
+    if (data?.status === 'trialing') {
+      trackFunnelMilestone('trial_started')
+    } else if (data?.status === 'active') {
+      trackFunnelMilestone('subscription_activated')
+    }
+  }, [data?.status])
 
   // The first step must never render action-less for a brand-new user: show a
   // loading placeholder while billing state resolves and a retry when it fails
