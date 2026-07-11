@@ -186,7 +186,7 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
             <Link
               className={buttonVariants({
                 className:
-                  'hidden min-h-12 touch-manipulation px-3 sm:inline-flex',
+                  'max-sm:!hidden min-h-12 touch-manipulation px-3 sm:inline-flex',
                 size: 'sm',
                 variant: 'ghost',
               })}
@@ -197,7 +197,7 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
             <Link
               className={buttonVariants({
                 className:
-                  'hidden min-h-12 touch-manipulation px-3 sm:inline-flex',
+                  'max-sm:!hidden min-h-12 touch-manipulation px-3 sm:inline-flex',
                 size: 'sm',
               })}
               to="/signup"
