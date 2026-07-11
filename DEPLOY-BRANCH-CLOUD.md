@@ -32,7 +32,14 @@ KEENPIX_SUPER_ADMIN_EMAIL=you@example.com
 POLAR_TOKEN=polar_oat_...
 POLAR_WEBHOOK_SECRET=whsec_...
 POLAR_SERVER=production
+VITE_GTM_CONTAINER_ID=GTM-XXXXXXX
 ```
+
+`VITE_GTM_CONTAINER_ID` is public configuration, not a credential. Mark it as
+available at both build time and runtime: Vite embeds it in the browser bundle,
+while the runtime value keeps the deployment configuration explicit. A missing
+value leaves consent controls and first-party Web Vitals reporting active but
+does not load Google Tag Manager.
 
 `POLAR_TOKEN` and `POLAR_WEBHOOK_SECRET` should come from the Polar environment
 matching the public domain. Production deploys must use
