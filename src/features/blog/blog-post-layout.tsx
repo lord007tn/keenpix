@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import dayjs from 'dayjs'
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
@@ -9,27 +10,16 @@ export interface BlogPostMeta {
   competitor?: string
   date: string
   description: string
+  image: string
+  imageAlt: string
   tags: string[]
   title: string
-}
-
-function formatDate(date: string): string {
-  const parsed = new Date(date)
-  if (Number.isNaN(parsed.getTime())) {
-    return date
-  }
-  // Format in UTC so SSR and client agree — the dates are date-only strings
-  // (UTC midnight), and a local timezone would shift the day and mismatch.
-  return parsed.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'UTC',
-  })
+  updated?: string
 }
 
 export function BlogPostHeader({ meta }: { meta: BlogPostMeta }) {
-  const authorLink = getAuthor(meta.author).sameAs?.[0]
+  const author = getAuthor(meta.author)
+  const authorLink = author.profilePath ?? author.sameAs?.[0]
   return (
     <header className="border-b bg-muted/30">
       <div className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
@@ -40,6 +30,14 @@ export function BlogPostHeader({ meta }: { meta: BlogPostMeta }) {
           <ArrowLeftIcon className="size-4" />
           All posts
         </a>
+        <img
+          alt={meta.imageAlt}
+          className="mt-8 aspect-[40/21] w-full rounded-xl border object-cover shadow-sm"
+          fetchPriority="high"
+          height={630}
+          src={meta.image}
+          width={1200}
+        />
         {meta.competitor ? (
           <div className="mt-6">
             <Badge variant="secondary">Comparison · vs {meta.competitor}</Badge>
@@ -56,8 +54,8 @@ export function BlogPostHeader({ meta }: { meta: BlogPostMeta }) {
             <a
               className="font-medium text-foreground hover:underline"
               href={authorLink}
-              rel="author noreferrer"
-              target="_blank"
+              rel={author.profilePath ? 'author' : 'author noreferrer'}
+              target={author.profilePath ? undefined : '_blank'}
             >
               {meta.author}
             </a>
@@ -65,7 +63,20 @@ export function BlogPostHeader({ meta }: { meta: BlogPostMeta }) {
             <span>{meta.author}</span>
           )}
           <span aria-hidden="true">·</span>
-          <time dateTime={meta.date}>{formatDate(meta.date)}</time>
+          <time dateTime={meta.date}>
+            {dayjs(meta.date).format('MMMM D, YYYY')}
+          </time>
+          {meta.updated && meta.updated !== meta.date ? (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>
+                Updated{' '}
+                <time dateTime={meta.updated}>
+                  {dayjs(meta.updated).format('MMMM D, YYYY')}
+                </time>
+              </span>
+            </>
+          ) : null}
           {meta.tags.length > 0 ? (
             <span className="flex flex-wrap gap-1.5">
               {meta.tags.map((tag) => (
@@ -78,6 +89,48 @@ export function BlogPostHeader({ meta }: { meta: BlogPostMeta }) {
         </div>
       </div>
     </header>
+  )
+}
+
+export function BlogPostTrust({ authorName }: { authorName: string }) {
+  const author = getAuthor(authorName)
+  return (
+    <aside
+      aria-label="Article accountability"
+      className="mx-auto max-w-3xl px-6 pb-12"
+    >
+      <div className="rounded-lg border bg-muted/30 p-6">
+        <h2 className="font-semibold text-lg">About this article</h2>
+        <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
+          {author.bio ?? `${author.name} writes for Keenpix.`} Product claims
+          are checked against the current Keenpix code and pricing. Competitor
+          facts use primary vendor sources and carry a verification date;
+          estimates and opinions are labeled as such.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+          {author.profilePath ? (
+            <a
+              className="font-medium text-primary hover:underline"
+              href={author.profilePath}
+            >
+              Author profile
+            </a>
+          ) : null}
+          <a
+            className="font-medium text-primary hover:underline"
+            href="/methodology/comparisons"
+          >
+            Editorial methodology
+          </a>
+          <a
+            className="font-medium text-primary hover:underline"
+            href="/support"
+          >
+            Request a correction
+          </a>
+        </div>
+      </div>
+    </aside>
   )
 }
 

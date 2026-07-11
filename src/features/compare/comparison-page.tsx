@@ -64,6 +64,43 @@ export function ComparisonPage({
           </div>
         </section>
 
+        <section className="border-b bg-muted/30">
+          <div className="mx-auto max-w-3xl px-6 py-10">
+            <h2 className="font-semibold text-xl tracking-tight">
+              Disclosure and sources
+            </h2>
+            <p className="mt-3 text-muted-foreground text-sm leading-relaxed">
+              Keenpix publishes this comparison and benefits if you choose
+              Keenpix. Vendor facts were checked against the primary sources
+              below in {comparison.pricingAsOf}. Pricing scenarios are estimates
+              using the displayed assumptions, not quotes; contracts, taxes,
+              regions, cache behavior, and legacy plans can change a real bill.
+            </p>
+            <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+              {comparison.sources.map((source) => (
+                <li key={source.url}>
+                  <a
+                    className="font-medium text-primary hover:underline"
+                    href={source.url}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    {source.label}
+                  </a>
+                </li>
+              ))}
+              <li>
+                <a
+                  className="font-medium text-primary hover:underline"
+                  href="/methodology/comparisons"
+                >
+                  Full methodology and corrections policy
+                </a>
+              </li>
+            </ul>
+          </div>
+        </section>
+
         <section className="border-b">
           <div className="mx-auto max-w-4xl px-6 py-14">
             <h2 className="font-semibold text-2xl tracking-tight">

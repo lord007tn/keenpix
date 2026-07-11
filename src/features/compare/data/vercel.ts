@@ -6,9 +6,9 @@ export const vercelComparison = {
   title: 'Vercel Image Optimization Alternative: Keenpix (2026)',
   metaDescription:
     'Keenpix vs Vercel Image Optimization: one meter vs three, unlimited transforms, next/image loader support, and a hard spend cap. Pricing as of July 2026.',
-  heroHeadline: 'One meter. Unlimited transforms. No 402s.',
+  heroHeadline: 'One meter. Unlimited transforms. A cap you control.',
   heroSubhead:
-    'Vercel Image Optimization bills transformations, cache reads, and cache writes — plus data transfer — and Hobby hard-stops your images with a 402 at the limit. Keenpix bills one thing (delivered bandwidth), keeps next/image working via a small custom loader, and pauses at a spend cap you set instead of surprising you.',
+    'Vercel Image Optimization bills transformations, cache reads, and cache writes — plus data transfer — and Hobby can return 402 at its included limits. Keenpix bills delivered bandwidth and also pauses delivery, but at a spend cap you set. The distinction is control over the threshold, not the absence of 402 responses.',
   verdict:
     "If your site fits inside Vercel's Hobby allowances, or you already pay for Vercel Pro and your image meters add up to a dollar or two a month, stay put — the default next/image loader is zero-config and Keenpix cannot beat free or nearly-free. Switch to Keenpix when the meters stop being ignorable: when Hobby 402s your images mid-month, when a crawler spike triples your transformation and cache-write line items, or when you want real image analytics, a hard spend cap, and an AGPL self-host escape hatch instead of forecasting three usage meters plus transfer. Keenpix is a young, focused product — no video, no storage, no custom domains yet — but for image delivery it replaces four line items with one number you can predict.",
   pricingRows: [
@@ -179,8 +179,20 @@ export const vercelComparison = {
     },
     {
       q: 'Can I self-host Keenpix?',
-      a: 'Yes. The engine is open source under AGPL-3.0 with a one-command Docker/Coolify install, free forever — no rug-pull, no CLA. The managed cloud at keenpix.com runs the same engine, so you can move between hosted and self-hosted without rewriting URLs.',
+      a: 'Yes. The cloud release publishes its image engine under AGPL-3.0 and includes Docker/Coolify deployment files. Self-hosting has no Keenpix license fee, but you own infrastructure and routing. The transform grammar can remain consistent when you control the hostname and migration plan.',
     },
+  ],
+  sources: [
+    { label: 'Vercel pricing', url: 'https://vercel.com/pricing' },
+    {
+      label: 'Vercel image cost guidance',
+      url: 'https://examples.vercel.com/docs/image-optimization/managing-image-optimization-costs',
+    },
+    {
+      label: 'Vercel image pricing changelog',
+      url: 'https://vercel.com/changelog/faster-transformations-and-reduced-pricing-for-image-optimization-4h2m8digJ84goyF69n5jUi',
+    },
+    { label: 'Keenpix pricing', url: '/pricing' },
   ],
   pricingAsOf: 'July 2026',
 } satisfies ComparisonPageData

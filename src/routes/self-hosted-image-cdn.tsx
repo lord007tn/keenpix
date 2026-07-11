@@ -31,7 +31,7 @@ export const Route = createFileRoute('/self-hosted-image-cdn')({
         ...seo({
           title: 'Self-hosted image CDN — open source under AGPL - Keenpix',
           description:
-            'Keenpix is an AGPL, self-hosted image CDN with a real dashboard — sharp transforms, AVIF/WebP, analytics, and SSRF-hardened allowlists. One Docker command, designed to sit behind your existing CDN.',
+            'Run an open-source, self-hosted image CDN with Sharp transforms, AVIF/WebP, analytics, signed URLs, and hardened origin controls behind your CDN.',
           url: canonicalUrl,
         }),
         ...(loaderData?.selfHost

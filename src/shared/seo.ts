@@ -15,6 +15,8 @@ export const SITE_DESCRIPTION =
   'Keenpix optimizes and delivers your images as AVIF/WebP from one URL — transparent bandwidth pricing, unlimited transforms, no lock-in. Or self-host free.'
 export const SITE_KEYWORDS =
   'image optimization CDN, image CDN, Cloudinary alternative, imgix alternative, ImageKit alternative, WebP, AVIF, sharp image transforms, self-hosted image optimization, open-source image CDN, bandwidth pricing'
+export const PRICING_DESCRIPTION =
+  'Keenpix pricing starts at $9/month for 100 GB delivered, with unlimited transforms, a 14-day trial, and spending caps. Or self-host free under AGPL.'
 export const BRAND_IMAGE_PATH = '/brand/keenpix-og-card.png'
 const BRAND_ICON_PATH = '/android-chrome-512x512.png'
 // Twitter attribution handle reused across the card meta tags.
@@ -135,9 +137,9 @@ export function softwareApplicationJsonLd() {
     // lets search engines surface the price range as a rich result.
     offers: {
       '@type': 'AggregateOffer',
-      highPrice: String(PLANS.business.priceMonthlyUsd),
-      lowPrice: '0',
-      offerCount: '4',
+      highPrice: String(PLANS.business.priceMonthlyUsd * 10),
+      lowPrice: String(PLANS.basic.priceMonthlyUsd),
+      offerCount: Object.keys(PLANS).length * 2,
       priceCurrency: 'USD',
     },
     operatingSystem: 'Linux, macOS, Windows',
@@ -184,6 +186,108 @@ export function webSiteJsonLd() {
     name: SITE_NAME,
     publisher: { '@id': ORGANIZATION_ID },
     url: absoluteUrl('/'),
+  }
+}
+
+export function homePageJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    '@id': `${absoluteUrl('/')}#webpage`,
+    about: { '@id': SOFTWARE_ID },
+    description: SITE_DESCRIPTION,
+    inLanguage: 'en',
+    isPartOf: { '@id': WEBSITE_ID },
+    mainEntity: { '@id': SOFTWARE_ID },
+    name: SITE_TITLE,
+    primaryImageOfPage: absoluteUrl(BRAND_IMAGE_PATH),
+    publisher: { '@id': ORGANIZATION_ID },
+    url: absoluteUrl('/'),
+  }
+}
+
+export function pricingPageJsonLd() {
+  const catalogId = `${absoluteUrl('/pricing')}#offers`
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': ORGANIZATION_ID,
+        logo: absoluteUrl(BRAND_ICON_PATH),
+        name: SITE_NAME,
+        url: absoluteUrl('/'),
+      },
+      {
+        '@type': 'WebSite',
+        '@id': WEBSITE_ID,
+        name: SITE_NAME,
+        publisher: { '@id': ORGANIZATION_ID },
+        url: absoluteUrl('/'),
+      },
+      {
+        '@type': 'WebPage',
+        '@id': `${absoluteUrl('/pricing')}#webpage`,
+        about: { '@id': SOFTWARE_ID },
+        description: PRICING_DESCRIPTION,
+        hasPart: { '@id': catalogId },
+        inLanguage: 'en',
+        isPartOf: { '@id': WEBSITE_ID },
+        mainEntity: { '@id': SOFTWARE_ID },
+        name: `Pricing - ${SITE_NAME}`,
+        publisher: { '@id': ORGANIZATION_ID },
+        url: absoluteUrl('/pricing'),
+      },
+      {
+        '@type': 'SoftwareApplication',
+        '@id': SOFTWARE_ID,
+        applicationCategory: 'DeveloperApplication',
+        name: SITE_NAME,
+        publisher: { '@id': ORGANIZATION_ID },
+        url: absoluteUrl('/'),
+      },
+      {
+        '@type': 'OfferCatalog',
+        '@id': catalogId,
+        itemListElement: Object.values(PLANS).flatMap((plan) => [
+          {
+            '@type': 'Offer',
+            availability: 'https://schema.org/InStock',
+            category: 'monthly subscription',
+            itemOffered: { '@id': SOFTWARE_ID },
+            name: `${plan.name} monthly`,
+            price: String(plan.priceMonthlyUsd),
+            priceCurrency: 'USD',
+            priceSpecification: {
+              '@type': 'UnitPriceSpecification',
+              billingDuration: 'P1M',
+              price: String(plan.priceMonthlyUsd),
+              priceCurrency: 'USD',
+            },
+            url: absoluteUrl('/pricing'),
+          },
+          {
+            '@type': 'Offer',
+            availability: 'https://schema.org/InStock',
+            category: 'annual subscription',
+            itemOffered: { '@id': SOFTWARE_ID },
+            name: `${plan.name} annual`,
+            price: String(plan.priceMonthlyUsd * 10),
+            priceCurrency: 'USD',
+            priceSpecification: {
+              '@type': 'UnitPriceSpecification',
+              billingDuration: 'P1Y',
+              price: String(plan.priceMonthlyUsd * 10),
+              priceCurrency: 'USD',
+            },
+            url: absoluteUrl('/pricing'),
+          },
+        ]),
+        name: 'Keenpix managed cloud plans',
+        numberOfItems: Object.keys(PLANS).length * 2,
+        url: absoluteUrl('/pricing'),
+      },
+    ],
   }
 }
 
@@ -242,6 +346,7 @@ export function blogPostingJsonLd({
   datePublished,
   dateModified,
   description,
+  image,
   path,
   title,
   url,
@@ -250,6 +355,7 @@ export function blogPostingJsonLd({
   datePublished: string
   dateModified?: string
   description: string
+  image: string
   path: Array<{ name: string; url: string }>
   title: string
   url: string
@@ -263,6 +369,12 @@ export function blogPostingJsonLd({
         name: person.name,
         ...(person.role ? { jobTitle: person.role } : {}),
         ...(person.bio ? { description: person.bio } : {}),
+        ...(person.profilePath
+          ? {
+              '@id': absoluteUrl(person.profilePath),
+              url: absoluteUrl(person.profilePath),
+            }
+          : {}),
         sameAs: person.sameAs,
       }
     : { '@type': 'Organization', name: person.name }
@@ -276,7 +388,7 @@ export function blogPostingJsonLd({
       dateModified: dateModified ?? datePublished,
       description,
       headline: title,
-      image: absoluteUrl(BRAND_IMAGE_PATH),
+      image,
       inLanguage: 'en',
       mainEntityOfPage: url,
       publisher: {

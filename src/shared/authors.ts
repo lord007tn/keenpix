@@ -6,6 +6,7 @@
 interface Author {
   bio?: string
   name: string
+  profilePath?: string
   role?: string
   sameAs?: string[]
 }
@@ -17,6 +18,7 @@ export const SUPPORT_EMAIL = 'fariq@keenpix.com'
 
 export const FOUNDER: Author = {
   name: 'Raed Bahri',
+  profilePath: '/authors/raed-bahri',
   role: 'Founder & maintainer',
   bio: 'Founder and maintainer of Keenpix. Builds image-delivery infrastructure and writes about honest image-CDN pricing and self-hosting.',
   sameAs: [SOCIAL_X_URL],
@@ -29,6 +31,6 @@ const AUTHORS: Record<string, Author> = {
 // Resolve a frontmatter byline to a known author, or a bare name when unknown
 // (which the JSON-LD builders treat as the Organization publisher). Annotated so
 // the bare-name fallback still types as Author for optional-field access.
-export function getAuthor(name: string): Author {
+export function getAuthor(name: string) {
   return AUTHORS[name] ?? { name }
 }

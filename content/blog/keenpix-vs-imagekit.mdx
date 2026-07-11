@@ -1,10 +1,13 @@
 ---
-title: Keenpix vs ImageKit — cheaper bandwidth and a real self-host option
-description: ImageKit is a solid bandwidth-priced image CDN, but it is closed-source and pricier at the edges. Keenpix undercuts it on overage, keeps transforms free, and is open source.
+title: "Keenpix vs ImageKit: Pricing and Self-Hosting (2026)"
+description: Compare Keenpix and ImageKit pricing, bandwidth overages, transformations, and self-hosting options using facts verified in July 2026 for your image stack.
 date: "2026-07-02"
+updated: "2026-07-11"
 author: Raed Bahri
 competitor: ImageKit
 tags: [comparison, pricing, image-cdn]
+image: /og/blog/keenpix-vs-imagekit.png?v=2026-07-11
+imageAlt: Abstract comparison of bandwidth plans and self-hosting paths
 ---
 
 ImageKit is one of the closest competitors to Keenpix in philosophy: it also bills primarily on **bandwidth** rather than opaque credits. So this comparison is less about the pricing *model* and more about **price, transforms, and openness**.
@@ -32,7 +35,7 @@ Keenpix never charges for transformations. Resize, crop, format conversion (AVIF
 
 ## Open source is the real differentiator
 
-ImageKit is a closed, managed platform. **Keenpix is open source under AGPL.** You can run the same engine yourself with Docker, keep everything on your own infrastructure, and pay nothing — and you can start on managed cloud and migrate to self-host without changing your URLs.
+ImageKit is a closed, managed platform. **The Keenpix cloud release publishes its image engine under AGPL-3.0.** You can run that version with Docker and pay no Keenpix license fee, while owning the infrastructure, updates, monitoring, and routing. The transform grammar can remain consistent during a move when you control the hostname and migration plan.
 
 That is the guarantee no proprietary vendor can offer: if the managed product ever stops making sense, you are not trapped.
 

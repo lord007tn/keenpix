@@ -1,10 +1,13 @@
 ---
-title: Keenpix vs imgix — origin images, bandwidth, and what you actually pay
-description: imgix prices on origin images plus bandwidth with no self-host option. Keenpix bills on bandwidth delivered only, keeps transforms free, and is open source. A side-by-side look.
+title: "Keenpix vs imgix: Pricing and Self-Hosting (2026)"
+description: Compare Keenpix and imgix pricing, origin-image fees, bandwidth, transformations, and self-hosting using facts verified in July 2026 for your image stack.
 date: "2026-07-04"
+updated: "2026-07-11"
 author: Raed Bahri
 competitor: imgix
 tags: [comparison, pricing, image-cdn]
+image: /og/blog/keenpix-vs-imgix.png?v=2026-07-11
+imageAlt: Abstract comparison of transformation controls and transparent delivery pricing
 ---
 
 imgix is a developer-favorite image CDN with an excellent rendering API. If you are choosing between imgix and Keenpix, the decision usually comes down to **pricing model** and whether you want the option to **self-host**.
@@ -32,7 +35,7 @@ Both products give you a powerful URL-based transformation API — resize, crop,
 
 ## The self-host escape hatch
 
-Keenpix is **open source under AGPL**. You can run the identical engine yourself with Docker, keep the pipeline on your own infrastructure, and pay nothing. imgix is a fully managed, closed platform — there is no path to bring it in-house.
+The Keenpix cloud release publishes its image engine under **AGPL-3.0**. You can run that version with Docker without a Keenpix license fee, while paying for and operating the infrastructure yourself. imgix is a managed platform; its service is not a self-hosted deployment path.
 
 For teams with compliance requirements, unpredictable budgets, or a preference for owning their stack, that optionality matters. You can start on managed Keenpix and move to self-host later without rewriting your image URLs.
 

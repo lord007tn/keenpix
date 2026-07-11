@@ -1,10 +1,13 @@
 ---
-title: Keenpix vs Cloudinary — a transparent, bandwidth-priced alternative
-description: Cloudinary bills on opaque "credits" that bundle transformations, storage, and bandwidth. Keenpix bills on one thing — bandwidth delivered — and lets you self-host. Here's an honest comparison.
+title: "Keenpix vs Cloudinary: Pricing and Features (2026)"
+description: Compare Keenpix and Cloudinary pricing, transformations, hosting options, and tradeoffs using facts verified in July 2026 for your next image CDN.
 date: "2026-07-06"
+updated: "2026-07-11"
 author: Raed Bahri
 competitor: Cloudinary
 tags: [comparison, pricing, image-cdn]
+image: /og/blog/keenpix-vs-cloudinary.png?v=2026-07-11
+imageAlt: Abstract comparison of pooled credits and transparent bandwidth metering
 ---
 
 Cloudinary is the most established image and video CDN, and for good reason — it is genuinely capable. But if you have ever opened a Cloudinary invoice and tried to reverse-engineer *why* it costs what it costs, this comparison is for you.
@@ -34,7 +37,7 @@ Because transforms are free, you never have to think about how many derived vari
 
 ## You can run it yourself
 
-This is the difference no amount of pricing tweaking can close: **Keenpix is open source**. The exact same engine that powers the managed cloud runs under AGPL, deployable with Docker on your own infrastructure, for free. If you ever want to leave the managed product — for cost, compliance, or control — you keep your URLs and your pipeline.
+This is the difference no amount of pricing tweaking can close: **the Keenpix cloud release publishes its image engine under AGPL-3.0**. You can deploy that version with Docker on your own infrastructure without a Keenpix license fee. A move still requires infrastructure, operations, and routing work; the transform URL grammar can remain consistent when you control the hostname and migration path.
 
 Cloudinary has no self-host path. Your assets and transformation URLs live inside their platform.
 
@@ -50,4 +53,4 @@ We would rather earn trust than oversell, so: if you need **video** transcoding 
 
 ## Try it
 
-Point Keenpix at your existing S3, R2, or any origin, keep your URLs, and see your real bandwidth bill before you commit. Or [self-host it free](/docs/self-hosting) — same engine, your infrastructure.
+Point Keenpix at your existing S3, R2, or another supported origin and measure your real delivered bandwidth before you commit. Or [self-host the engine](/docs/self-hosting) on infrastructure you operate.

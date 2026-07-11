@@ -15,6 +15,8 @@ export interface BlogListItem {
   competitor?: string
   date: string
   description: string
+  image: string
+  imageAlt: string
   slug: string
   tags: string[]
   title: string
@@ -32,6 +34,8 @@ export function listBlogPosts(): BlogListItem[] {
       competitor: page.data.competitor,
       date: page.data.date,
       description: page.data.description,
+      image: page.data.image,
+      imageAlt: page.data.imageAlt,
       slug: page.slugs.join('/'),
       tags: page.data.tags,
       title: page.data.title,

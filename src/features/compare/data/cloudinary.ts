@@ -8,7 +8,7 @@ export const cloudinaryComparison = {
     'Keenpix vs Cloudinary (July 2026): pooled credits vs one bandwidth meter with a hard cap you set. Honest pricing, migration steps, and when each wins.',
   heroHeadline: 'One honest meter instead of a credit pool',
   heroSubhead:
-    'Cloudinary bundles transformations, storage, and bandwidth into credits — and suspends accounts that run out. Keenpix bills exactly one thing, GB delivered, with unlimited transforms and a hard spend cap you control.',
+    'Cloudinary bundles transformations, storage, and bandwidth into credits. Keenpix bills exactly one thing, GB delivered, with unlimited transforms and a hard spend cap you control.',
   verdict:
     'If you need video transcoding, a full digital asset manager, or AI-powered transforms, pick Cloudinary — its breadth is real and Keenpix does not pretend to match it. If what you actually use Cloudinary for is resizing and delivering images, and your monthly ritual is reverse-engineering a credit invoice, Keenpix does that one job with one meter, unlimited transformations, a spend cap you set, and an AGPL self-host escape hatch. Be aware of what you give up: Keenpix is a young solo-founder product with no video, no storage, and no custom domains yet. As of July 2026 the math is stark for delivery-heavy sites — 400 GB/month is $19 on Keenpix and requires the $249/mo Advanced tier on Cloudinary.',
   pricingRows: [
@@ -40,7 +40,8 @@ export const cloudinaryComparison = {
     },
     {
       scenario: 'The month you exceed the plan',
-      competitor: 'No auto-overage on fixed tiers — account suspended',
+      competitor:
+        'Cloudinary documents soft limits and contacts customers about upgrading',
       keenpix: 'Linear overage up to your cap, then delivery pauses',
     },
   ],
@@ -62,12 +63,12 @@ export const cloudinaryComparison = {
     },
     {
       feature: 'Overage handling',
-      competitor: 'None on fixed tiers — suspension at quota',
+      competitor: 'Soft limits; plan upgrade or custom terms may be required',
       keenpix: 'Linear $0.05–0.08/GB, hard-capped',
     },
     {
       feature: 'Spend cap',
-      competitor: 'No',
+      competitor: 'No comparable customer-set hard cap documented',
       keenpix: 'Yes — on by default (~2x plan)',
     },
     {
@@ -123,10 +124,9 @@ export const cloudinaryComparison = {
         'Cloudinary credits get drained by transformations, storage, and bandwidth at different rates, so a bot crawl or one extra srcset breakpoint quietly moves your bill. Keenpix meters delivered bandwidth and nothing else. Your invoice tracks your traffic — no pooled-credit math to reverse-engineer.',
     },
     {
-      title:
-        "Hitting a limit pauses on your terms — it doesn't suspend your account",
+      title: 'A customer-set ceiling instead of an open-ended estimate',
       detail:
-        "Cloudinary's fixed tiers have no automatic overage: exceed the credit quota and the account gets suspended. Keenpix bills linear per-GB overage up to a hard cap you set, on by default at roughly 2x your plan price, and delivery pauses at the cap instead of surprising you. Payment hiccups get a dunning grace period, never an instant cutoff.",
+        'Cloudinary documents its plan limits as soft limits and says it contacts customers about upgrading. Keenpix takes a different approach: it bills linear per-GB overage only up to a hard cap you set, on by default at roughly 2x your plan price, then pauses delivery. Confirm the failure and upgrade behavior you prefer before production use.',
     },
     {
       title: 'Unlimited transformations make optimizing free',
@@ -136,7 +136,7 @@ export const cloudinaryComparison = {
     {
       title: 'An open-source escape hatch',
       detail:
-        'The exact engine behind the managed cloud is AGPL-3.0 — self-host it free forever with a one-command Docker or Coolify install, no CLA, no rug-pull. If you ever leave the cloud for cost, compliance, or control, you keep your URLs and your pipeline. Cloudinary has no self-host path.',
+        'The cloud release publishes its image engine under AGPL-3.0, so you can run that version with Docker or Coolify without a license fee. Moving in-house still requires infrastructure, operations, and a hostname/routing plan; the transform URL grammar can stay consistent when you control that routing. Cloudinary has no self-host path.',
     },
     {
       title: 'Real analytics at $9, not at enterprise',
@@ -167,7 +167,7 @@ export const cloudinaryComparison = {
     },
     {
       q: 'What happens when I hit my plan limit?',
-      a: "On Cloudinary's fixed tiers there is no automatic overage — exceed your credit quota and the account can be suspended. On Keenpix you pay a published linear rate ($0.05–0.08/GB by plan) up to a hard spend cap you set, on by default at roughly 2x your plan price. At the cap, delivery pauses instead of billing you more — your choice, not the vendor's.",
+      a: "Cloudinary describes its plan limits as soft limits and says it contacts customers about upgrading to a plan that better fits their usage. Keenpix bills a published linear rate ($0.05–0.08/GB by plan) up to a hard spend cap you set, on by default at roughly 2x your plan price. At the cap, Keenpix delivery pauses instead of billing more. Confirm either service's current terms before relying on a failure mode.",
     },
     {
       q: 'Do I have to migrate my images out of Cloudinary?',
@@ -185,6 +185,15 @@ export const cloudinaryComparison = {
       q: 'Is there a free tier?',
       a: 'The managed cloud has a 14-day free trial (card required) — plans start at $9/mo for 100 GB delivered. If you want free forever, self-host the open-source engine on your own infrastructure.',
     },
+  ],
+  sources: [
+    { label: 'Cloudinary pricing', url: 'https://cloudinary.com/pricing' },
+    {
+      label: 'Cloudinary credit documentation',
+      url: 'https://cloudinary.com/documentation/developer_onboarding_faq_credits',
+    },
+    { label: 'Cloudinary plan-limit FAQ', url: 'https://cloudinary.com/faq' },
+    { label: 'Keenpix pricing', url: '/pricing' },
   ],
   pricingAsOf: 'July 2026',
 } satisfies ComparisonPageData

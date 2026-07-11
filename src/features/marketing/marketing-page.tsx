@@ -85,7 +85,7 @@ const FEATURES = [
 // The lead "from $X/mo" metric is computed from live pricing in the component; the
 // rest are static product facts.
 const METRICS_TAIL = [
-  ['40–70%', 'smaller with AVIF & WebP'],
+  ['Measured', 'source and delivered bytes per request'],
   ['14 days', 'free trial — no charge until it ends'],
 ]
 
@@ -109,8 +109,8 @@ const NAV_LINKS = [
   { href: REPOSITORY_URL, label: 'GitHub' },
 ]
 
-// Below md the header nav collapses to a hamburger drawer so phone visitors can
-// still reach pricing/docs/blog and sign in — not just the logo + Get started.
+// Below lg the header nav collapses to a hamburger drawer so phone and tablet
+// visitors get a deliberate compact composition with comfortable touch targets.
 function MobileNav() {
   const [open, setOpen] = useState(false)
   return (
@@ -119,7 +119,7 @@ function MobileNav() {
         render={
           <Button
             aria-label="Open menu"
-            className="md:hidden"
+            className="size-12 touch-manipulation lg:hidden"
             size="icon"
             variant="ghost"
           />
@@ -127,7 +127,10 @@ function MobileNav() {
       >
         <MenuIcon />
       </SheetTrigger>
-      <SheetContent className="w-72 gap-0" side="left">
+      <SheetContent
+        className="w-72 gap-0 [&_[data-slot=sheet-close]]:size-12"
+        side="left"
+      >
         <SheetHeader>
           <SheetTitle>
             <KeenpixLogo />
@@ -136,7 +139,7 @@ function MobileNav() {
         <nav className="flex flex-col gap-0.5 p-3">
           {[...NAV_LINKS, { href: '/login', label: 'Sign in' }].map((link) => (
             <a
-              className="rounded-md px-2 py-2 font-medium text-sm hover:bg-accent"
+              className="flex min-h-12 touch-manipulation items-center rounded-md px-3 font-medium text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               href={link.href}
               key={link.href}
               onClick={() => setOpen(false)}
@@ -164,10 +167,10 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
   return (
     <div className="min-h-svh bg-background">
       <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-6">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-3 sm:gap-3 sm:px-6">
           <MobileNav />
-          <KeenpixLogo />
-          <nav className="ml-4 hidden gap-5 text-muted-foreground text-sm md:flex">
+          <KeenpixLogo className="min-w-0 shrink-0" />
+          <nav className="ml-4 hidden gap-5 text-muted-foreground text-sm lg:flex">
             {NAV_LINKS.map((link) => (
               <a
                 className="hover:text-foreground"
@@ -178,11 +181,12 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
               </a>
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-2">
-            <ModeToggle />
+          <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-2">
+            <ModeToggle className="size-12 touch-manipulation" />
             <Link
               className={buttonVariants({
-                className: 'hidden sm:inline-flex',
+                className:
+                  'hidden min-h-12 touch-manipulation px-3 sm:inline-flex',
                 size: 'sm',
                 variant: 'ghost',
               })}
@@ -190,7 +194,14 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
             >
               Sign in
             </Link>
-            <Link className={buttonVariants({ size: 'sm' })} to="/signup">
+            <Link
+              className={buttonVariants({
+                className:
+                  'hidden min-h-12 touch-manipulation px-3 sm:inline-flex',
+                size: 'sm',
+              })}
+              to="/signup"
+            >
               Start free trial
               <ArrowRightIcon data-icon="inline-end" />
             </Link>
@@ -235,14 +246,19 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
                 control. Or self-host the whole thing, free.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link className={buttonVariants()} to="/signup">
+                <Link
+                  className={buttonVariants({
+                    className: 'min-h-12 touch-manipulation px-4',
+                  })}
+                  to="/signup"
+                >
                   <ZapIcon data-icon="inline-start" />
                   Start free trial
                 </Link>
                 <a
                   className={buttonVariants({
                     className:
-                      'border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white',
+                      'min-h-12 touch-manipulation border-white/20 bg-white/10 px-4 text-white hover:bg-white/20 hover:text-white',
                     variant: 'outline',
                   })}
                   href="/docs/self-hosting"
@@ -501,7 +517,8 @@ Vary: Accept`}</CodeBlock>
                       </ul>
                       <Link
                         className={buttonVariants({
-                          className: 'mt-auto w-full',
+                          className:
+                            'mt-auto min-h-12 w-full touch-manipulation',
                           variant: featured ? 'default' : 'outline',
                         })}
                         to="/signup"
@@ -527,8 +544,8 @@ Vary: Accept`}</CodeBlock>
         </section>
 
         <section className="border-b" id="self-host">
-          <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[0.9fr_1.1fr]">
-            <div>
+          <div className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="min-w-0">
               <span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
                 Self-host
               </span>
@@ -542,12 +559,20 @@ Vary: Accept`}</CodeBlock>
                 infrastructure, and pay nothing.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <a className={buttonVariants()} href="/docs/self-hosting">
+                <a
+                  className={buttonVariants({
+                    className: 'min-h-12 touch-manipulation px-4',
+                  })}
+                  href="/docs/self-hosting"
+                >
                   Deploy with Docker
                   <ArrowRightIcon data-icon="inline-end" />
                 </a>
                 <a
-                  className={buttonVariants({ variant: 'outline' })}
+                  className={buttonVariants({
+                    className: 'min-h-12 touch-manipulation px-4',
+                    variant: 'outline',
+                  })}
                   href={REPOSITORY_URL}
                   rel="noreferrer"
                   target="_blank"
@@ -556,7 +581,7 @@ Vary: Accept`}</CodeBlock>
                 </a>
               </div>
             </div>
-            <div className="flex flex-col gap-6">
+            <div className="flex min-w-0 flex-col gap-6">
               <CodeBlock>{`cp .env.example .env   # set secrets + admin login
 docker compose up -d   # app + Postgres, migrated and seeded
 open http://localhost:3000`}</CodeBlock>
@@ -630,12 +655,20 @@ open http://localhost:3000`}</CodeBlock>
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Link className={buttonVariants()} to="/signup">
+              <Link
+                className={buttonVariants({
+                  className: 'min-h-12 touch-manipulation px-4',
+                })}
+                to="/signup"
+              >
                 Start free trial
                 <ArrowRightIcon data-icon="inline-end" />
               </Link>
               <a
-                className={buttonVariants({ variant: 'outline' })}
+                className={buttonVariants({
+                  className: 'min-h-12 touch-manipulation px-4',
+                  variant: 'outline',
+                })}
                 href="/docs/self-hosting"
               >
                 Self-hosting guide

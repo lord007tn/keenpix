@@ -69,6 +69,15 @@ export function SiteFooter() {
           <a className="hover:text-foreground" href="/compare">
             Compare
           </a>
+          <a className="hover:text-foreground" href="/security">
+            Security
+          </a>
+          <a className="hover:text-foreground" href="/status">
+            Status
+          </a>
+          <a className="hover:text-foreground" href="/support">
+            Support
+          </a>
           <a className="hover:text-foreground" href="/changelog">
             Changelog
           </a>

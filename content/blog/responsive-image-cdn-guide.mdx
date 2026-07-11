@@ -1,0 +1,166 @@
+---
+title: "Responsive image CDN guide: srcset, sizes, DPR, and formats"
+description: Build responsive image CDN URLs with srcset and sizes, choose width candidates, handle DPR and format negotiation, and avoid common cache mistakes.
+date: "2026-07-11"
+author: Raed Bahri
+tags: [responsive-images, image-cdn, implementation]
+image: /og/blog/responsive-image-cdn-guide.png?v=2026-07-11
+imageAlt: Responsive image frames showing srcset widths, device density, and formats
+---
+
+A responsive image CDN works best when **HTML tells the browser what the layout needs and the image service supplies the candidate files**. The CDN should not guess the rendered width from the user agent. Use `srcset` for candidates, `sizes` for layout intent, intrinsic dimensions for aspect ratio, and content-appropriate alt text.
+
+The browser then selects a candidate using viewport width, display density, current layout information, supported formats, and network conditions. You provide good options; you do not dictate one universal download.
+
+## Start with width candidates
+
+For a content image whose rendered width changes with the layout, width descriptors are the most flexible pattern:
+
+```html
+<img
+  src="https://images.example.com/article.jpg?w=800"
+  srcset="
+    https://images.example.com/article.jpg?w=400 400w,
+    https://images.example.com/article.jpg?w=640 640w,
+    https://images.example.com/article.jpg?w=800 800w,
+    https://images.example.com/article.jpg?w=1200 1200w
+  "
+  sizes="(max-width: 720px) calc(100vw - 32px), 720px"
+  width="1200"
+  height="675"
+  alt="Diagram of an image request moving through transform and CDN caches"
+/>
+```
+
+The `400w` descriptor means the resource is 400 CSS pixels wide. The `sizes` value says how wide the image will render at each layout condition. The browser uses both to select a candidate.
+
+Do not copy the example widths blindly. Inspect the component's actual rendered widths, include high-density displays, and choose a small reusable set. Too few candidates can waste bytes; too many can fragment caches and create needless work.
+
+## How to choose a width set
+
+A practical process is:
+
+1. Record the component's smallest and largest rendered widths at supported breakpoints.
+2. Multiply important widths by the highest device-pixel ratio you intend to serve.
+3. Choose a geometric sequence or a compact design-system list rather than every possible pixel width.
+4. Cap the result at the source image's useful resolution.
+5. Test byte differences. Remove adjacent candidates whose file sizes are too similar to matter.
+
+For example, a card that renders around 320, 480, and 720 CSS pixels might offer 320, 480, 640, 960, 1280, and 1440-pixel files. Whether that is excessive depends on the sources, encoding, traffic, and cache behavior. A benchmark must include those details before presenting one set as optimal.
+
+## Width descriptors vs density descriptors
+
+Use density descriptors such as `1x` and `2x` when the image has a stable CSS size:
+
+```html
+<img
+  src="https://images.example.com/avatar.jpg?w=64"
+  srcset="
+    https://images.example.com/avatar.jpg?w=64 1x,
+    https://images.example.com/avatar.jpg?w=128 2x
+  "
+  width="64"
+  height="64"
+  alt="Raed Bahri"
+/>
+```
+
+Do not mix width (`400w`) and density (`2x`) descriptors in one `srcset`. For a fluid layout, width descriptors plus `sizes` usually express the requirement more accurately.
+
+An image CDN may also expose a `dpr` transform parameter. Be careful not to apply density twice. If the URL already requests a 128-pixel physical output for a 64-pixel slot, adding `dpr=2` again can create a 256-pixel output.
+
+## Format negotiation with picture or Accept
+
+There are two common strategies.
+
+The first is server-side negotiation. A URL such as `fmt=auto` lets the image service inspect the request's `Accept` header and return a supported format. If a CDN sits in front, its cache key must distinguish responses correctly—typically through `Vary: Accept` or a normalized format key. Test this behavior; a misconfigured shared cache can serve the wrong format.
+
+The second is explicit `<picture>` sources:
+
+```html
+<picture>
+  <source
+    type="image/avif"
+    srcset="https://images.example.com/hero.jpg?w=640&fmt=avif 640w,
+            https://images.example.com/hero.jpg?w=1280&fmt=avif 1280w"
+  />
+  <source
+    type="image/webp"
+    srcset="https://images.example.com/hero.jpg?w=640&fmt=webp 640w,
+            https://images.example.com/hero.jpg?w=1280&fmt=webp 1280w"
+  />
+  <img
+    src="https://images.example.com/hero.jpg?w=1280&fmt=jpg"
+    width="1280"
+    height="720"
+    alt="Abstract Keenpix transformation pipeline"
+  />
+</picture>
+```
+
+Explicit sources create predictable URLs and cache entries but more markup. Automatic negotiation keeps markup smaller but makes the cache configuration more important. Neither approach guarantees that AVIF is smaller for every asset; compare real outputs.
+
+## Crop, fit, and art direction
+
+Resizing preserves or adjusts dimensions. Art direction changes the composition—for example, using a tighter crop on mobile. Use `<picture>` with media conditions when the content needs a different crop, not only a smaller copy.
+
+```html
+<picture>
+  <source
+    media="(max-width: 640px)"
+    srcset="https://images.example.com/team.jpg?w=640&h=800&fit=cover"
+  />
+  <img
+    src="https://images.example.com/team.jpg?w=1280&h=720&fit=cover"
+    width="1280"
+    height="720"
+    alt="The Keenpix maintainer reviewing image delivery logs"
+  />
+</picture>
+```
+
+Automatic face or subject cropping can be useful, but it is a product-specific feature and can fail. Editorially important crops deserve human review.
+
+## Loading and priority
+
+Responsive sizing does not decide when an image loads. The likely largest-contentful image should not be lazily loaded merely to satisfy a blanket rule. Below-fold images are usually good candidates for `loading="lazy"`. Browsers also support `fetchpriority="high"` for a genuinely critical image, but overusing high priority removes its value.
+
+Always reserve space with `width` and `height` or a stable CSS aspect ratio. Format conversion cannot prevent layout shift caused by missing dimensions.
+
+## Cache and URL design
+
+A responsive image CDN can generate many variants. Keep its grammar bounded:
+
+- allow only approved source hosts;
+- normalize parameter ordering and defaults;
+- restrict output dimensions and quality ranges;
+- sign URLs when arbitrary transforms would create abuse risk;
+- use versioned source URLs for long-lived immutable caching;
+- avoid per-request tokens in the cache key unless they are normalized away safely;
+- monitor cache misses and unusual width combinations.
+
+A crawler or buggy component can request thousands of unique widths even if transformations are not separately billed. The cost may show up as CPU, cache storage, origin traffic, or cold latency.
+
+## Framework components still need inspection
+
+Next.js, Nuxt, Astro, and other frameworks can generate `srcset`, `sizes`, and loader URLs. They reduce repetitive code, but defaults may not match the actual layout. Inspect rendered HTML and browser network requests. Verify that a custom loader preserves widths, quality, and absolute-source encoding correctly.
+
+Keenpix framework examples live in the [documentation](/docs/frameworks). The category article [what is an image CDN?](/blog/what-is-an-image-cdn) explains the request lifecycle, while [image CDN vs traditional CDN](/blog/image-cdn-vs-traditional-cdn) explains where transformation ends and edge caching begins.
+
+## Verification checklist
+
+Before shipping:
+
+- resize the viewport and confirm the selected resource width in browser developer tools;
+- test standard and high-density displays;
+- confirm correct AVIF/WebP/JPEG fallbacks;
+- verify `Content-Type`, `Cache-Control`, `Vary`, dimensions, and response status;
+- ensure the largest candidate is not larger than the source can support;
+- confirm meaningful alt text and empty alt values for decoration;
+- test cache reuse after a warm request;
+- test a changed source with the planned invalidation or versioning method;
+- measure transferred bytes and user-visible loading with representative pages.
+
+## Sources and verification
+
+This guide was checked on July 11, 2026 against [MDN responsive images](https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Responsive_images), [MDN's `<picture>` reference](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/picture), [web.dev responsive images](https://web.dev/learn/images/responsive-images), and [MDN's `Accept` header reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Accept). Code examples use placeholder domains and are not performance benchmarks.
