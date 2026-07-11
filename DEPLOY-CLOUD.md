@@ -33,8 +33,19 @@ the CLOUD MODE section of `.env.example`.
      `metered_unit` overage price on each product. (Scripts used in sandbox:
      `scripts`/scratchpad `create-meter.mjs`, `overage-setup.mjs`.)
    - Create a webhook endpoint → `https://keenpix.com/api/auth/polar/webhooks`
-     (events: `subscription.active/updated/canceled/revoked`). Set
+     (events: `subscription.created`, `subscription.active`,
+     `subscription.updated`, `subscription.canceled`,
+     `subscription.uncanceled`, and `subscription.revoked`). The `created` event
+     is required to mirror trials before they become active. Set
      `POLAR_TOKEN`, `POLAR_SERVER=production`, `POLAR_WEBHOOK_SECRET`.
+   - Keep sandbox webhooks off unless an isolated cloud staging callback exists.
+     Never point sandbox events at the production `keenpix.com` application.
+   - If the Polar dashboard cannot attach existing Meter Credits benefits to
+     products, run a dry check inside the cloud app container, then apply only
+     after it identifies exactly six products and three benefits:
+     `pnpm billing:configure-benefits -- --server=production`, followed by the
+     same command with `--apply`. The script preserves any existing benefits,
+     refuses ambiguous catalogs, and never prints the access token.
 4. **Shared cache** — create a Cloudflare R2 bucket + R2 API token, set the five
    `KEENPIX_CACHE_S3_*` (endpoint `https://<account>.r2.cloudflarestorage.com`,
    region `auto`). Or use the bundled maxio service.

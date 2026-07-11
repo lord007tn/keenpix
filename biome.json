@@ -18,6 +18,7 @@
       "!**/.nitro",
       "!**/.tanstack",
       "!**/.keenpix-cache",
+      "!**/output",
       "!**/prisma/migrations"
     ]
   },

@@ -3,6 +3,20 @@
 Keenpix publishes a GitHub release and GHCR Docker images from a semantic-version tag.
 This is the maintainer checklist for cutting one.
 
+## Cloud v0.2.0 pull-request gate
+
+The managed-cloud release is prepared on `cloud` before the normal tag flow:
+
+- keep application, provider, and infrastructure work on `cloud`;
+- run `pnpm health`, browser smoke tests, SEO drift, and the cloud integration checklist;
+- push `cloud`, manually deploy the reviewed commit to `keenpix-branch-cloud`, and record cloud-only rollback evidence;
+- open a `cloud` → `master` pull request with tests, configuration changes, known limitations, and migration explicitly deferred;
+- do not merge, tag, or move `latest` without explicit owner approval.
+
+The release evidence lives in `V0.2.0-RELEASE-TRACKER.md` and
+`docs/releases/v0.2.0.md`. Legacy production and migration execution are outside
+this gate.
+
 ## 1. Pre-flight (on `master`, clean tree)
 
 - [ ] `git switch master && git pull`
@@ -17,10 +31,10 @@ This is the maintainer checklist for cutting one.
 
 Release notes are generated automatically by
 [changelogithub](https://github.com/antfu/changelogithub) from the Conventional Commit
-messages since the previous tag — there is no `CHANGELOG.md` to edit. Write commits as
+messages since the previous tag. Keep `CHANGELOG.md` and the release-specific notes under
+`docs/releases/` aligned with material product and operational changes. Write commits as
 `feat: …`, `fix: …`, etc.; anything that doesn't match a recognized type is left out of
-the notes, so granular, well-typed commits make the best release. (`CHANGELOG.md` is kept
-only as a historical record of releases up to v0.1.3.)
+the generated notes, so granular, well-typed commits make the best release.
 
 ## 3. Tag and push
 

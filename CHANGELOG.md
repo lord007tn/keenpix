@@ -4,8 +4,19 @@ All notable changes to Keenpix are documented here.
 
 ## Unreleased
 
+No unreleased changes.
+
+## [v0.2.0] - 2026-07-11
+
 ### Added
 
+- Managed cloud mode with multi-tenant organizations, self-serve signup, email verification, Google OAuth support, and an operator console.
+- Polar-backed trials, subscriptions, usage metering, spending caps, billing alerts, dunning handling, and organization-scoped billing recovery.
+- Consent-aware GTM/GA4 funnel events and sampled first-party Core Web Vitals reporting with a privacy-choice surface.
+- Public pricing, comparison, self-hosting, changelog, trust, security, status, support, author, and editorial-methodology pages.
+- A nine-article blog with three focused image-CDN guides, dated primary-source disclosures, RSS, and required article-specific Takumi hero/OG images.
+- Opt-in HMAC-signed image URLs, cloud object caching, ClickHouse analytics, daily cloud database backups, and graceful deployment health handling.
+- Cross-platform SEO drift checks for canonical, robots, schema, Open Graph, headings, snippets, and status regressions.
 - Hourly Postgres analytics rollups with migration backfill and transactional updates when new request logs are written.
 - Rollup-based analytics summaries, charts, top images, format/status/domain filters, and dashboard KPI deltas so normal dashboard queries no longer scan raw request logs.
 - The overview dashboard now includes recent request activity and instance operations health alongside the analytics cards.
@@ -14,8 +25,19 @@ All notable changes to Keenpix are documented here.
 
 ### Changed
 
+- Relicensed the current self-host engine to AGPL-3.0-only; previously published v0.1.11 and older releases retain their original Apache-2.0 terms.
+- Reworked the public experience for narrow mobile layouts, comfortable touch targets, better font discovery, factual metadata/schema, truthful sitemap dates, and canonical apex routing.
+- Comparison and pricing copy now distinguishes sourced vendor facts, estimates, product limitations, customer-set caps, and self-host operational responsibility.
+- Polar usage events use deterministic idempotency keys, plan changes use the billing portal, and portal sessions resolve from the organization billing customer.
+- Postmark failures now log provider status/error codes without leaking recipient details.
 - The dashboard and analytics pages now distinguish Cloudflare edge metrics from Keenpix origin-shield metrics so totals and trend badges do not mix incompatible sources.
 - Coolify deployments default back to the public `ghcr.io/lord007tn/keenpix:latest` image unless `KEENPIX_IMAGE` is set.
+
+### Fixed
+
+- Corrected misleading Vercel 402, Cloudinary quota, ImageKit custom-domain, migration-URL, and unsupported universal image-savings claims.
+- Added missing Polar trial/uncancel webhook documentation and prevented duplicate checkout-based plan switches.
+- Fixed public header overflow at 320–412px through compact navigation and intrinsic-width containment.
 
 ## [v0.1.7] - 2026-06-13
 

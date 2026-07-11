@@ -26,13 +26,7 @@ const config: KnipConfig = {
     'src/components/mdx.tsx',
     'src/components/ui/**',
   ],
-  ignoreDependencies: [
-    '@fontsource-variable/inter',
-    'shadcn',
-    'tailwindcss',
-    'tw-animate-css',
-    'web-vitals',
-  ],
+  ignoreDependencies: ['shadcn', 'tailwindcss', 'tw-animate-css'],
   vitest: {
     config: ['vitest.config.ts'],
     entry: ['src/**/*.{test,spec}.ts'],
