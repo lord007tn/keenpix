@@ -67,6 +67,13 @@ export async function orgHasBillingCustomer(orgId: string): Promise<boolean> {
   return count > 0
 }
 
+export function getBillingCustomer(orgId: string) {
+  return prisma.billingCustomer.findUnique({
+    where: { orgId },
+    select: { polarCustomerId: true },
+  })
+}
+
 // The org's effective plan, or null when it has no entitled subscription. Cloud
 // gates a null-plan org; self-host never calls this (it runs unlimited).
 export async function getOrgPlan(orgId: string): Promise<Plan | null> {

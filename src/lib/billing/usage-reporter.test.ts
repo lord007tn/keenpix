@@ -98,6 +98,29 @@ describe('reportUsage', () => {
     expect(result).toEqual({ failed: 0, ingested: 0, orgs: 1, skipped: false })
   })
 
+  it('uses a stable Polar event id when a watermark write must be retried', async () => {
+    listUsageBillingCustomers.mockResolvedValue([customer('org_a')])
+    const fetchSpy = vi.fn((_url: string, _init: { body: string }) =>
+      Promise.resolve({ ok: true, status: 200 }),
+    )
+    vi.stubGlobal('fetch', fetchSpy)
+    markUsageReported
+      .mockRejectedValueOnce(new Error('database unavailable'))
+      .mockResolvedValueOnce({})
+
+    expect(await reportUsage()).toMatchObject({ failed: 1, ingested: 1 })
+    expect(await reportUsage()).toMatchObject({ failed: 0, ingested: 1 })
+
+    const eventIds = fetchSpy.mock.calls.map(([, init]) => {
+      const body = JSON.parse(init.body)
+      return body.events[0].external_id
+    })
+    expect(eventIds).toEqual([
+      'keenpix:bandwidth:org_a:2026-07-10T10:00:00.000Z',
+      'keenpix:bandwidth:org_a:2026-07-10T10:00:00.000Z',
+    ])
+  })
+
   it('never bills a trialing org but still advances its watermark', async () => {
     listUsageBillingCustomers.mockResolvedValue([
       customer('org_trial'),

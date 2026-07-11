@@ -31,6 +31,7 @@ export interface UsageReportResult {
 
 interface UsageEvent {
   customer_id: string
+  external_id: string
   metadata: Record<string, number | string>
   name: string
 }
@@ -75,6 +76,10 @@ async function runReport(): Promise<UsageReportResult> {
         await ingestEvent(base, {
           name: 'bandwidth_delivered',
           customer_id: customer.polarCustomerId,
+          // Polar deduplicates events by external_id. Keep this stable for the
+          // org + closed usage window so a successful ingest followed by a
+          // failed watermark write cannot double-bill that same window.
+          external_id: `keenpix:bandwidth:${customer.orgId}:${through.toISOString()}`,
           metadata: { gb: bytes / GB, org_id: customer.orgId },
         })
         ingested += 1

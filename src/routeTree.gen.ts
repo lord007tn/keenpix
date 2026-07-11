@@ -10,8 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as Char123llmFileChar125DottxtRouteImport } from './routes/{$llmFile}[.]txt'
+import { Route as SupportRouteImport } from './routes/support'
+import { Route as StatusRouteImport } from './routes/status'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SelfHostedImageCdnRouteImport } from './routes/self-hosted-image-cdn'
+import { Route as SecurityRouteImport } from './routes/security'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ChangelogRouteImport } from './routes/changelog'
@@ -24,6 +27,7 @@ import { Route as CompareIndexRouteImport } from './routes/compare/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as MethodologyComparisonsRouteImport } from './routes/methodology/comparisons'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as LegalLicenseRouteImport } from './routes/legal/license'
@@ -34,6 +38,8 @@ import { Route as DocsSplatRouteImport } from './routes/docs/$'
 import { Route as CompareSlugRouteImport } from './routes/compare/$slug'
 import { Route as BlogRssDotxmlRouteImport } from './routes/blog/rss[.]xml'
 import { Route as BlogSplatRouteImport } from './routes/blog/$'
+import { Route as AuthorsRaedBahriRouteImport } from './routes/authors/raed-bahri'
+import { Route as ApiWebVitalsRouteImport } from './routes/api/web-vitals'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as authVerifyEmailRouteImport } from './routes/(auth)/verify-email'
@@ -66,6 +72,16 @@ const Char123llmFileChar125DottxtRoute =
     path: '/{$llmFile}.txt',
     getParentRoute: () => rootRouteImport,
   } as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatusRoute = StatusRouteImport.update({
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -74,6 +90,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const SelfHostedImageCdnRoute = SelfHostedImageCdnRouteImport.update({
   id: '/self-hosted-image-cdn',
   path: '/self-hosted-image-cdn',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -136,6 +157,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const MethodologyComparisonsRoute = MethodologyComparisonsRouteImport.update({
+  id: '/methodology/comparisons',
+  path: '/methodology/comparisons',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LegalTermsRoute = LegalTermsRouteImport.update({
   id: '/legal/terms',
   path: '/legal/terms',
@@ -184,6 +210,16 @@ const BlogRssDotxmlRoute = BlogRssDotxmlRouteImport.update({
 const BlogSplatRoute = BlogSplatRouteImport.update({
   id: '/blog/$',
   path: '/blog/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthorsRaedBahriRoute = AuthorsRaedBahriRouteImport.update({
+  id: '/authors/raed-bahri',
+  path: '/authors/raed-bahri',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWebVitalsRoute = ApiWebVitalsRouteImport.update({
+  id: '/api/web-vitals',
+  path: '/api/web-vitals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
@@ -323,8 +359,11 @@ export interface FileRoutesByFullPath {
   '/changelog': typeof ChangelogRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/security': typeof SecurityRoute
   '/self-hosted-image-cdn': typeof SelfHostedImageCdnRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/status': typeof StatusRoute
+  '/support': typeof SupportRoute
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
@@ -333,6 +372,8 @@ export interface FileRoutesByFullPath {
   '/verify-email': typeof authVerifyEmailRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/web-vitals': typeof ApiWebVitalsRoute
+  '/authors/raed-bahri': typeof AuthorsRaedBahriRoute
   '/blog/$': typeof BlogSplatRoute
   '/blog/rss.xml': typeof BlogRssDotxmlRoute
   '/compare/$slug': typeof CompareSlugRoute
@@ -343,6 +384,7 @@ export interface FileRoutesByFullPath {
   '/legal/license': typeof LegalLicenseRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/methodology/comparisons': typeof MethodologyComparisonsRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
   '/blog/': typeof BlogIndexRoute
@@ -373,8 +415,11 @@ export interface FileRoutesByTo {
   '/changelog': typeof ChangelogRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/security': typeof SecurityRoute
   '/self-hosted-image-cdn': typeof SelfHostedImageCdnRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/status': typeof StatusRoute
+  '/support': typeof SupportRoute
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
@@ -383,6 +428,8 @@ export interface FileRoutesByTo {
   '/verify-email': typeof authVerifyEmailRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/web-vitals': typeof ApiWebVitalsRoute
+  '/authors/raed-bahri': typeof AuthorsRaedBahriRoute
   '/blog/$': typeof BlogSplatRoute
   '/blog/rss.xml': typeof BlogRssDotxmlRoute
   '/compare/$slug': typeof CompareSlugRoute
@@ -393,6 +440,7 @@ export interface FileRoutesByTo {
   '/legal/license': typeof LegalLicenseRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/methodology/comparisons': typeof MethodologyComparisonsRoute
   '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
   '/blog': typeof BlogIndexRoute
@@ -426,8 +474,11 @@ export interface FileRoutesById {
   '/changelog': typeof ChangelogRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/security': typeof SecurityRoute
   '/self-hosted-image-cdn': typeof SelfHostedImageCdnRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/status': typeof StatusRoute
+  '/support': typeof SupportRoute
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/login': typeof authLoginRoute
@@ -436,6 +487,8 @@ export interface FileRoutesById {
   '/(auth)/verify-email': typeof authVerifyEmailRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/web-vitals': typeof ApiWebVitalsRoute
+  '/authors/raed-bahri': typeof AuthorsRaedBahriRoute
   '/blog/$': typeof BlogSplatRoute
   '/blog/rss.xml': typeof BlogRssDotxmlRoute
   '/compare/$slug': typeof CompareSlugRoute
@@ -446,6 +499,7 @@ export interface FileRoutesById {
   '/legal/license': typeof LegalLicenseRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/methodology/comparisons': typeof MethodologyComparisonsRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
   '/blog/': typeof BlogIndexRoute
@@ -480,8 +534,11 @@ export interface FileRouteTypes {
     | '/changelog'
     | '/pricing'
     | '/robots.txt'
+    | '/security'
     | '/self-hosted-image-cdn'
     | '/sitemap.xml'
+    | '/status'
+    | '/support'
     | '/{$llmFile}.txt'
     | '/forgot-password'
     | '/login'
@@ -490,6 +547,8 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/api/health'
     | '/api/search'
+    | '/api/web-vitals'
+    | '/authors/raed-bahri'
     | '/blog/$'
     | '/blog/rss.xml'
     | '/compare/$slug'
@@ -500,6 +559,7 @@ export interface FileRouteTypes {
     | '/legal/license'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/methodology/comparisons'
     | '/admin/'
     | '/app/'
     | '/blog/'
@@ -530,8 +590,11 @@ export interface FileRouteTypes {
     | '/changelog'
     | '/pricing'
     | '/robots.txt'
+    | '/security'
     | '/self-hosted-image-cdn'
     | '/sitemap.xml'
+    | '/status'
+    | '/support'
     | '/{$llmFile}.txt'
     | '/forgot-password'
     | '/login'
@@ -540,6 +603,8 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/api/health'
     | '/api/search'
+    | '/api/web-vitals'
+    | '/authors/raed-bahri'
     | '/blog/$'
     | '/blog/rss.xml'
     | '/compare/$slug'
@@ -550,6 +615,7 @@ export interface FileRouteTypes {
     | '/legal/license'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/methodology/comparisons'
     | '/admin'
     | '/app'
     | '/blog'
@@ -582,8 +648,11 @@ export interface FileRouteTypes {
     | '/changelog'
     | '/pricing'
     | '/robots.txt'
+    | '/security'
     | '/self-hosted-image-cdn'
     | '/sitemap.xml'
+    | '/status'
+    | '/support'
     | '/{$llmFile}.txt'
     | '/(auth)/forgot-password'
     | '/(auth)/login'
@@ -592,6 +661,8 @@ export interface FileRouteTypes {
     | '/(auth)/verify-email'
     | '/api/health'
     | '/api/search'
+    | '/api/web-vitals'
+    | '/authors/raed-bahri'
     | '/blog/$'
     | '/blog/rss.xml'
     | '/compare/$slug'
@@ -602,6 +673,7 @@ export interface FileRouteTypes {
     | '/legal/license'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/methodology/comparisons'
     | '/admin/'
     | '/app/'
     | '/blog/'
@@ -635,8 +707,11 @@ export interface RootRouteChildren {
   ChangelogRoute: typeof ChangelogRoute
   PricingRoute: typeof PricingRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SecurityRoute: typeof SecurityRoute
   SelfHostedImageCdnRoute: typeof SelfHostedImageCdnRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StatusRoute: typeof StatusRoute
+  SupportRoute: typeof SupportRoute
   Char123llmFileChar125DottxtRoute: typeof Char123llmFileChar125DottxtRoute
   authForgotPasswordRoute: typeof authForgotPasswordRoute
   authLoginRoute: typeof authLoginRoute
@@ -645,6 +720,8 @@ export interface RootRouteChildren {
   authVerifyEmailRoute: typeof authVerifyEmailRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSearchRoute: typeof ApiSearchRoute
+  ApiWebVitalsRoute: typeof ApiWebVitalsRoute
+  AuthorsRaedBahriRoute: typeof AuthorsRaedBahriRoute
   BlogSplatRoute: typeof BlogSplatRoute
   BlogRssDotxmlRoute: typeof BlogRssDotxmlRoute
   CompareSlugRoute: typeof CompareSlugRoute
@@ -655,6 +732,7 @@ export interface RootRouteChildren {
   LegalLicenseRoute: typeof LegalLicenseRoute
   LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalTermsRoute: typeof LegalTermsRoute
+  MethodologyComparisonsRoute: typeof MethodologyComparisonsRoute
   BlogIndexRoute: typeof BlogIndexRoute
   CompareIndexRoute: typeof CompareIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -674,6 +752,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char123llmFileChar125DottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/status': {
+      id: '/status'
+      path: '/status'
+      fullPath: '/status'
+      preLoaderRoute: typeof StatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -686,6 +778,13 @@ declare module '@tanstack/react-router' {
       path: '/self-hosted-image-cdn'
       fullPath: '/self-hosted-image-cdn'
       preLoaderRoute: typeof SelfHostedImageCdnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -772,6 +871,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/methodology/comparisons': {
+      id: '/methodology/comparisons'
+      path: '/methodology/comparisons'
+      fullPath: '/methodology/comparisons'
+      preLoaderRoute: typeof MethodologyComparisonsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/legal/terms': {
       id: '/legal/terms'
       path: '/legal/terms'
@@ -840,6 +946,20 @@ declare module '@tanstack/react-router' {
       path: '/blog/$'
       fullPath: '/blog/$'
       preLoaderRoute: typeof BlogSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/authors/raed-bahri': {
+      id: '/authors/raed-bahri'
+      path: '/authors/raed-bahri'
+      fullPath: '/authors/raed-bahri'
+      preLoaderRoute: typeof AuthorsRaedBahriRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/web-vitals': {
+      id: '/api/web-vitals'
+      path: '/api/web-vitals'
+      fullPath: '/api/web-vitals'
+      preLoaderRoute: typeof ApiWebVitalsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/search': {
@@ -1077,8 +1197,11 @@ const rootRouteChildren: RootRouteChildren = {
   ChangelogRoute: ChangelogRoute,
   PricingRoute: PricingRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
+  SecurityRoute: SecurityRoute,
   SelfHostedImageCdnRoute: SelfHostedImageCdnRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StatusRoute: StatusRoute,
+  SupportRoute: SupportRoute,
   Char123llmFileChar125DottxtRoute: Char123llmFileChar125DottxtRoute,
   authForgotPasswordRoute: authForgotPasswordRoute,
   authLoginRoute: authLoginRoute,
@@ -1087,6 +1210,8 @@ const rootRouteChildren: RootRouteChildren = {
   authVerifyEmailRoute: authVerifyEmailRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSearchRoute: ApiSearchRoute,
+  ApiWebVitalsRoute: ApiWebVitalsRoute,
+  AuthorsRaedBahriRoute: AuthorsRaedBahriRoute,
   BlogSplatRoute: BlogSplatRoute,
   BlogRssDotxmlRoute: BlogRssDotxmlRoute,
   CompareSlugRoute: CompareSlugRoute,
@@ -1097,6 +1222,7 @@ const rootRouteChildren: RootRouteChildren = {
   LegalLicenseRoute: LegalLicenseRoute,
   LegalPrivacyRoute: LegalPrivacyRoute,
   LegalTermsRoute: LegalTermsRoute,
+  MethodologyComparisonsRoute: MethodologyComparisonsRoute,
   BlogIndexRoute: BlogIndexRoute,
   CompareIndexRoute: CompareIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

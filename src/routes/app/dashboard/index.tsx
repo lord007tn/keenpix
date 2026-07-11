@@ -3,6 +3,7 @@ import {
   useNavigate,
   useRouteContext,
 } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
 import { PageHeader } from '@/components/app/page-header'
 import { ProjectsDataTable } from '@/components/app/projects-data-table'
@@ -17,6 +18,7 @@ import { useDashboardQuery } from '@/features/analytics/use-dashboard-query'
 import { useEdgeStats } from '@/features/analytics/use-edge-stats'
 import { OnboardingChecklist } from '@/features/onboarding/onboarding-checklist'
 import { QuickStart } from '@/features/onboarding/quick-start'
+import { trackFunnelMilestone } from '@/lib/analytics/client'
 import { appPageHead } from '@/shared/seo'
 import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
@@ -64,6 +66,12 @@ function DashboardPage() {
   // range/project loads in the background; `isRefreshing` drives the indicator.
   const { data, isPending, isFetching, isError, refetch } =
     useDashboardQuery(search)
+  const requestCount = data?.kpis.requests.value ?? 0
+  useEffect(() => {
+    if (requestCount > 0) {
+      trackFunnelMilestone('first_image_served')
+    }
+  }, [requestCount])
   const isRefreshing = isFetching && !isPending
   // Cloudflare edge stats load off the critical path; the KPI edge split fills
   // in afterward. Range-aware now that we persist edge history.

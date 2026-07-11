@@ -1,8 +1,10 @@
 import { createServerFn } from '@tanstack/react-start'
+import { env } from '@/env/server'
 import { isCloud } from '@/server/deployment'
 import { MARKETING_FAQ } from '@/shared/marketing-faq'
 import {
   faqPageJsonLd,
+  homePageJsonLd,
   organizationJsonLd,
   softwareApplicationJsonLd,
   webSiteJsonLd,
@@ -24,11 +26,13 @@ export const getPublicConfigFn = createServerFn({ method: 'GET' }).handler(
     const cloud = isCloud()
     return {
       cloud,
+      googleAuth: cloud && Boolean(env.GOOGLE_CLIENT_ID),
       jsonLd: cloud
         ? [
             softwareApplicationJsonLd(),
             organizationJsonLd(),
             webSiteJsonLd(),
+            homePageJsonLd(),
             faqPageJsonLd(MARKETING_FAQ),
           ]
         : null,

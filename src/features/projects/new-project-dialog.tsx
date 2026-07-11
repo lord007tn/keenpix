@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label'
 import { getErrorMessage } from '@/errors/common'
 import { getBillingStateFn } from '@/functions/billing'
 import { createProjectFn } from '@/functions/projects'
+import { trackFunnelMilestone } from '@/lib/analytics/client'
 import { createProjectSchema } from '@/schemas/projects'
 import { useProject } from '@/stores/project-context'
 import { getFieldError } from '@/utils/validation/form-errors'
@@ -65,6 +66,7 @@ export function NewProjectDialog({
       const payload = createProjectSchema.parse(value)
       try {
         const project = await createProjectFn({ data: payload })
+        trackFunnelMilestone('project_created')
         toast.success(`Created project ${project.name}`)
         // Refresh layout/dashboard loaders so the new project appears everywhere,
         // then switch scope to it so the user lands ready to add allowed hosts.

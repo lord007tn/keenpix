@@ -38,6 +38,20 @@ export const env = createEnv({
         requireVar('SMTP_HOST', value.SMTP_HOST, when)
         requireVar('SMTP_FROM_EMAIL', value.SMTP_FROM_EMAIL, when)
       }
+      if (
+        Boolean(value.GOOGLE_CLIENT_ID) !== Boolean(value.GOOGLE_CLIENT_SECRET)
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [
+            value.GOOGLE_CLIENT_ID
+              ? 'GOOGLE_CLIENT_SECRET'
+              : 'GOOGLE_CLIENT_ID',
+          ],
+          message:
+            'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be configured together.',
+        })
+      }
       // Any production deploy (self-host or cloud) needs a database and a real
       // auth secret, or it boots green and then crashes on the first request.
       if (value.NODE_ENV === 'production') {

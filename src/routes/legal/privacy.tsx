@@ -17,7 +17,7 @@ export const Route = createFileRoute('/legal/privacy')({
 
 function PrivacyPage() {
   return (
-    <LegalLayout lastUpdated="July 6, 2026" title="Privacy Policy">
+    <LegalLayout lastUpdated="July 11, 2026" title="Privacy Policy">
       <p>
         This Privacy Policy explains how Keenpix ("we", "us") collects, uses,
         and protects personal data when you use the Keenpix cloud service. Where
@@ -48,6 +48,24 @@ function PrivacyPage() {
           Polar. We receive subscription status and customer identifiers; we do
           not store full card details.
         </li>
+        <li>
+          <strong>Optional website analytics:</strong> after you explicitly
+          consent, Google Analytics receives page and funnel events such as CTA
+          clicks, signup, project creation, first image delivery, and checkout.
+          Google Analytics may also collect the page location and title,
+          referrer, browser and device information, approximate location,
+          analytics cookies, and interactions enabled through Enhanced
+          Measurement. Keenpix does not intentionally send account,
+          organization, project, image, API key, or email data. Advertising
+          storage and personalization remain disabled.
+        </li>
+        <li>
+          <strong>Optional performance telemetry:</strong> a 10% sample of
+          consented page visits reports LCP, INP, and CLS with the route, device
+          class, viewport size, and navigation type to Keenpix’s same-origin
+          endpoint. It does not include cookies, account data, IP fields, URLs
+          with queries, referrers, user agents, or DOM content.
+        </li>
       </ul>
 
       <h2>How we use data</h2>
@@ -69,6 +87,18 @@ function PrivacyPage() {
         database providers, Cloudflare R2 for the shared image cache, ClickHouse
         for analytics storage, Polar for payments, and Postmark for email. Each
         processes data only to provide their function.
+      </p>
+
+      <h2>Analytics choices</h2>
+      <p>
+        Analytics is off until you choose “Allow analytics.” Declining does not
+        affect the service. You can change your choice at any time through the
+        “Privacy choices” control shown on the site. Keenpix also respects the
+        browser’s Do Not Track setting by not loading analytics. Revoking
+        consent immediately stops future funnel and Web Vitals reports, updates
+        Google Consent Mode to denied, and removes Keenpix-domain Google
+        Analytics cookies. The already-loaded tag script remains inert until the
+        next navigation; it is not loaded on later denied visits.
       </p>
 
       <h2>Retention</h2>

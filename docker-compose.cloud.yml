@@ -62,6 +62,12 @@ services:
 
   app:
     image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_KEENPIX_PUBLIC_URL: ${SERVICE_URL_APP}
+        VITE_GTM_CONTAINER_ID: ${VITE_GTM_CONTAINER_ID:-}
     restart: unless-stopped
     mem_limit: ${KEENPIX_MEM_LIMIT:-0}
     cpus: ${KEENPIX_CPU_LIMIT:-0}
@@ -86,6 +92,7 @@ services:
       - BETTER_AUTH_SECRET=${SERVICE_HEX_64_KEENPIX}
       - BETTER_AUTH_URL=${SERVICE_URL_APP}
       - KEENPIX_APP_URL=${SERVICE_URL_APP}
+      - VITE_GTM_CONTAINER_ID=${VITE_GTM_CONTAINER_ID:-}
       - KEENPIX_SUPER_ADMIN_EMAIL=${KEENPIX_SUPER_ADMIN_EMAIL:-admin@example.com}
       - KEENPIX_SUPER_ADMIN_PASSWORD=${SERVICE_PASSWORD_64_ADMIN}
       - KEENPIX_RUN_MIGRATIONS=${KEENPIX_RUN_MIGRATIONS:-true}

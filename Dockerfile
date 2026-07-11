@@ -28,14 +28,16 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 
 FROM deps AS build
 ARG VITE_KEENPIX_PUBLIC_URL
-ARG VERSION=0.1.0
+ARG VITE_GTM_CONTAINER_ID
+ARG VERSION=0.2.0
 ENV VITE_KEENPIX_PUBLIC_URL=$VITE_KEENPIX_PUBLIC_URL
+ENV VITE_GTM_CONTAINER_ID=$VITE_GTM_CONTAINER_ID
 COPY . .
 RUN pnpm exec prisma generate
 RUN pnpm build
 
 FROM runtime-deps AS runner
-ARG VERSION=0.1.0
+ARG VERSION=0.2.0
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV KEENPIX_CACHE_DIR=/var/cache/keenpix
@@ -53,6 +55,7 @@ COPY --from=build /app/src/generated ./src/generated
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/scripts/configure-polar-benefits.mjs ./scripts/configure-polar-benefits.mjs
 COPY --chmod=755 docker-entrypoint.sh ./docker-entrypoint.sh
 # Run as the unprivileged node user. Own the cache directory so a named Docker
 # volume inherits usable permissions the first time it is created.

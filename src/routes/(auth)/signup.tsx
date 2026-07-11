@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getPublicConfigFn } from '@/functions/config'
+import { trackFunnelMilestone } from '@/lib/analytics/client'
 import { authClient } from '@/lib/auth/client'
 import { signupSchema } from '@/schemas/auth'
 import { safeRedirect } from '@/shared/safe-redirect'
@@ -21,10 +22,11 @@ import { getFieldError } from '@/utils/validation/form-errors'
 // (operators add users from the admin surface), so redirect there off the cloud.
 export const Route = createFileRoute('/(auth)/signup')({
   beforeLoad: async () => {
-    const { cloud } = await getPublicConfigFn()
+    const { cloud, googleAuth } = await getPublicConfigFn()
     if (!cloud) {
       throw redirect({ to: '/login' })
     }
+    return { googleAuth }
   },
   // `redirect` is a validated same-origin path to resume after email
   // verification — set by invite acceptance so a brand-new invitee returns to
@@ -41,6 +43,7 @@ export const Route = createFileRoute('/(auth)/signup')({
 })
 
 function SignupPage() {
+  const { googleAuth } = Route.useRouteContext()
   const { redirect: redirectTo } = Route.useSearch()
   const [error, setError] = useState<string | null>(null)
   const [sentTo, setSentTo] = useState<string | null>(null)
@@ -69,6 +72,7 @@ function SignupPage() {
       // Cloud requires email verification before sign-in, so we don't land in the
       // app yet — show a "check your inbox" confirmation instead.
       setSentTo(payload.email)
+      trackFunnelMilestone('sign_up', { method: 'email' })
       toast.success('Account created — check your email to verify')
     },
   })
@@ -111,6 +115,23 @@ function SignupPage() {
         </CardHeader>
 
         <CardContent className="flex flex-col gap-4">
+          {googleAuth && !sentTo ? (
+            <Button
+              onClick={() =>
+                authClient.signIn.social({
+                  provider: 'google',
+                  callbackURL: '/app/dashboard?range=30d',
+                  newUserCallbackURL:
+                    '/app/dashboard?range=30d&new_user=google',
+                  errorCallbackURL: '/signup',
+                })
+              }
+              type="button"
+              variant="outline"
+            >
+              Continue with Google
+            </Button>
+          ) : null}
           {sentTo ? (
             <div className="flex flex-col items-center gap-3 text-center">
               <MailCheckIcon className="size-8 text-primary" />

@@ -10,6 +10,10 @@ export const serverEnvSchema = {
   DATABASE_URL: z.string().min(1).optional(),
   BETTER_AUTH_SECRET: z.string().min(1).optional(),
   BETTER_AUTH_URL: optionalUrlSchema,
+  // Google OAuth (cloud sign-in). Both values must be set together; the client
+  // secret stays server-only and the public config exposes only availability.
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
     .default('info'),
@@ -122,4 +126,10 @@ export const clientEnvSchema = {
   VITE_KEENPIX_PUBLIC_URL: optionalUrlSchema,
   VITE_KEENPIX_AUTH_URL: optionalUrlSchema,
   VITE_BETTER_AUTH_URL: optionalUrlSchema,
+  // A GTM container ID is public configuration, not a credential. Analytics is
+  // loaded only after explicit consent (see components/app/analytics-consent).
+  VITE_GTM_CONTAINER_ID: z
+    .string()
+    .regex(/^GTM-[A-Z0-9]+$/)
+    .optional(),
 }

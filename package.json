@@ -1,6 +1,6 @@
 {
   "name": "keenpix",
-  "version": "0.1.11",
+  "version": "0.2.0",
   "description": "Open-source, self-hosted image optimization with a drop-in transform API, sharp, Postgres, disk caching, and analytics.",
   "private": true,
   "type": "module",
@@ -42,11 +42,13 @@
     "health": "pnpm lint && pnpm run typecheck && pnpm test && pnpm run knip && pnpm run doctor && pnpm build",
     "toolchain": "pnpm run health",
     "release:notes": "pnpm dlx changelogithub@14.0.0",
+    "seo:drift": "node scripts/seo-drift.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "db:backfill-cuid": "tsx prisma/backfill-rollup-cuid.ts",
+    "billing:configure-benefits": "node scripts/configure-polar-benefits.mjs",
     "db:reset": "prisma migrate reset --force"
   },
   "prisma": {

@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const getOrgSubscription = vi.hoisted(() => vi.fn())
+const getBillingCustomer = vi.hoisted(() => vi.fn())
 const getActiveInternalPlanGrant = vi.hoisted(() => vi.fn())
 const orgHasBillingCustomer = vi.hoisted(() => vi.fn())
 const billingUsageSnapshot = vi.hoisted(() => vi.fn())
+const createCustomerSession = vi.hoisted(() => vi.fn())
 vi.mock('@/data-access/subscriptions', () => ({
+  getBillingCustomer,
   getOrgSubscription,
   orgHasBillingCustomer,
 }))
@@ -12,10 +15,19 @@ vi.mock('@/data-access/internal-plan-grants', () => ({
   getActiveInternalPlanGrant,
 }))
 vi.mock('@/data-access/usage', () => ({ billingUsageSnapshot }))
+vi.mock('@/lib/billing/polar-client', () => ({
+  createPolarClient: () => ({
+    customerSessions: { create: createCustomerSession },
+  }),
+}))
+vi.mock('@/server/deployment', () => ({
+  getAppUrl: () => 'https://keenpix.com',
+}))
 
-const { getBillingState } = await import('./index')
+const { createBillingPortalSession, getBillingState } = await import('./index')
 
 const GB = 1024 ** 3
+const CONTACT_SUPPORT = /contact support/i
 
 afterEach(() => {
   vi.clearAllMocks()
@@ -161,5 +173,31 @@ describe('getBillingState', () => {
     expect(state.plan).toBe('pro')
     expect(state.planSource).toBe('billing')
     expect(state.status).toBe('active')
+  })
+})
+
+describe('createBillingPortalSession', () => {
+  it('creates an organization portal session from the mirrored customer id', async () => {
+    getBillingCustomer.mockResolvedValue({ polarCustomerId: 'cus_org_a' })
+    createCustomerSession.mockResolvedValue({
+      customerPortalUrl: 'https://polar.sh/portal/session',
+    })
+
+    await expect(createBillingPortalSession('org_a')).resolves.toEqual({
+      url: 'https://polar.sh/portal/session',
+    })
+    expect(createCustomerSession).toHaveBeenCalledWith({
+      customerId: 'cus_org_a',
+      returnUrl: 'https://keenpix.com/app/account?section=billing',
+    })
+  })
+
+  it('gives a recovery path when the workspace has no customer link', async () => {
+    getBillingCustomer.mockResolvedValue(null)
+
+    await expect(createBillingPortalSession('org_a')).rejects.toThrow(
+      CONTACT_SUPPORT,
+    )
+    expect(createCustomerSession).not.toHaveBeenCalled()
   })
 })
