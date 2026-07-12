@@ -7,7 +7,7 @@ import { REPOSITORY_URL } from '@/shared/repository'
 const BELIEFS = [
   {
     title: 'Bill for value, not implementation details',
-    body: 'You pay for bytes delivered to real users — never per transform, never pooled credits you have to reverse-engineer. Aggressive optimization should lower your bill, not raise it.',
+    body: 'You pay for optimized response bytes returned by Keenpix — never per transform or from a pooled credit meter. Upstream CDN edge hits do not reach the app meter; optional edge analytics reports them separately.',
   },
   {
     title: 'No lock-in, ever',
@@ -34,7 +34,7 @@ export function AboutPage() {
             </h1>
             <p className="mt-4 max-w-2xl text-balance text-lg text-muted-foreground leading-relaxed">
               Keenpix optimizes and delivers your images in modern formats from
-              a single URL — with transparent, bandwidth-only pricing and an
+              a single URL — with published application-bandwidth pricing and an
               open-source engine you can run yourself. We build it because image
               delivery should be fast, cheap, and impossible to get locked into.
             </p>

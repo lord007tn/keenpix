@@ -76,6 +76,17 @@ export function ComparisonPage({
               using the displayed assumptions, not quotes; contracts, taxes,
               regions, cache behavior, and legacy plans can change a real bill.
             </p>
+            <p className="mt-2 text-muted-foreground text-sm">
+              Reviewed by {comparison.reviewer}. Facts verified{' '}
+              <time dateTime={comparison.verifiedAt}>
+                {comparison.verifiedAt}
+              </time>
+              ; next scheduled review{' '}
+              <time dateTime={comparison.nextReviewAt}>
+                {comparison.nextReviewAt}
+              </time>
+              .
+            </p>
             <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
               {comparison.sources.map((source) => (
                 <li key={source.url}>
@@ -228,7 +239,7 @@ export function ComparisonPage({
                   <span className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted font-mono text-xs">
                     {index + 1}
                   </span>
-                  <p className="text-muted-foreground leading-relaxed">
+                  <p className="min-w-0 break-words text-muted-foreground leading-relaxed [overflow-wrap:anywhere]">
                     {step}
                   </p>
                 </li>

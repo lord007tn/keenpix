@@ -1,34 +1,36 @@
 ---
-title: "Best Image CDNs in 2026: 10 Services Compared | Keenpix"
+title: "Best Image CDNs in 2026: 10 Services Compared"
 description: Compare 10 image CDN and optimization services using verified July 2026 pricing, use cases, tradeoffs, and clear best-fit recommendations for developers.
 date: "2026-07-10"
-updated: "2026-07-11"
+updated: "2026-07-12"
 author: Raed Bahri
 tags: [comparison, pricing, image-cdn]
 image: /og/blog/best-image-cdns-2026.png?v=2026-07-11
 imageAlt: Abstract comparison grid showing image CDN delivery pipelines and pricing meters
 ---
 
-There are a lot of "best image CDN" listicles, and most of them are affiliate pages that have never opened a pricing calculator. This one is different in two ways.
+“Best image CDN” articles often omit the assumptions behind their rankings. This comparison starts with two disclosures.
 
 First, **full disclosure: Keenpix is our product.** It appears below as one entry among ten, in its own camp, with its weaknesses listed the same way we list everyone else's. If that disclosure makes you trust the rest of the list more, good — that is the point.
 
-Second, every price here was checked against the vendor's live pricing page in **July 2026**. Pricing in this space changes fast (imgix moved to credits in August 2025; Vercel re-metered image optimization; Cloudinary reshuffled tiers), so treat anything older than a few months as suspect — including this post, eventually.
+Second, the price and feature claims below were checked against vendor-owned pricing pages and documentation on **July 12, 2026**. Pricing in this space changes quickly, so use the linked primary sources before making a purchase.
+
+Our method is intentionally narrow: compare published self-service pricing, billing units, image-format support, product scope, and self-host availability. We did not run a cross-provider performance benchmark, test private enterprise contracts, or rank support quality. “Best for” labels are editorial fit guidance, not measured winners.
 
 ## The short version
 
 | Tool | Best for | Entry paid plan (July 2026) | Billing meter | Self-host? |
 | --- | --- | --- | --- | --- |
-| Cloudinary | Teams that need DAM + video + AI in one platform | $99/mo (225 credits) | Pooled credits | No |
-| imgix | The deepest rendering API, budget permitting | $25/mo (100 credits) | Credits (delivery + management) | No |
+| Cloudinary | Teams that need DAM + video + AI in one platform | $99/mo monthly; $89/mo annual equivalent (225 credits) | Pooled credits | No |
+| imgix | Teams needing a broad rendering API | $25/mo (100 credits) | Credit package with media + delivery allowances | No |
 | ImageKit | All-in-one media stack on a budget | $9/mo (40 GB) | Bandwidth, tiered | No |
-| Gumlet | Video-heavy sites that also serve images | ~$32/mo (~300 GB) | Bandwidth (~$0.08/GB) | No |
+| Gumlet | Teams that want image and video products from one vendor | $32/mo (300 GB image bandwidth) | Bandwidth; $0.15/GB image overage | No |
 | TwicPics | EU teams wanting an EU vendor | $19/mo (40 GB) | Bandwidth | No |
 | Cloudflare Images | Small sites already all-in on Cloudflare | Pay-as-you-go ($0.50/1k transforms) | Transforms + storage + delivery counts | No |
-| Bunny Optimizer | Lowest absolute cost for a single site | $9.50/mo per site + ~$0.01/GB CDN | Flat fee + bandwidth | No |
+| Bunny Optimizer | Sites that want a flat optimizer fee plus CDN bandwidth | $9.50/mo per site + CDN bandwidth | Flat fee + bandwidth | No |
 | Vercel Image Optimization | Small Next.js apps on Vercel | Included in Pro, usage-billed | Transforms + cache reads + cache writes | No |
-| imgproxy | Maximum control, zero SaaS dependency | Free (MIT); Pro $49/mo | None (self-host) | Yes (MIT) |
-| Keenpix *(our product)* | Bandwidth-only billing behind your existing CDN | $9/mo (100 GB) | Delivered bandwidth only | Yes (AGPL) |
+| imgproxy | Maximum control, zero SaaS dependency | Free (Apache-2.0); Pro is quote-based | None (self-host) | Yes (Apache-2.0) |
+| Keenpix *(our product)* | Application-bandwidth billing behind your existing CDN | $9/mo (100 GB) | Bytes returned by Keenpix | Yes (AGPL) |
 
 Now the details, grouped by camp — because "which image CDN is best" is really four different questions depending on which camp you are shopping in.
 
@@ -40,23 +42,23 @@ These are full media platforms: storage, DAM, video, AI features, and image deli
 
 **Best for:** teams that need digital asset management, video, and AI features in one vendor and have the budget for it.
 
-Cloudinary is the incumbent for a reason — the feature set is the deepest in the industry: DAM with approval workflows, video transcoding, AI auto-tagging, content-aware cropping, and an ecosystem of SDKs and integrations nobody else matches.
+Cloudinary documents a broad product surface: DAM workflows, video transcoding, AI auto-tagging, content-aware cropping, SDKs, and integrations.
 
-**Pricing (as of July 2026):** free tier of 25 credits/month, where one credit is 1,000 transformations *or* 1 GB storage *or* 1 GB bandwidth, pooled together. Plus is $99/month for 225 credits ($89 on annual). Advanced is $249/month for 600 credits. Note that serving from your own domain (CNAME) is only available from Advanced up.
+**Pricing (verified July 12, 2026):** the free tier includes 25 credits/month, where one credit is 1,000 transformations *or* 1 GB managed storage *or* 1 GB viewing bandwidth. Plus is $99/month for 225 credits, or $89/month equivalent with annual billing. Advanced is $249/month for 600 credits. Cloudinary's comparison page documents custom-domain availability by plan. Sources: [Cloudinary pricing](https://cloudinary.com/pricing) and [plan/credit comparison](https://cloudinary.com/pricing/compare-plans).
 
-**The catch:** credits couple your bill to implementation details. A new `srcset` breakpoint, a bot crawl, or a storage cleanup you forgot all pull from the same pool, and the effective rate works out to roughly $0.44 per credit-GB. There is also no automatic overage on the fixed tiers — exceed your quota and your account gets suspended rather than billed, which is arguably worse mid-launch.
+**The tradeoff:** transformations, storage, and bandwidth draw from one credit pool, so forecasting requires modeling all three. Cloudinary describes its self-service plan limits as soft limits and says it contacts customers about upgrading after they exceed them; exact handling can depend on the account. We do not characterize an over-limit account as automatically suspended.
 
-We wrote a full [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) comparison, but the honest summary: if you need Cloudinary's breadth, nothing below matches it. Pay for it knowingly.
+We wrote a full [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) comparison. Among the products reviewed here, Cloudinary documents the broadest combination of DAM, video, and image features; that breadth is the reason to evaluate it despite the multi-use credit meter.
 
 ### imgix
 
-**Best for:** design-driven teams that want the best rendering API on the market and can absorb premium, less predictable pricing.
+**Best for:** design-driven teams that want a deep rendering API and are comfortable forecasting a credit package.
 
-imgix's transformation API is genuinely best-in-class — the parameter set, the output quality, the documentation. If your product lives or dies on image rendering fidelity, it deserves a look.
+imgix publishes a broad transformation API and extensive documentation. If rendering controls are central to your product, it deserves evaluation against your own image set.
 
-**Pricing (as of July 2026):** imgix moved to credit pricing in August 2025. Starter is $25/month for 100 credits, Basic $75 for 375, Growth $300 for 1,875. Delivery costs 1 credit per GB; "management" costs 2 credits per GB of cached storage per month — so the same asset bills you on two meters.
+**Pricing (verified July 12, 2026):** Starter is $25/month for 100 credits, Basic $75 for 375, and Growth $300 for 1,875. The published Starter allowances are up to 50 GB of media and 100 GB of delivery; annual packages cost about 17% less. Unused credits do not roll over. Source: [imgix purchasing credits and costs](https://www.imgix.com/faq-categories/purchasing-credits-and-costs).
 
-**The catch:** the credit transition has been rocky. Third parties have reported renewal increases in the ~5x range and mid-cycle service blocking when credits run out — though we should flag that the most detailed public account comes from smallpics.io, which is itself a competing service, so weigh that source accordingly. Even discounting the drama, the two-meter credit model makes forecasting harder than it should be. Our [Keenpix vs imgix](/blog/keenpix-vs-imgix) post digs into the pricing mechanics.
+**The tradeoff:** a credit package represents media and delivery allowances, so teams need both dimensions to size a plan. Public imgix documentation says customers can upgrade when they need more credits; it does not support blanket claims about arbitrary renewal increases or mid-cycle blocking. Our [Keenpix vs imgix](/blog/keenpix-vs-imgix) post compares the published meters.
 
 ## Camp 2: Mid-market image SaaS
 
@@ -66,21 +68,21 @@ Purpose-built image (and increasingly video) services with sane entry pricing. T
 
 **Best for:** teams that want storage, DAM-lite, video, and image optimization in one affordable product.
 
-ImageKit is probably the best all-rounder value in this camp: unlimited transformations, a real media library, video support, and a genuinely generous free tier.
+ImageKit combines transformations, a media library, video support, and a free tier. That can make it a practical all-in-one candidate when those features matter.
 
-**Pricing (as of July 2026):** free plan with 20 GB bandwidth/month and 3 GB storage. Lite is $9/month for 40 GB, then $0.50/GB. Pro is $89/month for 225 GB, then $0.45/GB.
+**Pricing (verified July 12, 2026):** the free plan includes 20 GB bandwidth/month and 3 GB DAM storage. Lite is $9/month for 40 GB, then $0.50/GB. Pro is $89/month for 225 GB, then $0.45/GB. Source: [ImageKit plans](https://imagekit.io/plans/).
 
-**The catch:** the free tier hard-stops serving mid-month when you exceed it — your images just stop, which is a rough failure mode for a production site. And the overage rates ($0.45–0.50/GB) are steep once you outgrow your bundle; that is 6–10x what bandwidth-metered rivals charge past the included allowance. See [Keenpix vs ImageKit](/blog/keenpix-vs-imagekit) for the closest head-to-head, since both bill on bandwidth.
+**The tradeoff:** ImageKit's own plan page says media delivery stops when the free plan reaches its 20 GB monthly limit. Paid Lite and Pro continue with published $0.50/GB and $0.45/GB overage rates. See [Keenpix vs ImageKit](/blog/keenpix-vs-imagekit) for the closest head-to-head.
 
 ### Gumlet
 
 **Best for:** video-heavy sites that also need image optimization from one vendor.
 
-Gumlet has drifted video-first in the last couple of years, but the image product remains solid and the billing model is one of the saner ones: bandwidth only.
+Gumlet offers both video and image products. Its image usage analytics documentation describes bandwidth as the usage metric, while the current pricing page lists image plans separately from video plans.
 
-**Pricing (as of July 2026):** free tier of 30 GB/month. Growth is around $32/month for roughly 300 GB, with bandwidth-only billing working out to about $0.08/GB.
+**Pricing (verified July 12, 2026):** Gumlet's image Free plan includes 30 GB/month. Image Growth is $32/month with 300 GB and a published $0.15/GB overage; Image Business is $199/month with 2,500 GB and a $0.08/GB overage. Source: [Gumlet pricing](https://www.gumlet.com/pricing/) and its [image usage analytics documentation](https://docs.gumlet.com/docs/usage-analytics-for-images).
 
-**The catch:** the product's center of gravity is video now, and the image side gets correspondingly less attention. If you only need images, you are buying a video product's roadmap.
+**The tradeoff:** Gumlet sells image and video products with separate plan dimensions. Confirm that a quoted plan covers the image workload you are comparing rather than applying video-plan pricing to image delivery.
 
 ### TwicPics
 
@@ -102,31 +104,31 @@ If you already pay Cloudflare, Bunny, or Vercel, their built-in image features a
 
 **Pricing (as of July 2026):** 5,000 unique transformations/month free, then $0.50 per 1,000 unique transformations; storage at $5 per 100k images; delivery at $1 per 100k images. Repeat requests for the same transform in a month count once, which keeps costs down for stable image sets.
 
-**The catch:** users at scale report rate limits, and the observability is thin — minimal analytics and a dashboard that tells you very little about what is actually being served, cached, or slow.
+**The tradeoff:** transformation, storage, and delivery counts are separate published meters, so cost depends on the number of stored assets, delivered images, and unique variants. Model those dimensions from your own traffic rather than relying on unsupported reputation or rate-limit claims. Source: [Cloudflare Images pricing](https://developers.cloudflare.com/images/pricing/).
 
 Worth being clear about our own position here: Keenpix is *not* a Cloudflare replacement. It is designed to sit **behind** Cloudflare (or any CDN) as the transformation origin — Cloudflare's free cache in front, a transform engine you control behind it. Complementary layers, not rivals.
 
 ### Bunny Optimizer
 
-**Best for:** the lowest absolute cost for a single website, if you can live without AVIF and analytics.
+**Best for:** a site that wants unlimited optimizer operations for a flat per-site fee, with CDN bandwidth billed separately.
 
-Bunny's pitch is brutal simplicity: a flat fee per site, unlimited optimizations, on top of Bunny's famously cheap CDN.
+Bunny's published model is simple to calculate: a flat optimizer fee per site plus separately billed CDN bandwidth.
 
-**Pricing (as of July 2026):** $9.50/month per website for the optimizer, with CDN bandwidth billed separately at roughly $0.01/GB.
+**Pricing (verified July 12, 2026):** $9.50/month per website for unlimited optimizer requests, optimizations, and transformations; CDN bandwidth is billed separately and varies by network/region. Sources: [Bunny Optimizer pricing](https://docs.bunny.net/optimizer/pricing) and [Bunny CDN pricing](https://bunny.net/pricing/cdn/).
 
-At volume, that combination is cheaper than everything else on this list, Keenpix included. We are not going to pretend otherwise.
+For some single-site traffic profiles this combination can price below Keenpix, but that is workload- and region-dependent rather than a universal cheapest claim.
 
-**The catch:** as of early 2026 the optimizer does not output AVIF (verify against their docs — this may have changed), there are effectively no delivery analytics, there is no self-host option, and the per-site fee multiplies painfully for agencies running many small sites.
+**The tradeoff:** Bunny added AVIF input/output in April 2026 and promoted it to general availability on June 26, with a four-megapixel AVIF output limit and fallback for larger images. The service has no self-host path, and the optimizer fee applies per website. Sources: [Bunny Optimizer formats](https://docs.bunny.net/optimizer/dynamic-images/formats) and [Bunny changelog](https://docs.bunny.net/changelog).
 
 ### Vercel Image Optimization
 
 **Best for:** small Next.js apps already deployed on Vercel, where `next/image` works out of the box.
 
-The developer experience is unbeatable if you are on Vercel already: zero configuration, automatic formats, done.
+For an existing Vercel-hosted Next.js app, the built-in integration can reduce setup work and supports automatic formats.
 
-**Pricing (as of July 2026):** Hobby includes 5,000 transformations, 300k cache reads, and 100k cache writes per month — then hard-fails with a 402 error. Pro bills on-demand: $0.05–$0.0812 per 1,000 transformations, plus $0.40–0.64 per million cache reads, plus $4.00–6.40 per million cache writes, plus Fast Data Transfer on top.
+**Pricing (verified July 12, 2026):** Hobby includes 5,000 transformations, 300k cache-read units, and 100k cache-write units per month. Vercel says new Hobby transformations return a 402 after a limit is exceeded while previously cached images continue working. On-demand regional rates are $0.05–0.0812 per 1,000 transformations, $0.40–0.64 per million cache-read units, and $4.00–6.40 per million cache-write units, plus Fast Data Transfer and Edge Requests. Source: [Vercel image optimization limits and pricing](https://vercel.com/docs/image-optimization/limits-and-pricing).
 
-**The catch:** that is *three* usage meters plus bandwidth, and none of them map cleanly to "images my users saw." Teams have been surprised by LLM-crawler traffic inflating transformation and cache-write counts on pages no human visited. It is fine at small scale; it is hard to forecast at any other scale.
+**The tradeoff:** that is *three* image-optimization meters plus data transfer. Forecast with Vercel's current usage model and your actual cache behavior; we do not rely on anecdotal crawler-billing claims here.
 
 ## Camp 4: Open source
 
@@ -136,7 +138,7 @@ The camp where you stop renting and start owning.
 
 **Best for:** teams that want a battle-tested, standalone transform server and are happy to bring their own cache, CDN, and monitoring.
 
-imgproxy is the veteran of open-source image processing — fast, security-conscious, widely deployed, with an MIT-licensed core.
+imgproxy is a mature open-source image processor with an Apache-2.0-licensed core. Pro is a separate commercial edition. Source: [imgproxy source and license](https://github.com/imgproxy/imgproxy) and [imgproxy Pro](https://imgproxy.net/pro/).
 
 **Pricing (as of July 2026):** the open-source version is free and includes more than people assume — basic watermarks and basic smart crop are in the free core. Pro is $49/month (or $499/year) per 16 workers and adds the advanced tier: object-detection cropping, dynamic watermarks, autoquality, automatic best-format selection, and video/PDF thumbnails.
 
@@ -144,13 +146,13 @@ imgproxy is the veteran of open-source image processing — fast, security-consc
 
 ### Keenpix — *disclosure: this is our product*
 
-**Best for:** developers who want unlimited transforms billed on delivered bandwidth only, behind the CDN they already run, with a self-host escape hatch.
+**Best for:** developers who want unlimited transforms billed on bytes returned by Keenpix, behind the CDN they already run, with a self-host escape hatch.
 
-Keenpix is an image optimization and delivery layer: point a URL like `/img/<origin-url>?w=800&fmt=auto` at images on origins you already have (S3, R2, your own servers), and it handles sharp-based transforms, AVIF/WebP negotiation, full IPX-parity modifiers, and disk+memory caching with stale-while-revalidate. It is designed to sit **behind** your existing CDN, not replace it. Security is allowlist-based — per-project origin-host allowlists and SSRF hardening instead of public API keys, with optional HMAC-signed URLs. Analytics (bandwidth saved, cache hit rate, format mix, latency percentiles, live request logs) are included on every tier, not gated to enterprise.
+Keenpix is an image optimization and delivery layer: point a URL like `/img/<origin-url>?w=800&fmt=auto` at images on origins you already have (S3, R2, your own servers), and it handles documented resize, crop, quality, AVIF/WebP negotiation, and image modifiers with disk+memory caching and stale-while-revalidate. It is designed to sit **behind** your existing CDN, not replace it. Security is allowlist-based — per-project origin-host allowlists and SSRF hardening instead of public API keys, with optional HMAC-signed URLs. Analytics (application response bytes, bandwidth saved, cache hit rate, format mix, latency percentiles, live request logs) are included on every tier, not gated to enterprise.
 
-**Pricing (as of July 2026):** Basic $9/month for 100 GB delivered, then $0.08/GB. Pro $19/month for 400 GB, then $0.06/GB. Business $29/month for 1 TB, then $0.05/GB. Annual gets two months free. Transformations are unlimited on every plan — [the only meter is delivered bandwidth](/blog/transparent-image-cdn-pricing). A hard spend cap is on by default (about 2x plan price, and you set it): delivery pauses at the cap instead of surprising you with an invoice. There is a 14-day trial (card required), and payment hiccups get a dunning grace period rather than an instant cutoff. The engine is open source under AGPL-3.0 — [self-hosting](/docs/self-hosting) is free forever, one Docker command, no CLA, and the managed cloud runs the exact same engine.
+**Pricing (verified July 12, 2026):** Basic $9/month for 100 GB returned by the Keenpix application, then $0.08/GB. Pro $19/month for 400 GB, then $0.06/GB. Business $29/month for 1 TB, then $0.05/GB. Annual costs ten monthly payments. Transformations are unlimited — [read the exact meter boundary](/blog/transparent-image-cdn-pricing) or [see current plan details](/pricing). An upstream Cloudflare edge `HIT` does not reach Keenpix and is not added to billing; optional Cloudflare analytics can report edge traffic separately. A customer-controlled spending cap is on by default. The engine is available under AGPL-3.0 for [self-hosting](/docs/self-hosting).
 
-**The honest cons, same standard as everyone above:** there is no video support, no DAM, and no storage or uploads — Keenpix transforms and delivers from origins you already have, full stop. It is a young product from a solo founder (it serves every image on joodlab.com in production, but it does not have Cloudinary's decade of scar tissue). Custom domains are not available yet. And at raw per-GB cost, Bunny is cheaper. If you need any of those things, pick from the camps above — several of them are genuinely good.
+**The honest cons, same standard as everyone above:** there is no video support, DAM, storage, or upload library — Keenpix transforms and returns images from origins you already have. It is a younger product than the established platforms above, and public customer evidence is still limited. Custom domains are not available yet. Depending on region and traffic shape, Bunny's flat optimizer fee plus CDN bandwidth can cost less. If those constraints matter, evaluate the other camps above.
 
 ## Honorable mentions
 
@@ -162,16 +164,16 @@ Keenpix is an image optimization and delivery layer: point a URL like `/img/<ori
 Match the tool to the actual shape of your problem:
 
 - **You need DAM, video, and AI in one vendor:** Cloudinary if budget allows, ImageKit if it does not.
-- **Rendering quality and API depth are the product:** imgix — go in with eyes open on credits.
+- **Rendering controls are central to the product:** evaluate imgix's API against your own image set and size the credit package.
 - **You want one affordable vendor for storage + images + video:** ImageKit.
 - **Video is the main event:** Gumlet (or Cloudinary at the premium end).
 - **You want an EU vendor:** TwicPics.
 - **You are small and already on Cloudflare:** Cloudflare Images is fine; add a real transform layer behind it when you outgrow the analytics.
-- **One site, minimum possible spend, no AVIF/analytics needs:** Bunny Optimizer — it is legitimately the cheapest at scale.
+- **One site and a flat optimizer fee:** Bunny Optimizer, which now supports AVIF; add region-specific CDN bandwidth to the comparison.
 - **Small Next.js app on Vercel:** the built-in optimizer, until the three meters start mattering.
 - **Full self-host control, no dashboard needed:** imgproxy.
 - **Transform-and-deliver from origins you already have, one bandwidth meter, self-host option:** Keenpix — with the caveats we listed against ourselves above.
 
 Still torn between running it yourself and paying someone? We wrote a framework for that too: [self-hosted vs managed image optimization](/blog/self-host-vs-managed-image-optimization).
 
-*All pricing verified against vendor pricing pages in July 2026. If you spot something that has changed, tell us and we will correct it — the whole value of a comparison like this is that it stays honest.*
+*Verification date: July 12, 2026. Sources are linked beside the high-risk pricing and feature claims. Prices exclude taxes, negotiated enterprise terms, and workload-specific transfer effects. If a vendor changes a source, the current vendor page takes precedence over this article.*

@@ -2,7 +2,7 @@
 title: "Keenpix vs ImageKit: Pricing and Self-Hosting (2026)"
 description: Compare Keenpix and ImageKit pricing, bandwidth overages, transformations, and self-hosting options using facts verified in July 2026 for your image stack.
 date: "2026-07-02"
-updated: "2026-07-11"
+updated: "2026-07-12"
 author: Raed Bahri
 competitor: ImageKit
 tags: [comparison, pricing, image-cdn]
@@ -14,11 +14,11 @@ ImageKit is one of the closest competitors to Keenpix in philosophy: it also bil
 
 ## Same meter, lower rate
 
-Both Keenpix and ImageKit charge on bandwidth delivered, which is the honest way to price an image CDN. The differences show up in the details:
+Both products publish bandwidth-oriented plans, but the measurement boundaries and plan details differ. Keenpix counts optimized bytes returned by its application; upstream CDN edge `HIT`s are visible only when optional edge analytics is connected and are not added to billing.
 
 | | Keenpix | ImageKit |
 | --- | --- | --- |
-| Billing unit | Bandwidth delivered (GB) | Bandwidth delivered (GB) |
+| Billing unit | Keenpix application response bytes (GB) | Bandwidth delivered (GB) |
 | Transformations | Unlimited, free | Included |
 | Overage rate | $0.05–0.08/GB | Higher per-GB |
 | Entry price | $9/mo | Comparable-to-higher |
@@ -27,7 +27,7 @@ Both Keenpix and ImageKit charge on bandwidth delivered, which is the honest way
 
 *ImageKit pricing referenced as of July 2026; check [ImageKit's current plans](https://imagekit.io/plans) for the latest rates.*
 
-Keenpix is built to be **the cheapest managed image CDN** — overage lands in the $0.05–0.08/GB range, materially under most incumbents, with a single published rate and a hard cap you control.
+Keenpix publishes overage rates of $0.05–0.08/GB depending on tier, with a spending cap customers can control. Compare the full workload and contract rather than treating one overage number as a universal lowest-price claim.
 
 ## Free transforms, honestly unlimited
 
@@ -46,8 +46,9 @@ ImageKit ships a media library and DAM-style features, and a mature global edge 
 ## Related comparisons
 
 - [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) — credits vs bandwidth pricing.
-- [Keenpix vs imgix](/blog/keenpix-vs-imgix) — origin-image pricing vs bandwidth-only.
-- [Why we bill on bandwidth delivered](/blog/transparent-image-cdn-pricing) — the pricing philosophy in full.
+- [Keenpix vs imgix](/blog/keenpix-vs-imgix) — current credit packages vs application-byte billing.
+- [How the Keenpix application-byte meter works](/blog/transparent-image-cdn-pricing) — including the upstream-CDN boundary.
+- [Keenpix pricing](/pricing) — current plans and meter boundary.
 
 ## Compare on your own traffic
 

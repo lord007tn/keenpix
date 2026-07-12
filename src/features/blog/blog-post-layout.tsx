@@ -143,7 +143,7 @@ export function BlogPostCta() {
             Optimized images, minus the surprise bill.
           </h2>
           <p className="mt-2 text-muted-foreground">
-            One honest price on bandwidth delivered. Or self-host the
+            One published price on bytes returned by Keenpix. Or self-host the
             open-source engine, free.
           </p>
         </div>

@@ -73,7 +73,7 @@ const FEATURES = [
   {
     icon: ChartColumnIcon,
     title: 'Analytics without another vendor',
-    body: 'Requests, bandwidth delivered and saved, format mix, cache hit rate, top assets, and latency — built in on every plan.',
+    body: 'Requests, application response bytes and savings, format mix, cache hit rate, top assets, and latency — built in on every plan. Optional Cloudflare analytics reports upstream edge traffic separately.',
   },
   {
     icon: GitBranchIcon,
@@ -453,7 +453,8 @@ Vary: Accept`}</CodeBlock>
                 </h2>
               </div>
               <p className="max-w-md text-muted-foreground leading-relaxed">
-                Every plan bills on bandwidth delivered — never per transform.
+                Every plan bills on bytes returned by Keenpix — never per
+                transform. Upstream CDN edge hits are not added to the meter.
                 Overage is one linear published rate with a hard cap, on by
                 default. 14-day free trial; two months free on annual.
               </p>

@@ -6,17 +6,17 @@ export const cloudinaryComparison = {
   title: 'Cloudinary Alternative: Keenpix vs Cloudinary (2026)',
   metaDescription:
     'Keenpix vs Cloudinary (July 2026): pooled credits vs one bandwidth meter with a hard cap you set. Honest pricing, migration steps, and when each wins.',
-  heroHeadline: 'One honest meter instead of a credit pool',
+  heroHeadline: 'Keenpix vs Cloudinary: a focused image CDN alternative',
   heroSubhead:
-    'Cloudinary bundles transformations, storage, and bandwidth into credits. Keenpix bills exactly one thing, GB delivered, with unlimited transforms and a hard spend cap you control.',
+    'Cloudinary bundles transformations, storage, and bandwidth into credits. Keenpix bills exactly one thing: optimized response bytes returned by the application, with unlimited transforms and a hard spend cap you control. Upstream CDN edge hits do not reach that meter.',
   verdict:
-    'If you need video transcoding, a full digital asset manager, or AI-powered transforms, pick Cloudinary — its breadth is real and Keenpix does not pretend to match it. If what you actually use Cloudinary for is resizing and delivering images, and your monthly ritual is reverse-engineering a credit invoice, Keenpix does that one job with one meter, unlimited transformations, a spend cap you set, and an AGPL self-host escape hatch. Be aware of what you give up: Keenpix is a young solo-founder product with no video, no storage, and no custom domains yet. As of July 2026 the math is stark for delivery-heavy sites — 400 GB/month is $19 on Keenpix and requires the $249/mo Advanced tier on Cloudinary.',
+    'If you need video transcoding, a full digital asset manager, or AI-powered transforms, pick Cloudinary — its breadth is real and Keenpix does not pretend to match it. If what you use Cloudinary for is resizing and delivering images, Keenpix offers one bandwidth meter, unlimited transformations, a spend cap you set, and an upcoming AGPL-3.0 v0.2.0 self-host path. Be aware of what you give up: Keenpix is a young solo-founder product with no video, no storage, and no custom domains yet. As of July 2026, 400 GB/month is $19 on Keenpix; Cloudinary bandwidth draws from the Advanced plan’s pooled credits alongside transforms and storage.',
   pricingRows: [
     {
       scenario: 'Credits → GB translation',
       competitor:
         '1 credit = 1 GB bandwidth OR 1k transforms OR 1 GB storage, one pool',
-      keenpix: 'No translation — 1 GB delivered is 1 GB',
+      keenpix: 'No translation — 1 GB returned by Keenpix is 1 GB metered',
     },
     {
       scenario: '100 GB delivered / month',
@@ -49,7 +49,7 @@ export const cloudinaryComparison = {
     {
       feature: 'Billing model',
       competitor: 'Pooled credits (transforms + storage + GB)',
-      keenpix: 'One meter: GB delivered',
+      keenpix: 'One meter: application response bytes',
     },
     {
       feature: 'Transformations',
@@ -59,7 +59,7 @@ export const cloudinaryComparison = {
     {
       feature: 'Entry paid plan',
       competitor: '$99/mo · 225 pooled credits ($89 annual)',
-      keenpix: '$9/mo · 100 GB delivered',
+      keenpix: '$9/mo · 100 GB returned by Keenpix',
     },
     {
       feature: 'Overage handling',
@@ -74,7 +74,7 @@ export const cloudinaryComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No',
-      keenpix: 'Yes — AGPL-3.0, one-command Docker',
+      keenpix: 'Upcoming v0.2.0: AGPL-3.0 with Docker deployment files',
     },
     {
       feature: 'Analytics',
@@ -121,7 +121,7 @@ export const cloudinaryComparison = {
     {
       title: 'One meter you can actually forecast',
       detail:
-        'Cloudinary credits get drained by transformations, storage, and bandwidth at different rates, so a bot crawl or one extra srcset breakpoint quietly moves your bill. Keenpix meters delivered bandwidth and nothing else. Your invoice tracks your traffic — no pooled-credit math to reverse-engineer.',
+        'Cloudinary credits cover transformations, storage, and bandwidth at different rates, so forecasting needs all three dimensions. Keenpix meters optimized response bytes returned by the application. An upstream CDN edge hit does not reach that meter; optional edge analytics is reported separately.',
     },
     {
       title: 'A customer-set ceiling instead of an open-ended estimate',
@@ -136,7 +136,7 @@ export const cloudinaryComparison = {
     {
       title: 'An open-source escape hatch',
       detail:
-        'The cloud release publishes its image engine under AGPL-3.0, so you can run that version with Docker or Coolify without a license fee. Moving in-house still requires infrastructure, operations, and a hostname/routing plan; the transform URL grammar can stay consistent when you control that routing. Cloudinary has no self-host path.',
+        'The upcoming v0.2.0 release is AGPL-3.0 and includes Docker/Coolify deployment files; the latest published v0.1.11 remains Apache-2.0 until v0.2.0 is tagged. Moving in-house still requires infrastructure, operations, and a hostname/routing plan. Cloudinary has no self-host path.',
     },
     {
       title: 'Real analytics at $9, not at enterprise',
@@ -155,7 +155,7 @@ export const cloudinaryComparison = {
     'Leave your assets where they are. Keenpix has no storage, so originals stay in S3, R2, your own server — or even in Cloudinary storage, used purely as an origin. You are only replacing the transform-and-delivery layer.',
     'Create a Keenpix project and allowlist your origin hosts (e.g. your-bucket.s3.amazonaws.com or res.cloudinary.com). Per-project allowlists replace public API keys entirely.',
     "Translate URLs: https://res.cloudinary.com/<cloud>/image/upload/w_800,q_75/photo.jpg becomes https://keenpix.com/img/<origin-url>?project=<id>&w=800&q=75. Cloudinary's f_auto needs no parameter — AVIF/WebP negotiation is automatic. c_fill,w_800,h_600 maps to w=800&h=600&fit=cover.",
-    "Swap URL generation in code with a small helper or your framework's image loader. Modifiers are IPX-parity, so Nuxt Image and IPX users can often keep their params unchanged.",
+    "Swap URL generation in code with a small helper or your framework's image loader. Common resize, crop, quality, and format parameters have documented Keenpix equivalents; test every modifier your application uses before switching.",
     'Keep your CDN in front. Keenpix is designed to sit behind Cloudflare (or any CDN), so cached edge hits never touch your Keenpix quota.',
     'Optionally enable HMAC signed URLs on hotlink-sensitive routes.',
     "Run both side by side through the 14-day trial, watch cache hit rate and bandwidth-saved analytics, set your spend cap, then cut over — it's only URL changes, no DNS.",
@@ -179,11 +179,11 @@ export const cloudinaryComparison = {
     },
     {
       q: 'Is the self-hosted version feature-limited?',
-      a: 'No. The AGPL-3.0 self-host engine is the same code that powers the managed cloud — sharp transforms, AVIF/WebP negotiation, caching, analytics. One-command Docker or Coolify install, free forever, no CLA, no open-core split to worry about.',
+      a: 'The upcoming v0.2.0 cloud release publishes its engine under AGPL-3.0 and includes the transform pipeline, caching, and analytics. The latest published v0.1.11 release remains Apache-2.0 until v0.2.0 is tagged. Self-hosting still requires your own infrastructure and operations.',
     },
     {
       q: 'Is there a free tier?',
-      a: 'The managed cloud has a 14-day free trial (card required) — plans start at $9/mo for 100 GB delivered. If you want free forever, self-host the open-source engine on your own infrastructure.',
+      a: 'The managed cloud has a 14-day free trial (card required), with plans starting at $9/month for 100 GB of optimized responses returned by Keenpix. A released open-source version can be self-hosted without a Keenpix license fee, but you pay for and operate the infrastructure.',
     },
   ],
   sources: [
@@ -196,4 +196,7 @@ export const cloudinaryComparison = {
     { label: 'Keenpix pricing', url: '/pricing' },
   ],
   pricingAsOf: 'July 2026',
+  reviewer: 'Raed Bahri, Keenpix founder and maintainer',
+  verifiedAt: '2026-07-12',
+  nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

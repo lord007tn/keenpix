@@ -2,10 +2,28 @@ import { describe, expect, it } from 'vitest'
 import {
   homePageJsonLd,
   pricingPageJsonLd,
+  seo,
   softwareApplicationJsonLd,
 } from './seo'
 
 describe('SEO entity graphs', () => {
+  it('uses article-specific image alt text for Open Graph and Twitter', () => {
+    const meta = seo({
+      title: 'Article title',
+      image: 'https://keenpix.com/og/blog/article.png',
+      imageAlt: 'Diagram showing the article-specific image delivery workflow',
+    })
+
+    expect(meta).toContainEqual({
+      property: 'og:image:alt',
+      content: 'Diagram showing the article-specific image delivery workflow',
+    })
+    expect(meta).toContainEqual({
+      name: 'twitter:image:alt',
+      content: 'Diagram showing the article-specific image delivery workflow',
+    })
+  })
+
   it('connects the homepage WebPage to the site and software entities', () => {
     expect(homePageJsonLd()).toEqual(
       expect.objectContaining({

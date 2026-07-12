@@ -1,10 +1,13 @@
+import { JsonLd } from '@/components/app/json-ld'
 import { SiteFooter, SiteHeader } from '@/features/blog/blog-chrome'
 import { FOUNDER, SOCIAL_X_URL } from '@/shared/authors'
 import { REPOSITORY_URL } from '@/shared/repository'
+import { authorProfileJsonLd } from '@/shared/seo'
 
 export function AuthorPage() {
   return (
     <div className="min-h-svh bg-background">
+      <JsonLd data={authorProfileJsonLd()} />
       <SiteHeader />
       <main id="main-content">
         <section className="border-b bg-muted/30">
