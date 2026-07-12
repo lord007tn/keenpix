@@ -1,3 +1,4 @@
+import { getOrgApiKeyAccess } from '@/actions/api-keys'
 import { DEFAULT_ORG_ID } from '@/lib/auth/active-org'
 import { auth } from '@/lib/auth/server'
 import { isCloud } from '@/server/deployment'
@@ -31,25 +32,30 @@ export async function verifySdkApiKey(
   })
 
   if (result.valid) {
-    const access = getApiKeyAccess(result.key)
     const apiKeyId = getApiKeyId(result.key)
+    const scope = apiKeyId ? await getOrgApiKeyAccess(apiKeyId) : null
+    const legacyAccess = getApiKeyAccess(result.key)
     // Resolve the org the key belongs to. Self-host legacy keys (no orgId) map to
     // the single default org; a cloud key MUST carry its own orgId — there is no
     // shared-tenant fallback, so an unattributed cloud key is rejected. Every
     // downstream lookup is org-scoped, so a key can only ever touch its own org.
-    const orgId = access.orgId ?? (isCloud() ? undefined : DEFAULT_ORG_ID)
+    const orgId = scope?.orgId ?? (isCloud() ? undefined : DEFAULT_ORG_ID)
     if (!orgId) {
       throw jsonError('API key is not associated with an organization', 403)
     }
     if (activity && apiKeyId) {
       activity.apiKeyId = apiKeyId
-      activity.projectId = projectId ?? access.projectId
-      activity.scope = access.projectId ? 'project' : 'all_projects'
+      activity.projectId = projectId ?? scope?.projectId ?? undefined
+      activity.scope = scope?.projectId ? 'project' : 'all_projects'
     }
-    if (access.projectId && projectId && access.projectId !== projectId) {
+    if (scope?.projectId && projectId && scope.projectId !== projectId) {
       throw jsonError('API key cannot access this project', 403)
     }
-    return { orgId, projectId: access.projectId }
+    return {
+      orgId,
+      projectId:
+        scope?.projectId ?? (isCloud() ? undefined : legacyAccess.projectId),
+    }
   }
 
   const status = result.error?.code === 'RATE_LIMIT_EXCEEDED' ? 429 : 401

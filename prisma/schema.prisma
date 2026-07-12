@@ -33,6 +33,7 @@ model Organization {
   subscription      Subscription?
   internalPlanGrant InternalPlanGrant?
   billingAlerts     BillingAlert[]
+  apiKeyScopes      ApiKeyScope[]
 }
 
 // One-shot billing notification ledger: one row per (org, kind, period). The
@@ -179,11 +180,29 @@ model ApiKey {
   permissions         String?
   metadata            String?
   activities          ApiKeyActivity[]
+  scope               ApiKeyScope?
 
   @@index([configId])
   @@index([key])
   @@index([referenceId])
   @@map("apikey")
+}
+
+// Authoritative tenant boundary for an SDK API key. Better Auth owns the key
+// material while Keenpix owns its organization/project authorization scope.
+// Keeping this relational prevents malformed metadata from widening access and
+// lets Postgres enforce that a project-scoped key belongs to the same org.
+model ApiKeyScope {
+  apiKeyId      String       @id
+  apiKey        ApiKey       @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  orgId         String
+  organization  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  projectId     String?
+  project       Project?     @relation(fields: [projectId, orgId], references: [id, orgId], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+
+  @@index([orgId])
+  @@index([projectId, orgId])
 }
 
 model ApiKeyActivity {
@@ -229,8 +248,10 @@ model Project {
   signingSecret  String?
   createdAt      DateTime     @default(now())
   requestLogs    RequestLog[]
+  apiKeyScopes   ApiKeyScope[]
 
   @@index([orgId])
+  @@unique([id, orgId])
 }
 
 // Instance-wide operations configuration (one row). Null fields fall back to

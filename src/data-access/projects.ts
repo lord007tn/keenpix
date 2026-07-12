@@ -199,11 +199,23 @@ export async function updateProject(
 // Delete a project (org-scoped). Request logs cascade via their FK; the hourly
 // rollups (keyed by orgId, no FK) are retained so billing usage stays accurate.
 // Returns whether a row was actually deleted.
-export async function deleteProject(projectId: string, orgId: string) {
-  const result = await prisma.project.deleteMany({
-    where: { id: projectId, orgId },
+export function deleteProject(projectId: string, orgId: string) {
+  return prisma.$transaction(async (tx) => {
+    const project = await tx.project.findFirst({
+      where: { id: projectId, orgId },
+      select: { id: true },
+    })
+    if (!project) {
+      return false
+    }
+    // Project-scoped keys cannot outlive their authorization target. Delete the
+    // Better Auth key rows first; activities and scopes cascade with them.
+    await tx.apiKey.deleteMany({
+      where: { scope: { is: { orgId, projectId } } },
+    })
+    await tx.project.delete({ where: { id: projectId } })
+    return true
   })
-  return result.count > 0
 }
 
 export interface ProjectSettingsPatch {
