@@ -88,6 +88,13 @@ secret. Point the sandbox endpoint at
 sandbox Polar server when its public hostname is `keenpix.com`; production uses
 `https://keenpix.com/api/auth/polar/webhooks` with production credentials.
 
+Coolify preview containers may not retain Compose service aliases. When that
+occurs, set preview-only `KEENPIX_POSTGRES_HOST` and
+`KEENPIX_CLICKHOUSE_HOST` to the corresponding `-pr-<id>` container names;
+override the existing `KEENPIX_CACHE_S3_ENDPOINT` and `SMTP_HOST` variables
+with the preview Maxio and Mailpit container names. Production leaves these
+unset and keeps the Compose service defaults.
+
 Optional resource caps:
 
 ```dotenv
