@@ -69,18 +69,21 @@ export const env = createEnv({
         requireVar('POLAR_TOKEN', value.POLAR_TOKEN, when)
         requireVar('POLAR_WEBHOOK_SECRET', value.POLAR_WEBHOOK_SECRET, when)
         requireVar('CRON_SECRET', value.CRON_SECRET, when)
-        // POLAR_SERVER defaults to "sandbox"; require it explicitly in cloud so a
-        // prod deploy can't silently run checkout + metering against sandbox.
+        // POLAR_SERVER defaults to "sandbox"; require it explicitly in cloud.
+        // The public keenpix.com deployment must use production, while a separate
+        // staging hostname may deliberately use the Polar sandbox.
         requireVar('POLAR_SERVER', value.POLAR_SERVER, when)
+        const appUrl = value.KEENPIX_APP_URL ?? value.BETTER_AUTH_URL
+        const appHostname = appUrl ? new URL(appUrl).hostname : undefined
         if (
-          value.NODE_ENV === 'production' &&
-          value.POLAR_SERVER === 'sandbox'
+          value.POLAR_SERVER === 'sandbox' &&
+          (appHostname === 'keenpix.com' || appHostname === 'www.keenpix.com')
         ) {
           ctx.addIssue({
             code: 'custom',
             path: ['POLAR_SERVER'],
             message:
-              'POLAR_SERVER must be "production" for a production cloud build (got "sandbox").',
+              'POLAR_SERVER must be "production" for the keenpix.com cloud deployment (got "sandbox"). Use a separate non-production hostname for Polar sandbox callbacks.',
           })
         }
       }

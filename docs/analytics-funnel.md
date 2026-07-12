@@ -31,9 +31,13 @@ database remain authoritative for subscriptions and usage.
 
 ## GTM and GA4 configuration
 
-1. Set the public `VITE_GTM_CONTAINER_ID` build variable to the production GTM
-   container ID. Keep OAuth secrets server-only.
-2. In GTM, add one GA4 Google tag for the production web data stream. Require
+The production container is `GTM-TFJ9TQDN`; its GA4 web stream measurement ID is
+`G-QWRHXK89P8` (property `545149627`). These identifiers are public configuration,
+not credentials.
+
+1. Set `VITE_GTM_CONTAINER_ID=GTM-TFJ9TQDN` at both build time and runtime. Keep
+   OAuth secrets server-only.
+2. In GTM, add one Google tag with tag ID `G-QWRHXK89P8`. Require
    `analytics_storage` consent and leave ad signals disabled.
 3. Create custom-event triggers for the events above. Mark `sign_up`,
    `project_created`, `first_image_served`, `begin_checkout`, and

@@ -92,6 +92,8 @@ services:
       - BETTER_AUTH_SECRET=${SERVICE_HEX_64_KEENPIX}
       - BETTER_AUTH_URL=${SERVICE_URL_APP}
       - KEENPIX_APP_URL=${SERVICE_URL_APP}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - VITE_GTM_CONTAINER_ID=${VITE_GTM_CONTAINER_ID:-}
       - KEENPIX_SUPER_ADMIN_EMAIL=${KEENPIX_SUPER_ADMIN_EMAIL:-admin@example.com}
       - KEENPIX_SUPER_ADMIN_PASSWORD=${SERVICE_PASSWORD_64_ADMIN}
@@ -116,6 +118,7 @@ services:
       - POLAR_TOKEN=${POLAR_TOKEN} # (required)
       - POLAR_SERVER=${POLAR_SERVER:-production}
       - POLAR_WEBHOOK_SECRET=${POLAR_WEBHOOK_SECRET} # (required)
+      - POLAR_SUCCESS_URL=${POLAR_SUCCESS_URL:-/app/dashboard}
       # Transactional email: pick ONE provider. From-domain must be a verified
       # sender for that provider. The app fails to boot if the selected
       # provider's required vars are missing.
@@ -124,6 +127,10 @@ services:
       - POSTMARK_API_KEY=${POSTMARK_API_KEY:-}
       - POSTMARK_FROM=${POSTMARK_FROM:-Keenpix <no-reply@keenpix.com>}
       - POSTMARK_MESSAGE_STREAM=${POSTMARK_MESSAGE_STREAM:-outbound}
+      # Optional Cloudflare edge analytics (zone-scoped Analytics:Read token).
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-}
+      - CLOUDFLARE_ZONE_ID=${CLOUDFLARE_ZONE_ID:-}
+      - CLOUDFLARE_HOST=${CLOUDFLARE_HOST:-}
       # resend:
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - RESEND_FROM=${RESEND_FROM:-Keenpix <no-reply@keenpix.com>}

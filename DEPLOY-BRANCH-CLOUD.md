@@ -28,12 +28,20 @@ domain to the service with the container port. This compose file uses
 Set these in Coolify before deploying:
 
 ```dotenv
+KEENPIX_APP_URL=https://keenpix.com
+BETTER_AUTH_URL=https://keenpix.com
+VITE_KEENPIX_PUBLIC_URL=https://keenpix.com
 KEENPIX_SUPER_ADMIN_EMAIL=you@example.com
 POLAR_TOKEN=polar_oat_...
 POLAR_WEBHOOK_SECRET=whsec_...
 POLAR_SERVER=production
-VITE_GTM_CONTAINER_ID=GTM-XXXXXXX
+VITE_GTM_CONTAINER_ID=GTM-TFJ9TQDN
+GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=...
 ```
+
+The three public URL variables must resolve to the HTTPS apex domain so Better
+Auth callbacks, generated links, and the browser build all agree on one origin.
 
 `VITE_GTM_CONTAINER_ID` is public configuration, not a credential. Mark it as
 available at both build time and runtime: Vite embeds it in the browser bundle,
@@ -41,9 +49,13 @@ while the runtime value keeps the deployment configuration explicit. A missing
 value leaves consent controls and first-party Web Vitals reporting active but
 does not load Google Tag Manager.
 
+For the production Google Web OAuth client, configure the authorized JavaScript
+origin `https://keenpix.com` and redirect URI
+`https://keenpix.com/api/auth/callback/google`. Keep the client secret server-only.
+
 `POLAR_TOKEN` and `POLAR_WEBHOOK_SECRET` should come from the Polar environment
 matching the public domain. Production deploys must use
-`POLAR_SERVER=production` (the app refuses sandbox in production builds). The
+`POLAR_SERVER=production` (the app refuses sandbox on `keenpix.com`). The
 app boots with generated Coolify values for Postgres, Better Auth, ClickHouse,
 Maxio, the super-admin password, and the cron secret.
 
@@ -59,6 +71,22 @@ POSTMARK_FROM=no-reply@keenpix.com   # domain must be verified in Postmark
 
 (Resend works too: `EMAIL_PROVIDER=resend` + `RESEND_API_KEY`/`RESEND_FROM`.)
 Staging can keep the default `EMAIL_PROVIDER=smtp` → Mailpit.
+
+Optional Cloudflare edge analytics (separate from DNS/TLS and R2) requires a
+zone-scoped token with **Zone → Analytics → Read**:
+
+```dotenv
+CLOUDFLARE_API_TOKEN=...
+CLOUDFLARE_ZONE_ID=...
+CLOUDFLARE_HOST=keenpix.com
+```
+
+For Polar sandbox verification, deploy a separate cloud staging hostname and
+set that resource to `POLAR_SERVER=sandbox` with its sandbox token and webhook
+secret. Point the sandbox endpoint at
+`https://<staging-host>/api/auth/polar/webhooks`. The application refuses a
+sandbox Polar server when its public hostname is `keenpix.com`; production uses
+`https://keenpix.com/api/auth/polar/webhooks` with production credentials.
 
 Optional resource caps:
 

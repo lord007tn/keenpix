@@ -97,6 +97,8 @@ services:
       BETTER_AUTH_SECRET: ${SERVICE_HEX_64_KEENPIX}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
       KEENPIX_APP_URL: ${KEENPIX_APP_URL:-http://localhost:3000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       VITE_KEENPIX_PUBLIC_URL: ${VITE_KEENPIX_PUBLIC_URL:-http://localhost:3000}
       VITE_GTM_CONTAINER_ID: ${VITE_GTM_CONTAINER_ID:-}
       KEENPIX_SUPER_ADMIN_EMAIL: ${KEENPIX_SUPER_ADMIN_EMAIL}
@@ -117,8 +119,9 @@ services:
       # force-closing. Keep ≤ stop_grace_period so slow transforms can complete.
       SERVER_SHUTDOWN_TIMEOUT: "${SERVER_SHUTDOWN_TIMEOUT:-25}"
       POLAR_TOKEN: ${POLAR_TOKEN}
-      POLAR_SERVER: production
+      POLAR_SERVER: ${POLAR_SERVER:-production}
       POLAR_WEBHOOK_SECRET: ${POLAR_WEBHOOK_SECRET}
+      POLAR_SUCCESS_URL: ${POLAR_SUCCESS_URL:-/app/dashboard}
       # Default is the bundled Mailpit sink (staging). PRODUCTION MUST OVERRIDE:
       # set EMAIL_PROVIDER=postmark (or resend) + its credentials in Coolify so
       # verification, invite, usage, and dunning emails reach real inboxes.
@@ -126,6 +129,9 @@ services:
       POSTMARK_API_KEY: ${POSTMARK_API_KEY}
       POSTMARK_FROM: ${POSTMARK_FROM}
       POSTMARK_MESSAGE_STREAM: ${POSTMARK_MESSAGE_STREAM:-outbound}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+      CLOUDFLARE_ZONE_ID: ${CLOUDFLARE_ZONE_ID:-}
+      CLOUDFLARE_HOST: ${CLOUDFLARE_HOST:-}
       RESEND_API_KEY: ${RESEND_API_KEY}
       RESEND_FROM: ${RESEND_FROM}
       SMTP_HOST: ${SMTP_HOST:-mailpit}
