@@ -41,28 +41,31 @@ export async function getPublicCloudflareSettings(): Promise<PublicCloudflareSet
   const db = await prisma.cloudflareSettings.findUnique({
     where: { id: DEFAULT_CLOUDFLARE_ID },
   })
-  if (db) {
-    let source: PublicCloudflareSettings['source'] = 'none'
-    if (db.enabled && db.apiToken && db.zoneId) {
-      source = 'database'
-    } else if (envCloudflareSettings()) {
-      source = 'environment'
-    }
+  if (db?.enabled && db.apiToken && db.zoneId) {
     return {
-      source,
-      enabled: db.enabled,
+      source: 'database',
+      enabled: true,
       zoneId: db.zoneId ?? '',
       host: db.host ?? '',
-      tokenSet: Boolean(db.apiToken),
+      tokenSet: true,
     }
   }
   const envSettings = envCloudflareSettings()
+  if (envSettings) {
+    return {
+      source: 'environment',
+      enabled: true,
+      zoneId: envSettings.zoneId,
+      host: envSettings.host ?? '',
+      tokenSet: true,
+    }
+  }
   return {
-    source: envSettings ? 'environment' : 'none',
-    enabled: Boolean(envSettings),
-    zoneId: envSettings?.zoneId ?? '',
-    host: envSettings?.host ?? '',
-    tokenSet: Boolean(envSettings?.apiToken),
+    source: 'none',
+    enabled: db?.enabled ?? false,
+    zoneId: db?.zoneId ?? '',
+    host: db?.host ?? '',
+    tokenSet: Boolean(db?.apiToken),
   }
 }
 

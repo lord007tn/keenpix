@@ -7,6 +7,8 @@ const CLOUD_KEYS = [
   'KEENPIX_MODE',
   'DATABASE_URL',
   'BETTER_AUTH_SECRET',
+  'BETTER_AUTH_URL',
+  'KEENPIX_APP_URL',
   'EMAIL_PROVIDER',
   'POSTMARK_API_KEY',
   'POSTMARK_FROM',
@@ -64,6 +66,26 @@ describe('cloud config env validation', () => {
     const env = await loadEnv(FULL_CLOUD_ENV)
     expect(env.KEENPIX_MODE).toBe('cloud')
     expect(env.EMAIL_PROVIDER).toBe('postmark')
+  })
+
+  it('accepts Polar sandbox on an isolated cloud staging hostname', async () => {
+    const env = await loadEnv({
+      ...FULL_CLOUD_ENV,
+      KEENPIX_APP_URL: 'https://staging.keenpix.example',
+      POLAR_SERVER: 'sandbox',
+    })
+    expect(env.POLAR_SERVER).toBe('sandbox')
+  })
+
+  it('rejects Polar sandbox on the production Keenpix hostname', async () => {
+    vi.spyOn(console, 'error').mockImplementation(silence)
+    await expect(
+      loadEnv({
+        ...FULL_CLOUD_ENV,
+        KEENPIX_APP_URL: 'https://keenpix.com',
+        POLAR_SERVER: 'sandbox',
+      }),
+    ).rejects.toThrow()
   })
 
   it('does not require cloud config in self-host mode', async () => {
