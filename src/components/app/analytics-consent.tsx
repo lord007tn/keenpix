@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { clientEnv } from '@/env/client'
 import {
   getAnalyticsConsent,
-  loadGoogleTagManager,
+  loadGoogleAnalytics,
   setAnalyticsConsent,
   trackEvent,
   trackFunnelMilestone,
@@ -21,14 +21,15 @@ function trackSocialSignup() {
 }
 
 export function AnalyticsConsent() {
-  const [available, setAvailable] = useState(
-    Boolean(clientEnv.VITE_GTM_CONTAINER_ID),
+  const providerAvailable = Boolean(
+    clientEnv.VITE_GA_MEASUREMENT_ID || clientEnv.VITE_GTM_CONTAINER_ID,
   )
+  const [available, setAvailable] = useState(providerAvailable)
   const [open, setOpen] = useState(false)
   const [choiceMade, setChoiceMade] = useState(false)
 
   useEffect(() => {
-    if (!clientEnv.VITE_GTM_CONTAINER_ID || navigator.doNotTrack === '1') {
+    if (!providerAvailable || navigator.doNotTrack === '1') {
       setAvailable(false)
       return
     }
@@ -36,13 +37,13 @@ export function AnalyticsConsent() {
     setChoiceMade(consent !== null)
     setOpen(consent === null)
     if (consent === 'granted') {
-      loadGoogleTagManager()
+      loadGoogleAnalytics()
       trackSocialSignup()
     }
-  }, [])
+  }, [providerAvailable])
 
   useEffect(() => {
-    if (!clientEnv.VITE_GTM_CONTAINER_ID) {
+    if (!providerAvailable) {
       return
     }
     const onClick = (event: MouseEvent) => {
@@ -65,7 +66,7 @@ export function AnalyticsConsent() {
     document.addEventListener('click', onClick, { capture: true })
     return () =>
       document.removeEventListener('click', onClick, { capture: true })
-  }, [])
+  }, [providerAvailable])
 
   if (!available) {
     return null

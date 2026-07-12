@@ -32,6 +32,15 @@ function pushGoogleConsent(
   })
 }
 
+function pushGoogleCommand(...command: unknown[]) {
+  window.dataLayer ??= []
+  function gtag(..._command: unknown[]) {
+    // biome-ignore lint/complexity/noArguments: gtag consumes its Arguments object.
+    window.dataLayer?.push(arguments)
+  }
+  gtag(...command)
+}
+
 export function getAnalyticsConsent() {
   if (typeof window === 'undefined' || navigator.doNotTrack === '1') {
     return 'denied' as const
@@ -80,11 +89,39 @@ export function setAnalyticsConsent(consent: AnalyticsConsent) {
   )
 
   if (effectiveConsent === 'granted') {
-    loadGoogleTagManager()
+    loadGoogleAnalytics()
   }
 }
 
+export function loadGoogleAnalytics() {
+  const measurementId = clientEnv.VITE_GA_MEASUREMENT_ID
+  if (!measurementId) {
+    loadGoogleTagManager()
+    return
+  }
+  if (
+    getAnalyticsConsent() !== 'granted' ||
+    document.querySelector(`script[data-keenpix-ga="${measurementId}"]`)
+  ) {
+    return
+  }
+
+  pushGoogleConsent('default', 'denied')
+  pushGoogleConsent('update', 'granted')
+  const script = document.createElement('script')
+  script.async = true
+  script.dataset.keenpixGa = measurementId
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`
+  document.head.append(script)
+  pushGoogleCommand('js', new Date())
+  pushGoogleCommand('config', measurementId)
+  trackAcquisitionContext()
+}
+
 export function loadGoogleTagManager() {
+  if (clientEnv.VITE_GA_MEASUREMENT_ID) {
+    return
+  }
   const containerId = clientEnv.VITE_GTM_CONTAINER_ID
   if (
     !containerId ||
@@ -139,7 +176,11 @@ export function trackEvent(
     return
   }
   window.dataLayer ??= []
-  window.dataLayer.push({ event, ...parameters })
+  if (clientEnv.VITE_GA_MEASUREMENT_ID) {
+    pushGoogleCommand('event', event, parameters)
+  } else {
+    window.dataLayer.push({ event, ...parameters })
+  }
 }
 
 export function trackFunnelMilestone(

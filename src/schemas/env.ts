@@ -132,4 +132,10 @@ export const clientEnvSchema = {
     .string()
     .regex(/^GTM-[A-Z0-9]+$/)
     .optional(),
+  // A direct GA4 measurement ID is the preferred cloud configuration when GTM
+  // cannot publish a usable Google tag. It follows the same consent gate as GTM.
+  VITE_GA_MEASUREMENT_ID: z
+    .string()
+    .regex(/^G-[A-Z0-9]+$/)
+    .optional(),
 }
