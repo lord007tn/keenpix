@@ -27,16 +27,3 @@ export async function createApiKeyActivity(input: NewApiKeyActivity) {
     },
   })
 }
-
-export async function disableInternalApiKey(id: string, configId: string) {
-  const result = await prisma.apiKey.updateMany({
-    where: { id, configId },
-    data: { enabled: false },
-  })
-
-  if (result.count === 0) {
-    throw new Error('API key not found')
-  }
-
-  return { ok: true }
-}

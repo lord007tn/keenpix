@@ -1,47 +1,15 @@
 import dayjs from 'dayjs'
 import { prisma } from '@/db'
 
-// Org-scoped reads for the tenant API-keys surface. Internal keys carry their
-// owning org in metadata.orgId (stamped at creation); we filter to the caller's
-// active org so a tenant only ever sees its own keys.
+// Org-scoped reads for the tenant API-keys surface. ApiKeyScope is the
+// authoritative relational tenant boundary; metadata is retained only for
+// Better Auth compatibility and is never trusted for authorization.
 const INTERNAL_CONFIG = 'internal'
-
-function parseJsonish(value: unknown): unknown {
-  let current = value
-  for (let i = 0; i < 2; i++) {
-    if (typeof current !== 'string') {
-      break
-    }
-    try {
-      current = JSON.parse(current)
-    } catch {
-      return null
-    }
-  }
-  return current
-}
-
-function metaFields(raw: unknown) {
-  const meta = parseJsonish(raw)
-  if (!(meta && typeof meta === 'object' && !Array.isArray(meta))) {
-    return { orgId: null as string | null, projectId: null as string | null }
-  }
-  const orgId = Reflect.get(meta, 'orgId')
-  const projectId = Reflect.get(meta, 'projectId')
-  return {
-    orgId: typeof orgId === 'string' && orgId.trim() ? orgId.trim() : null,
-    projectId:
-      typeof projectId === 'string' && projectId.trim()
-        ? projectId.trim()
-        : null,
-  }
-}
 
 export async function listOrgApiKeys(orgId: string) {
   const rows = await prisma.apiKey.findMany({
-    where: { configId: INTERNAL_CONFIG },
+    where: { configId: INTERNAL_CONFIG, scope: { is: { orgId } } },
     orderBy: { createdAt: 'desc' },
-    take: 200,
     select: {
       id: true,
       name: true,
@@ -52,42 +20,57 @@ export async function listOrgApiKeys(orgId: string) {
       lastRequest: true,
       expiresAt: true,
       createdAt: true,
-      metadata: true,
+      scope: { select: { projectId: true } },
     },
   })
-  return rows
-    .map((apiKey) => ({ apiKey, meta: metaFields(apiKey.metadata) }))
-    .filter(({ meta }) => meta.orgId === orgId)
-    .map(({ apiKey, meta }) => ({
-      id: apiKey.id,
-      name: apiKey.name,
-      start: apiKey.start,
-      prefix: apiKey.prefix,
-      enabled: apiKey.enabled,
-      requestCount: apiKey.requestCount,
-      lastRequest: apiKey.lastRequest,
-      expiresAt: apiKey.expiresAt,
-      createdAt: apiKey.createdAt,
-      projectId: meta.projectId,
-    }))
+  return rows.map((apiKey) => ({
+    id: apiKey.id,
+    name: apiKey.name,
+    start: apiKey.start,
+    prefix: apiKey.prefix,
+    enabled: apiKey.enabled,
+    requestCount: apiKey.requestCount,
+    lastRequest: apiKey.lastRequest,
+    expiresAt: apiKey.expiresAt,
+    createdAt: apiKey.createdAt,
+    projectId: apiKey.scope?.projectId ?? null,
+  }))
 }
 
-export async function getApiKeyOrgId(id: string) {
-  const row = await prisma.apiKey.findUnique({
-    where: { id },
-    select: { metadata: true },
+export function createApiKeyScope(input: {
+  apiKeyId: string
+  orgId: string
+  projectId?: string
+}) {
+  return prisma.apiKeyScope.create({
+    data: {
+      apiKeyId: input.apiKeyId,
+      orgId: input.orgId,
+      projectId: input.projectId,
+    },
   })
-  return row ? metaFields(row.metadata).orgId : null
 }
 
-async function orgApiKeyIds(orgId: string) {
-  const rows = await prisma.apiKey.findMany({
-    where: { configId: INTERNAL_CONFIG },
-    select: { id: true, metadata: true },
+export function getApiKeyScope(apiKeyId: string) {
+  return prisma.apiKeyScope.findUnique({
+    where: { apiKeyId },
+    select: { orgId: true, projectId: true },
   })
-  return rows
-    .filter((row) => metaFields(row.metadata).orgId === orgId)
-    .map((row) => row.id)
+}
+
+export async function disableOrgApiKey(id: string, orgId: string) {
+  const result = await prisma.apiKey.updateMany({
+    where: {
+      id,
+      configId: INTERNAL_CONFIG,
+      scope: { is: { orgId } },
+    },
+    data: { enabled: false },
+  })
+  if (result.count === 0) {
+    throw new Error('API key not found')
+  }
+  return { ok: true }
 }
 
 export async function listOrgApiKeyActivities(
@@ -95,11 +78,7 @@ export async function listOrgApiKeyActivities(
   skip = 0,
   take = 10,
 ) {
-  const ids = await orgApiKeyIds(orgId)
-  if (ids.length === 0) {
-    return { activities: [], total: 0 }
-  }
-  const where = { apiKeyId: { in: ids } }
+  const where = { apiKey: { scope: { is: { orgId } } } }
   const [rows, total] = await Promise.all([
     prisma.apiKeyActivity.findMany({
       where,

@@ -1,7 +1,8 @@
 import { getProject, listProjects } from '@/actions/projects'
-import { disableInternalApiKey } from '@/data-access/admin/api-keys'
 import {
-  getApiKeyOrgId,
+  createApiKeyScope,
+  disableOrgApiKey as disableOrgApiKeyInDb,
+  getApiKeyScope,
   listOrgApiKeyActivities,
   listOrgApiKeys,
 } from '@/data-access/api-keys'
@@ -38,26 +39,43 @@ export async function createOrgApiKey(input: {
       throw new Error('Project not found in this organization')
     }
   }
-  return auth.api.createApiKey({
+  const created = await auth.api.createApiKey({
     body: {
       configId: INTERNAL_CONFIG,
       name: input.name,
       userId: input.userId,
+      organizationId: input.orgId,
       permissions: PERMISSIONS,
       metadata: input.projectId
         ? { orgId: input.orgId, projectId: input.projectId }
         : { orgId: input.orgId },
     },
   })
+  try {
+    await createApiKeyScope({
+      apiKeyId: created.id,
+      orgId: input.orgId,
+      projectId: input.projectId,
+    })
+  } catch (error) {
+    // Never return a key without its relational authorization scope. Disabling
+    // the orphan makes a partial failure fail closed even before cleanup.
+    await auth.api
+      .updateApiKey({
+        body: { keyId: created.id, enabled: false, userId: input.userId },
+      })
+      .catch(() => undefined)
+    throw error
+  }
+  return created
 }
 
-export async function disableOrgApiKey(id: string, orgId: string) {
-  // Ownership check: only disable a key that belongs to the caller's org.
-  const keyOrg = await getApiKeyOrgId(id)
-  if (keyOrg !== orgId) {
-    throw new Error('API key not found')
-  }
-  return disableInternalApiKey(id, INTERNAL_CONFIG)
+export function disableOrgApiKey(id: string, orgId: string) {
+  return disableOrgApiKeyInDb(id, orgId)
+}
+
+export function getOrgApiKeyAccess(apiKeyId: string) {
+  return getApiKeyScope(apiKeyId)
 }
 
 export function listOrgApiKeyActivitiesPage(orgId: string, page: number) {

@@ -7,7 +7,9 @@ import {
   getSessionFromCtx,
 } from 'better-auth/api'
 import { admin, organization } from 'better-auth/plugins'
+import { createAccessControl } from 'better-auth/plugins/access'
 import { adminAc, userAc } from 'better-auth/plugins/admin/access'
+import { defaultStatements } from 'better-auth/plugins/organization/access'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { prisma } from '@/db'
 import { env } from '@/env/server'
@@ -38,6 +40,40 @@ const isProd = env.NODE_ENV === 'production'
 // in any of these is still billable, so its owner can't delete their account and
 // orphan it (see the deleteUser.beforeDelete guard).
 const LIVE_SUBSCRIPTION = new Set(['active', 'trialing', 'past_due', 'unpaid'])
+
+// Better Auth's API-key plugin can make organizations the owning reference, but
+// its authorization resource is intentionally opt-in. Extend the standard org
+// roles so owners/admins can manage keys while members remain read-only tenants.
+const organizationAccess = createAccessControl({
+  ...defaultStatements,
+  apiKey: ['create', 'read', 'update', 'delete'],
+})
+const organizationRoles = {
+  owner: organizationAccess.newRole({
+    organization: ['update', 'delete'],
+    member: ['create', 'update', 'delete'],
+    invitation: ['create', 'cancel'],
+    team: ['create', 'update', 'delete'],
+    ac: ['create', 'read', 'update', 'delete'],
+    apiKey: ['create', 'read', 'update', 'delete'],
+  }),
+  admin: organizationAccess.newRole({
+    organization: ['update'],
+    member: ['create', 'update', 'delete'],
+    invitation: ['create', 'cancel'],
+    team: ['create', 'update', 'delete'],
+    ac: ['create', 'read', 'update', 'delete'],
+    apiKey: ['create', 'read', 'update', 'delete'],
+  }),
+  member: organizationAccess.newRole({
+    organization: [],
+    member: [],
+    invitation: [],
+    team: [],
+    ac: ['read'],
+    apiKey: [],
+  }),
+}
 
 /** Reject placeholder/known-weak secrets (normalized) so the repo's own dev
  * value — and any human-written placeholder, including the one shipped in
@@ -303,6 +339,7 @@ export const auth = betterAuth({
   plugins: [
     apiKey({
       configId: 'internal',
+      references: 'organization',
       apiKeyHeaders: ['x-keenpix-api-key'],
       customAPIKeyGetter: (ctx) => {
         const authorization = ctx.headers?.get('authorization')?.trim()
@@ -346,6 +383,8 @@ export const auth = betterAuth({
     // the admin surface (M5), not self-serve, so only cloud lets users create.
     // Org-member invitations (cloud team management) email a link to /accept-invite.
     organization({
+      ac: organizationAccess,
+      roles: organizationRoles,
       allowUserToCreateOrganization: isCloud(),
       invitationExpiresIn: 60 * 60 * 48,
       sendInvitationEmail: (data) => {
