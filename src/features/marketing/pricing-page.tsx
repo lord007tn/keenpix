@@ -52,7 +52,7 @@ export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'What exactly am I billed for?',
     answer:
-      'One meter: gigabytes delivered to your users. Transformations, responsive variants, and modern-format conversion are unlimited and free on every plan. There are no per-image, per-transform, per-request, or storage charges — Keenpix has no storage; it optimizes and delivers from origins you already have.',
+      'One meter: optimized response bytes returned by the Keenpix application. Transformations, responsive variants, and modern-format conversion are unlimited on every plan. There are no per-image, per-transform, per-request, or storage charges — Keenpix has no asset storage; it returns optimized images from origins you already have. If an upstream Cloudflare cache serves an edge HIT, that request never reaches Keenpix and is not in the billing meter. Optional Cloudflare analytics reports edge traffic separately.',
   },
   {
     question: 'How does the free trial work?',
@@ -92,7 +92,7 @@ const MATRIX: Array<{
   values: [string, string, string, string] // self-host, basic, pro, business
 }> = [
   {
-    feature: 'Included delivery / month',
+    feature: 'Included Keenpix response bytes / month',
     values: [
       'Unlimited (your infra)',
       gb(PLANS.basic.includedBandwidthBytes),
@@ -176,7 +176,7 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
               Pricing
             </span>
             <h1 className="mt-2 text-balance font-semibold text-4xl tracking-tight sm:text-5xl">
-              One honest meter: bandwidth delivered.
+              One meter: bytes returned by Keenpix.
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-balance text-lg text-muted-foreground leading-relaxed">
               Unlimited transforms on every plan. A single published overage

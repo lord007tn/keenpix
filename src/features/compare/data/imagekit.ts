@@ -6,11 +6,11 @@ export const imagekitComparison = {
   title: 'ImageKit Alternative: Keenpix vs ImageKit (2026)',
   metaDescription:
     'Keenpix vs ImageKit, July 2026: same $9 entry but 100 GB vs 40 GB, $0.08 vs $0.50/GB overage, AGPL self-hosting — and where ImageKit still wins.',
-  heroHeadline: 'Same $9. 2.5x the bandwidth. 6x cheaper overage.',
+  heroHeadline: 'Keenpix vs ImageKit: a bandwidth-first alternative',
   heroSubhead:
-    'ImageKit bills the honest way — on bandwidth — and we respect that. Keenpix just charges a lot less per GB, caps your spend by default instead of hard-stopping your images, and lets you self-host the entire engine under AGPL.',
+    'ImageKit and Keenpix both publish bandwidth-based pricing. Keenpix bundles more bandwidth at its entry tier and the upcoming v0.2.0 code is AGPL-3.0, while ImageKit offers a much broader media platform.',
   verdict:
-    "If you want an all-in-one media platform — upload widgets, a media library your marketing team can browse, video streaming, and a genuinely free tier under 20 GB/month — ImageKit is the better product, full stop. Keenpix deliberately does none of that. Pick Keenpix if your images already live on origins you control (S3, R2, your own server) and what you actually need is fast optimization and delivery with predictable costs: the same $9 entry buys 100 GB instead of 40 GB, overage runs $0.05–0.08/GB instead of $0.45–0.50/GB, a spend cap is on by default so a traffic spike pauses delivery instead of inflating your bill, and the AGPL engine means you can walk away to your own Docker host any time. Keenpix is also younger and solo-built — weigh that honestly against ImageKit's maturity.",
+    "If you want an all-in-one media platform — upload widgets, a media library your marketing team can browse, video streaming, and a free tier under 20 GB/month — ImageKit is the better product. Keenpix deliberately does none of that. Pick Keenpix if your images already live on origins you control and you need optimization and delivery with predictable costs: the same $9 entry buys 100 GB instead of 40 GB, published overage runs $0.05–0.08/GB, and a spend cap is on by default. The upcoming v0.2.0 code also provides an AGPL-3.0 self-host path. Keenpix is younger and solo-built — weigh that honestly against ImageKit's maturity.",
   pricingRows: [
     {
       scenario: '20 GB delivered / month',
@@ -42,7 +42,7 @@ export const imagekitComparison = {
     {
       feature: 'Entry paid plan',
       competitor: '$9/mo · 40 GB bandwidth',
-      keenpix: '$9/mo · 100 GB delivered',
+      keenpix: '$9/mo · 100 GB returned by Keenpix',
     },
     {
       feature: 'Overage rate',
@@ -72,12 +72,12 @@ export const imagekitComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No',
-      keenpix: 'Yes — AGPL-3.0, one-command Docker/Coolify',
+      keenpix: 'Upcoming v0.2.0: AGPL-3.0 with Docker/Coolify files',
     },
     {
       feature: 'Open source',
       competitor: 'No',
-      keenpix: 'Yes — AGPL, no CLA, no rug-pull',
+      keenpix: 'v0.2.0 source: AGPL-3.0; prior releases keep their licenses',
     },
     {
       feature: 'Storage / DAM',
@@ -115,7 +115,7 @@ export const imagekitComparison = {
     {
       title: '2.5x the bandwidth for the same $9',
       detail:
-        'ImageKit Lite and Keenpix Basic both cost $9/month, but Lite includes 40 GB while Basic includes 100 GB delivered. If your site pushes more than 40 GB of images a month, the identical sticker price stops being identical very quickly. Annual billing adds two free months on top.',
+        'ImageKit Lite and Keenpix Basic both cost $9/month, but Lite includes 40 GB while Basic includes 100 GB of responses returned by Keenpix. Compare the exact meter boundaries and your cache behavior; annual Keenpix billing costs ten monthly payments.',
     },
     {
       title: 'Overage at $0.08/GB, not $0.50/GB',
@@ -125,17 +125,17 @@ export const imagekitComparison = {
     {
       title: 'A cap you set instead of a meter you fear',
       detail:
-        "ImageKit's free tier silently stops serving images mid-month when you cross 20 GB — your visitors see broken pages before you see a warning. Keenpix ships a hard spend cap, on by default at roughly 2x your plan price: delivery pauses at a number you chose, and payment hiccups never instantly cut you off.",
+        'ImageKit documents a 20 GB free-plan delivery allowance and an account-level usage limit; confirm the current enforcement and notification behavior for your account. Keenpix ships a hard spend cap, on by default at roughly 2x your plan price, so delivery pauses at a number you chose.',
     },
     {
       title: 'One meter, no storage bill',
       detail:
-        'Keenpix transforms and delivers straight from the origins you already run — S3, R2, your own server — so there is nothing to upload and no storage line item. You pay for delivered bandwidth, period. That also means no vendor holds your master images hostage.',
+        'Keenpix transforms from origins you already run — S3, R2, or your own server — so there is nothing to upload and no asset-storage line item. Billing meters optimized response bytes returned by Keenpix; upstream CDN edge hits do not reach that meter.',
     },
     {
       title: 'Self-hosting is the exit ramp',
       detail:
-        'The exact engine behind keenpix.com is AGPL-3.0 and installs with one Docker or Coolify command. If the managed cloud ever stops making sense, you move to your own hardware and pay nothing — a guarantee no closed platform, ImageKit included, can offer.',
+        'The v0.2.0 cloud code is licensed AGPL-3.0 and includes Docker and Coolify deployment files. The latest published v0.1.11 release remains Apache-2.0 until v0.2.0 is tagged. Moving in-house avoids a Keenpix license fee but transfers infrastructure, updates, monitoring, and routing to you.',
     },
   ],
   whenCompetitorWins: [
@@ -143,7 +143,7 @@ export const imagekitComparison = {
     'You need video. ImageKit ships video transformation and streaming; Keenpix is images only.',
     "You stay under 20 GB/month and want genuinely free managed hosting. ImageKit's free tier costs $0 forever; Keenpix cloud starts at $9 after a 14-day trial (self-hosting is the free option).",
     'You need a custom delivery domain today. ImageKit offers it on paid plans; Keenpix does not yet.',
-    'You want a mature product with a full team behind it. ImageKit has years of production polish; Keenpix is a young, solo-founder product (though it serves every image on joodlab.com in production).',
+    'You want a mature product with a full team, established support operations, and a broader media platform; Keenpix is a young, solo-founder product.',
   ],
   migrationSteps: [
     'Create a Keenpix project and allowlist your origin hosts (the S3 bucket, R2 bucket, or server your images live on). There are no public API keys to embed or rotate — the allowlist is the security boundary.',
@@ -152,7 +152,7 @@ export const imagekitComparison = {
     'Swap your image helper or component to emit Keenpix URLs behind a flag, and run both services side by side during the 14-day trial. The analytics dashboard shows output sizes, format mix, and cache hit rate to compare against your ImageKit bill.',
     'Keep (or add) your CDN in front — Keenpix is designed to sit behind Cloudflare or any edge cache, so repeat hits never touch the meter.',
     'Set your spend cap (it defaults to ~2x plan price) and, if your transforms should not be publicly enumerable, enable HMAC signed URLs.',
-    'After a week of clean analytics, remove the ImageKit URLs — or take the AGPL engine and self-host if the numbers say the $0 route wins.',
+    'After a week of clean analytics, remove the ImageKit URLs, or self-host a released Keenpix version if its measured operational cost and responsibilities fit your team.',
   ],
   faq: [
     {
@@ -165,7 +165,7 @@ export const imagekitComparison = {
     },
     {
       q: 'Can Keenpix handle video?',
-      a: 'No. Keenpix is images only — resize, crop, AVIF/WebP negotiation, the full IPX modifier set. If video is core to your product, keep ImageKit or a dedicated video service alongside.',
+      a: 'No. Keenpix is images only, with documented resize, crop, quality, format negotiation, and image modifiers. If video is core to your product, keep ImageKit or a dedicated video service alongside.',
     },
     {
       q: 'What happens when I exceed my bandwidth quota?',
@@ -173,7 +173,7 @@ export const imagekitComparison = {
     },
     {
       q: 'Can I self-host Keenpix?',
-      a: 'Yes. The cloud release publishes the image engine under AGPL-3.0 and includes Docker/Coolify deployment files. Self-hosting has no Keenpix license fee, but you own infrastructure, updates, monitoring, and routing. The transform URL grammar can remain consistent when you control the hostname and migration path.',
+      a: 'The upcoming v0.2.0 code is AGPL-3.0 and includes Docker/Coolify deployment files; the latest published v0.1.11 remains Apache-2.0 until v0.2.0 is tagged. Self-hosting has no Keenpix license fee, but you own infrastructure, updates, monitoring, and routing.',
     },
     {
       q: 'Do I have to re-upload my images to migrate?',
@@ -189,4 +189,7 @@ export const imagekitComparison = {
     { label: 'Keenpix pricing', url: '/pricing' },
   ],
   pricingAsOf: 'July 2026',
+  reviewer: 'Raed Bahri, Keenpix founder and maintainer',
+  verifiedAt: '2026-07-12',
+  nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

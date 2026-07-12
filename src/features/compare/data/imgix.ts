@@ -6,11 +6,11 @@ export const imgixComparison = {
   title: 'imgix Alternative: Keenpix vs imgix (2026)',
   metaDescription:
     "Compare Keenpix and imgix after imgix's 2025 credit switch: one bandwidth meter, published rates, an AGPL self-host option, and a URL param migration map.",
-  heroHeadline: 'The imgix alternative with one published meter',
+  heroHeadline: 'Keenpix vs imgix: a predictable image CDN alternative',
   heroSubhead:
-    "Keenpix bills delivered bandwidth only — no credits, no management meter, no sales call to learn what renewal costs. It's the same AGPL engine you can self-host free, or managed from $9/mo.",
+    'Keenpix bills optimized response bytes returned by the application — no credits or management meter, and upstream CDN edge hits do not reach the meter. The upcoming v0.2.0 code is AGPL-3.0 and can be self-hosted without a Keenpix license fee, or used as a managed service from $9/month.',
   verdict:
-    "imgix is still the deepest rendering API in the business — if you lean on face-aware cropping, text overlays, video, or its long tail of advanced parameters, Keenpix won't replace that today, and a mature vendor with enterprise support may matter more to you than price. But if your workload is what most imgix workloads actually are — resize, crop, quality, and modern-format delivery — the calculus changed in August 2025 when imgix moved everyone to credits: delivery and cached-storage management now draw from one pool, self-serve pricing stops at $300/mo, and anything above that is a sales conversation. Keenpix charges for delivered bandwidth and nothing else, publishes every rate including overage, ships analytics on every tier, and is open source under AGPL-3.0 so you always have a self-host exit. For a straightforward transform-and-deliver pipeline, Keenpix at $9–29/mo does the same job for a fraction of the cost — and you can verify that claim on your own traffic during the trial.",
+    "imgix has a broader rendering API — if you lean on face-aware cropping, text overlays, video, or its long tail of advanced parameters, Keenpix won't replace that today, and a mature vendor with enterprise support may matter more to you than price. imgix's August 2025 credit model draws delivery and cached-storage management from one pool, its published self-serve plans stop at $300/month, and larger requirements need a quote. Keenpix charges for application response bytes, publishes self-serve overage rates, and includes analytics on every tier. For core resize, crop, quality, and modern-format delivery, compare both services on your own traffic during the trial; do not assume feature or output parity.",
   pricingRows: [
     {
       scenario: '100 GB delivered / month',
@@ -35,8 +35,7 @@ export const imgixComparison = {
     },
     {
       scenario: 'Overage beyond plan',
-      competitor:
-        'Not published — contact sales; mid-cycle blocking reported by third parties',
+      competitor: 'Not published — contact imgix for current enterprise terms',
       keenpix:
         '$0.05–0.08/GB, published; your spend cap pauses delivery instead',
     },
@@ -60,7 +59,7 @@ export const imgixComparison = {
     {
       feature: 'Entry plan',
       competitor: '$25/mo · 100 credits',
-      keenpix: '$9/mo · 100 GB delivered',
+      keenpix: '$9/mo · 100 GB returned by Keenpix',
     },
     {
       feature: 'Transformations',
@@ -70,7 +69,7 @@ export const imgixComparison = {
     {
       feature: 'Rendering API depth',
       competitor: 'Best-in-class, very deep',
-      keenpix: 'Full IPX-parity modifier set',
+      keenpix: 'Documented core resize, crop, quality, and format modifiers',
     },
     {
       feature: 'Auto AVIF/WebP',
@@ -85,7 +84,7 @@ export const imgixComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No',
-      keenpix: 'Yes — AGPL-3.0, one-command Docker',
+      keenpix: 'Upcoming v0.2.0: AGPL-3.0 with Docker deployment files',
     },
     {
       feature: 'Signed URLs',
@@ -109,7 +108,7 @@ export const imgixComparison = {
     },
     {
       feature: 'Overage behavior',
-      competitor: 'Mid-cycle blocking reported (third-party)',
+      competitor: 'Confirm current credit-limit handling with imgix',
       keenpix: 'Customer-set spend cap, on by default',
     },
     {
@@ -122,22 +121,22 @@ export const imgixComparison = {
     {
       title: 'One meter you can actually predict',
       detail:
-        "imgix's August 2025 credit model bills delivery at 1 credit/GB and managed cached storage at 2 credits per GB per month, from one pooled balance. Large catalogs pay twice: once to deliver, again to keep originals under management. Keenpix has exactly one number on the invoice — gigabytes delivered — so your bill tracks your traffic and nothing else.",
+        "imgix's August 2025 credit model bills delivery at 1 credit/GB and managed cached storage at 2 credits per GB per month, from one pooled balance. Keenpix has one billing meter: optimized response bytes returned by the application. An upstream CDN edge hit does not reach that meter.",
     },
     {
       title: 'Published pricing, no renewal roulette',
       detail:
-        "Keenpix's rates, including overage ($0.05–0.08/GB depending on plan), are on the pricing page for every tier. imgix's self-serve pricing stops at $300/mo, and third-party writeups have reported renewal increases of roughly 5x — we can't verify those accounts (one widely cited source is itself a competing vendor), but the fact that you can't check the sticker price yourself is the underlying problem.",
+        'Keenpix publishes rates and overage ($0.05–0.08/GB depending on plan) for every self-serve tier. imgix publishes self-serve plans through Growth at $300/month; larger requirements need a current quote. Compare a written imgix quote with your measured workload rather than relying on third-party anecdotes.',
     },
     {
       title: 'A spend cap instead of a blocked account',
       detail:
-        'Third parties have reported imgix accounts being blocked mid-cycle when credits run out. Keenpix ships a hard overage cap that you control, on by default at roughly 2x your plan price: hit it and delivery pauses — no surprise bill, no ambiguity. Payment hiccups get a dunning grace period rather than an instant cutoff.',
+        'imgix publishes credit allowances, but teams should confirm current overage and enforcement behavior directly for their plan. Keenpix ships a hard overage cap that you control, on by default at roughly 2x your plan price; delivery pauses when that customer-set limit is reached.',
     },
     {
-      title: 'An AGPL self-host exit, forever',
+      title: 'An AGPL self-host option in v0.2.0',
       detail:
-        'The cloud release publishes its image engine under AGPL-3.0 and includes Docker/Coolify deployment files. If pricing, policy, or compliance stops working for you, you can operate that version in-house. You still own infrastructure and routing; the URL grammar can remain consistent when you control the hostname. imgix is managed-only.',
+        'The upcoming v0.2.0 release is AGPL-3.0 and includes Docker/Coolify deployment files; the latest published v0.1.11 remains Apache-2.0 until v0.2.0 is tagged. You can operate a released version in-house, while owning infrastructure and routing. imgix is managed-only.',
     },
     {
       title: 'Analytics on every plan, not a premium add-on',
@@ -158,7 +157,7 @@ export const imgixComparison = {
     'Rewrite the URL shape: https://yoursub.imgix.net/hero.jpg?w=800&fm=avif becomes /img/https://origin.example.com/hero.jpg?project=yourproject&w=800&fmt=avif. You can usually drop fm entirely — Keenpix negotiates AVIF/WebP automatically from the Accept header.',
     'Update your image URL helper or framework <Image> loader. Most codebases build imgix URLs in one function, so this is typically a single-file change.',
     "Put Keenpix behind your existing CDN (Cloudflare or similar — it's designed for that) and run both services side by side on a slice of traffic, diffing output with the live request logs.",
-    'Confirm your overage spend cap (on by default at about 2x plan price) and watch cache hit rate and delivered bandwidth in the dashboard for a week.',
+    'Confirm your overage spend cap (on by default at about 2x plan price) and watch cache hit rate and application response bytes in the dashboard for a week.',
     'Cut the remaining traffic over and cancel imgix before the next credit-cycle renewal.',
   ],
   faq: [
@@ -171,8 +170,8 @@ export const imgixComparison = {
       a: 'imgix moved all plans to a credit model: Starter $25/mo for 100 credits, Basic $75/mo for 375, Growth $300/mo for 1,875. Delivery costs 1 credit per GB and management costs 2 credits per GB per month of cached storage, from one pooled balance. Pricing above Growth is not published.',
     },
     {
-      q: 'Do imgix renewals really increase 5x?',
-      a: "We can't verify that. Third-party writeups have reported renewal increases around 5x and accounts being blocked mid-cycle when credits run out — but at least one widely cited source is itself a competing service, so treat these as reports, not established fact, and confirm your own renewal terms with imgix.",
+      q: 'How should I compare imgix enterprise pricing?',
+      a: 'Request a current written quote from imgix and model it against your own delivery and managed-source usage. Keenpix does not use unverified third-party renewal anecdotes as pricing evidence.',
     },
     {
       q: 'How does Keenpix billing work?',
@@ -180,11 +179,11 @@ export const imgixComparison = {
     },
     {
       q: 'Can I self-host Keenpix instead of paying for cloud?',
-      a: "Yes. The engine is open source under AGPL-3.0 with a one-command Docker or Coolify install, and it's the same code the managed cloud runs. Self-hosting is free forever — there's no open-core split and no CLA.",
+      a: 'The v0.2.0 cloud code is licensed AGPL-3.0 and includes Docker and Coolify deployment files. The latest published v0.1.11 release remains Apache-2.0 until v0.2.0 is tagged. Self-hosting has no Keenpix license fee, but you operate the infrastructure.',
     },
     {
       q: 'What does Keenpix not do?',
-      a: "No video, no storage or DAM (it transforms and delivers from origins you already have), and custom domains aren't available yet. It's a young product from a solo founder — though it serves every image on joodlab.com in production, and the AGPL license means the engine can't be taken away from you.",
+      a: "No video, no storage or DAM (it transforms and delivers from origins you already have), and custom domains aren't available yet. It is also a young product from a solo founder, so buyers should weigh vendor maturity and support needs.",
     },
   ],
   sources: [
@@ -197,4 +196,7 @@ export const imgixComparison = {
     { label: 'Keenpix pricing', url: '/pricing' },
   ],
   pricingAsOf: 'July 2026',
+  reviewer: 'Raed Bahri, Keenpix founder and maintainer',
+  verifiedAt: '2026-07-12',
+  nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

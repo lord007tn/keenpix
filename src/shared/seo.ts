@@ -35,6 +35,7 @@ export function seo({
   description = SITE_DESCRIPTION,
   keywords,
   image,
+  imageAlt,
   url,
   type = 'website',
 }: {
@@ -42,6 +43,7 @@ export function seo({
   description?: string
   keywords?: string
   image?: string
+  imageAlt?: string
   url?: string
   type?: 'website' | 'article'
 }) {
@@ -68,7 +70,8 @@ export function seo({
     { property: 'og:image:type', content: 'image/png' },
     {
       property: 'og:image:alt',
-      content: `${SITE_NAME} — optimized images, minus the surprise bill`,
+      content:
+        imageAlt ?? `${SITE_NAME} — optimized images, minus the surprise bill`,
     },
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:site', content: TWITTER_HANDLE },
@@ -78,7 +81,8 @@ export function seo({
     { name: 'twitter:image', content: imageUrl },
     {
       name: 'twitter:image:alt',
-      content: `${SITE_NAME} — optimized images, minus the surprise bill`,
+      content:
+        imageAlt ?? `${SITE_NAME} — optimized images, minus the surprise bill`,
     },
   ]
 }
@@ -203,6 +207,37 @@ export function homePageJsonLd() {
     primaryImageOfPage: absoluteUrl(BRAND_IMAGE_PATH),
     publisher: { '@id': ORGANIZATION_ID },
     url: absoluteUrl('/'),
+  }
+}
+
+export function authorProfileJsonLd() {
+  const profileUrl = absoluteUrl(FOUNDER.profilePath ?? '/authors/raed-bahri')
+  const personId = `${profileUrl}#person`
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'ProfilePage',
+        '@id': `${profileUrl}#profile`,
+        dateModified: '2026-07-12',
+        description: FOUNDER.bio,
+        inLanguage: 'en',
+        isPartOf: { '@id': WEBSITE_ID },
+        mainEntity: { '@id': personId },
+        name: `${FOUNDER.name} — ${FOUNDER.role}`,
+        url: profileUrl,
+      },
+      {
+        '@type': 'Person',
+        '@id': personId,
+        description: FOUNDER.bio,
+        jobTitle: FOUNDER.role,
+        name: FOUNDER.name,
+        sameAs: FOUNDER.sameAs,
+        url: profileUrl,
+        worksFor: { '@id': ORGANIZATION_ID },
+      },
+    ],
   }
 }
 

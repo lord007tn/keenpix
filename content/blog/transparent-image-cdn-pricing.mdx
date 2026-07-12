@@ -1,15 +1,15 @@
 ---
 title: "Image CDN Pricing: Why Keenpix Bills by Bandwidth"
-description: See why Keenpix prices its image CDN by delivered bandwidth instead of transformations, with predictable plans, free transforms, and spending caps.
+description: See why Keenpix bills for application response bytes instead of transformations, with published plans, included transforms, and spending caps.
 date: "2026-06-28"
-updated: "2026-07-11"
+updated: "2026-07-12"
 author: Raed Bahri
 tags: [pricing, philosophy, image-cdn]
 image: /og/blog/transparent-image-cdn-pricing.png?v=2026-07-11
 imageAlt: Transparent bandwidth meter with a visible image CDN spending cap
 ---
 
-Most image CDN bills are hard to predict because they meter the wrong thing. If you have ever been surprised by an invoice, this post explains the pricing philosophy behind Keenpix — and why we think metering **bandwidth delivered** is the only honest option.
+Image CDN bills can be hard to predict when several usage dimensions share one meter. This post explains Keenpix's narrower model: **bytes returned by the Keenpix application**, with transformations included.
 
 ## The problem with per-transform and credit pricing
 
@@ -23,24 +23,24 @@ None of that reflects real value delivered to real users. It just makes the mete
 
 ## What we meter instead
 
-Keenpix meters one thing: **bytes delivered at the edge**. That is the number that actually tracks value — it goes up when real visitors receive real images, and nothing else moves it.
+Keenpix's billing meter records one thing: **optimized response bytes returned by the Keenpix application**. It increases when a request reaches Keenpix and Keenpix returns an image; creating another transform does not create a separate charge.
 
 - **Transformations are free and unlimited.** Build as many variants as you want.
 - **One linear overage rate.** Published, per-GB, no pooled-credit math.
 - **A hard cap you set.** We never silently blow past your budget.
 
-## Why "delivered" and not "origin"
+## What an upstream CDN changes
 
-We measure bandwidth at the **edge** — total bytes delivered to visitors — not just the traffic that reaches our origin servers. Edge caching means origin traffic is a small and unstable fraction of real delivery, so pricing on origin-only bytes would either under-reflect usage or force us to make it up elsewhere. Metering delivered bytes is the transparent choice: you are billed on exactly what your users received, and you can see it.
+If you put Cloudflare or another CDN in front of Keenpix, an edge-cache `HIT` is answered before the request reaches the Keenpix application. That response therefore does **not** appear in Keenpix's application meter. The dashboard can show Cloudflare edge traffic separately when optional Cloudflare analytics is configured; without that connection, it reports only requests and bytes handled by Keenpix. Edge analytics are for reconciliation and are not added to the Polar billing meter.
 
 ## The result
 
-Optimizing aggressively — more formats, more breakpoints, higher quality where it matters — should *lower* your costs by shrinking bytes delivered, not raise them by spinning a transform meter. Billing on bandwidth delivered aligns our incentives with yours: we both win when your images are smaller.
+Optimizing aggressively — more formats, more breakpoints, higher quality where it matters — should reduce application bytes when the resulting files are smaller, not add a separate transformation fee. See the exact allowances and overage rates on [Keenpix pricing](/pricing).
 
 And if you would rather not be billed at all, you can always [self-host Keenpix free](/docs/self-hosting) — the same open-source engine on your own infrastructure.
 
 ## See it against the incumbents
 
 - [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) — credits vs bandwidth pricing.
-- [Keenpix vs imgix](/blog/keenpix-vs-imgix) — origin-image pricing vs bandwidth-only.
+- [Keenpix vs imgix](/blog/keenpix-vs-imgix) — credit packages vs application-byte billing.
 - [Keenpix vs ImageKit](/blog/keenpix-vs-imagekit) — the closest bandwidth-priced alternative, compared.

@@ -10,7 +10,7 @@ export const SELF_HOSTED_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Is the self-hosted version really free?',
     answer:
-      'Yes. The self-hosted engine is AGPL-3.0 — free forever, full-featured, no seat limits, no transform limits, no telemetry. You pay only for your own server. Our business is the managed cloud: the same engine, hosted, from $9/mo for 100 GB delivered with unlimited transformations (as of July 2026). Self-hosting is not a lead magnet with the good parts held back; it is the product.',
+      'The upcoming v0.2.0 source is AGPL-3.0, with no Keenpix license fee, seat limit, transform limit, or telemetry. You operate and pay for the infrastructure. The latest tagged v0.1.11 remains Apache-2.0 until v0.2.0 is released. Managed cloud starts at $9/month for 100 GB of application response bytes with unlimited transformations (as of July 2026).',
   },
   {
     question: 'How does Keenpix compare to imgproxy?',
@@ -30,7 +30,7 @@ export const SELF_HOSTED_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Can I move to the managed cloud later?',
     answer:
-      'Yes, in either direction. Self-host and managed cloud run the same engine with the same URL scheme, so switching is a DNS-and-prefix change, not a rewrite. Teams start self-hosted for cost or compliance and hand us the ops later, or start on cloud (with a 14-day trial and spend caps on by default) and bring it in-house once volume justifies it.',
+      'The v0.2.0 cloud and self-host deployment paths share the transform URL grammar. Moving still requires a planned hostname, configuration, cache, database, and traffic migration; it is not only a DNS switch. Validate both directions with canary traffic before cutover.',
   },
 ]
 
@@ -95,13 +95,13 @@ const COMPARISON_ROWS = [
   {
     label: 'License',
     keenpix: 'AGPL-3.0',
-    imgproxy: 'MIT (core)',
+    imgproxy: 'Apache-2.0 (core)',
     thumbor: 'MIT',
     ipx: 'MIT',
   },
   {
     label: 'Managed option',
-    keenpix: 'Yes — same engine at keenpix.com',
+    keenpix: 'Yes — managed cloud and self-host paths',
     imgproxy: 'Pro is a paid self-hosted tier, no managed cloud',
     thumbor: 'No',
     ipx: 'No',
@@ -115,15 +115,15 @@ const PROMISES = [
   },
   {
     title: 'AGPL-3.0, free forever',
-    body: 'The full engine — not a crippled "community edition" — is the open-source product. The managed cloud runs the same code.',
+    body: 'The upcoming v0.2.0 source is AGPL-3.0. The latest tagged v0.1.11 remains Apache-2.0 until the release is published.',
   },
   {
     title: 'No CLA',
-    body: 'We cannot relicense your contributions out from under you, which forecloses the open-core rug-pull you have watched happen elsewhere.',
+    body: 'There is no contributor license agreement. Review the AGPL-3.0 terms and repository history for the exact rights that apply to each release.',
   },
   {
-    title: 'It eats its own dogfood',
-    body: 'Keenpix serves every image on joodlab.com in production.',
+    title: 'Cloud and self-host deployment paths',
+    body: 'The repository includes Docker and Coolify deployment paths. Validate performance, backups, monitoring, and capacity against your own workload before production use.',
   },
 ]
 
@@ -138,7 +138,7 @@ const ALTERNATIVES = [
   {
     name: 'imgproxy',
     reason:
-      'you want a headless MIT-licensed Go binary and you already own your cache, metrics, and dashboards — or you need Pro’s video/PDF thumbnails.',
+      'you want a headless Apache-2.0-licensed Go binary and you already own your cache, metrics, and dashboards — or you need Pro’s video/PDF thumbnails.',
   },
   {
     name: 'Thumbor',
@@ -157,7 +157,7 @@ const ALTERNATIVES = [
   {
     name: 'Bunny Optimizer',
     reason:
-      'you want the lowest possible flat cost for a single site and can live without AVIF output, analytics, or self-hosting; at $9.50/mo per website plus ~$0.01/GB CDN bandwidth (as of July 2026) it is the one rival that can undercut Keenpix at scale.',
+      'you want a $9.50/month per-website optimizer fee plus separately billed CDN bandwidth. Bunny Optimizer added GA AVIF output in June 2026 and has no self-host path; compare its region-specific bandwidth price with your own traffic rather than assuming a universal lowest cost.',
   },
 ]
 
@@ -183,8 +183,8 @@ export function SelfHostedLandingPage({
               you run yourself: sharp-powered transforms, automatic AVIF/WebP
               negotiation, a disk + memory cache with stale-while-revalidate,
               and built-in analytics — installed with one Docker command. It is
-              the same engine that powers our managed cloud, licensed AGPL-3.0,
-              designed to sit behind the CDN you already have.
+              the v0.2.0 engine used by the managed-cloud code path, licensed
+              AGPL-3.0, and designed to sit behind the CDN you already have.
             </p>
             <p className="mt-4 max-w-2xl text-muted-foreground leading-relaxed">
               No uploads to migrate, no API keys to leak, no per-transformation
@@ -395,7 +395,7 @@ docker compose up -d --build
         <section className="border-b">
           <div className="mx-auto max-w-3xl px-6 py-14">
             <h2 className="font-semibold text-2xl tracking-tight">
-              Zero telemetry, AGPL, no rug-pull
+              Zero telemetry and published license terms
             </h2>
             <div className="mt-8 grid gap-6 sm:grid-cols-2">
               {PROMISES.map((promise) => (
@@ -411,10 +411,10 @@ docker compose up -d --build
               ))}
             </div>
             <p className="mt-8 text-muted-foreground text-sm leading-relaxed">
-              The honest AGPL caveat: if you modify Keenpix and offer it to
-              users over a network, the license requires you to share those
-              modifications. Running it unmodified for your own sites — which is
-              what almost everyone does — carries no such obligation.
+              AGPL-3.0 generally requires operators who modify the program and
+              offer it over a network to provide the corresponding source to
+              those users. Review the license itself and obtain legal advice for
+              your deployment; this page is not legal guidance.
             </p>
           </div>
         </section>
@@ -513,7 +513,7 @@ docker compose up -d --build
               >
                 Start a 14-day trial
               </Link>{' '}
-              — same engine, our servers, from $9/mo.
+              — managed v0.2.0 deployment, from $9/month.
             </p>
           </div>
         </section>

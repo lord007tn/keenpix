@@ -11,8 +11,12 @@ import { REPOSITORY_URL } from '@/shared/repository'
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="mx-auto flex h-14 max-w-5xl items-center gap-4 px-6">
-        <a aria-label="Keenpix home" href="/">
+      <div className="mx-auto flex min-h-16 max-w-5xl items-center gap-2 px-3 sm:gap-4 sm:px-6">
+        <a
+          aria-label="Keenpix home"
+          className="inline-flex min-h-12 min-w-12 items-center"
+          href="/"
+        >
           <KeenpixLogo />
         </a>
         <nav className="ml-4 hidden gap-5 text-muted-foreground text-sm md:flex">
@@ -29,19 +33,24 @@ export function SiteHeader() {
             Docs
           </a>
         </nav>
-        <div className="ml-auto flex items-center gap-2">
-          <ModeToggle />
+        <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-2">
+          <ModeToggle className="min-h-12 min-w-12" />
+          <div className="hidden sm:block">
+            <Link
+              className={buttonVariants({
+                className: 'min-h-12',
+                size: 'sm',
+                variant: 'ghost',
+              })}
+              to="/login"
+            >
+              Sign in
+            </Link>
+          </div>
           <Link
-            className={buttonVariants({
-              className: 'hidden sm:inline-flex',
-              size: 'sm',
-              variant: 'ghost',
-            })}
-            to="/login"
+            className={buttonVariants({ className: 'min-h-12', size: 'sm' })}
+            to="/signup"
           >
-            Sign in
-          </Link>
-          <Link className={buttonVariants({ size: 'sm' })} to="/signup">
             Get started
             <ArrowRightIcon data-icon="inline-end" />
           </Link>

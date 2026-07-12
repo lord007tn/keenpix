@@ -75,7 +75,7 @@ export function AnalyticsConsent() {
   if (!open) {
     return choiceMade ? (
       <Button
-        className="fixed bottom-3 left-3 z-40 min-h-11 touch-manipulation bg-background/90 px-3 text-xs shadow-sm backdrop-blur"
+        className="fixed bottom-3 left-3 z-40 min-h-12 touch-manipulation bg-background/90 px-3 text-xs shadow-sm backdrop-blur"
         onClick={() => setOpen(true)}
         size="sm"
         variant="outline"
@@ -88,14 +88,14 @@ export function AnalyticsConsent() {
   return (
     <aside
       aria-label="Analytics privacy choices"
-      className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-[calc(100vw-1.5rem)] flex-col gap-4 overflow-hidden rounded-lg border bg-background p-4 shadow-lg sm:max-w-2xl sm:flex-row sm:items-center"
+      className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-h-[min(32rem,calc(100svh-1.5rem))] max-w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-y-auto overscroll-contain rounded-lg border bg-background p-4 shadow-lg sm:max-w-2xl sm:flex-row sm:items-center"
     >
       <p className="min-w-0 flex-1 break-words text-muted-foreground text-sm leading-relaxed">
         Keenpix uses optional, consent-based analytics to understand which pages
         lead to signups and successful setup. We do not use advertising cookies
         or send account, image, or project data. See our{' '}
         <a
-          className="rounded-sm text-foreground underline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+          className="inline-flex min-h-12 items-center rounded-sm text-foreground underline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
           href="/legal/privacy"
         >
           privacy policy
@@ -104,7 +104,7 @@ export function AnalyticsConsent() {
       </p>
       <div className="flex w-full shrink-0 flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
         <Button
-          className="min-h-11 flex-1 touch-manipulation sm:flex-none"
+          className="min-h-12 flex-1 touch-manipulation sm:flex-none"
           onClick={() => {
             setAnalyticsConsent('denied')
             setChoiceMade(true)
@@ -115,7 +115,7 @@ export function AnalyticsConsent() {
           Decline
         </Button>
         <Button
-          className="min-h-11 flex-1 touch-manipulation sm:flex-none"
+          className="min-h-12 flex-1 touch-manipulation sm:flex-none"
           onClick={() => {
             setAnalyticsConsent('granted')
             trackSocialSignup()

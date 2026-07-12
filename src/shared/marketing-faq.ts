@@ -22,7 +22,7 @@ const { basic, pro, business } = PLANS
 export const MARKETING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'How does Keenpix pricing work?',
-    answer: `Keenpix bills on one thing — bandwidth delivered — and never per transform. Managed cloud starts at $${basic.priceMonthlyUsd}/mo for ${gb(basic.includedBandwidthBytes)} delivered with unlimited transforms, and scales to Pro ($${pro.priceMonthlyUsd}/mo, ${gb(pro.includedBandwidthBytes)}) and Business ($${business.priceMonthlyUsd}/mo, ${gb(business.includedBandwidthBytes)}). Overage is a single published linear rate between ${cents(business.overagePerGbCents)} and ${cents(basic.overagePerGbCents)} per GB depending on tier, and every subscription starts with a hard spending cap (2× your plan price, adjustable or removable any time) so the bill can never surprise you. Transforms, responsive srcset variants, and modern formats are always free and unlimited, so optimizing aggressively lowers your bill instead of raising it. Prefer to pay nothing? Self-host the same open-source engine for free.`,
+    answer: `Keenpix bills on one thing — optimized response bytes returned by the Keenpix application — and never per transform. Managed cloud starts at $${basic.priceMonthlyUsd}/mo for ${gb(basic.includedBandwidthBytes)} with unlimited transforms, and scales to Pro ($${pro.priceMonthlyUsd}/mo, ${gb(pro.includedBandwidthBytes)}) and Business ($${business.priceMonthlyUsd}/mo, ${gb(business.includedBandwidthBytes)}). Overage is a single published linear rate between ${cents(business.overagePerGbCents)} and ${cents(basic.overagePerGbCents)} per GB depending on tier, and every subscription starts with a hard spending cap (2× your plan price, adjustable or removable any time). A request served as an upstream Cloudflare edge HIT never reaches Keenpix and is not in the billing meter; optional Cloudflare analytics reports edge delivery separately. Prefer to pay nothing? Self-host the same open-source engine for free.`,
   },
   {
     question: 'What happens when I hit my spending cap?',
@@ -46,7 +46,7 @@ export const MARKETING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Is Keenpix a Cloudinary, imgix, or ImageKit alternative?',
     answer:
-      'Yes. Keenpix is a focused image-CDN alternative to Cloudinary, imgix, and ImageKit. It optimizes and delivers images from your existing S3, R2, or origin with bandwidth-based pricing and no per-transform credits or origin-image counts. You pay for bytes delivered, with a hard cap you control. Keenpix can also be self-hosted under AGPL-3.0, so teams that accept the operational responsibility can run the engine on their own infrastructure.',
+      'Yes. Keenpix is a focused image-optimization alternative to Cloudinary, imgix, and ImageKit. It returns optimized images from your existing S3, R2, or origin with no per-transform credits or origin-image count. Managed billing counts bytes returned by the Keenpix application; upstream CDN edge hits are reported only when optional edge analytics is connected and are not added to billing. Keenpix can also be self-hosted under AGPL-3.0, so teams that accept the operational responsibility can run the engine on their own infrastructure.',
   },
   {
     question: 'Do I have to migrate or re-upload my images?',

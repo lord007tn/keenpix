@@ -2,7 +2,7 @@
 title: "Keenpix vs Cloudinary: Pricing and Features (2026)"
 description: Compare Keenpix and Cloudinary pricing, transformations, hosting options, and tradeoffs using facts verified in July 2026 for your next image CDN.
 date: "2026-07-06"
-updated: "2026-07-11"
+updated: "2026-07-12"
 author: Raed Bahri
 competitor: Cloudinary
 tags: [comparison, pricing, image-cdn]
@@ -16,18 +16,18 @@ Cloudinary is the most established image and video CDN, and for good reason — 
 
 Cloudinary meters usage in **credits**. A single credit bundles together a mix of transformations, managed storage, and delivered bandwidth, and each of those consumes credits at a different rate. The result is a bill that is hard to predict and harder to explain: a viral asset, a bot crawl, or a new responsive-image breakpoint can quietly burn through a month's allotment.
 
-Keenpix meters exactly **one** thing: **bandwidth delivered at the edge**. Transformations are always unlimited and free. There are no per-transformation charges, no storage tier to reason about, and no pooled-credit math.
+Keenpix meters **optimized response bytes returned by its application**. Transformations are included and Keenpix does not sell asset storage. If an upstream Cloudflare cache answers a request, that edge `HIT` does not reach the app and is not in this meter; optional Cloudflare analytics reports edge traffic separately.
 
 | | Keenpix | Cloudinary |
 | --- | --- | --- |
-| Billing unit | Bandwidth delivered (GB) | Credits (bundled) |
+| Billing unit | Keenpix application response bytes (GB) | Credits (bundled) |
 | Transformations | Unlimited, free | Consume credits |
 | Overage | One linear published rate ($0.05–0.08/GB) | Credit packs / plan upgrades |
-| Hard spend cap | Yes, you set it | Not really |
+| Hard spend cap | Yes, you set it | Check account terms |
 | Self-host option | Yes (open source, AGPL) | No |
-| Entry price | $9/mo | $89/mo (after free tier) |
+| Entry price | $9/mo | $99/mo monthly for Plus ($89/mo equivalent on annual billing) |
 
-*Cloudinary pricing referenced as of July 2026; check [Cloudinary's current pricing](https://cloudinary.com/pricing) for the latest rates.*
+*Verified July 12, 2026 against [Cloudinary pricing](https://cloudinary.com/pricing) and its [credit definition and plan comparison](https://cloudinary.com/pricing/compare-plans). Cloudinary describes plan limits as soft limits and contacts customers about upgrading after an overage; exact commercial handling can depend on the account.*
 
 ## Predictable pricing
 
@@ -43,14 +43,15 @@ Cloudinary has no self-host path. Your assets and transformation URLs live insid
 
 ## When Cloudinary is still the right call
 
-We would rather earn trust than oversell, so: if you need **video** transcoding at scale, a full **digital asset manager** with approval workflows, or AI features like auto-tagging and content-aware cropping *today*, Cloudinary's breadth is real and Keenpix does not match it yet. Keenpix is focused on being the fastest, cheapest, most transparent way to **optimize and deliver images** — and to let you self-host when you want to.
+We would rather earn trust than oversell, so: if you need **video** transcoding at scale, a full **digital asset manager** with approval workflows, or AI features like auto-tagging and content-aware cropping *today*, Cloudinary's breadth is real and Keenpix does not match it yet. Keenpix is focused on a smaller surface: optimizing images from origins you already operate, a published application-bandwidth meter, and a self-host option.
 
 ## Related comparisons
 
-- [Keenpix vs imgix](/blog/keenpix-vs-imgix) — origin-image pricing vs bandwidth-only.
+- [Keenpix vs imgix](/blog/keenpix-vs-imgix) — current credit packages vs application-byte billing.
 - [Keenpix vs ImageKit](/blog/keenpix-vs-imagekit) — the closest bandwidth-priced alternative, compared.
-- [Why we bill on bandwidth delivered](/blog/transparent-image-cdn-pricing) — the pricing philosophy in full.
+- [How the Keenpix application-byte meter works](/blog/transparent-image-cdn-pricing) — including the upstream-CDN boundary.
+- [Keenpix pricing](/pricing) — current allowances, overage rates, and spending-cap behavior.
 
 ## Try it
 
-Point Keenpix at your existing S3, R2, or another supported origin and measure your real delivered bandwidth before you commit. Or [self-host the engine](/docs/self-hosting) on infrastructure you operate.
+Point Keenpix at your existing S3, R2, or another supported origin and measure application response bytes on your own traffic before you commit. Or [self-host the engine](/docs/self-hosting) on infrastructure you operate.

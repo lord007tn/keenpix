@@ -49,9 +49,10 @@ export const Route = createFileRoute('/blog/$')({
     return data
   },
   head: ({ loaderData }: { loaderData?: BlogLoaderData }) => {
-    const title = loaderData?.title
-      ? `${loaderData.title} - Keenpix Blog`
-      : 'Keenpix Blog'
+    // The visible article title is already descriptive and several posts include
+    // the brand. Reusing it avoids pushing useful words out of a 60-ish-character
+    // search title with a redundant "Keenpix Blog" suffix.
+    const title = loaderData?.title ?? 'Keenpix Blog'
     const description =
       loaderData?.description ??
       'Image optimization, pricing, and comparisons from the Keenpix team.'
@@ -67,6 +68,7 @@ export const Route = createFileRoute('/blog/$')({
           title,
           description,
           image: loaderData?.ogImage ?? absoluteUrl(BRAND_IMAGE_PATH),
+          imageAlt: loaderData?.imageAlt,
           url: canonicalUrl,
           type: 'article',
         }),
