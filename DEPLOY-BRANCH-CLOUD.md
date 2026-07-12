@@ -36,6 +36,7 @@ POLAR_TOKEN=polar_oat_...
 POLAR_WEBHOOK_SECRET=whsec_...
 POLAR_SERVER=production
 VITE_GTM_CONTAINER_ID=GTM-TFJ9TQDN
+VITE_GA_MEASUREMENT_ID=G-C04VQED7GV
 GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=...
 ```
@@ -43,11 +44,12 @@ GOOGLE_CLIENT_SECRET=...
 The three public URL variables must resolve to the HTTPS apex domain so Better
 Auth callbacks, generated links, and the browser build all agree on one origin.
 
-`VITE_GTM_CONTAINER_ID` is public configuration, not a credential. Mark it as
-available at both build time and runtime: Vite embeds it in the browser bundle,
-while the runtime value keeps the deployment configuration explicit. A missing
-value leaves consent controls and first-party Web Vitals reporting active but
-does not load Google Tag Manager.
+`VITE_GA_MEASUREMENT_ID` and `VITE_GTM_CONTAINER_ID` are public configuration,
+not credentials. Mark configured values as available at both build time and
+runtime: Vite embeds them in the browser bundle, while the runtime values keep
+the deployment configuration explicit. Direct GA4 takes precedence when both
+are present; GTM remains a fallback. Leaving both unset disables Google product
+analytics while first-party Web Vitals reporting remains consent-aware.
 
 For the production Google Web OAuth client, configure the authorized JavaScript
 origin `https://keenpix.com` and redirect URI
