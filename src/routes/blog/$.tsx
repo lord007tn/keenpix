@@ -183,7 +183,7 @@ const clientLoader = browserCollections.blog.createClientLoader({
             updated: frontmatter.updated,
           }}
         />
-        <article className="prose mx-auto max-w-3xl px-6 py-10">
+        <article className="prose mx-auto max-w-3xl px-6 py-10 [&_:not(pre)>code]:break-all">
           <MDX components={getMDXComponents()} />
         </article>
         <BlogPostTrust authorName={frontmatter.author} />

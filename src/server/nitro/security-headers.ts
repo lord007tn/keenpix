@@ -16,9 +16,9 @@ export function setSecurityHeaders(response: Response) {
 }
 
 const plugin: NitroAppPlugin = (nitroApp) => {
-  // Route rules do not cover TanStack's app-generated not-found response in the
-  // current Nitro adapter. Apply the same baseline at the final response hook so
-  // redirects, errors, and 404s cannot bypass it.
+  // Keep the application response baseline aligned with the final Cloudflare
+  // response-header policy. Cloudflare also covers framework-generated 404s that
+  // do not pass through this Nitro hook.
   nitroApp.hooks.hook('response', (response) => {
     setSecurityHeaders(response)
   })

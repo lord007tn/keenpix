@@ -37,12 +37,20 @@ export function ComparisonPage({
               {comparison.heroSubhead}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link className={buttonVariants()} to="/signup">
+              <Link
+                className={buttonVariants({
+                  className: 'min-h-11 touch-manipulation px-4',
+                })}
+                to="/signup"
+              >
                 Start free trial
                 <ArrowRightIcon data-icon="inline-end" />
               </Link>
               <a
-                className={buttonVariants({ variant: 'outline' })}
+                className={buttonVariants({
+                  className: 'min-h-11 touch-manipulation px-4',
+                  variant: 'outline',
+                })}
                 href="/docs/self-hosting"
               >
                 Self-host free
