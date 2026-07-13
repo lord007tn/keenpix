@@ -267,14 +267,13 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
                 </a>
               </div>
               <p className="mt-5 text-sm text-white/60">
-                In production today — Keenpix serves every image on{' '}
+                JoodCMS includes a first-party Keenpix image-delivery
+                integration —{' '}
                 <a
                   className="text-white/80 underline hover:text-white"
-                  href="https://joodlab.com"
-                  rel="noreferrer"
-                  target="_blank"
+                  href="/blog/joodcms-keenpix-integration"
                 >
-                  joodlab.com
+                  read the code-backed case study
                 </a>
                 .
               </p>
@@ -456,7 +455,7 @@ Vary: Accept`}</CodeBlock>
                 Every plan bills on bytes returned by Keenpix — never per
                 transform. Upstream CDN edge hits are not added to the meter.
                 Overage is one linear published rate with a hard cap, on by
-                default. 14-day free trial; two months free on annual.
+                default. Every plan starts with a 14-day free trial.
               </p>
             </div>
             <div className="grid items-stretch gap-4 lg:grid-cols-3">
@@ -490,10 +489,6 @@ Vary: Accept`}</CodeBlock>
                             /mo
                           </span>
                         </div>
-                        <p className="text-muted-foreground text-xs">
-                          or {formatUsd(prices.plans[planId].year.amountCents)}
-                          /yr — 2 months free
-                        </p>
                       </div>
                       <p className="text-muted-foreground text-sm">
                         {PLAN_TAGLINES[planId]}

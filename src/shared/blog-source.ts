@@ -13,6 +13,8 @@ export const blogSource = loader({
 export interface BlogListItem {
   author: string
   competitor?: string
+  cover?: string
+  coverAlt?: string
   date: string
   description: string
   image: string
@@ -32,6 +34,8 @@ export function listBlogPosts(): BlogListItem[] {
     .map((page) => ({
       author: page.data.author,
       competitor: page.data.competitor,
+      cover: page.data.cover,
+      coverAlt: page.data.coverAlt,
       date: page.data.date,
       description: page.data.description,
       image: page.data.image,

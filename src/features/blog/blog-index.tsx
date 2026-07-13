@@ -11,11 +11,11 @@ function PostCard({ post }: { post: BlogListItem }) {
       href={post.url}
     >
       <img
-        alt={post.imageAlt}
+        alt={post.coverAlt ?? post.imageAlt}
         className="aspect-[40/21] w-full border-b object-cover"
         height={630}
         loading="lazy"
-        src={post.image}
+        src={post.cover ?? post.image}
         width={1200}
       />
       <div className="flex flex-col gap-3 p-6 pt-5">

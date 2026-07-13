@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  blogPostingJsonLd,
   homePageJsonLd,
   pricingPageJsonLd,
   seo,
@@ -24,6 +25,39 @@ describe('SEO entity graphs', () => {
     })
   })
 
+  it('publishes the real social-image MIME type after removing version queries', () => {
+    expect(
+      seo({
+        title: 'JPEG article',
+        image: 'https://keenpix.com/editorial/article-og.jpg?v=2026-07-13',
+      }),
+    ).toContainEqual({ property: 'og:image:type', content: 'image/jpeg' })
+    expect(
+      seo({
+        title: 'PNG article',
+        image: 'https://keenpix.com/og/article.png',
+      }),
+    ).toContainEqual({ property: 'og:image:type', content: 'image/png' })
+  })
+
+  it('links article authors to the Person entity on their profile page', () => {
+    const [article] = blogPostingJsonLd({
+      author: 'Raed Bahri',
+      datePublished: '2026-07-13',
+      description: 'A code-backed case study.',
+      image: 'https://keenpix.com/editorial/article-og.jpg',
+      path: [],
+      title: 'Case study',
+      url: 'https://keenpix.com/blog/case-study',
+    })
+
+    expect(article.author).toEqual(
+      expect.objectContaining({
+        '@id': 'http://localhost:3000/authors/raed-bahri#person',
+      }),
+    )
+  })
+
   it('connects the homepage WebPage to the site and software entities', () => {
     expect(homePageJsonLd()).toEqual(
       expect.objectContaining({
@@ -36,8 +70,9 @@ describe('SEO entity graphs', () => {
     )
   })
 
-  it('reports the six managed billing combinations with a numeric count', () => {
-    expect(softwareApplicationJsonLd().offers.offerCount).toBe(6)
+  it('reports the three monthly managed plans with a numeric count', () => {
+    expect(softwareApplicationJsonLd().offers.offerCount).toBe(3)
+    expect(softwareApplicationJsonLd().offers.highPrice).toBe('29')
 
     const graph = pricingPageJsonLd()['@graph']
     const catalog = graph.find((node) => node['@type'] === 'OfferCatalog')
@@ -52,15 +87,12 @@ describe('SEO entity graphs', () => {
         'OfferCatalog',
       ]),
     )
-    expect(catalog).toEqual(expect.objectContaining({ numberOfItems: 6 }))
-    expect(offers).toHaveLength(6)
+    expect(catalog).toEqual(expect.objectContaining({ numberOfItems: 3 }))
+    expect(offers).toHaveLength(3)
     expect(offers.map((offer: { name: string }) => offer.name)).toEqual([
       'Basic monthly',
-      'Basic annual',
       'Pro monthly',
-      'Pro annual',
       'Business monthly',
-      'Business annual',
     ])
   })
 })

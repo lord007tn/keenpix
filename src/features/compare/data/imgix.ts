@@ -10,7 +10,7 @@ export const imgixComparison = {
   heroSubhead:
     'Keenpix bills optimized response bytes returned by the application — no credits or management meter, and upstream CDN edge hits do not reach the meter. The upcoming v0.2.0 code is AGPL-3.0 and can be self-hosted without a Keenpix license fee, or used as a managed service from $9/month.',
   verdict:
-    "imgix has a broader rendering API — if you lean on face-aware cropping, text overlays, video, or its long tail of advanced parameters, Keenpix won't replace that today, and a mature vendor with enterprise support may matter more to you than price. imgix's August 2025 credit model draws delivery and cached-storage management from one pool, its published self-serve plans stop at $300/month, and larger requirements need a quote. Keenpix charges for application response bytes, publishes self-serve overage rates, and includes analytics on every tier. For core resize, crop, quality, and modern-format delivery, compare both services on your own traffic during the trial; do not assume feature or output parity.",
+    "imgix has a broader rendering API — if you lean on face-aware cropping, text overlays, video, or its long tail of advanced parameters, Keenpix won't replace that today, and a mature vendor with enterprise support may matter more to you than price. imgix's credit model draws delivery and cached-storage management from one pool, with published self-serve packages from $25 Starter through $500 Growth Plus. Keenpix charges for application response bytes, publishes self-serve overage rates, and includes analytics on every tier. For core resize, crop, quality, and modern-format delivery, compare both services on your own traffic during the trial; do not assume feature or output parity.",
   pricingRows: [
     {
       scenario: '100 GB delivered / month',
@@ -19,8 +19,7 @@ export const imgixComparison = {
     },
     {
       scenario: '400 GB delivered / month',
-      competitor:
-        '$75/mo Basic maxes at 375 credits; next tier is $300/mo Growth',
+      competitor: '$150/mo Midrange (830 credits, before management credits)',
       keenpix: '$19/mo Pro — 400 GB included',
     },
     {
@@ -35,7 +34,8 @@ export const imgixComparison = {
     },
     {
       scenario: 'Overage beyond plan',
-      competitor: 'Not published — contact imgix for current enterprise terms',
+      competitor:
+        'Published packages end at $500/mo Growth Plus; larger needs require current terms',
       keenpix:
         '$0.05–0.08/GB, published; your spend cap pauses delivery instead',
     },
@@ -53,7 +53,7 @@ export const imgixComparison = {
     },
     {
       feature: 'Published pricing',
-      competitor: 'Self-serve to $300/mo; above that, sales',
+      competitor: 'Self-serve packages to $500/mo Growth Plus',
       keenpix: 'Every tier and overage rate published',
     },
     {
@@ -126,7 +126,7 @@ export const imgixComparison = {
     {
       title: 'Published pricing, no renewal roulette',
       detail:
-        'Keenpix publishes rates and overage ($0.05–0.08/GB depending on plan) for every self-serve tier. imgix publishes self-serve plans through Growth at $300/month; larger requirements need a current quote. Compare a written imgix quote with your measured workload rather than relying on third-party anecdotes.',
+        'Keenpix publishes rates and overage ($0.05–0.08/GB depending on plan) for every self-serve tier. imgix publishes packages through Growth Plus at $500/month; larger requirements need current terms. Compare a written imgix quote with your measured workload rather than relying on third-party anecdotes.',
     },
     {
       title: 'A spend cap instead of a blocked account',
@@ -167,7 +167,7 @@ export const imgixComparison = {
     },
     {
       q: 'What changed with imgix pricing in August 2025?',
-      a: 'imgix moved all plans to a credit model: Starter $25/mo for 100 credits, Basic $75/mo for 375, Growth $300/mo for 1,875. Delivery costs 1 credit per GB and management costs 2 credits per GB per month of cached storage, from one pooled balance. Pricing above Growth is not published.',
+      a: 'imgix moved its published plans to a credit model. Current monthly packages are Starter $25 for 100 credits, Basic $75 for 375, Midrange $150 for 830, Growth $300 for 1,875, and Growth Plus $500 for 3,570. Delivery costs 1 credit per GB and management costs 2 credits per GB per month of cached storage, from one pooled balance.',
     },
     {
       q: 'How should I compare imgix enterprise pricing?',
@@ -175,7 +175,7 @@ export const imgixComparison = {
     },
     {
       q: 'How does Keenpix billing work?',
-      a: 'One meter: bandwidth delivered. Basic is $9/mo for 100 GB then $0.08/GB, Pro $19/mo for 400 GB then $0.06/GB, Business $29/mo for 1 TB then $0.05/GB, with annual billing giving two months free. Transformations are unlimited on every plan, and a customer-set spend cap (on by default) pauses delivery rather than letting overage run.',
+      a: 'One meter: bandwidth delivered. Basic is $9/mo for 100 GB then $0.08/GB, Pro $19/mo for 400 GB then $0.06/GB, and Business $29/mo for 1 TB then $0.05/GB. Transformations are unlimited on every monthly plan, and a customer-set spend cap (on by default) pauses delivery rather than letting overage run.',
     },
     {
       q: 'Can I self-host Keenpix instead of paying for cloud?',
@@ -197,6 +197,6 @@ export const imgixComparison = {
   ],
   pricingAsOf: 'July 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
-  verifiedAt: '2026-07-12',
+  verifiedAt: '2026-07-13',
   nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

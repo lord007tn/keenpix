@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { LegalLayout } from '@/features/legal/legal-layout'
+import { SUPPORT_EMAIL } from '@/shared/authors'
 import { absoluteUrl, seo } from '@/shared/seo'
 
 export const Route = createFileRoute('/legal/terms')({
@@ -16,7 +17,7 @@ export const Route = createFileRoute('/legal/terms')({
 
 function TermsPage() {
   return (
-    <LegalLayout lastUpdated="July 6, 2026" title="Terms of Service">
+    <LegalLayout lastUpdated="July 13, 2026" title="Terms of Service">
       <p>
         These Terms of Service ("Terms") govern your access to and use of the
         Keenpix cloud service operated by Keenpix ("Keenpix", "we", "us"). By
@@ -58,8 +59,12 @@ function TermsPage() {
           vulnerabilities without authorization, or circumvent usage limits; or
         </li>
         <li>
-          use the service in a way that overloads or impairs it for other
-          customers.
+          distribute malware, phishing material, spam, or other content intended
+          to deceive or harm others; or
+        </li>
+        <li>
+          use the service in a way that overloads, disrupts, or impairs it for
+          other customers.
         </li>
       </ul>
 
@@ -72,7 +77,9 @@ function TermsPage() {
         are unlimited. Subscriptions renew automatically until cancelled; you
         can cancel at any time from your billing portal and retain access
         through the end of the paid period. Fees are non-refundable except where
-        required by law.
+        required by law. If you believe a charge is incorrect, contact us with
+        the invoice or receipt before opening a payment dispute so we can
+        investigate it.
       </p>
 
       <h2>5. Your content and origins</h2>
@@ -93,9 +100,11 @@ function TermsPage() {
       <h2>7. Termination</h2>
       <p>
         You may stop using Keenpix at any time. We may suspend or terminate
-        access for violation of these Terms or non-payment. Because the engine
-        is open source, you can migrate to a self-hosted deployment and keep
-        your transform URLs.
+        access for violation of these Terms, non-payment, a credible security
+        risk, or activity that may harm the service or others. Where practical,
+        we will give notice and an opportunity to fix the issue. Because the
+        engine is open source, you can migrate to a self-hosted deployment and
+        keep your transform URLs.
       </p>
 
       <h2>8. Disclaimers and liability</h2>
@@ -107,10 +116,26 @@ function TermsPage() {
         consequential damages.
       </p>
 
-      <h2>9. Contact</h2>
+      <h2>9. Ownership and feedback</h2>
+      <p>
+        Keenpix and its licensors retain rights in the service, software,
+        documentation, and branding. These Terms do not transfer ownership of
+        your content or Keenpix intellectual property. If you send product
+        feedback, you allow us to use it without restriction or payment.
+      </p>
+
+      <h2>10. Your responsibility</h2>
+      <p>
+        You are responsible for claims arising from content, origins, or
+        instructions you provide, including claims that they infringe another
+        party's rights. Keep independent copies of source assets and do not use
+        the transform cache as your only backup.
+      </p>
+
+      <h2>11. Contact</h2>
       <p>
         Questions about these Terms? Email{' '}
-        <a href="mailto:legal@keenpix.com">legal@keenpix.com</a>.
+        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
       </p>
     </LegalLayout>
   )

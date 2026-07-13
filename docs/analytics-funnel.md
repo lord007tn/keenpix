@@ -60,3 +60,8 @@ No traffic, Web Vitals baseline, or conversion rate is claimed at release time.
 
 Search Console query data must be analyzed in aggregate. It cannot be joined to
 an individual visitor or sent as an event parameter.
+
+Client-side route changes send one `page_view` after consent. The event uses the
+page title and an apex-origin URL containing only the pathname; query strings,
+hashes, and router search state are intentionally excluded. Invitation tokens
+and organization identifiers in admin paths are replaced with route labels.

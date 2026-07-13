@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useLocation } from '@tanstack/react-router'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { clientEnv } from '@/env/client'
 import {
@@ -21,12 +22,15 @@ function trackSocialSignup() {
 }
 
 export function AnalyticsConsent() {
+  const location = useLocation()
+  const previousPath = useRef(location.pathname)
   const providerAvailable = Boolean(
     clientEnv.VITE_GA_MEASUREMENT_ID || clientEnv.VITE_GTM_CONTAINER_ID,
   )
   const [available, setAvailable] = useState(providerAvailable)
   const [open, setOpen] = useState(false)
   const [choiceMade, setChoiceMade] = useState(false)
+  const [trackingEnabled, setTrackingEnabled] = useState(false)
 
   useEffect(() => {
     if (!providerAvailable || navigator.doNotTrack === '1') {
@@ -36,6 +40,7 @@ export function AnalyticsConsent() {
     const consent = getAnalyticsConsent()
     setChoiceMade(consent !== null)
     setOpen(consent === null)
+    setTrackingEnabled(consent === 'granted')
     if (consent === 'granted') {
       loadGoogleAnalytics()
       trackSocialSignup()
@@ -43,7 +48,28 @@ export function AnalyticsConsent() {
   }, [providerAvailable])
 
   useEffect(() => {
-    if (!providerAvailable) {
+    if (!trackingEnabled) {
+      return
+    }
+    if (previousPath.current === location.pathname) {
+      return
+    }
+    previousPath.current = location.pathname
+    let pagePath = location.pathname
+    if (pagePath.startsWith('/invite/')) {
+      pagePath = '/invite/:token'
+    } else if (pagePath.startsWith('/admin/customers/')) {
+      pagePath = '/admin/customers/:organization'
+    }
+    trackEvent('page_view', {
+      page_location: `${window.location.origin}${pagePath}`,
+      page_path: pagePath,
+      page_title: document.title,
+    })
+  }, [location.pathname, trackingEnabled])
+
+  useEffect(() => {
+    if (!(providerAvailable && trackingEnabled)) {
       return
     }
     const onClick = (event: MouseEvent) => {
@@ -66,7 +92,7 @@ export function AnalyticsConsent() {
     document.addEventListener('click', onClick, { capture: true })
     return () =>
       document.removeEventListener('click', onClick, { capture: true })
-  }, [providerAvailable])
+  }, [providerAvailable, trackingEnabled])
 
   if (!available) {
     return null
@@ -107,6 +133,7 @@ export function AnalyticsConsent() {
           className="min-h-12 flex-1 touch-manipulation sm:flex-none"
           onClick={() => {
             setAnalyticsConsent('denied')
+            setTrackingEnabled(false)
             setChoiceMade(true)
             setOpen(false)
           }}
@@ -118,6 +145,7 @@ export function AnalyticsConsent() {
           className="min-h-12 flex-1 touch-manipulation sm:flex-none"
           onClick={() => {
             setAnalyticsConsent('granted')
+            setTrackingEnabled(true)
             trackSocialSignup()
             setChoiceMade(true)
             setOpen(false)
