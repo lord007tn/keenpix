@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import { defineNitroConfig } from 'nitro/config'
+import { SECURITY_HEADERS } from './src/server/nitro/security-headers'
 
 /**
  * Keep `undici` external in the server build.
@@ -15,13 +16,6 @@ import { defineNitroConfig } from 'nitro/config'
 // deny + Referrer-Policy harden the auth/billing surfaces against clickjacking
 // and referrer leakage. A full app-shell CSP is intentionally deferred (needs
 // per-route testing against the TanStack hydration inline scripts).
-const SECURITY_HEADERS = {
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'SAMEORIGIN',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-}
-
 export default defineNitroConfig({
   // Match the app's `@` alias (Nitro's built-in `@` points at rootDir, but ours is
   // `./src`) so these server plugins and their transitive `@/…` imports resolve.
@@ -33,6 +27,7 @@ export default defineNitroConfig({
   // structured access line per request.
   plugins: [
     './src/server/nitro/graceful-shutdown.ts',
+    './src/server/nitro/security-headers.ts',
     './src/server/nitro/request-log.ts',
   ],
   routeRules: {
