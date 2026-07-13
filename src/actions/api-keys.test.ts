@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { createApiKey, createApiKeyScope, getProject, updateApiKey } =
+const { createApiKey, createApiKeyScope, getProject, isCloud, updateApiKey } =
   vi.hoisted(() => ({
     createApiKey: vi.fn(),
     createApiKeyScope: vi.fn(),
     getProject: vi.fn(),
+    isCloud: vi.fn(),
     updateApiKey: vi.fn(),
   }))
 
@@ -22,6 +23,7 @@ vi.mock('@/data-access/api-keys', () => ({
 vi.mock('@/lib/auth/server', () => ({
   auth: { api: { createApiKey, updateApiKey } },
 }))
+vi.mock('@/server/deployment', () => ({ isCloud }))
 
 const { createOrgApiKey } = await import('./api-keys')
 
@@ -30,6 +32,7 @@ beforeEach(() => {
   createApiKeyScope.mockResolvedValue({})
   getProject.mockResolvedValue({ id: 'project_a', orgId: 'org_a' })
   updateApiKey.mockResolvedValue({})
+  isCloud.mockReturnValue(false)
 })
 
 afterEach(() => {
@@ -37,6 +40,18 @@ afterEach(() => {
 })
 
 describe('createOrgApiKey', () => {
+  it('requires every cloud key to belong to a project', async () => {
+    isCloud.mockReturnValue(true)
+    await expect(
+      createOrgApiKey({
+        orgId: 'org_a',
+        userId: 'user_a',
+        name: 'Unscoped key',
+      }),
+    ).rejects.toThrow('must belong to a project')
+    expect(createApiKey).not.toHaveBeenCalled()
+  })
+
   it('rejects a project that is not in the active organization', async () => {
     getProject.mockResolvedValue(undefined)
     await expect(

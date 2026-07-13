@@ -1,6 +1,5 @@
 import { Link } from '@tanstack/react-router'
 import { CheckIcon } from 'lucide-react'
-import { useState } from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -31,8 +30,6 @@ import {
   TRIAL,
 } from '@/lib/billing/plans'
 import { cn } from '@/lib/cn/utils'
-
-type Interval = 'month' | 'year'
 
 const GB = 1024 ** 3
 const TRAILING_ZEROS = /\.00$/
@@ -71,11 +68,6 @@ export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
     question: 'What happens if my payment fails?',
     answer:
       'Nothing breaks immediately. Keenpix keeps serving your images through a dunning grace window while Polar retries the payment, and you get an email right away. Delivery only stops if billing stays unresolved and the subscription ends.',
-  },
-  {
-    question: 'How does annual billing work?',
-    answer:
-      'Annual plans cost 10× the monthly price — two months free. Plan switches are prorated by Polar and take effect immediately.',
   },
   {
     question: 'Is self-hosting really free?',
@@ -163,7 +155,6 @@ const MATRIX: Array<{
 ]
 
 export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
-  const [interval, setInterval] = useState<Interval>('month')
   const prices = pricing ?? catalogPricing()
 
   return (
@@ -184,35 +175,11 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
               that is never billed. Or self-host the whole engine, free.
             </p>
 
-            <div className="mt-8 inline-flex items-center gap-1 rounded-lg bg-muted p-1">
-              {(['month', 'year'] as const).map((value) => (
-                <button
-                  className={cn(
-                    'flex items-center gap-2 rounded-md px-4 py-1.5 font-medium text-sm transition-colors',
-                    interval === value
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                  key={value}
-                  onClick={() => setInterval(value)}
-                  type="button"
-                >
-                  {value === 'month' ? 'Monthly' : 'Annual'}
-                  {value === 'year' ? (
-                    <Badge variant="success">2 months free</Badge>
-                  ) : null}
-                </button>
-              ))}
-            </div>
-
             <div className="mt-8 grid gap-4 text-left lg:grid-cols-3">
               {PLAN_CARD_ORDER.map((planId) => {
                 const plan = PLANS[planId]
                 const price = prices.plans[planId]
-                const monthlyCents =
-                  interval === 'year'
-                    ? price.year.amountCents / 12
-                    : price.month.amountCents
+                const monthlyCents = price.month.amountCents
                 const featured = planId === 'pro'
                 return (
                   <Card
@@ -232,11 +199,6 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
                           /mo
                         </span>
                       </div>
-                      {interval === 'year' ? (
-                        <p className="text-muted-foreground text-sm">
-                          Billed ${formatUsd(price.year.amountCents)}/year
-                        </p>
-                      ) : null}
                       <p className="text-muted-foreground text-sm">
                         {PLAN_TAGLINES[planId]}
                       </p>

@@ -38,6 +38,9 @@ export const serverEnvSchema = {
   POLAR_TOKEN: z.string().min(1).optional(),
   POLAR_SERVER: z.enum(['sandbox', 'production']).optional(),
   POLAR_WEBHOOK_SECRET: z.string().min(1).optional(),
+  // Separate secret for the production-hosted, acknowledgement-only Polar
+  // sandbox callback. It must never equal the production webhook secret.
+  POLAR_SANDBOX_WEBHOOK_SECRET: z.string().min(1).optional(),
   POLAR_SUCCESS_URL: z.string().min(1).optional(),
   // Shared secret for machine-triggered internal jobs (usage metering cron).
   // The scheduler sends `Authorization: Bearer $CRON_SECRET`.

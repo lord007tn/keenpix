@@ -85,15 +85,19 @@ async function copyKey(text: string) {
 // Create flow lives in a modal: collect name + scope, then reveal the key once.
 function CreateApiKeyDialog({
   projects,
+  projectId,
+  projectName,
   onCreated,
 }: {
   projects: WorkspaceData['projects']
+  projectId?: string
+  projectName?: string
   onCreated: (created: CreatedApiKey, projectId: string | null) => void
 }) {
   const [open, setOpen] = useState(false)
   const [createdKey, setCreatedKey] = useState('')
   const form = useForm({
-    defaultValues: { name: '', projectId: ALL_PROJECTS_SCOPE },
+    defaultValues: { name: '', projectId: projectId ?? ALL_PROJECTS_SCOPE },
     validators: {
       onChange: createApiKeySchema,
       onSubmit: createApiKeySchema,
@@ -206,46 +210,58 @@ function CreateApiKeyDialog({
                 )
               }}
             </form.Field>
-            <form.Field name="projectId">
-              {(field) => (
-                <div className="flex flex-col gap-1.5">
-                  <Label>Scope</Label>
-                  <Select
-                    onValueChange={(value) =>
-                      field.handleChange(value ?? ALL_PROJECTS_SCOPE)
-                    }
-                    value={field.state.value}
-                  >
-                    <SelectTrigger
-                      aria-label="API key scope"
-                      className="w-full"
-                    >
-                      <SelectValue>
-                        {(value) =>
-                          projectScopeLabel(
-                            projects,
-                            value === ALL_PROJECTS_SCOPE ? null : value,
-                          )
-                        }
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectGroupLabel>Scope</SelectGroupLabel>
-                        <SelectItem value={ALL_PROJECTS_SCOPE}>
-                          All projects
-                        </SelectItem>
-                        {projects.map((project) => (
-                          <SelectItem key={project.id} value={project.id}>
-                            {project.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+            {projectId ? (
+              <div className="flex flex-col gap-1.5">
+                <Label>Project</Label>
+                <div className="flex min-h-10 items-center rounded-md border bg-muted/30 px-3 text-sm">
+                  {projectName ?? projectScopeLabel(projects, projectId)}
                 </div>
-              )}
-            </form.Field>
+                <p className="text-muted-foreground text-xs">
+                  This key can access only this project.
+                </p>
+              </div>
+            ) : (
+              <form.Field name="projectId">
+                {(field) => (
+                  <div className="flex flex-col gap-1.5">
+                    <Label>Scope</Label>
+                    <Select
+                      onValueChange={(value) =>
+                        field.handleChange(value ?? ALL_PROJECTS_SCOPE)
+                      }
+                      value={field.state.value}
+                    >
+                      <SelectTrigger
+                        aria-label="API key scope"
+                        className="w-full"
+                      >
+                        <SelectValue>
+                          {(value) =>
+                            projectScopeLabel(
+                              projects,
+                              value === ALL_PROJECTS_SCOPE ? null : value,
+                            )
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectGroupLabel>Scope</SelectGroupLabel>
+                          <SelectItem value={ALL_PROJECTS_SCOPE}>
+                            All projects
+                          </SelectItem>
+                          {projects.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </form.Field>
+            )}
             <DialogFooter>
               <Button
                 onClick={() => changeOpen(false)}
@@ -271,7 +287,13 @@ function CreateApiKeyDialog({
   )
 }
 
-export function ApiKeyManagement() {
+export function ApiKeyManagement({
+  projectId,
+  projectName,
+}: {
+  projectId?: string
+  projectName?: string
+}) {
   const [workspace, setWorkspace] = useState<WorkspaceData | null>(null)
   const [activities, setActivities] = useState<ActivityRow[]>([])
   const [activityTotal, setActivityTotal] = useState(0)
@@ -281,7 +303,9 @@ export function ApiKeyManagement() {
 
   const load = useCallback(async () => {
     try {
-      const data = await getOrgApiKeysFn()
+      const data = await getOrgApiKeysFn({
+        data: { projectId: projectId ?? '' },
+      })
       setWorkspace(data)
       setActivities(data.apiKeyActivities)
       setActivityTotal(data.apiKeyActivitiesTotal)
@@ -289,11 +313,13 @@ export function ApiKeyManagement() {
     } catch (e) {
       toast.error(getErrorMessage(e, 'Could not load API keys'))
     }
-  }, [])
+  }, [projectId])
 
   async function changeActivityPage(next: number) {
     try {
-      const res = await getOrgApiKeyActivitiesFn({ data: { page: next } })
+      const res = await getOrgApiKeyActivitiesFn({
+        data: { page: next, projectId: projectId ?? '' },
+      })
       setActivities(res.activities)
       setActivityTotal(res.total)
       setActivityPage(next)
@@ -355,8 +381,9 @@ export function ApiKeyManagement() {
   return (
     <div className="flex flex-col gap-5">
       <CardDescription>
-        Create keys for trusted internal systems that need to manage Keenpix
-        projects, domains, and pipeline settings over the JSON API.
+        {projectId
+          ? `Create credentials scoped to ${projectName ?? 'this project'}. A project key cannot read or change another project in the organization.`
+          : 'Create keys for trusted internal systems that need to manage Keenpix projects, domains, and pipeline settings over the JSON API.'}
       </CardDescription>
 
       <div className="flex items-center justify-between gap-3">
@@ -364,7 +391,12 @@ export function ApiKeyManagement() {
           <span className="font-medium text-sm">API keys</span>
           <Badge variant="outline">{apiKeys.length}</Badge>
         </div>
-        <CreateApiKeyDialog onCreated={handleCreated} projects={projects} />
+        <CreateApiKeyDialog
+          onCreated={handleCreated}
+          projectId={projectId}
+          projectName={projectName}
+          projects={projects}
+        />
       </div>
 
       <div className="divide-y rounded-md border">

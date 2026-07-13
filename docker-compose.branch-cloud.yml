@@ -123,6 +123,7 @@ services:
       POLAR_TOKEN: ${POLAR_TOKEN}
       POLAR_SERVER: ${POLAR_SERVER:-production}
       POLAR_WEBHOOK_SECRET: ${POLAR_WEBHOOK_SECRET}
+      POLAR_SANDBOX_WEBHOOK_SECRET: ${POLAR_SANDBOX_WEBHOOK_SECRET:-}
       POLAR_SUCCESS_URL: ${POLAR_SUCCESS_URL:-/app/dashboard}
       # Default is the bundled Mailpit sink (staging). PRODUCTION MUST OVERRIDE:
       # set EMAIL_PROVIDER=postmark (or resend) + its credentials in Coolify so

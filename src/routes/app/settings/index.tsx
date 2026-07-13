@@ -118,13 +118,19 @@ function SettingsPage() {
   const projectSections: Section[] = currentProject
     ? ['general', 'pipeline', 'security']
     : []
+  if (currentProject && canManageProject) {
+    projectSections.push('api-keys')
+  }
   // Billing + Team are per-org and cloud-only (self-host is single-tenant/free),
   // shown to every member of the org. API keys are the org's JSON-API credentials
   // (both modes), managed by owners/admins. Operator-only config (staff, ops, CDN)
   // lives in the Admin console.
   const billingSections: Section[] = cloud ? ['billing'] : []
   const teamSections: Section[] = cloud ? ['team'] : []
-  const apiKeySections: Section[] = canManageProject ? ['api-keys'] : []
+  // Cloud credentials belong to one selected project. Self-host retains the
+  // legacy organization-wide key surface when no project is selected.
+  const apiKeySections: Section[] =
+    !cloud && canManageProject && !currentProject ? ['api-keys'] : []
   const available = [
     ...projectSections,
     ...billingSections,
@@ -193,7 +199,7 @@ function SettingsPage() {
     <div className="flex flex-col gap-6 p-6">
       <PageHeader
         eyebrow={isAll ? 'Workspace' : currentProject?.name}
-        subtitle="Project and instance configuration."
+        subtitle="Project and organization configuration."
         title="Settings"
       />
 
@@ -342,12 +348,17 @@ function SettingsPage() {
               <CardHeader>
                 <CardTitle>API keys</CardTitle>
                 <CardDescription>
-                  Credentials for managing this organization&apos;s projects,
-                  domains, and pipeline over the JSON API.
+                  {currentProject
+                    ? `Credentials scoped to ${currentProject.name}.`
+                    : 'Credentials for managing projects, domains, and pipeline over the JSON API.'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ApiKeyManagement />
+                <ApiKeyManagement
+                  key={currentProject?.id ?? 'organization'}
+                  projectId={currentProject?.id}
+                  projectName={currentProject?.name}
+                />
               </CardContent>
             </Card>
           ) : null}

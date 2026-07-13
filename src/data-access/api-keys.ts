@@ -6,9 +6,12 @@ import { prisma } from '@/db'
 // Better Auth compatibility and is never trusted for authorization.
 const INTERNAL_CONFIG = 'internal'
 
-export async function listOrgApiKeys(orgId: string) {
+export async function listOrgApiKeys(orgId: string, projectId?: string) {
   const rows = await prisma.apiKey.findMany({
-    where: { configId: INTERNAL_CONFIG, scope: { is: { orgId } } },
+    where: {
+      configId: INTERNAL_CONFIG,
+      scope: { is: { orgId, ...(projectId ? { projectId } : {}) } },
+    },
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,
@@ -77,8 +80,13 @@ export async function listOrgApiKeyActivities(
   orgId: string,
   skip = 0,
   take = 10,
+  projectId?: string,
 ) {
-  const where = { apiKey: { scope: { is: { orgId } } } }
+  const where = {
+    apiKey: {
+      scope: { is: { orgId, ...(projectId ? { projectId } : {}) } },
+    },
+  }
   const [rows, total] = await Promise.all([
     prisma.apiKeyActivity.findMany({
       where,

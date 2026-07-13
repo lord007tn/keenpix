@@ -52,6 +52,17 @@ export const env = createEnv({
             'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be configured together.',
         })
       }
+      if (
+        value.POLAR_SANDBOX_WEBHOOK_SECRET &&
+        value.POLAR_SANDBOX_WEBHOOK_SECRET === value.POLAR_WEBHOOK_SECRET
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['POLAR_SANDBOX_WEBHOOK_SECRET'],
+          message:
+            'POLAR_SANDBOX_WEBHOOK_SECRET must differ from POLAR_WEBHOOK_SECRET.',
+        })
+      }
       // Any production deploy (self-host or cloud) needs a database and a real
       // auth secret, or it boots green and then crashes on the first request.
       if (value.NODE_ENV === 'production') {

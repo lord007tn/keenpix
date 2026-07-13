@@ -4,12 +4,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { getErrorMessage } from '@/errors/common'
 import { getPlanPricingFn } from '@/functions/pricing'
 import { trackEvent } from '@/lib/analytics/client'
@@ -24,7 +19,6 @@ import {
 } from '@/lib/billing/plans'
 import { cn } from '@/lib/cn/utils'
 
-type Interval = 'month' | 'year'
 type PlanPrice = PlanPricing['plans'][PlanId]
 
 const GB = 1024 ** 3
@@ -50,14 +44,10 @@ function formatDomains(customDomains: number | null): string {
   return `${customDomains} custom domains`
 }
 
-// Effective per-month dollars for the chosen interval. Annual shows the amortized
-// monthly figure (annual total / 12) so the toggle reads as a discount, not a
-// bigger number. Sourced from live Polar prices (or the catalog fallback), so the
-// displayed price always matches the real charge.
-function perMonthUsd(price: PlanPrice, interval: Interval): number {
-  const cents =
-    interval === 'year' ? price.year.amountCents / 12 : price.month.amountCents
-  return cents / 100
+// Sourced from live Polar pricing (or the catalog fallback), so the displayed
+// monthly price always matches the real charge.
+function monthlyUsd(price: PlanPrice): number {
+  return price.month.amountCents / 100
 }
 
 function formatUsd(dollars: number): string {
@@ -103,10 +93,9 @@ function checkoutLabel(
     : `Start ${TRIAL.days}-day free trial`
 }
 
-// The interval toggle + the three plan cards, with checkout wired to Polar. Shared
-// by the billing settings panel and the onboarding "choose a plan" dialog so the
-// pricing UI and checkout logic never diverge. Checkout attributes the resulting
-// subscription to the active `orgId` supplied by the authenticated app surface.
+// The three monthly plan cards, with checkout wired to Polar. Shared by billing
+// settings and onboarding so pricing and checkout logic never diverge. Checkout
+// attributes the subscription to the active organization.
 export function PlanSelection({
   orgId,
   activePlanId,
@@ -118,7 +107,6 @@ export function PlanSelection({
   hasPlan?: boolean
   compact?: boolean
 }) {
-  const [interval, setInterval] = useState<Interval>('month')
   const [busy, setBusy] = useState<PlanId | null>(null)
   // Live Polar prices so the cards match the real charge; the catalog is the
   // first-paint/self-host/offline fallback so a price never renders blank.
@@ -133,14 +121,14 @@ export function PlanSelection({
     setBusy(planId)
     try {
       const result = await authClient.checkout({
-        slug: `${planId}-${interval}`,
+        slug: `${planId}-month`,
         referenceId: orgId,
       })
       const url = result?.data?.url
       if (url) {
         trackEvent('begin_checkout', {
           plan: planId,
-          billing_interval: interval,
+          billing_interval: 'month',
         })
         window.location.href = url
         return
@@ -156,27 +144,6 @@ export function PlanSelection({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-center gap-1 rounded-lg bg-muted p-1 sm:w-fit">
-        {(['month', 'year'] as const).map((value) => (
-          <button
-            className={cn(
-              'flex items-center gap-2 rounded-md px-4 py-1.5 font-medium text-sm transition-colors',
-              interval === value
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-            key={value}
-            onClick={() => setInterval(value)}
-            type="button"
-          >
-            {value === 'month' ? 'Monthly' : 'Annual'}
-            {value === 'year' ? (
-              <Badge variant="success">2 months free</Badge>
-            ) : null}
-          </button>
-        ))}
-      </div>
-
       <div className="grid gap-4 lg:grid-cols-3">
         {PLAN_ORDER.map((planId) => {
           const plan = PLANS[planId]
@@ -198,15 +165,10 @@ export function PlanSelection({
                 </div>
                 <div className="flex items-baseline gap-1 pt-2">
                   <span className="font-semibold text-3xl">
-                    ${formatUsd(perMonthUsd(price, interval))}
+                    ${formatUsd(monthlyUsd(price))}
                   </span>
                   <span className="text-muted-foreground text-sm">/mo</span>
                 </div>
-                {interval === 'year' ? (
-                  <CardDescription>
-                    Billed ${formatUsd(price.year.amountCents / 100)}/year
-                  </CardDescription>
-                ) : null}
               </CardHeader>
               <CardContent className="flex flex-1 flex-col gap-4">
                 {compact ? null : (

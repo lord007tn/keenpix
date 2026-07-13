@@ -76,13 +76,19 @@ describe('SDK API-key tenant isolation', () => {
     await expectStatus(verifySdkApiKey(request, 'read'), 403)
   })
 
-  it('allows an org-wide key only inside its relational organization', async () => {
+  it('rejects an organization-wide key in cloud', async () => {
+    getOrgApiKeyAccess.mockResolvedValue({ orgId: 'org_real', projectId: null })
+    await expectStatus(verifySdkApiKey(request, 'write', 'project_a'), 403)
+  })
+
+  it('retains organization-wide keys for single-tenant self-host installs', async () => {
+    isCloud.mockReturnValue(false)
     getOrgApiKeyAccess.mockResolvedValue({ orgId: 'org_real', projectId: null })
     await expect(
       verifySdkApiKey(request, 'write', 'project_a'),
     ).resolves.toEqual({
       orgId: 'org_real',
-      projectId: undefined,
+      projectId: 'metadata_project',
     })
   })
 })

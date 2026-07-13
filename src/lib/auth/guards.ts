@@ -29,6 +29,13 @@ export const authMiddleware = createMiddleware({ type: 'function' }).server(
     // single-tenant, so skip the query entirely there.
     const orgRole =
       isCloud() && orgId ? await getMemberRole(session.user.id, orgId) : null
+    // An organization member can be removed while one of their existing
+    // sessions still points at that organization. Better Auth only clears the
+    // acting session on self-removal, so fail closed here before any custom
+    // server function can trust a stale activeOrganizationId.
+    if (isCloud() && orgId && !orgRole) {
+      throw new Error('You are not a member of the active organization.')
+    }
     return next({
       context: {
         userId: session.user.id,
@@ -52,9 +59,18 @@ export function requireSuperAdmin(context: { role?: string }) {
 // scoped reads/writes. Self-host always resolves to org_default; cloud throws
 // when the caller has no active org selected, so no query can fall back to a
 // shared/default tenant.
-export function requireActiveOrg(context: { orgId?: string | null }): string {
+export function requireActiveOrg(context: {
+  orgId?: string | null
+  orgRole?: string | null
+}): string {
   if (!context.orgId) {
     throw new Error('No active organization')
+  }
+  // Defense in depth for tenant reads. authMiddleware performs this check at
+  // the boundary, but retaining it here prevents a future caller from passing a
+  // stale cloud organization through a hand-built context.
+  if (isCloud() && !context.orgRole) {
+    throw new Error('You are not a member of the active organization.')
   }
   return context.orgId
 }

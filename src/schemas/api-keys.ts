@@ -9,6 +9,15 @@ export const createApiKeySchema = z.object({
   projectId: z.string(),
 })
 
+export const apiKeyWorkspaceSchema = z.object({
+  projectId: z.string(),
+})
+
+export const apiKeyActivityPageSchema = z.object({
+  page: z.coerce.number().int().min(1).catch(1),
+  projectId: z.string(),
+})
+
 export const disableApiKeySchema = z.object({
   id: nonEmptyStringSchema(),
 })

@@ -56,10 +56,6 @@ export const operationsConfigSchema = z.object({
 
 export const ACTIVITY_PAGE_SIZE = 10
 
-export const apiActivityPageSchema = z.object({
-  page: z.coerce.number().int().min(1).catch(1),
-})
-
 export const customerAccountSchema = z.object({
   orgId: nonEmptyStringSchema(),
 })

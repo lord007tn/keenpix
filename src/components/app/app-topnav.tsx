@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { NavUser } from '@/components/app/nav-user'
+import { OrganizationSwitcher } from '@/components/app/organization-switcher'
 import { ProjectSwitcher } from '@/components/app/project-switcher'
 import { ModeToggle } from '@/components/theme/mode-toggle'
 import type { SessionUser } from '@/functions/auth'
@@ -42,9 +43,17 @@ export function AppTopnav({
 
   return (
     <header className="sticky top-0 z-20 flex flex-col border-b bg-background">
-      <div className="flex h-14 items-center gap-2 px-3 sm:px-4">
-        <KeenpixLogo />
-        <span className="mx-0.5 hidden text-lg text-muted-foreground/40 sm:inline">
+      <div className="flex h-14 items-center gap-1 px-2 sm:gap-2 sm:px-4">
+        <KeenpixLogo showName={false} />
+        {cloud ? (
+          <>
+            <span className="mx-0.5 hidden text-lg text-muted-foreground/40 sm:inline">
+              /
+            </span>
+            <OrganizationSwitcher />
+          </>
+        ) : null}
+        <span className="mx-0.5 hidden text-lg text-muted-foreground/40 md:inline">
           /
         </span>
         <ProjectSwitcher />

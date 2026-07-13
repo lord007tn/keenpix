@@ -1,7 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { readLogs } from '@/actions/logs'
+import { getMemberRole } from '@/data-access/members'
 import { resolveActiveOrgId } from '@/lib/auth/active-org'
 import { auth } from '@/lib/auth/server'
+import { isCloud } from '@/server/deployment'
 
 const STREAM_INTERVAL_MS = 2500
 const MAX_SEEN_IDS = 500
@@ -17,13 +19,14 @@ export const Route = createFileRoute('/api/internal/logs/stream')({
   },
 })
 
-async function handleLogStream(request: Request) {
+export async function handleLogStream(request: Request) {
   const session = await auth.api
     .getSession({ headers: request.headers })
     .catch(() => null)
   if (!session?.user) {
     return new Response('Unauthorized', { status: 401 })
   }
+  const userId = session.user.id
   // Scope the stream to the caller's org (self-host → org_default). Without an
   // active org in cloud there is nothing to stream — and never another tenant's.
   const orgId = resolveActiveOrgId(
@@ -32,6 +35,12 @@ async function handleLogStream(request: Request) {
   )
   if (!orgId) {
     return new Response('No active organization', { status: 403 })
+  }
+  // This route is a raw SSE handler and does not pass through authMiddleware.
+  // Re-check live membership so a removed member's stale session cannot keep
+  // streaming another organization's request logs until the session expires.
+  if (isCloud() && !(await getMemberRole(userId, orgId))) {
+    return new Response('Organization access revoked', { status: 403 })
   }
   // Narrowed to a definite string for capture by the interval closure below.
   const scopedOrgId = orgId
@@ -48,6 +57,14 @@ async function handleLogStream(request: Request) {
     start(controller) {
       async function writeRows() {
         try {
+          // Membership can be revoked after this long-lived response opens.
+          // Re-check before every database read so an existing stream closes on
+          // the next poll instead of leaking logs until the browser disconnects.
+          if (isCloud() && !(await getMemberRole(userId, scopedOrgId))) {
+            clearInterval(id)
+            controller.close()
+            return
+          }
           const rows = await readLogs(scopedOrgId, project, STREAM_FETCH_LIMIT)
           const next = rows.filter((row) => !seen.has(row.id))
           for (const row of rows) {

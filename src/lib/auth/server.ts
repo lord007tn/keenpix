@@ -15,6 +15,7 @@ import { prisma } from '@/db'
 import { env } from '@/env/server'
 import { buildPolarPlugin } from '@/lib/billing/polar-plugin'
 import { sendPlatformEmail } from '@/lib/email/send'
+import { escapeEmailHtml } from '@/lib/email/utils/html/escape'
 import { errorContext, logger } from '@/lib/logger/logger'
 import { getAppUrl, isCloud } from '@/server/deployment'
 
@@ -175,7 +176,7 @@ export const auth = betterAuth({
         to: user.email,
         subject: 'Reset your Keenpix password',
         text: `Reset your Keenpix password:\n\n${url}\n\nIf you didn't request this, you can ignore this email.`,
-        html: `<p>Reset your Keenpix password:</p><p><a href="${url}">Reset password</a></p><p>If you didn't request this, you can ignore this email.</p>`,
+        html: `<p>Reset your Keenpix password:</p><p><a href="${escapeEmailHtml(url)}">Reset password</a></p><p>If you didn't request this, you can ignore this email.</p>`,
       }),
   },
   // Verification emails on cloud sign-up; the link signs the user in on success.
@@ -187,7 +188,7 @@ export const auth = betterAuth({
         to: user.email,
         subject: 'Verify your Keenpix email',
         text: `Welcome to Keenpix! Verify your email:\n\n${url}`,
-        html: `<p>Welcome to Keenpix! Verify your email to get started:</p><p><a href="${url}">Verify email</a></p>`,
+        html: `<p>Welcome to Keenpix! Verify your email to get started:</p><p><a href="${escapeEmailHtml(url)}">Verify email</a></p>`,
       }),
   },
   user: {
@@ -204,7 +205,7 @@ export const auth = betterAuth({
           to: user.email,
           subject: 'Confirm your Keenpix email change',
           text: `Confirm changing your Keenpix email to ${newEmail}:\n\n${url}\n\nIf you didn't request this, you can ignore this email and your address stays the same.`,
-          html: `<p>Confirm changing your Keenpix email to <strong>${newEmail}</strong>:</p><p><a href="${url}">Confirm email change</a></p><p>If you didn't request this, you can ignore this email and your address stays the same.</p>`,
+          html: `<p>Confirm changing your Keenpix email to <strong>${escapeEmailHtml(newEmail)}</strong>:</p><p><a href="${escapeEmailHtml(url)}">Confirm email change</a></p><p>If you didn't request this, you can ignore this email and your address stays the same.</p>`,
         }),
     },
     // Self-serve account deletion is cloud-only: self-host operators manage users
@@ -394,7 +395,7 @@ export const auth = betterAuth({
           to: data.email,
           subject: `You're invited to ${data.organization.name} on Keenpix`,
           text: `${who} invited you to join ${data.organization.name} on Keenpix.\n\nAccept your invitation:\n${url}\n\nThis invitation expires in 48 hours.`,
-          html: `<p>${who} invited you to join <strong>${data.organization.name}</strong> on Keenpix.</p><p><a href="${url}">Accept invitation</a></p><p>This invitation expires in 48 hours.</p>`,
+          html: `<p>${escapeEmailHtml(who)} invited you to join <strong>${escapeEmailHtml(data.organization.name)}</strong> on Keenpix.</p><p><a href="${escapeEmailHtml(url)}">Accept invitation</a></p><p>This invitation expires in 48 hours.</p>`,
         })
       },
     }),

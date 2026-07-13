@@ -1,5 +1,4 @@
 import { checkout, polar, portal, webhooks } from '@polar-sh/better-auth'
-import type { Polar } from '@polar-sh/sdk'
 import {
   upsertSubscription,
   upsertSubscriptionWithCustomer,
@@ -7,6 +6,7 @@ import {
 import { env } from '@/env/server'
 import { notifyPaymentIssue } from '@/lib/billing/alerts'
 import { errorContext, logger } from '@/lib/logger/logger'
+import { listCheckoutProducts } from './polar-checkout-products'
 import { createPolarClient } from './polar-client'
 import {
   mapSubscriptionSnapshot,
@@ -63,34 +63,10 @@ async function syncSubscription(
 const SUCCESS_URL = '/app/dashboard'
 
 // Slug map the checkout endpoint resolves against, built live from the Polar
-// product catalog: each subscription product carries `plan` + `interval`
-// metadata, so `${plan}-${interval}` (e.g. `pro-year`) is a stable slug the
-// billing UI can request without hardcoding sandbox/production product ids.
-// Failures resolve to an empty map (checkout errors cleanly) rather than throw.
-async function resolveProducts(
-  client: Polar,
-): Promise<{ productId: string; slug: string }[]> {
-  try {
-    const products: { productId: string; slug: string }[] = []
-    const iterator = await client.products.list({
-      isArchived: false,
-      limit: 100,
-    })
-    for await (const page of iterator) {
-      for (const product of page.result.items) {
-        const plan = product.metadata?.plan
-        const interval = product.metadata?.interval
-        if (typeof plan === 'string' && typeof interval === 'string') {
-          products.push({ productId: product.id, slug: `${plan}-${interval}` })
-        }
-      }
-    }
-    return products
-  } catch {
-    return []
-  }
-}
-
+// product catalog: each monthly subscription product carries `plan` +
+// `interval=month` metadata, so `${plan}-month` is a stable slug the billing UI
+// can request without hardcoding sandbox/production product ids. Failures
+// resolve to an empty map (checkout errors cleanly) rather than throw.
 // The Polar billing plugin for better-auth. Returns null unless running in cloud
 // with an access token configured, so self-host (and any cloud deploy without
 // billing credentials) never constructs a Polar client or mounts billing routes.
@@ -100,7 +76,7 @@ export function buildPolarPlugin() {
     return null
   }
   const checkoutPlugin = checkout({
-    products: () => resolveProducts(client),
+    products: () => listCheckoutProducts(client),
     successUrl: env.POLAR_SUCCESS_URL ?? SUCCESS_URL,
     authenticatedUsersOnly: true,
   })
