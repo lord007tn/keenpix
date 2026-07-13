@@ -510,7 +510,7 @@ docker compose up -d --build
             <p className="text-muted-foreground text-sm">
               Prefer the managed cloud?{' '}
               <Link
-                className="underline underline-offset-4 hover:text-foreground"
+                className="inline-flex min-h-11 touch-manipulation items-center underline underline-offset-4 hover:text-foreground"
                 to="/signup"
               >
                 Start a 14-day trial
