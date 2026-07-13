@@ -219,7 +219,8 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
                       </ul>
                       <Link
                         className={buttonVariants({
-                          className: 'mt-auto w-full',
+                          className:
+                            'mt-auto min-h-11 w-full touch-manipulation px-4',
                           variant: featured ? 'default' : 'outline',
                         })}
                         to="/signup"

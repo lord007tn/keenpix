@@ -6,7 +6,7 @@ All notable changes to Keenpix are documented here.
 
 No unreleased changes.
 
-## [v0.2.0] - 2026-07-11
+## [v0.2.0] - 2026-07-13
 
 ### Added
 
@@ -14,7 +14,8 @@ No unreleased changes.
 - Polar-backed trials, subscriptions, usage metering, spending caps, billing alerts, dunning handling, and organization-scoped billing recovery.
 - Consent-aware GTM/GA4 funnel events and sampled first-party Core Web Vitals reporting with a privacy-choice surface.
 - Public pricing, comparison, self-hosting, changelog, trust, security, status, support, author, and editorial-methodology pages.
-- A nine-article blog with three focused image-CDN guides, dated primary-source disclosures, RSS, and required article-specific Takumi hero/OG images.
+- A 10-article blog with focused image-CDN guides, comparison research, dated primary-source disclosures, RSS, and required article-specific social images.
+- A disclosed, code-backed JoodCMS integration case study with a generated 1600×900 WebP cover and 1200×630 JPEG Open Graph asset; no unsupported performance outcome is claimed.
 - Opt-in HMAC-signed image URLs, cloud object caching, ClickHouse analytics, daily cloud database backups, and graceful deployment health handling.
 - Cross-platform SEO drift checks for canonical, robots, schema, Open Graph, headings, snippets, and status regressions.
 - Hourly Postgres analytics rollups with migration backfill and transactional updates when new request logs are written.

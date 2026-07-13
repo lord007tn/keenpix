@@ -20,7 +20,7 @@ export const SELF_HOSTED_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Does Keenpix replace my CDN?',
     answer:
-      'No — it complements it. Keenpix is the origin shield that sits behind Cloudflare (or any CDN) and generates the optimized variants your edge then caches. Transform responses are emitted with long-lived immutable cache headers, so one cache rule on /img/* means the edge serves repeat traffic for free and Keenpix only works on cache misses.',
+      'No — it complements it. Keenpix is the origin shield that sits behind Cloudflare (or any CDN) and generates the optimized variants your edge then caches. Transform responses are emitted with long-lived immutable cache headers, so a cache rule on /img/* lets the edge handle repeat requests without reaching Keenpix. Your CDN may still charge for its own delivery.',
   },
   {
     question: 'Where do my images live?',
@@ -37,7 +37,7 @@ export const SELF_HOSTED_FAQ: Array<{ answer: string; question: string }> = [
 const WHY_SELF_HOST = [
   {
     title: 'Bandwidth cost',
-    body: 'Managed image CDNs charge for the same gigabyte many times over. As of July 2026: ImageKit overage is $0.45–0.50/GB, Cloudinary credits work out to roughly $0.44 per credit-GB, and imgix bills delivery and cached storage from one credit pool. If you already pay for a server and a CDN, a self-hosted transform layer makes your marginal cost per optimized image close to zero — and AVIF/WebP typically cut image weight 30–70%, so it often pays for itself in CDN egress savings alone.',
+    body: 'Self-hosting replaces a vendor invoice with infrastructure, CDN delivery, storage, operations, and engineering costs that you control. Whether it costs less depends on your source images, cache-hit rate, traffic geography, formats, quality settings, and team time. Measure source and delivered bytes on your own workload before treating self-hosting as a savings claim.',
   },
   {
     title: 'Privacy and GDPR',
@@ -130,7 +130,7 @@ const PROMISES = [
 const LIMITATIONS = [
   'No video. Images only — if you need video transcoding, look at Cloudinary or Gumlet.',
   'No storage or DAM. Keenpix transforms and delivers from origins you already have — S3, R2, your app server. There is no upload API, no media library, no asset search.',
-  'Young product. Keenpix is newer than everything in the table above and built by a solo founder. The flip side: it is small enough to read in an afternoon, and issues get answered by the person who wrote the code.',
+  'Young product. Keenpix is newer than the alternatives in the table above and built by a solo founder. The repository is available for teams to audit directly, but maturity and support depth should be evaluated against your own requirements.',
   'Custom domains are not yet available on the managed cloud (self-hosters, of course, use whatever domain they want).',
 ]
 
@@ -305,9 +305,10 @@ export function SelfHostedLandingPage({
             </p>
             <p className="mt-4 text-muted-foreground leading-relaxed">
               Keenpix is for the team that wants the whole thing — engine,
-              cache, security model, and observability — working in the next
-              five minutes, with a UI a teammate can use without reading env-var
-              docs.
+              cache, security model, and observability — in one deployment, with
+              a UI for normal project operations. Production readiness still
+              requires secrets, backups, capacity checks, and the deployment
+              validation described in the docs.
             </p>
           </div>
         </section>
@@ -315,7 +316,7 @@ export function SelfHostedLandingPage({
         <section className="border-b">
           <div className="mx-auto max-w-3xl px-6 py-14">
             <h2 className="font-semibold text-2xl tracking-tight">
-              The 60-second Docker quickstart
+              Docker quickstart
             </h2>
             <p className="mt-4 text-muted-foreground leading-relaxed">
               Keenpix ships as a single Node container (sharp needs Node, not an
@@ -335,8 +336,8 @@ docker compose up -d --build
               both the dashboard and the transform endpoint. From there: sign
               in, create a project pointed at your image origin, add that origin
               to the allowlist, and request your first transform — no API key
-              required in the URL. It also deploys as a one-click Coolify
-              service if that is your platform. The{' '}
+              required in the URL. The repository also includes a Coolify
+              deployment path. The{' '}
               <a
                 className="text-foreground underline underline-offset-4 hover:text-primary"
                 href="/docs/self-hosting"
@@ -369,11 +370,12 @@ docker compose up -d --build
                 public, max-age=31536000, immutable
               </code>
               , so one Cloudflare Cache Rule on{' '}
-              <code className="font-mono text-sm">/img/*</code> means the edge
-              serves repeat traffic for free and Keenpix only works on cache
-              misses. Between the edge cache and Keenpix's own two-tier cache
-              with stale-while-revalidate, your actual origins see a small
-              fraction of real traffic. The{' '}
+              <code className="font-mono text-sm">/img/*</code> lets the edge
+              answer cached repeat requests without reaching Keenpix. Keenpix's
+              two-tier cache with stale-while-revalidate can also avoid repeated
+              origin fetches. The actual edge, Keenpix, and origin hit rates
+              depend on your traffic and cache configuration and should be
+              measured in your environment. The{' '}
               <a
                 className="text-foreground underline underline-offset-4 hover:text-primary"
                 href="/docs/self-hosting/cdn"
