@@ -8,6 +8,8 @@ import { getAuthor } from '@/shared/authors'
 export interface BlogPostMeta {
   author: string
   competitor?: string
+  cover?: string
+  coverAlt?: string
   date: string
   description: string
   image: string
@@ -24,18 +26,18 @@ export function BlogPostHeader({ meta }: { meta: BlogPostMeta }) {
     <header className="border-b bg-muted/30">
       <div className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
         <a
-          className="inline-flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
+          className="inline-flex min-h-11 touch-manipulation items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
           href="/blog"
         >
           <ArrowLeftIcon className="size-4" />
           All posts
         </a>
         <img
-          alt={meta.imageAlt}
+          alt={meta.coverAlt ?? meta.imageAlt}
           className="mt-8 aspect-[40/21] w-full rounded-xl border object-cover shadow-sm"
           fetchPriority="high"
           height={630}
-          src={meta.image}
+          src={meta.cover ?? meta.image}
           width={1200}
         />
         {meta.competitor ? (
@@ -52,7 +54,7 @@ export function BlogPostHeader({ meta }: { meta: BlogPostMeta }) {
         <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-muted-foreground text-sm">
           {authorLink ? (
             <a
-              className="font-medium text-foreground hover:underline"
+              className="inline-flex min-h-11 touch-manipulation items-center font-medium text-foreground hover:underline"
               href={authorLink}
               rel={author.profilePath ? 'author' : 'author noreferrer'}
               target={author.profilePath ? undefined : '_blank'}
@@ -110,20 +112,20 @@ export function BlogPostTrust({ authorName }: { authorName: string }) {
         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
           {author.profilePath ? (
             <a
-              className="font-medium text-primary hover:underline"
+              className="inline-flex min-h-11 touch-manipulation items-center font-medium text-primary hover:underline"
               href={author.profilePath}
             >
               Author profile
             </a>
           ) : null}
           <a
-            className="font-medium text-primary hover:underline"
+            className="inline-flex min-h-11 touch-manipulation items-center font-medium text-primary hover:underline"
             href="/methodology/comparisons"
           >
             Editorial methodology
           </a>
           <a
-            className="font-medium text-primary hover:underline"
+            className="inline-flex min-h-11 touch-manipulation items-center font-medium text-primary hover:underline"
             href="/support"
           >
             Request a correction
@@ -149,12 +151,20 @@ export function BlogPostCta() {
         </div>
         <div className="flex shrink-0 flex-wrap gap-3">
           <a
-            className={buttonVariants({ variant: 'outline' })}
+            className={buttonVariants({
+              className: 'min-h-12 touch-manipulation px-4',
+              variant: 'outline',
+            })}
             href="/docs/self-hosting"
           >
             Self-host free
           </a>
-          <Link className={buttonVariants()} to="/signup">
+          <Link
+            className={buttonVariants({
+              className: 'min-h-12 touch-manipulation px-4',
+            })}
+            to="/signup"
+          >
             Start free trial
             <ArrowRightIcon data-icon="inline-end" />
           </Link>

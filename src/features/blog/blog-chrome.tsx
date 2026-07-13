@@ -17,19 +17,31 @@ export function SiteHeader() {
           className="inline-flex min-h-12 min-w-12 items-center"
           href="/"
         >
-          <KeenpixLogo />
+          <KeenpixLogo className="[&>span:last-child]:hidden min-[360px]:[&>span:last-child]:inline" />
         </a>
         <nav className="ml-4 hidden gap-5 text-muted-foreground text-sm md:flex">
-          <a className="hover:text-foreground" href="/#product">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/#product"
+          >
             Product
           </a>
-          <a className="hover:text-foreground" href="/pricing">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/pricing"
+          >
             Pricing
           </a>
-          <a className="hover:text-foreground" href="/blog">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/blog"
+          >
             Blog
           </a>
-          <a className="hover:text-foreground" href="/docs">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/docs"
+          >
             Docs
           </a>
         </nav>
@@ -69,41 +81,74 @@ export function SiteFooter() {
           © 2026 keenpix · managed cloud + open-source self-host
         </span>
         <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-          <a className="hover:text-foreground" href="/about">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/about"
+          >
             About
           </a>
-          <a className="hover:text-foreground" href="/pricing">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/pricing"
+          >
             Pricing
           </a>
-          <a className="hover:text-foreground" href="/compare">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/compare"
+          >
             Compare
           </a>
-          <a className="hover:text-foreground" href="/security">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/security"
+          >
             Security
           </a>
-          <a className="hover:text-foreground" href="/status">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/status"
+          >
             Status
           </a>
-          <a className="hover:text-foreground" href="/support">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/support"
+          >
             Support
           </a>
-          <a className="hover:text-foreground" href="/changelog">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/changelog"
+          >
             Changelog
           </a>
-          <a className="hover:text-foreground" href="/docs">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/docs"
+          >
             Documentation
           </a>
-          <a className="hover:text-foreground" href="/legal/terms">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/legal/terms"
+          >
             Terms
           </a>
-          <a className="hover:text-foreground" href="/legal/privacy">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/legal/privacy"
+          >
             Privacy
           </a>
-          <a className="hover:text-foreground" href="/legal/license">
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/legal/license"
+          >
             License
           </a>
           <a
-            className="hover:text-foreground"
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
             href={REPOSITORY_URL}
             rel="noreferrer"
             target="_blank"
@@ -111,7 +156,7 @@ export function SiteFooter() {
             GitHub
           </a>
           <a
-            className="hover:text-foreground"
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
             href={SOCIAL_X_URL}
             rel="noreferrer"
             target="_blank"

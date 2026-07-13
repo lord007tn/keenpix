@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createSitemapXml } from '@/helpers/seo/sitemap/create-sitemap-xml'
+import { SITEMAP_STATIC_PATHS } from '@/helpers/seo/sitemap/sitemap-static-paths'
 import { getAppUrl, isCloud } from '@/server/deployment'
 import { blogSource } from '@/shared/blog-source'
 import { source } from '@/shared/docs-source'
@@ -17,31 +18,9 @@ export const Route = createFileRoute('/sitemap.xml')({
         // are advertised via robots/link-alternate, not the XML sitemap. Blog
         // entries carry a real <lastmod> from their frontmatter date (already a
         // YYYY-MM-DD W3C datetime, so no timezone-shifting reformatting needed).
-        const staticUrls = [
-          '/',
-          '/about',
-          '/pricing',
-          '/blog',
-          '/authors/raed-bahri',
-          '/compare',
-          '/compare/cloudinary-alternative',
-          '/compare/imgix-alternative',
-          '/compare/imagekit-alternative',
-          '/compare/vercel-image-optimization-alternative',
-          '/self-hosted-image-cdn',
-          '/methodology/comparisons',
-          '/security',
-          '/status',
-          '/support',
-          '/changelog',
-          '/legal/terms',
-          '/legal/privacy',
-          '/legal/dpa',
-          '/legal/license',
-        ]
         const origin = getAppUrl()
         const entries = [
-          ...staticUrls.map((url) => ({ url: `${origin}${url}` })),
+          ...SITEMAP_STATIC_PATHS.map((url) => ({ url: `${origin}${url}` })),
           ...source.getPages().map((page) => ({
             url: `${origin}${page.url}`,
             lastmod: page.data.updated,

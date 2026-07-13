@@ -28,7 +28,7 @@ test('public pages and health endpoint respond', async ({ page, request }) => {
 
   await page.goto('/docs')
   await expect(
-    page.getByRole('heading', { exact: true, name: 'Keenpix' }),
+    page.getByRole('heading', { exact: true, name: 'Documentation' }),
   ).toBeVisible()
 
   const health = await request.get('/api/health')

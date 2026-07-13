@@ -27,6 +27,10 @@ const PAGES = {
         title: 'Claims we do not make',
         body: 'Keenpix does not currently claim SOC 2, ISO 27001, PCI certification, a public bug-bounty program, or a contractual uptime SLA. Those claims will appear only if supporting evidence exists.',
       },
+      {
+        title: 'Report a vulnerability',
+        body: `Email ${SUPPORT_EMAIL} with a clear description, affected URL or component, and reproduction steps. Do not include live credentials or customer data, and do not access data that is not yours. We ask for reasonable time to investigate before public disclosure.`,
+      },
     ],
   },
   status: {
@@ -107,25 +111,38 @@ export function TrustPage({ page }: { page: keyof typeof PAGES }) {
             </div>
             <div className="mt-12 flex flex-wrap gap-3">
               {page === 'status' ? (
-                <a className={buttonVariants()} href="/api/health">
+                <a
+                  className={buttonVariants({
+                    className: 'min-h-12 touch-manipulation px-4',
+                  })}
+                  href="/api/health"
+                >
                   Check current health
                 </a>
               ) : (
                 <a
-                  className={buttonVariants()}
+                  className={buttonVariants({
+                    className: 'min-h-12 touch-manipulation px-4',
+                  })}
                   href={`mailto:${SUPPORT_EMAIL}`}
                 >
                   Contact support
                 </a>
               )}
               <a
-                className={buttonVariants({ variant: 'outline' })}
+                className={buttonVariants({
+                  className: 'min-h-12 touch-manipulation px-4',
+                  variant: 'outline',
+                })}
                 href="/docs"
               >
                 Read documentation
               </a>
               <a
-                className={buttonVariants({ variant: 'outline' })}
+                className={buttonVariants({
+                  className: 'min-h-12 touch-manipulation px-4',
+                  variant: 'outline',
+                })}
                 href={page === 'support' ? REPOSITORY_URL : RELEASES_URL}
                 rel="noreferrer"
                 target="_blank"

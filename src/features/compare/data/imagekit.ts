@@ -115,7 +115,7 @@ export const imagekitComparison = {
     {
       title: '2.5x the bandwidth for the same $9',
       detail:
-        'ImageKit Lite and Keenpix Basic both cost $9/month, but Lite includes 40 GB while Basic includes 100 GB of responses returned by Keenpix. Compare the exact meter boundaries and your cache behavior; annual Keenpix billing costs ten monthly payments.',
+        'ImageKit Lite and Keenpix Basic both cost $9/month, but Lite includes 40 GB while Basic includes 100 GB of responses returned by Keenpix. Compare the exact meter boundaries and your cache behavior.',
     },
     {
       title: 'Overage at $0.08/GB, not $0.50/GB',

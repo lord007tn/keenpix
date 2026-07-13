@@ -1,0 +1,90 @@
+---
+title: How JoodCMS integrates Keenpix image delivery
+description: A code-backed case study of JoodCMS using Keenpix for responsive variants, source allowlists, domain sync, prewarming, and safe fallbacks.
+date: "2026-07-13"
+author: Raed Bahri
+tags: [case-study, joodcms, nuxt, integration]
+image: /og/blog/joodcms-keenpix-integration.png?v=2026-07-13
+imageAlt: JoodCMS media flowing through Keenpix into responsive storefront image variants
+cover: /editorial/joodcms-keenpix-integration-cover.webp?v=2026-07-13
+coverAlt: Content cards moving through a modular image pipeline into phone, tablet, and desktop storefronts
+ogImage: /editorial/joodcms-keenpix-integration-og.jpg?v=2026-07-13
+---
+
+[JoodLab](https://www.joodlab.com/) maintains JoodCMS, a multi-tenant TypeScript CMS with several Nuxt storefront themes. JoodCMS now contains a first-party Keenpix integration for turning CMS media URLs into responsive image variants while keeping project access, source hosts, and failures explicit.
+
+This is a **code-backed implementation case study**, not a performance testimonial. We reviewed the JoodCMS integration source on July 13, 2026. No traffic volume, byte savings, cache-hit rate, Core Web Vitals improvement, or cost reduction is claimed here because those outcomes have not yet been published from a reproducible production measurement.
+
+**Relationship disclosure:** JoodCMS and Keenpix are projects in the same JoodLab-led product ecosystem. This is first-party implementation evidence, not an independent customer endorsement.
+
+## The integration boundary
+
+JoodCMS separates two kinds of access:
+
+- A trusted backend stores a Keenpix API key and a project ID for SDK management calls.
+- Public storefront image URLs carry the project ID but no secret. Keenpix checks the requested source host against that project's allowlist.
+
+That follows Keenpix's documented [project and access model](/docs/getting-started/projects): the transform URL is safe to put in HTML, while the management key stays server-side. The JoodCMS integration directs its configuration, domain, and prewarm requests to one named project instead of using a global image setting shared across unrelated sites. The matching Keenpix key is created inside that organization and project, so it cannot administer sibling projects.
+
+## How a storefront image is built
+
+Each supported JoodCMS Nuxt theme registers a custom Nuxt Image provider. For an eligible raster source, the provider:
+
+1. keeps the original absolute source URL;
+2. encodes it into Keenpix's `/img/<source-url>` path;
+3. adds the configured project ID;
+4. forwards the width, quality, and requested output format; and
+5. leaves visual cropping to the storefront's CSS instead of forcing an unrelated source image into one server-side aspect ratio.
+
+The provider also refuses to re-wrap a URL that is already a Keenpix transform and leaves non-raster assets untouched. That matters in a CMS, where logos, SVGs, animated media, and externally managed files may share the same content model.
+
+For the URL grammar and supported parameters, see the [transform endpoint reference](/docs/reference/endpoint) and [Nuxt integration guide](/docs/frameworks/nuxt).
+
+## Domain changes update the source allowlist
+
+CMS sites change domains: a preview hostname becomes a launch hostname, a `www` alias is added, or an old domain is removed. JoodCMS connects those website-domain workflows to Keenpix's project-domain endpoints.
+
+The integration normalizes the hostname and calls the authenticated SDK endpoint to add or remove it from the project's allowed sources. A manual sync action can reconcile the current set of website hosts. Failed synchronization is logged and reported instead of silently turning a rejected origin into an unrestricted fetch.
+
+This is the important security property: JoodCMS can automate normal domain lifecycle work without weakening Keenpix's [source validation and SSRF boundary](/docs/concepts/security).
+
+## Prewarming after media changes
+
+JoodCMS also implements a prewarm action for recently uploaded or published images. Its authored defaults request the widths `320`, `640`, `768`, `960`, and `1280`, with AVIF and WebP variants at quality 75.
+
+Those are inputs, not a universal recommendation. A storefront should choose widths from its real rendered layouts and verify that its `sizes` attribute lets the browser select the intended candidate. The action accepts up to the limits documented by Keenpix and sends the job to the project-specific [SDK prewarm endpoint](/docs/reference/sdk-api#prewarm).
+
+Prewarming reduces the chance that the first visitor waits for a cold transformation, but it does not prove a performance improvement by itself. The production check still needs browser timings, cache headers, response formats, and image dimensions.
+
+## Failure behavior stays visible and reversible
+
+The JoodCMS image component marks a Keenpix delivery failure and retries the original source without the custom provider. This protects page rendering when an integration setting, origin rule, or transform request is wrong.
+
+Fallback is a safety net, not observability. A team should still monitor how often it occurs: a page that remains visible while repeatedly serving oversized originals is available, but not healthy.
+
+## What we would measure next
+
+The useful production comparison is not “Keenpix on” versus an invented benchmark. It is a controlled sample of the same JoodCMS pages and source images, recording:
+
+- selected candidate width and output format;
+- transformed bytes versus original-source bytes;
+- cold and warm response timing;
+- edge and application cache status;
+- LCP for pages where the image is actually the LCP element; and
+- fallback and transform error rates.
+
+The source list, exact URLs, browser profile, geography, cache state, and test date should ship with any published result. Until then, the defensible result is the architecture itself: JoodCMS has a project-targeted, allowlist-aware, framework-native integration with prewarming and source fallback.
+
+## Implementation references
+
+The reviewed JoodCMS repository is private, so this article names the source paths rather than linking readers to inaccessible files:
+
+- `packages/integrations/keenpix/src/index.ts` — integration registration and stored configuration;
+- `packages/integrations/keenpix/src/actions/prewarm.ts` — reusable prewarm action;
+- `apps/server/src/actions/keenpix.ts` — project configuration, domain sync, and backend prewarm client;
+- `apps/theme-default-*/app/providers/keenpix.ts` — Nuxt Image URL construction; and
+- `apps/theme-default-*/app/components/CmsImage.vue` — provider selection and source fallback.
+
+For a similar implementation, start with the [cloud quickstart](/docs/getting-started/cloud-quickstart), then use the [SDK API](/docs/reference/sdk-api) for project automation. For the responsive HTML side, read the [responsive image CDN guide](/blog/responsive-image-cdn-guide).
+
+*Editorial disclosure: the article's text-free hero artwork was generated with OpenAI image generation, cropped into the documented Keenpix cover and social-card formats, and visually reviewed against the Keenpix brand guide. It does not depict measured customer data or a literal JoodCMS screen.*

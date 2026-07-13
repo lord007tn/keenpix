@@ -48,6 +48,15 @@ export function seo({
   type?: 'website' | 'article'
 }) {
   const imageUrl = image ?? absoluteUrl(BRAND_IMAGE_PATH)
+  const imagePath = imageUrl.split('?')[0].toLowerCase()
+  let imageType = 'image/png'
+  if (imagePath.endsWith('.jpg') || imagePath.endsWith('.jpeg')) {
+    imageType = 'image/jpeg'
+  } else if (imagePath.endsWith('.webp')) {
+    imageType = 'image/webp'
+  } else if (imagePath.endsWith('.avif')) {
+    imageType = 'image/avif'
+  }
   return [
     { title },
     { name: 'description', content: description },
@@ -67,7 +76,7 @@ export function seo({
     { property: 'og:image', content: imageUrl },
     { property: 'og:image:width', content: '1200' },
     { property: 'og:image:height', content: '630' },
-    { property: 'og:image:type', content: 'image/png' },
+    { property: 'og:image:type', content: imageType },
     {
       property: 'og:image:alt',
       content:
@@ -141,9 +150,9 @@ export function softwareApplicationJsonLd() {
     // lets search engines surface the price range as a rich result.
     offers: {
       '@type': 'AggregateOffer',
-      highPrice: String(PLANS.business.priceMonthlyUsd * 10),
+      highPrice: String(PLANS.business.priceMonthlyUsd),
       lowPrice: String(PLANS.basic.priceMonthlyUsd),
-      offerCount: Object.keys(PLANS).length * 2,
+      offerCount: Object.keys(PLANS).length,
       priceCurrency: 'USD',
     },
     operatingSystem: 'Linux, macOS, Windows',
@@ -284,42 +293,24 @@ export function pricingPageJsonLd() {
       {
         '@type': 'OfferCatalog',
         '@id': catalogId,
-        itemListElement: Object.values(PLANS).flatMap((plan) => [
-          {
-            '@type': 'Offer',
-            availability: 'https://schema.org/InStock',
-            category: 'monthly subscription',
-            itemOffered: { '@id': SOFTWARE_ID },
-            name: `${plan.name} monthly`,
+        itemListElement: Object.values(PLANS).map((plan) => ({
+          '@type': 'Offer',
+          availability: 'https://schema.org/InStock',
+          category: 'monthly subscription',
+          itemOffered: { '@id': SOFTWARE_ID },
+          name: `${plan.name} monthly`,
+          price: String(plan.priceMonthlyUsd),
+          priceCurrency: 'USD',
+          priceSpecification: {
+            '@type': 'UnitPriceSpecification',
+            billingDuration: 'P1M',
             price: String(plan.priceMonthlyUsd),
             priceCurrency: 'USD',
-            priceSpecification: {
-              '@type': 'UnitPriceSpecification',
-              billingDuration: 'P1M',
-              price: String(plan.priceMonthlyUsd),
-              priceCurrency: 'USD',
-            },
-            url: absoluteUrl('/pricing'),
           },
-          {
-            '@type': 'Offer',
-            availability: 'https://schema.org/InStock',
-            category: 'annual subscription',
-            itemOffered: { '@id': SOFTWARE_ID },
-            name: `${plan.name} annual`,
-            price: String(plan.priceMonthlyUsd * 10),
-            priceCurrency: 'USD',
-            priceSpecification: {
-              '@type': 'UnitPriceSpecification',
-              billingDuration: 'P1Y',
-              price: String(plan.priceMonthlyUsd * 10),
-              priceCurrency: 'USD',
-            },
-            url: absoluteUrl('/pricing'),
-          },
-        ]),
+          url: absoluteUrl('/pricing'),
+        })),
         name: 'Keenpix managed cloud plans',
-        numberOfItems: Object.keys(PLANS).length * 2,
+        numberOfItems: Object.keys(PLANS).length,
         url: absoluteUrl('/pricing'),
       },
     ],
@@ -406,7 +397,7 @@ export function blogPostingJsonLd({
         ...(person.bio ? { description: person.bio } : {}),
         ...(person.profilePath
           ? {
-              '@id': absoluteUrl(person.profilePath),
+              '@id': `${absoluteUrl(person.profilePath)}#person`,
               url: absoluteUrl(person.profilePath),
             }
           : {}),

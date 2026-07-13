@@ -36,11 +36,16 @@ export const blog = defineCollections({
     author: z.string().default('Keenpix Team'),
     tags: z.array(z.string()).default([]),
     competitor: z.string().optional(),
-    // Every published post must carry a versioned Takumi image path and useful
-    // visible-image alt text. This keeps the listing, article hero, OG metadata,
-    // and immutable cache key on one editorial source of truth.
+    // Every published post keeps a versioned Takumi fallback and useful alt
+    // text, even when it also supplies static editorial cover/social art.
     image: z.string().startsWith('/og/blog/'),
     imageAlt: z.string().min(1),
+    // Optional generated editorial art. `cover` is the visible 1600x900 hero;
+    // `ogImage` is its 1200x630 social crop. Posts without authored art keep
+    // using the deterministic Takumi image above for every surface.
+    cover: z.string().startsWith('/editorial/').optional(),
+    coverAlt: z.string().min(1).optional(),
+    ogImage: z.string().startsWith('/editorial/').optional(),
     draft: z.boolean().default(false),
   }),
   // Full post bodies flow into llms-full.txt — the comparison posts are the

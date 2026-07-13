@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { LegalLayout } from '@/features/legal/legal-layout'
+import { SUPPORT_EMAIL } from '@/shared/authors'
 import { absoluteUrl, seo } from '@/shared/seo'
 
 export const Route = createFileRoute('/legal/privacy')({
@@ -17,7 +18,7 @@ export const Route = createFileRoute('/legal/privacy')({
 
 function PrivacyPage() {
   return (
-    <LegalLayout lastUpdated="July 11, 2026" title="Privacy Policy">
+    <LegalLayout lastUpdated="July 13, 2026" title="Privacy Policy">
       <p>
         This Privacy Policy explains how Keenpix ("we", "us") collects, uses,
         and protects personal data when you use the Keenpix cloud service. Where
@@ -80,6 +81,10 @@ function PrivacyPage() {
         </li>
         <li>to comply with legal obligations and enforce our Terms.</li>
       </ul>
+      <p>
+        We do not sell personal data or use service data for targeted
+        advertising.
+      </p>
 
       <h2>Sub-processors</h2>
       <p>
@@ -115,8 +120,15 @@ function PrivacyPage() {
         Depending on your location, you may have rights to access, correct,
         export, or delete your personal data, and to object to or restrict
         certain processing. To exercise these rights, email{' '}
-        <a href="mailto:privacy@keenpix.com">privacy@keenpix.com</a>. You can
-        also delete projects and close your account from the app at any time.
+        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. You can also
+        delete projects and close your account from the app at any time.
+      </p>
+
+      <h2>Children</h2>
+      <p>
+        Keenpix is not directed to children under 16, and we do not knowingly
+        collect their personal data. If you believe a child has provided data,
+        contact us so we can review and delete it where appropriate.
       </p>
 
       <h2>Security</h2>
@@ -130,7 +142,7 @@ function PrivacyPage() {
       <h2>Contact</h2>
       <p>
         Questions about privacy? Email{' '}
-        <a href="mailto:privacy@keenpix.com">privacy@keenpix.com</a>.
+        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
       </p>
     </LegalLayout>
   )

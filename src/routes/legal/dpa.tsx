@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { LegalLayout } from '@/features/legal/legal-layout'
+import { SUPPORT_EMAIL } from '@/shared/authors'
 import { absoluteUrl, seo } from '@/shared/seo'
 
 export const Route = createFileRoute('/legal/dpa')({
@@ -17,7 +18,7 @@ export const Route = createFileRoute('/legal/dpa')({
 
 function DpaPage() {
   return (
-    <LegalLayout lastUpdated="July 6, 2026" title="Data Processing Addendum">
+    <LegalLayout lastUpdated="July 13, 2026" title="Data Processing Addendum">
       <p>
         This Data Processing Addendum ("DPA") forms part of the{' '}
         <a href="/legal/terms">Terms of Service</a> between you ("Controller")
@@ -108,7 +109,7 @@ function DpaPage() {
       <h2>Contact</h2>
       <p>
         To raise a data-protection matter or request a signed copy of this DPA,
-        email <a href="mailto:privacy@keenpix.com">privacy@keenpix.com</a>.
+        email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
       </p>
     </LegalLayout>
   )

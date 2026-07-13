@@ -28,6 +28,8 @@ interface BlogLoaderData {
   authorUrl: string | null
   canonicalUrl: string
   competitor?: string
+  cover?: string
+  coverAlt?: string
   date: string
   description: string
   image: string
@@ -121,6 +123,7 @@ const serverLoader = createServerFn({ method: 'GET' })
 
     const updated = page.data.updated ?? page.data.date
     const image = page.data.image
+    const ogImage = page.data.ogImage ?? image
     const author = getAuthor(page.data.author)
 
     return {
@@ -131,11 +134,13 @@ const serverLoader = createServerFn({ method: 'GET' })
         : (author.sameAs?.[0] ?? null),
       canonicalUrl,
       competitor: page.data.competitor,
+      cover: page.data.cover,
+      coverAlt: page.data.coverAlt,
       date: page.data.date,
       description: page.data.description,
       image,
       imageAlt: page.data.imageAlt,
-      ogImage: `${getAppUrl()}${image}`,
+      ogImage: `${getAppUrl()}${ogImage}`,
       path: page.path,
       selfHost,
       tags: page.data.tags,
@@ -151,7 +156,7 @@ const serverLoader = createServerFn({ method: 'GET' })
             datePublished: page.data.date,
             dateModified: updated,
             description: page.data.description,
-            image: `${getAppUrl()}${image}`,
+            image: `${getAppUrl()}${ogImage}`,
             path: breadcrumbs,
             title: page.data.title,
             url: canonicalUrl,
@@ -167,6 +172,8 @@ const clientLoader = browserCollections.blog.createClientLoader({
           meta={{
             author: frontmatter.author,
             competitor: frontmatter.competitor,
+            cover: frontmatter.cover,
+            coverAlt: frontmatter.coverAlt,
             date: frontmatter.date,
             description: frontmatter.description,
             image: frontmatter.image,
