@@ -34,6 +34,7 @@ VITE_KEENPIX_PUBLIC_URL=https://keenpix.com
 KEENPIX_SUPER_ADMIN_EMAIL=you@example.com
 POLAR_TOKEN=polar_oat_...
 POLAR_WEBHOOK_SECRET=whsec_...
+POLAR_SANDBOX_WEBHOOK_SECRET=whsec_...
 POLAR_SERVER=production
 VITE_GTM_CONTAINER_ID=GTM-TFJ9TQDN
 VITE_GA_MEASUREMENT_ID=G-C04VQED7GV
@@ -83,12 +84,14 @@ CLOUDFLARE_ZONE_ID=...
 CLOUDFLARE_HOST=keenpix.com
 ```
 
-For Polar sandbox verification, deploy a separate cloud staging hostname and
-set that resource to `POLAR_SERVER=sandbox` with its sandbox token and webhook
-secret. Point the sandbox endpoint at
-`https://<staging-host>/api/auth/polar/webhooks`. The application refuses a
-sandbox Polar server when its public hostname is `keenpix.com`; production uses
-`https://keenpix.com/api/auth/polar/webhooks` with production credentials.
+For callback verification without a webhook subdomain, point Polar sandbox at
+`https://keenpix.com/api/auth/polar/sandbox-webhooks` and set that endpoint's
+distinct secret as `POLAR_SANDBOX_WEBHOOK_SECRET`. The route verifies the
+standard webhook signature and acknowledges the event, but cannot write
+subscriptions or entitlements. Production uses
+`https://keenpix.com/api/auth/polar/webhooks` with production credentials. A
+true sandbox checkout-to-entitlement rehearsal still requires an isolated app
+and database; do not run it against the production Keenpix database.
 
 Coolify preview containers may not retain Compose service aliases. When that
 occurs, set preview-only `KEENPIX_POSTGRES_HOST` and
@@ -145,6 +148,9 @@ For a full rebuild: create fresh volumes, start only `postgres`, copy a dump in
   `<app-url>/api/auth/polar/webhooks` (subscribe it to `subscription.created`,
   `active`, `updated`, `canceled`, `uncanceled`, AND `revoked` — `created`
   carries the trial state and `uncanceled` clears a scheduled cancellation).
+- Catalog: expose only the Basic, Pro, and Business monthly products. Archive
+  older annual products rather than deleting them so historical subscriptions
+  remain auditable; annual checkout is intentionally not linked by the app.
 - Usage cron: confirm `/api/internal/billing/report-usage` runs hourly in the
   `usage-cron` logs (it also sweeps usage alerts, and prunes log retention at
   03:00 UTC).

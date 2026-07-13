@@ -9,12 +9,15 @@ const CLOUD_KEYS = [
   'BETTER_AUTH_SECRET',
   'BETTER_AUTH_URL',
   'KEENPIX_APP_URL',
+  'GOOGLE_CLIENT_ID',
+  'GOOGLE_CLIENT_SECRET',
   'EMAIL_PROVIDER',
   'POSTMARK_API_KEY',
   'POSTMARK_FROM',
   'POLAR_TOKEN',
   'POLAR_SERVER',
   'POLAR_WEBHOOK_SECRET',
+  'POLAR_SANDBOX_WEBHOOK_SECRET',
   'CRON_SECRET',
 ]
 
@@ -68,6 +71,16 @@ describe('cloud config env validation', () => {
     expect(env.EMAIL_PROVIDER).toBe('postmark')
   })
 
+  it('rejects a Google OAuth client without its server-only secret', async () => {
+    vi.spyOn(console, 'error').mockImplementation(silence)
+    await expect(
+      loadEnv({
+        ...FULL_CLOUD_ENV,
+        GOOGLE_CLIENT_ID: 'client.apps.googleusercontent.com',
+      }),
+    ).rejects.toThrow()
+  })
+
   it('accepts Polar sandbox on an isolated cloud staging hostname', async () => {
     const env = await loadEnv({
       ...FULL_CLOUD_ENV,
@@ -84,6 +97,16 @@ describe('cloud config env validation', () => {
         ...FULL_CLOUD_ENV,
         KEENPIX_APP_URL: 'https://keenpix.com',
         POLAR_SERVER: 'sandbox',
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('rejects reuse of the production secret for the sandbox callback', async () => {
+    vi.spyOn(console, 'error').mockImplementation(silence)
+    await expect(
+      loadEnv({
+        ...FULL_CLOUD_ENV,
+        POLAR_SANDBOX_WEBHOOK_SECRET: FULL_CLOUD_ENV.POLAR_WEBHOOK_SECRET,
       }),
     ).rejects.toThrow()
   })

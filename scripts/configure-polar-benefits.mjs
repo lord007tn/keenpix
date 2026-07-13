@@ -1,7 +1,6 @@
 import { Polar } from '@polar-sh/sdk'
 
 const PLAN_UNITS = { basic: 100, pro: 400, business: 1000 }
-const INTERVALS = new Set(['month', 'year'])
 
 const apply = process.argv.includes('--apply')
 const serverArgument = process.argv.find((value) =>
@@ -35,13 +34,12 @@ const targets = products.filter(
   (product) =>
     typeof product.metadata.plan === 'string' &&
     product.metadata.plan in PLAN_UNITS &&
-    typeof product.metadata.interval === 'string' &&
-    INTERVALS.has(product.metadata.interval),
+    product.metadata.interval === 'month',
 )
 
-if (targets.length !== 6) {
+if (targets.length !== 3) {
   throw new Error(
-    `Expected exactly 6 active plan products, found ${targets.length}. Refusing to mutate.`,
+    `Expected exactly 3 active monthly plan products, found ${targets.length}. Refusing to mutate.`,
   )
 }
 
@@ -58,7 +56,7 @@ for (const product of targets) {
   meterIds.add(meteredPrices[0].meterId)
 }
 if (meterIds.size !== 1) {
-  throw new Error('The six products do not share one canonical usage meter.')
+  throw new Error('The three products do not share one canonical usage meter.')
 }
 const canonicalMeterId = [...meterIds][0]
 
@@ -66,9 +64,9 @@ for (const plan of Object.keys(PLAN_UNITS)) {
   const planProducts = targets.filter(
     (product) => product.metadata.plan === plan,
   )
-  if (planProducts.length !== 2) {
+  if (planProducts.length !== 1) {
     throw new Error(
-      `Expected monthly and yearly ${plan} products, found ${planProducts.length}.`,
+      `Expected one monthly ${plan} product, found ${planProducts.length}.`,
     )
   }
 

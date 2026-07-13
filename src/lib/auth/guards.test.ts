@@ -35,13 +35,22 @@ describe('requireSelfHost', () => {
 describe('requireActiveOrg', () => {
   it('returns the org id when present', async () => {
     const { requireActiveOrg } = await load(true)
-    expect(requireActiveOrg({ orgId: 'org_x' })).toBe('org_x')
+    expect(requireActiveOrg({ orgId: 'org_x', orgRole: 'member' })).toBe(
+      'org_x',
+    )
   })
 
   it('throws when there is no active org (no read can fall back to a default tenant)', async () => {
     const { requireActiveOrg } = await load(true)
     expect(() => requireActiveOrg({ orgId: null })).toThrow()
     expect(() => requireActiveOrg({ orgId: undefined })).toThrow()
+  })
+
+  it('rejects a stale cloud organization after membership is removed', async () => {
+    const { requireActiveOrg } = await load(true)
+    expect(() => requireActiveOrg({ orgId: 'org_x', orgRole: null })).toThrow(
+      'not a member',
+    )
   })
 })
 

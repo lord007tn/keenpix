@@ -12,6 +12,7 @@ export async function sendPostmarkMail(input: MailInput): Promise<void> {
   }
   const res = await fetch('https://api.postmarkapp.com/email', {
     method: 'POST',
+    signal: AbortSignal.timeout(15_000),
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',

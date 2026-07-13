@@ -57,6 +57,18 @@ describe('API-key tenant isolation', () => {
     expect(apiKeyFindMany.mock.calls[0]?.[0]).not.toHaveProperty('take')
   })
 
+  it('narrows project settings to keys in the selected organization and project', async () => {
+    await listOrgApiKeys('org_a', 'project_a')
+    expect(apiKeyFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          configId: 'internal',
+          scope: { is: { orgId: 'org_a', projectId: 'project_a' } },
+        },
+      }),
+    )
+  })
+
   it('lists activity only through keys owned by the organization', async () => {
     await listOrgApiKeyActivities('org_b')
     expect(activityFindMany).toHaveBeenCalledWith(
@@ -67,6 +79,19 @@ describe('API-key tenant isolation', () => {
     expect(activityCount).toHaveBeenCalledWith({
       where: { apiKey: { scope: { is: { orgId: 'org_b' } } } },
     })
+  })
+
+  it('narrows activity to keys in the selected organization and project', async () => {
+    await listOrgApiKeyActivities('org_b', 0, 10, 'project_b')
+    const where = {
+      apiKey: {
+        scope: { is: { orgId: 'org_b', projectId: 'project_b' } },
+      },
+    }
+    expect(activityFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where }),
+    )
+    expect(activityCount).toHaveBeenCalledWith({ where })
   })
 
   it('disables a key only when its relational scope matches the active org', async () => {

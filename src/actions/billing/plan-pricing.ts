@@ -9,8 +9,7 @@ import {
 import { createPolarClient } from '@/lib/billing/polar-client'
 import { errorContext, logger } from '@/lib/logger/logger'
 
-type Interval = 'month' | 'year'
-type Collected = Partial<Record<PlanId, Partial<Record<Interval, PricePoint>>>>
+type Collected = Partial<Record<PlanId, PricePoint>>
 
 // Bound the live Polar lookup so a slow/hung call can't stall the public
 // marketing SSR — fall back to the catalog instead.
@@ -24,10 +23,9 @@ let cache: { at: number; value: PlanPricing } | null = null
 let inFlight: Promise<PlanPricing> | null = null
 
 // Read the headline (fixed) price + interval off each Polar subscription product,
-// keyed by its `plan` + `interval` metadata (the same metadata resolveProducts
-// uses to build checkout slugs). Returns null — signalling "use the catalog" — if
-// Polar is unconfigured, or if any plan/interval is missing a fixed price (a
-// partial map would render some cards from Polar and some blank).
+// keyed by its `plan` metadata. Only monthly products are launchable: annual
+// products have a year-long Polar usage period, which is incompatible with the
+// published monthly allowance. Returns null when any monthly plan is incomplete.
 async function resolveFromPolar(): Promise<PlanPricing | null> {
   const client = createPolarClient()
   if (!client) {
@@ -42,7 +40,7 @@ async function resolveFromPolar(): Promise<PlanPricing | null> {
       if (!(typeof plan === 'string' && isPlanId(plan))) {
         continue
       }
-      if (interval !== 'month' && interval !== 'year') {
+      if (interval !== 'month') {
         continue
       }
       // Only a plain fixed price carries a headline amount; skip
@@ -53,9 +51,7 @@ async function resolveFromPolar(): Promise<PlanPricing | null> {
       if (!price || price.amountType !== 'fixed') {
         continue
       }
-      const forPlan = collected[plan] ?? {}
-      collected[plan] = forPlan
-      forPlan[interval] = {
+      collected[plan] = {
         amountCents: price.priceAmount,
         currency: price.priceCurrency,
       }
@@ -63,12 +59,11 @@ async function resolveFromPolar(): Promise<PlanPricing | null> {
   }
   const plans = {} as PlanPricing['plans']
   for (const id of Object.keys(PLANS) as PlanId[]) {
-    const month = collected[id]?.month
-    const year = collected[id]?.year
-    if (!(month && year)) {
+    const month = collected[id]
+    if (!month) {
       return null
     }
-    plans[id] = { month, year }
+    plans[id] = { month }
   }
   return { source: 'polar', plans }
 }

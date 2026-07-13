@@ -37,6 +37,7 @@ describe('sendPostmarkMail', () => {
       'https://api.postmarkapp.com/email',
       expect.objectContaining({
         method: 'POST',
+        signal: expect.any(AbortSignal),
         headers: expect.objectContaining({
           'X-Postmark-Server-Token': 'server-token',
         }),

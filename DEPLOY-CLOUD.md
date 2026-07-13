@@ -26,8 +26,12 @@ the CLOUD MODE section of `.env.example`.
    `EMAIL_PROVIDER=resend` + `RESEND_API_KEY` + `RESEND_FROM`. SMTP:
    `EMAIL_PROVIDER=smtp` + `SMTP_HOST` + `SMTP_FROM_EMAIL` (+ auth).
 3. **Polar (production org)** —
-   - Create the 6 products (basic/pro/business × month/year) with metadata
+   - Create the 3 monthly products (basic/pro/business) with metadata
      `plan`, `interval`, `included_gb`, `overage_per_gb_cents`.
+     Set `interval=month`. Archive any older annual products: do not delete them,
+     but do not leave public annual checkout links active. Annual checkout is
+     intentionally disabled until monthly allowance resets can be reconciled
+     with Polar's annual usage period.
    - Create the `Bandwidth Delivered` meter (sum of `gb` on `bandwidth_delivered`
      events) and, per plan, a `meter_credit` benefit (units = included GB) + a
      `metered_unit` overage price on each product. (Scripts used in sandbox:
@@ -38,11 +42,15 @@ the CLOUD MODE section of `.env.example`.
      `subscription.uncanceled`, and `subscription.revoked`). The `created` event
      is required to mirror trials before they become active. Set
      `POLAR_TOKEN`, `POLAR_SERVER=production`, `POLAR_WEBHOOK_SECRET`.
-   - Keep sandbox webhooks off unless an isolated cloud staging callback exists.
-     Never point sandbox events at the production `keenpix.com` application.
+   - Create the sandbox webhook endpoint at
+     `https://keenpix.com/api/auth/polar/sandbox-webhooks` and set its distinct
+     secret as `POLAR_SANDBOX_WEBHOOK_SECRET`. This apex callback only verifies
+     and acknowledges sandbox delivery; it deliberately cannot sync production
+     entitlements. Subscribe it to the same six subscription events for callback
+     parity. Never reuse `POLAR_WEBHOOK_SECRET` for it.
    - If the Polar dashboard cannot attach existing Meter Credits benefits to
      products, run a dry check inside the cloud app container, then apply only
-     after it identifies exactly six products and three benefits:
+     after it identifies exactly three monthly products and three benefits:
      `pnpm billing:configure-benefits -- --server=production`, followed by the
      same command with `--apply`. The script preserves any existing benefits,
      refuses ambiguous catalogs, and never prints the access token.

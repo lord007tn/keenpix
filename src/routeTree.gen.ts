@@ -66,6 +66,7 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AdminCustomersOrgIdIndexRouteImport } from './routes/admin/customers/$orgId/index'
 import { Route as ApiInternalLogsStreamRouteImport } from './routes/api/internal/logs/stream'
 import { Route as ApiInternalBillingReportUsageRouteImport } from './routes/api/internal/billing/report-usage'
+import { Route as ApiAuthPolarSandboxWebhooksRouteImport } from './routes/api/auth/polar/sandbox-webhooks'
 
 const Char123llmFileChar125DottxtRoute =
   Char123llmFileChar125DottxtRouteImport.update({
@@ -356,6 +357,12 @@ const ApiInternalBillingReportUsageRoute =
     path: '/api/internal/billing/report-usage',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAuthPolarSandboxWebhooksRoute =
+  ApiAuthPolarSandboxWebhooksRouteImport.update({
+    id: '/api/auth/polar/sandbox-webhooks',
+    path: '/api/auth/polar/sandbox-webhooks',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -412,6 +419,7 @@ export interface FileRoutesByFullPath {
   '/app/logs/': typeof AppLogsIndexRoute
   '/app/operations/': typeof AppOperationsIndexRoute
   '/app/settings/': typeof AppSettingsIndexRoute
+  '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
   '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
   '/admin/customers/$orgId/': typeof AdminCustomersOrgIdIndexRoute
@@ -469,6 +477,7 @@ export interface FileRoutesByTo {
   '/app/logs': typeof AppLogsIndexRoute
   '/app/operations': typeof AppOperationsIndexRoute
   '/app/settings': typeof AppSettingsIndexRoute
+  '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
   '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
   '/admin/customers/$orgId': typeof AdminCustomersOrgIdIndexRoute
@@ -529,6 +538,7 @@ export interface FileRoutesById {
   '/app/logs/': typeof AppLogsIndexRoute
   '/app/operations/': typeof AppOperationsIndexRoute
   '/app/settings/': typeof AppSettingsIndexRoute
+  '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
   '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
   '/admin/customers/$orgId/': typeof AdminCustomersOrgIdIndexRoute
@@ -590,6 +600,7 @@ export interface FileRouteTypes {
     | '/app/logs/'
     | '/app/operations/'
     | '/app/settings/'
+    | '/api/auth/polar/sandbox-webhooks'
     | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
     | '/admin/customers/$orgId/'
@@ -647,6 +658,7 @@ export interface FileRouteTypes {
     | '/app/logs'
     | '/app/operations'
     | '/app/settings'
+    | '/api/auth/polar/sandbox-webhooks'
     | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
     | '/admin/customers/$orgId'
@@ -706,6 +718,7 @@ export interface FileRouteTypes {
     | '/app/logs/'
     | '/app/operations/'
     | '/app/settings/'
+    | '/api/auth/polar/sandbox-webhooks'
     | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
     | '/admin/customers/$orgId/'
@@ -753,6 +766,7 @@ export interface RootRouteChildren {
   ApiSdkSplatRoute: typeof ApiSdkSplatRoute
   OgBlogSplatRoute: typeof OgBlogSplatRoute
   OgDocsSplatRoute: typeof OgDocsSplatRoute
+  ApiAuthPolarSandboxWebhooksRoute: typeof ApiAuthPolarSandboxWebhooksRoute
   ApiInternalBillingReportUsageRoute: typeof ApiInternalBillingReportUsageRoute
   ApiInternalLogsStreamRoute: typeof ApiInternalLogsStreamRoute
 }
@@ -1158,6 +1172,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalBillingReportUsageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/polar/sandbox-webhooks': {
+      id: '/api/auth/polar/sandbox-webhooks'
+      path: '/api/auth/polar/sandbox-webhooks'
+      fullPath: '/api/auth/polar/sandbox-webhooks'
+      preLoaderRoute: typeof ApiAuthPolarSandboxWebhooksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1251,6 +1272,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSdkSplatRoute: ApiSdkSplatRoute,
   OgBlogSplatRoute: OgBlogSplatRoute,
   OgDocsSplatRoute: OgDocsSplatRoute,
+  ApiAuthPolarSandboxWebhooksRoute: ApiAuthPolarSandboxWebhooksRoute,
   ApiInternalBillingReportUsageRoute: ApiInternalBillingReportUsageRoute,
   ApiInternalLogsStreamRoute: ApiInternalLogsStreamRoute,
 }

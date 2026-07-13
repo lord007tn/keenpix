@@ -120,6 +120,7 @@ services:
       - POLAR_TOKEN=${POLAR_TOKEN} # (required)
       - POLAR_SERVER=${POLAR_SERVER:-production}
       - POLAR_WEBHOOK_SECRET=${POLAR_WEBHOOK_SECRET} # (required)
+      - POLAR_SANDBOX_WEBHOOK_SECRET=${POLAR_SANDBOX_WEBHOOK_SECRET:-}
       - POLAR_SUCCESS_URL=${POLAR_SUCCESS_URL:-/app/dashboard}
       # Transactional email: pick ONE provider. From-domain must be a verified
       # sender for that provider. The app fails to boot if the selected

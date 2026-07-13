@@ -68,11 +68,11 @@ function fakeClient(products: unknown[]) {
 
 const FULL_CATALOG = [
   fakeProduct('basic', 'month', [fixed(900)]),
-  fakeProduct('basic', 'year', [fixed(9000)]),
   fakeProduct('pro', 'month', [fixed(1900)]),
-  fakeProduct('pro', 'year', [fixed(19_000)]),
   fakeProduct('business', 'month', [fixed(2900)]),
-  fakeProduct('business', 'year', [fixed(29_000)]),
+  // Archived dashboard records may remain readable, but an annual product must
+  // never influence displayed pricing or become a checkout option.
+  fakeProduct('pro', 'year', [fixed(19_000)]),
 ]
 
 afterEach(() => {
@@ -88,14 +88,12 @@ describe('getPlanPricing', () => {
     expect(pricing.plans.pro.month.amountCents).toBe(1900)
   })
 
-  it('sources live prices + interval from Polar products', async () => {
+  it('sources monthly prices from Polar products', async () => {
     createPolarClient.mockReturnValue(fakeClient(FULL_CATALOG))
     const getPlanPricing = await loadGetPlanPricing()
     const pricing = await getPlanPricing()
     expect(pricing.source).toBe('polar')
     expect(pricing.plans.pro.month.amountCents).toBe(1900)
-    expect(pricing.plans.pro.year.amountCents).toBe(19_000)
-    expect(pricing.plans.business.year.amountCents).toBe(29_000)
   })
 
   it('picks the fixed price and ignores free/non-fixed prices', async () => {
@@ -116,9 +114,9 @@ describe('getPlanPricing', () => {
     expect(pricing.plans.basic.month.amountCents).toBe(900)
   })
 
-  it('falls back to the catalog when a plan/interval has no fixed price', async () => {
+  it('falls back to the catalog when a monthly plan has no fixed price', async () => {
     const incomplete = FULL_CATALOG.filter(
-      (p) => !(p.metadata.plan === 'pro' && p.metadata.interval === 'year'),
+      (p) => !(p.metadata.plan === 'pro' && p.metadata.interval === 'month'),
     )
     createPolarClient.mockReturnValue(fakeClient(incomplete))
     const getPlanPricing = await loadGetPlanPricing()

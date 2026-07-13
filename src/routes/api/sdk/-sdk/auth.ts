@@ -43,6 +43,9 @@ export async function verifySdkApiKey(
     if (!orgId) {
       throw jsonError('API key is not associated with an organization', 403)
     }
+    if (isCloud() && !scope?.projectId) {
+      throw jsonError('API key is not associated with a project', 403)
+    }
     if (activity && apiKeyId) {
       activity.apiKeyId = apiKeyId
       activity.projectId = projectId ?? scope?.projectId ?? undefined
