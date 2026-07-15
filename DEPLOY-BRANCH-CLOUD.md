@@ -36,7 +36,6 @@ POLAR_TOKEN=polar_oat_...
 POLAR_WEBHOOK_SECRET=whsec_...
 POLAR_SANDBOX_WEBHOOK_SECRET=whsec_...
 POLAR_SERVER=production
-VITE_GTM_CONTAINER_ID=GTM-TFJ9TQDN
 VITE_GA_MEASUREMENT_ID=G-C04VQED7GV
 GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=...
@@ -48,9 +47,12 @@ Auth callbacks, generated links, and the browser build all agree on one origin.
 `VITE_GA_MEASUREMENT_ID` and `VITE_GTM_CONTAINER_ID` are public configuration,
 not credentials. Mark configured values as available at both build time and
 runtime: Vite embeds them in the browser bundle, while the runtime values keep
-the deployment configuration explicit. Direct GA4 takes precedence when both
-are present; GTM remains a fallback. Leaving both unset disables Google product
-analytics while first-party Web Vitals reporting remains consent-aware.
+the deployment configuration explicit. GTM takes precedence when both are
+present. Set the GTM ID only after its published Google tag and custom-event
+tags pass Preview and are not scanner-paused; otherwise omit it and use the
+direct GA4 fallback. Leaving both unset disables Google product analytics.
+Cloudflare Web Analytics supplies independent, cookie-free field performance
+monitoring for the public site.
 
 For the production Google Web OAuth client, configure the authorized JavaScript
 origin `https://keenpix.com` and redirect URI

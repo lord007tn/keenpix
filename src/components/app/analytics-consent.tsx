@@ -117,9 +117,11 @@ export function AnalyticsConsent() {
       className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-h-[min(32rem,calc(100svh-1.5rem))] max-w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-y-auto overscroll-contain rounded-lg border bg-background p-4 shadow-lg sm:max-w-2xl sm:flex-row sm:items-center"
     >
       <p className="min-w-0 flex-1 break-words text-muted-foreground text-sm leading-relaxed">
-        Keenpix uses optional, consent-based analytics to understand which pages
+        Keenpix uses optional Google Analytics cookies to understand which pages
         lead to signups and successful setup. We do not use advertising cookies
-        or send account, image, or project data. See our{' '}
+        or send account, image, or project data. Cloudflare's separate,
+        cookie-free performance measurement does not depend on this choice. See
+        our{' '}
         <a
           className="inline-flex min-h-12 items-center rounded-sm text-foreground underline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
           href="/legal/privacy"

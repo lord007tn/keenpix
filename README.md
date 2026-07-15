@@ -111,8 +111,8 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_ADMIN_EMAIL` / `KEENPIX_ADMIN_PASSWORD` | – | Legacy aliases for the super-admin bootstrap variables. |
 | `LOG_LEVEL` | – | Server log level (`info` by default). |
 | `VITE_KEENPIX_PUBLIC_URL` | – | Browser-facing app URL for local/source builds when it cannot be inferred from the browser origin. |
-| `VITE_GTM_CONTAINER_ID` | – | Consent-gated Google Tag Manager container ID. Because Vite embeds this value at build time, set it as both a Docker build argument and a runtime variable in cloud deployments. |
-| `VITE_GA_MEASUREMENT_ID` | – | Preferred consent-gated direct GA4 measurement ID. When set, it takes precedence over GTM. Set it at both Docker build time and runtime. |
+| `VITE_GTM_CONTAINER_ID` | – | Primary consent-gated Google Tag Manager container ID. The published container must contain an unpaused Google tag and event routing; setting the ID alone does not route events. Because Vite embeds this value at build time, set it as both a Docker build argument and a runtime variable in cloud deployments. |
+| `VITE_GA_MEASUREMENT_ID` | – | Consent-gated direct GA4 fallback used only when GTM is unset. Set it at both Docker build time and runtime. |
 | `EMAIL_PROVIDER` | – | Selects the one active email provider: `postmark`, `resend`, or `smtp`. Unset disables email. The selected provider's vars are validated at startup. |
 | `POSTMARK_API_KEY` / `POSTMARK_FROM` / `POSTMARK_MESSAGE_STREAM` | – | Postmark credentials (when `EMAIL_PROVIDER=postmark`). |
 | `RESEND_API_KEY` / `RESEND_FROM` | – | Resend credentials (when `EMAIL_PROVIDER=resend`). |

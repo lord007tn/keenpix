@@ -18,7 +18,7 @@ export const Route = createFileRoute('/legal/privacy')({
 
 function PrivacyPage() {
   return (
-    <LegalLayout lastUpdated="July 13, 2026" title="Privacy Policy">
+    <LegalLayout lastUpdated="July 15, 2026" title="Privacy Policy">
       <p>
         This Privacy Policy explains how Keenpix ("we", "us") collects, uses,
         and protects personal data when you use the Keenpix cloud service. Where
@@ -40,9 +40,10 @@ function PrivacyPage() {
         <li>
           <strong>Operational logs and analytics:</strong> per-request metadata
           — timestamp, requested path, image format, response status, cache
-          result, latency, bytes delivered, and coarse country — used to power
-          your dashboard and to bill bandwidth. We do not store the image bytes
-          beyond the transform cache.
+          result, latency, and bytes delivered — used to power your dashboard
+          and to bill bandwidth. Coarse country may be recorded when a trusted
+          edge supplies it; it is otherwise left empty. We do not store the
+          image bytes beyond the transform cache.
         </li>
         <li>
           <strong>Billing data:</strong> handled by our merchant of record,
@@ -61,11 +62,12 @@ function PrivacyPage() {
           storage and personalization remain disabled.
         </li>
         <li>
-          <strong>Optional performance telemetry:</strong> a 10% sample of
-          consented page visits reports LCP, INP, and CLS with the route, device
-          class, viewport size, and navigation type to Keenpix’s same-origin
-          endpoint. It does not include cookies, account data, IP fields, URLs
-          with queries, referrers, user agents, or DOM content.
+          <strong>Website performance telemetry:</strong> Cloudflare Web
+          Analytics measures page views, load timing, and Core Web Vitals such
+          as LCP, INP, and CLS for visitors in all configured regions, including
+          the EU. Its beacon uses no cookies or browser storage and Cloudflare
+          states that source IP addresses are discarded at its nearest data
+          center.
         </li>
       </ul>
 
@@ -89,21 +91,24 @@ function PrivacyPage() {
       <h2>Sub-processors</h2>
       <p>
         We rely on a small set of infrastructure sub-processors: our hosting and
-        database providers, Cloudflare R2 for the shared image cache, ClickHouse
-        for analytics storage, Polar for payments, and Postmark for email. Each
-        processes data only to provide their function.
+        database providers, Cloudflare for traffic delivery, security, R2 image
+        caching, and Web Analytics, ClickHouse for analytics storage, Polar for
+        payments, and Postmark for email. Each processes data only to provide
+        its function.
       </p>
 
       <h2>Analytics choices</h2>
       <p>
-        Analytics is off until you choose “Allow analytics.” Declining does not
-        affect the service. You can change your choice at any time through the
-        “Privacy choices” control shown on the site. Keenpix also respects the
-        browser’s Do Not Track setting by not loading analytics. Revoking
-        consent immediately stops future funnel and Web Vitals reports, updates
+        Google Analytics is off until you choose “Allow analytics.” Declining
+        does not affect the service. You can change your choice at any time
+        through the “Privacy choices” control shown on the site. Keenpix also
+        respects the browser’s Do Not Track setting by not loading Google
+        analytics. Revoking consent stops future Google funnel reports, updates
         Google Consent Mode to denied, and removes Keenpix-domain Google
-        Analytics cookies. The already-loaded tag script remains inert until the
-        next navigation; it is not loaded on later denied visits.
+        Analytics cookies. Cloudflare’s separate cookie-free Web Analytics
+        beacon remains active for site performance measurement in all regions,
+        including the EU, and is not used for Keenpix account or image-project
+        analytics.
       </p>
 
       <h2>Retention</h2>
