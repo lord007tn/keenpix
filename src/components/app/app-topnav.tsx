@@ -4,6 +4,7 @@ import {
   LayoutGridIcon,
   ScrollTextIcon,
   SettingsIcon,
+  SparklesIcon,
 } from 'lucide-react'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { NavUser } from '@/components/app/nav-user'
@@ -55,10 +56,24 @@ export function AppTopnav({
             <OrganizationSwitcher />
           </>
         ) : null}
-        <span className="mx-0.5 hidden text-lg text-muted-foreground/40 md:inline">
-          /
-        </span>
-        {workspaceReady ? <ProjectSwitcher /> : null}
+        {workspaceReady ? (
+          <>
+            <span className="mx-0.5 hidden text-lg text-muted-foreground/40 md:inline">
+              /
+            </span>
+            <ProjectSwitcher />
+          </>
+        ) : (
+          <>
+            <span className="mx-0.5 hidden text-lg text-muted-foreground/40 sm:inline">
+              /
+            </span>
+            <span className="hidden items-center gap-1.5 text-muted-foreground text-sm sm:flex">
+              <SparklesIcon className="size-4 text-primary" />
+              Workspace setup
+            </span>
+          </>
+        )}
         <div className="flex-1" />
         <a
           className="mr-1 hidden text-muted-foreground text-sm transition-colors hover:text-foreground md:inline"
@@ -71,27 +86,41 @@ export function AppTopnav({
       </div>
 
       <nav className="flex items-center gap-1 overflow-x-auto px-2">
-        {BASE_TABS.filter(
-          (tab) => workspaceReady || tab.to === '/app/dashboard',
-        ).map((tab) => {
-          const Icon = tab.icon
-          const active = pathname.startsWith(tab.to)
-          return (
-            <Link
-              className={tabClassName(active)}
-              key={tab.to}
-              search={(prev) => ({
-                ...prev,
-                project: projectId,
-                range: prev.range ?? '24h',
-              })}
-              to={tab.to}
-            >
-              <Icon className={cn('size-4', active && 'text-primary')} />
-              {tab.label}
-            </Link>
-          )
-        })}
+        {workspaceReady ? (
+          BASE_TABS.map((tab) => {
+            const Icon = tab.icon
+            const active = pathname.startsWith(tab.to)
+            return (
+              <Link
+                className={tabClassName(active)}
+                key={tab.to}
+                search={(prev) => ({
+                  ...prev,
+                  project: projectId,
+                  range: prev.range ?? '24h',
+                })}
+                to={tab.to}
+              >
+                <Icon className={cn('size-4', active && 'text-primary')} />
+                {tab.label}
+              </Link>
+            )
+          })
+        ) : (
+          <Link
+            className={tabClassName(pathname.startsWith('/app/onboarding'))}
+            search={(prev) => ({ ...prev, project: projectId })}
+            to="/app/onboarding"
+          >
+            <SparklesIcon
+              className={cn(
+                'size-4',
+                pathname.startsWith('/app/onboarding') && 'text-primary',
+              )}
+            />
+            Get started
+          </Link>
+        )}
 
         <Link
           className={tabClassName(pathname.startsWith('/app/settings'))}

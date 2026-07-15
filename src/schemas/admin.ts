@@ -1,5 +1,10 @@
 import { z } from 'zod'
-import { analyticsRangeSchema, nonEmptyStringSchema } from './common'
+import {
+  analyticsRangeSchema,
+  historicalAnalyticsRangeSchema,
+  nonEmptyStringSchema,
+  validateHistoricalWindow,
+} from './common'
 
 const staffRoleSchema = z.enum(['admin', 'staff'])
 const internalPlanSchema = z.enum(['none', 'basic', 'pro', 'business'])
@@ -60,10 +65,14 @@ export const customerAccountSchema = z.object({
   orgId: nonEmptyStringSchema(),
 })
 
-export const customerAnalyticsSchema = z.object({
-  orgId: nonEmptyStringSchema(),
-  range: analyticsRangeSchema.catch('30d'),
-})
+export const customerAnalyticsSchema = z
+  .object({
+    from: z.iso.date().optional(),
+    orgId: nonEmptyStringSchema(),
+    range: historicalAnalyticsRangeSchema.catch('30d'),
+    to: z.iso.date().optional(),
+  })
+  .superRefine(validateHistoricalWindow)
 
 export const updateInternalPlanGrantSchema = z.object({
   orgId: nonEmptyStringSchema(),

@@ -128,9 +128,10 @@ export function OnboardingChecklist({
     data?.status === 'internal'
   const canManageBilling = !cloud || orgRole === 'owner' || orgRole === 'admin'
   const needsBillingRecovery =
-    data?.status === 'past_due' ||
-    data?.status === 'unpaid' ||
-    data?.hasBillingCustomer === true
+    !subscribed &&
+    (data?.status === 'past_due' ||
+      data?.status === 'unpaid' ||
+      data?.hasBillingCustomer === true)
 
   useEffect(() => {
     if (data?.status === 'trialing') {
@@ -189,6 +190,13 @@ export function OnboardingChecklist({
     planDescription =
       'Review the existing billing account to restore workspace access.'
   }
+  const projectAction = canManageBilling ? (
+    <NewProjectDialog />
+  ) : (
+    <span className="text-muted-foreground text-sm">
+      Ask an organization owner or admin to create the first project.
+    </span>
+  )
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
@@ -221,7 +229,7 @@ export function OnboardingChecklist({
             />
           ) : null}
           <Step
-            action={<NewProjectDialog />}
+            action={projectAction}
             description="A project points Keenpix at one image origin you control."
             done={hasProjects}
             locked={cloud && !subscribed}

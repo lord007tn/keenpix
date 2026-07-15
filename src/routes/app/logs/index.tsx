@@ -51,7 +51,7 @@ const EMPTY_VALUES: string[] = []
 export const Route = createFileRoute('/app/logs/')({
   beforeLoad: ({ context }) => {
     if (!context.workspaceReady) {
-      throw redirect({ to: '/app/dashboard', search: { range: '24h' } })
+      throw redirect({ to: '/app/onboarding' })
     }
   },
   head: () =>

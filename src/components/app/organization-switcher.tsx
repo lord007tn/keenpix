@@ -34,7 +34,7 @@ export function OrganizationSwitcher() {
     // Organization scope affects every app loader and the current project query.
     // A full same-origin navigation guarantees the new session scope reaches all
     // server functions and clears a project id from the previous organization.
-    window.location.assign('/app/dashboard?range=30d')
+    window.location.assign('/app')
   }
 
   return (

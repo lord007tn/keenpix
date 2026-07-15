@@ -94,7 +94,7 @@ function getDateParam(value: unknown) {
 export const Route = createFileRoute('/app/analytics/')({
   beforeLoad: ({ context }) => {
     if (!context.workspaceReady) {
-      throw redirect({ to: '/app/dashboard', search: { range: '24h' } })
+      throw redirect({ to: '/app/onboarding' })
     }
   },
   head: () =>
