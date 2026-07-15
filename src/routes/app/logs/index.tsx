@@ -145,7 +145,7 @@ function LogsPage() {
     { range, from, to },
     cloud ? maxHistoryDays : undefined,
   )
-  const visibleRange = range === 'all' ? range : boundedWindow.range
+  const visibleRange = boundedWindow.range
   const visibleFrom =
     boundedWindow.range === 'custom' ? boundedWindow.from : from
   const visibleTo = boundedWindow.range === 'custom' ? boundedWindow.to : to

@@ -7,6 +7,7 @@ declare global {
 }
 
 const ANALYTICS_CONSENT_KEY = 'keenpix.analytics-consent.v1'
+const ANALYTICS_CONSENT_COOKIE = 'keenpix_analytics_consent'
 const ANALYTICS_CONSENT_EVENT = 'keenpix:analytics-consent'
 
 export type AnalyticsConsent = 'granted' | 'denied'
@@ -47,31 +48,41 @@ export function getAnalyticsConsent() {
   }
   try {
     const consent = window.localStorage.getItem(ANALYTICS_CONSENT_KEY)
-    return consent === 'granted' || consent === 'denied' ? consent : null
+    if (consent === 'granted' || consent === 'denied') {
+      return consent
+    }
   } catch {
-    return 'denied' as const
+    // Fall through to the essential first-party consent cookie.
   }
+  const consent = document.cookie
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${ANALYTICS_CONSENT_COOKIE}=`))
+    ?.slice(ANALYTICS_CONSENT_COOKIE.length + 1)
+  return consent === 'granted' || consent === 'denied' ? consent : null
 }
 
 export function setAnalyticsConsent(consent: AnalyticsConsent) {
-  let effectiveConsent = consent
   try {
     window.localStorage.setItem(ANALYTICS_CONSENT_KEY, consent)
   } catch {
-    effectiveConsent = 'denied'
+    // The essential first-party consent cookie remains as the fallback.
   }
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  // biome-ignore lint/suspicious/noDocumentCookie: this essential cookie remembers the visitor's consent choice without loading analytics.
+  document.cookie = `${ANALYTICS_CONSENT_COOKIE}=${consent}; Max-Age=31536000; Path=/; SameSite=Lax${secure}`
   pushGoogleConsent('default', 'denied')
-  pushGoogleConsent('update', effectiveConsent)
+  pushGoogleConsent('update', consent)
   window.dataLayer ??= []
   window.dataLayer.push({
     event: 'consent_update',
-    analytics_storage: effectiveConsent,
+    analytics_storage: consent,
     ad_storage: 'denied',
     ad_user_data: 'denied',
     ad_personalization: 'denied',
   })
 
-  if (effectiveConsent === 'denied') {
+  if (consent === 'denied') {
     for (const cookie of document.cookie.split(';')) {
       const name = cookie.split('=')[0]?.trim()
       if (name?.startsWith('_ga')) {
@@ -85,10 +96,10 @@ export function setAnalyticsConsent(consent: AnalyticsConsent) {
     }
   }
   window.dispatchEvent(
-    new CustomEvent(ANALYTICS_CONSENT_EVENT, { detail: effectiveConsent }),
+    new CustomEvent(ANALYTICS_CONSENT_EVENT, { detail: consent }),
   )
 
-  if (effectiveConsent === 'granted') {
+  if (consent === 'granted') {
     loadGoogleAnalytics()
   }
 }
