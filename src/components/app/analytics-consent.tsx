@@ -29,7 +29,6 @@ export function AnalyticsConsent() {
   )
   const [available, setAvailable] = useState(providerAvailable)
   const [open, setOpen] = useState(false)
-  const [choiceMade, setChoiceMade] = useState(false)
   const [trackingEnabled, setTrackingEnabled] = useState(false)
 
   useEffect(() => {
@@ -38,7 +37,6 @@ export function AnalyticsConsent() {
       return
     }
     const consent = getAnalyticsConsent()
-    setChoiceMade(consent !== null)
     setOpen(consent === null)
     setTrackingEnabled(consent === 'granted')
     if (consent === 'granted') {
@@ -99,16 +97,7 @@ export function AnalyticsConsent() {
   }
 
   if (!open) {
-    return choiceMade ? (
-      <Button
-        className="fixed bottom-3 left-3 z-40 min-h-12 touch-manipulation bg-background/90 px-3 text-xs shadow-sm backdrop-blur"
-        onClick={() => setOpen(true)}
-        size="sm"
-        variant="outline"
-      >
-        Privacy choices
-      </Button>
-    ) : null
+    return null
   }
 
   return (
@@ -136,7 +125,6 @@ export function AnalyticsConsent() {
           onClick={() => {
             setAnalyticsConsent('denied')
             setTrackingEnabled(false)
-            setChoiceMade(true)
             setOpen(false)
           }}
           variant="outline"
@@ -149,7 +137,6 @@ export function AnalyticsConsent() {
             setAnalyticsConsent('granted')
             setTrackingEnabled(true)
             trackSocialSignup()
-            setChoiceMade(true)
             setOpen(false)
           }}
         >

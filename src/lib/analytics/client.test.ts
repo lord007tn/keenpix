@@ -11,7 +11,12 @@ const { clientEnv } = vi.hoisted(() => ({
 
 vi.mock('@/env/client', () => ({ clientEnv }))
 
-import { loadGoogleAnalytics, setAnalyticsConsent, trackEvent } from './client'
+import {
+  getAnalyticsConsent,
+  loadGoogleAnalytics,
+  setAnalyticsConsent,
+  trackEvent,
+} from './client'
 
 describe('consent-aware Google analytics', () => {
   beforeEach(() => {
@@ -19,6 +24,8 @@ describe('consent-aware Google analytics', () => {
     clientEnv.VITE_GTM_CONTAINER_ID = undefined
     document.head.replaceChildren()
     window.localStorage.clear()
+    // biome-ignore lint/suspicious/noDocumentCookie: reset the essential consent cookie between isolated browser tests.
+    document.cookie = 'keenpix_analytics_consent=; Max-Age=0; Path=/'
     window.dataLayer = []
     Object.defineProperty(window.navigator, 'doNotTrack', {
       configurable: true,
@@ -34,6 +41,13 @@ describe('consent-aware Google analytics', () => {
 
     expect(document.querySelector('script')).toBeNull()
     expect(window.dataLayer).toEqual([])
+  })
+
+  it('remembers a consent decision when local storage is unavailable later', () => {
+    setAnalyticsConsent('denied')
+    window.localStorage.clear()
+
+    expect(getAnalyticsConsent()).toBe('denied')
   })
 
   it('prefers GTM over direct GA4 after consent', () => {
