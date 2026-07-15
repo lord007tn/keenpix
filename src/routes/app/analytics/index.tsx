@@ -393,7 +393,11 @@ function AnalyticsPage() {
             }}
             value={range}
           >
-            <SelectTrigger aria-label="Analytics range" className="h-11 w-40">
+            <SelectTrigger
+              aria-label="Analytics range"
+              className="w-40"
+              size="lg"
+            >
               <SelectValue>
                 {(value) =>
                   RANGES.find((item) => item.value === value)?.label ??
