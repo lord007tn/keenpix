@@ -133,6 +133,12 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_MEM_LIMIT` / `KEENPIX_CPU_LIMIT` / `KEENPIX_MEM_RESERVATION` | – | Opt-in Docker Compose resource caps for the app container. Default `0` = no limit. When set, Docker enforces them and the Operations page CPU/RAM gauges read the cap as the real ceiling. A too-low memory cap can get the app OOM-killed. |
 | `KEENPIX_PG_MEM_LIMIT` / `KEENPIX_PG_CPU_LIMIT` / `KEENPIX_PG_MEM_RESERVATION` | – | Same opt-in resource caps for the bundled Postgres container. Default `0` = no limit. |
 
+The cloud usage job also captures aggregate Cloudflare `/img/*` edge history
+hourly. Customer analytics remain organization/project-scoped origin records;
+zone-wide edge figures are operator-only. See
+[`docs/analytics-history.md`](docs/analytics-history.md) for retention, export,
+coverage, and the prospective project-attributed edge design.
+
 ---
 
 ## Transform API

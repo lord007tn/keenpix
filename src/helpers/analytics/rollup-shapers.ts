@@ -1,5 +1,8 @@
 import dayjs from 'dayjs'
-import { rollupBucketing } from '@/data-access/analytics-rollups'
+import {
+  type RollupBucketing,
+  rollupBucketing,
+} from '@/data-access/analytics-rollups'
 import type {
   AnalyticsRange,
   DomainBreakdownRow,
@@ -93,10 +96,12 @@ export interface BucketAgg {
 
 export function timeSeriesFromBuckets(
   buckets: BucketAgg[],
-  range: AnalyticsRange,
+  range: AnalyticsRange | RollupBucketing,
 ): TimePoint[] {
-  const { n, labelFor, indexFor } = rollupBucketing(range)
+  const { n, labelFor, indexFor, startFor } =
+    typeof range === 'string' ? rollupBucketing(range) : range
   const out: TimePoint[] = Array.from({ length: n }, (_, i) => ({
+    start: startFor(i),
     label: labelFor(i),
     requests: 0,
     cached: 0,
@@ -121,9 +126,10 @@ export function timeSeriesFromBuckets(
 
 export function latencyTrendFromBuckets(
   buckets: BucketAgg[],
-  range: AnalyticsRange,
+  range: AnalyticsRange | RollupBucketing,
 ): LatencyTrendPoint[] {
-  const { n, labelFor, indexFor } = rollupBucketing(range)
+  const { n, labelFor, indexFor } =
+    typeof range === 'string' ? rollupBucketing(range) : range
   const counts = Array.from({ length: n }, () => emptyLatencyBucketCounts())
   for (const b of buckets) {
     const c = counts[indexFor(b.bucketStart)]
@@ -151,9 +157,10 @@ export interface BucketStatusAgg {
 
 export function statusSeriesFromBuckets(
   rows: BucketStatusAgg[],
-  range: AnalyticsRange,
+  range: AnalyticsRange | RollupBucketing,
 ): StatusPoint[] {
-  const { n, labelFor, indexFor } = rollupBucketing(range)
+  const { n, labelFor, indexFor } =
+    typeof range === 'string' ? rollupBucketing(range) : range
   const out: StatusPoint[] = Array.from({ length: n }, (_, i) => ({
     label: labelFor(i),
     success: 0,

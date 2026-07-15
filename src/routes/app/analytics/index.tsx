@@ -5,8 +5,10 @@ import {
   useNavigate,
   useRouteContext,
 } from '@tanstack/react-router'
+import dayjs from 'dayjs'
 import {
   CloudIcon,
+  DownloadIcon,
   GitCompareIcon,
   LayersIcon,
   type LucideIcon,
@@ -24,6 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -50,13 +53,26 @@ import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import { useAnalyticsQuery } from '@/features/analytics/use-analytics-query'
 import { useEdgeStats } from '@/features/analytics/use-edge-stats'
 import { getBillingStateFn } from '@/functions/billing'
+import { analyticsSeriesCsv } from '@/helpers/analytics/export-csv'
 import { getPlan } from '@/lib/billing/plans'
 import { compactNumber, humanBytes } from '@/shared/format'
 import { appPageHead } from '@/shared/seo'
-import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
+import {
+  type HistoricalAnalyticsRange,
+  isAnalyticsRange,
+  isHistoricalAnalyticsRange,
+} from '@/shared/types'
 import { useProject } from '@/stores/project-context'
 
-const RANGES: AnalyticsRange[] = ['24h', '7d', '30d', '90d']
+const RANGES: Array<{ label: string; value: HistoricalAnalyticsRange }> = [
+  { label: 'Last 24 hours', value: '24h' },
+  { label: 'Last 7 days', value: '7d' },
+  { label: 'Last 30 days', value: '30d' },
+  { label: 'Last 90 days', value: '90d' },
+  { label: 'Last 365 days', value: '365d' },
+  { label: 'All time', value: 'all' },
+  { label: 'Custom dates', value: 'custom' },
+]
 
 const EMPTY_AVAILABLE = { formats: [], statuses: [], domains: [] }
 
@@ -70,6 +86,16 @@ function parseStringArray(value: unknown): string[] | undefined {
   return
 }
 
+function getDateParam(value: unknown) {
+  if (typeof value !== 'string') {
+    return
+  }
+  const date = dayjs(value)
+  return date.isValid() && date.format('YYYY-MM-DD') === value
+    ? value
+    : undefined
+}
+
 export const Route = createFileRoute('/app/analytics/')({
   head: () =>
     appPageHead(
@@ -81,16 +107,38 @@ export const Route = createFileRoute('/app/analytics/')({
   ): {
     domain?: string[]
     format?: string[]
-    range: AnalyticsRange
+    from?: string
+    range: HistoricalAnalyticsRange
     project?: string
     status?: string[]
-  } => ({
-    range: isAnalyticsRange(search.range) ? search.range : '24h',
-    project: typeof search.project === 'string' ? search.project : undefined,
-    domain: parseStringArray(search.domain),
-    format: parseStringArray(search.format),
-    status: parseStringArray(search.status),
-  }),
+    to?: string
+  } => {
+    const range = isHistoricalAnalyticsRange(search.range)
+      ? search.range
+      : '24h'
+    let from: string | undefined
+    let to: string | undefined
+    if (range === 'custom') {
+      const today = dayjs().format('YYYY-MM-DD')
+      from =
+        getDateParam(search.from) ??
+        dayjs().subtract(30, 'day').format('YYYY-MM-DD')
+      to = getDateParam(search.to) ?? today
+      if (dayjs(from).isAfter(to) || dayjs(to).isAfter(today)) {
+        from = dayjs().subtract(30, 'day').format('YYYY-MM-DD')
+        to = today
+      }
+    }
+    return {
+      range,
+      project: typeof search.project === 'string' ? search.project : undefined,
+      domain: parseStringArray(search.domain),
+      format: parseStringArray(search.format),
+      from,
+      status: parseStringArray(search.status),
+      to,
+    }
+  },
   component: AnalyticsPage,
 })
 
@@ -189,7 +237,7 @@ function isChartLens(value: unknown): value is ChartLens {
 
 function AnalyticsPage() {
   const search = Route.useSearch()
-  const { range, format, status, domain } = search
+  const { range, format, status, domain, from, to } = search
   const navigate = useNavigate({ from: Route.fullPath })
   const { cloud, user } = useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
@@ -211,6 +259,7 @@ function AnalyticsPage() {
   const { data, isPending, isFetching, isError, refetch } =
     useAnalyticsQuery(search)
   const isRefreshing = isFetching && !isPending
+  const edgeRange = isAnalyticsRange(range) ? range : undefined
   // Cloudflare edge stats load off the critical path; the edge cards/lenses
   // fill in afterward. Range-aware now that we persist edge history.
   const {
@@ -220,7 +269,7 @@ function AnalyticsPage() {
     edgeRefreshing,
     edgePending,
     edgeError,
-  } = useEdgeStats(range)
+  } = useEdgeStats(edgeRange)
   const [view, setView] = useState<AreaView>('requests')
   const [lens, setLens] = useState<ChartLens>('funnel')
   const [topMetric, setTopMetric] = useState<'requests' | 'bytes'>('requests')
@@ -265,6 +314,20 @@ function AnalyticsPage() {
     ]
   }, [data?.available, format, status, domain, isAll])
 
+  const downloadAnalytics = () => {
+    if (!data) {
+      return
+    }
+    const url = URL.createObjectURL(
+      new Blob([analyticsSeriesCsv(data.series)], { type: 'text/csv' }),
+    )
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `keenpix-analytics-${data.window.from.slice(0, 10)}-${data.window.to.slice(0, 10)}.csv`
+    anchor.click()
+    window.setTimeout(() => URL.revokeObjectURL(url), 0)
+  }
+
   const header = (
     <PageHeader
       actions={
@@ -301,27 +364,95 @@ function AnalyticsPage() {
             active={isRefreshing}
             error={isError && Boolean(data)}
           />
-          <ToggleGroup
-            onValueChange={(v: string[]) => {
-              const next = v[0]
-              if (isAnalyticsRange(next)) {
-                navigate({ search: (p) => ({ ...p, range: next }) })
+          <Select
+            onValueChange={(next) => {
+              if (!isHistoricalAnalyticsRange(next)) {
+                return
               }
+              navigate({
+                search: (previous) => ({
+                  ...previous,
+                  range: next,
+                  from:
+                    next === 'custom'
+                      ? (previous.from ??
+                        dayjs().subtract(30, 'day').format('YYYY-MM-DD'))
+                      : undefined,
+                  to:
+                    next === 'custom'
+                      ? (previous.to ?? dayjs().format('YYYY-MM-DD'))
+                      : undefined,
+                }),
+              })
             }}
+            value={range}
+          >
+            <SelectTrigger aria-label="Analytics range" className="h-11 w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {RANGES.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {range === 'custom' ? (
+            <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:w-auto">
+              <Input
+                aria-label="Analytics start date"
+                autoComplete="off"
+                className="h-11 w-full min-w-0 sm:w-36"
+                max={to ?? dayjs().format('YYYY-MM-DD')}
+                name="analytics-start-date"
+                onChange={(event) =>
+                  navigate({
+                    search: (previous) => ({
+                      ...previous,
+                      from: event.target.value,
+                    }),
+                  })
+                }
+                type="date"
+                value={from ?? ''}
+              />
+              <span className="text-muted-foreground text-xs">to</span>
+              <Input
+                aria-label="Analytics end date"
+                autoComplete="off"
+                className="h-11 w-full min-w-0 sm:w-36"
+                max={dayjs().format('YYYY-MM-DD')}
+                min={from}
+                name="analytics-end-date"
+                onChange={(event) =>
+                  navigate({
+                    search: (previous) => ({
+                      ...previous,
+                      to: event.target.value,
+                    }),
+                  })
+                }
+                type="date"
+                value={to ?? ''}
+              />
+            </div>
+          ) : null}
+          <Button
+            aria-label="Export analytics CSV"
+            className="h-11"
+            disabled={!data}
+            onClick={downloadAnalytics}
             size="sm"
-            value={[range]}
             variant="outline"
           >
-            {RANGES.map((r) => (
-              <ToggleGroupItem key={r} value={r}>
-                {r}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+            <DownloadIcon aria-hidden="true" />
+            Export CSV
+          </Button>
         </>
       }
       eyebrow={isAll ? 'All projects' : currentProject?.name}
-      subtitle="Everything keenpix has seen this window. Built in, not bolted on."
+      subtitle="Organization- and project-scoped delivery history measured at the keenpix origin."
       title="Analytics"
     />
   )
@@ -360,12 +491,17 @@ function AnalyticsPage() {
   // Only the operator can wire Cloudflare, so only the super-admin ever sees the
   // connect CTA. Regular tenants get origin-only cards with no dead-end prompt.
   const edgeNotConfigured =
-    isSuperAdmin && !(edgePending || edgeError || edgeConfigured)
+    Boolean(edgeRange) &&
+    isSuperAdmin &&
+    !(edgePending || edgeError || edgeConfigured)
   // A background capture is in flight and the reconciled split isn't on screen
   // yet — show the "preparing" indicator (and hold the note) until it lands.
   const edgePreparing = edgeRefreshing && !edgeGated
   let edgeNote: string | undefined
-  if (
+  if (canSeeEdge && !edgeRange) {
+    edgeNote =
+      'This longer window shows authoritative keenpix-origin history. Zone-wide edge comparison is available for 24h, 7d, 30d, and 90d.'
+  } else if (
     canSeeEdge &&
     !(edgePending || edgePreparing || edgeGated || edgeNotConfigured)
   ) {
@@ -434,7 +570,8 @@ function AnalyticsPage() {
           >
             Upgrade to Pro
           </Link>{' '}
-          for advanced analytics and longer history.
+          for advanced log search and 90-day raw-request retention. Durable
+          aggregate history remains available here.
         </p>
       )}
 
@@ -447,6 +584,12 @@ function AnalyticsPage() {
           preparing={edgePreparing}
           summary={data.summary}
         />
+        <p className="text-muted-foreground text-xs">
+          Customer totals are measured from requests that reached keenpix. A
+          Cloudflare edge hit never reaches the origin, so zone-wide edge
+          delivery is reported separately and is visible only to the platform
+          operator.
+        </p>
       </section>
 
       <Card>

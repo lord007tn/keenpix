@@ -154,7 +154,8 @@ For a full rebuild: create fresh volumes, start only `postgres`, copy a dump in
   older annual products rather than deleting them so historical subscriptions
   remain auditable; annual checkout is intentionally not linked by the app.
 - Usage cron: confirm `/api/internal/billing/report-usage` runs hourly in the
-  `usage-cron` logs (it also sweeps usage alerts, and prunes log retention at
-  03:00 UTC).
+  `usage-cron` logs. It runs once immediately after app health succeeds, captures
+  Cloudflare edge history, sweeps usage alerts, and prunes log retention at
+  03:00 UTC. A configured edge response reports `edgeHistory.configured: true`.
 - Backups: confirm a `keenpix-*.dump` appears in the `pg-backup` service logs
   within the first day, and run the restore drill above once.

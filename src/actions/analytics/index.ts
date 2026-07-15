@@ -1,12 +1,12 @@
 import type { z } from 'zod'
 import type { EffectiveCloudflareSettings } from '@/data-access/admin/cloudflare'
 import { getEffectiveCloudflareSettings } from '@/data-access/admin/cloudflare'
-import { rollupSinceFor } from '@/data-access/analytics-rollups'
+import { analyticsCoverageStart } from '@/data-access/analytics-aggregates'
 import {
-  edgeCoverageStart,
-  listEdgeRollups,
-  upsertEdgeRollups,
-} from '@/data-access/edge-rollups'
+  historicalRollupBucketing,
+  rollupSinceFor,
+} from '@/data-access/analytics-rollups'
+import { edgeCoverageStart, listEdgeRollups } from '@/data-access/edge-rollups'
 import {
   getProject,
   listProjects,
@@ -25,7 +25,6 @@ import {
   summarizeAgg,
   timeSeriesFromBuckets,
 } from '@/helpers/analytics/rollup-shapers'
-import { fetchEdgeAdaptiveHourly } from '@/lib/cloudflare/analytics'
 import type { analyticsInputSchema } from '@/schemas/analytics'
 import { isCloud } from '@/server/deployment'
 import type {
@@ -34,6 +33,7 @@ import type {
   EdgeCacheStats,
 } from '@/shared/types'
 import { withAnalyticsSource } from './analytics-source'
+import { captureConfiguredEdgeHistory } from './edge-history'
 
 // Every metric is a GROUP BY / aggregate, so the store returns a few pre-summed
 // rows instead of the full per-(hour × project × host × country × path × format
@@ -56,11 +56,31 @@ export async function getAnalytics(
     format: input.format ?? [],
     status: input.status ?? [],
   }
-  const gte = rollupSinceFor(input.range)
+  const coverageStart =
+    input.range === 'all'
+      ? await analyticsCoverageStart({ orgId, projectId: project })
+      : null
+  const window = historicalRollupBucketing({
+    coverageStart,
+    from: input.from,
+    range: input.range,
+    to: input.to,
+  })
   // The filtered window powers every metric card; the unfiltered window feeds
   // the filter menus (which must offer every value present) and the breakdown.
-  const filtered = { gte, orgId, projectId: project, filters }
-  const unfiltered = { gte, orgId, projectId: project }
+  const filtered = {
+    gte: window.gte,
+    lt: window.lt,
+    orgId,
+    projectId: project,
+    filters,
+  }
+  const unfiltered = {
+    gte: window.gte,
+    lt: window.lt,
+    orgId,
+    projectId: project,
+  }
   return withAnalyticsSource(orgId, async (source) => {
     const [
       summaryAgg,
@@ -91,12 +111,16 @@ export async function getAnalytics(
     return {
       range: input.range,
       summary: summarizeAgg(summaryAgg),
-      series: timeSeriesFromBuckets(buckets, input.range),
+      window: {
+        from: window.gte.toISOString(),
+        to: window.lt.toISOString(),
+      },
+      series: timeSeriesFromBuckets(buckets, window),
       formats: formatDistribution(formats),
       topImages,
       latency: latencyBinsFromAgg(summaryAgg),
-      latencyTrend: latencyTrendFromBuckets(buckets, input.range),
-      statusSeries: statusSeriesFromBuckets(statusBuckets, input.range),
+      latencyTrend: latencyTrendFromBuckets(buckets, window),
+      statusSeries: statusSeriesFromBuckets(statusBuckets, window),
       geo: geoDistribution(geoRows),
       // Per-project domain rollup vs. org-wide project rollup: one or the other,
       // matching which scope the page is showing.
@@ -140,12 +164,11 @@ function startEdgeCapture(
     return null
   }
   lastCaptureAt.set(key, Date.now())
-  const run = (async () => {
-    const groups = await fetchEdgeAdaptiveHourly(settings)
-    await upsertEdgeRollups(settings.zoneId, host, groups)
-  })().finally(() => {
-    captureInFlight.delete(key)
-  })
+  const run = captureConfiguredEdgeHistory(settings)
+    .then(() => undefined)
+    .finally(() => {
+      captureInFlight.delete(key)
+    })
   captureInFlight.set(key, run)
   return run
 }

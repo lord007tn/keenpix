@@ -32,6 +32,17 @@ export interface WindowOpts {
   projectId?: string
 }
 
+export async function analyticsCoverageStart(opts: {
+  orgId: string
+  projectId?: string
+}) {
+  const { _min } = await prisma.analyticsRollupHourly.aggregate({
+    where: { orgId: opts.orgId, projectId: opts.projectId },
+    _min: { bucketStart: true },
+  })
+  return _min.bucketStart
+}
+
 function whereFor(opts: WindowOpts): Prisma.AnalyticsRollupHourlyWhereInput {
   // Tenant scope is mandatory and comes first: every rollup row is org-scoped,
   // so no aggregate can sum another tenant's traffic.
