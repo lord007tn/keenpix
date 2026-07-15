@@ -273,6 +273,12 @@ function AnalyticsPage() {
   const [view, setView] = useState<AreaView>('requests')
   const [lens, setLens] = useState<ChartLens>('funnel')
   const [topMetric, setTopMetric] = useState<'requests' | 'bytes'>('requests')
+  const selectedRangeLabel =
+    RANGES.find((item) => item.value === range)?.label ?? range
+  const windowDescription =
+    range === 'custom' && from && to
+      ? `${from} to ${to}`
+      : selectedRangeLabel.toLowerCase()
   // Top images carry both dimensions; rank and format by the selected metric.
   const topImages = useMemo(
     () =>
@@ -388,7 +394,12 @@ function AnalyticsPage() {
             value={range}
           >
             <SelectTrigger aria-label="Analytics range" className="h-11 w-40">
-              <SelectValue />
+              <SelectValue>
+                {(value) =>
+                  RANGES.find((item) => item.value === value)?.label ??
+                  String(value)
+                }
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {RANGES.map((item) => (
@@ -530,13 +541,13 @@ function AnalyticsPage() {
   const activeLens: ChartLens = lensAvailable[lens] ? lens : 'funnel'
   let lensDescription: string
   if (activeLens === 'compare') {
-    lensDescription = `Edge vs keenpix, overlaid · last ${range}`
+    lensDescription = `Edge vs keenpix, overlaid · ${windowDescription}`
   } else if (activeLens === 'edge') {
-    lensDescription = `Edge, zone-wide · last ${range}`
+    lensDescription = `Edge, zone-wide · ${windowDescription}`
   } else if (edgeGated) {
-    lensDescription = `Edge → keenpix cache → live · last ${range}`
+    lensDescription = `Edge → keenpix cache → live · ${windowDescription}`
   } else {
-    lensDescription = `keenpix origin · last ${range}`
+    lensDescription = `keenpix origin · ${windowDescription}`
   }
   let chartEl: ReactNode
   if (activeLens === 'compare' && edge) {
@@ -683,8 +694,8 @@ function AnalyticsPage() {
             <CardHeader>
               <CardTitle>Format distribution</CardTitle>
               <CardDescription>
-                {compactNumber(data.summary.totalRequests)} requests · last{' '}
-                {range}
+                {compactNumber(data.summary.totalRequests)} requests ·{' '}
+                {windowDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -699,7 +710,7 @@ function AnalyticsPage() {
           <CardHeader>
             <CardTitle>Latency over time</CardTitle>
             <CardDescription>
-              p50 / p95 / p99 per bucket · last {range}
+              p50 / p95 / p99 per bucket · {windowDescription}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -716,7 +727,7 @@ function AnalyticsPage() {
                   {topMetric === 'bytes'
                     ? 'By delivered bytes'
                     : 'By request count'}{' '}
-                  · last {range}
+                  · {windowDescription}
                 </CardDescription>
               </div>
               <ToggleGroup
@@ -750,7 +761,7 @@ function AnalyticsPage() {
             <CardHeader>
               <CardTitle>Traffic by country</CardTitle>
               <CardDescription>
-                Requests by requester country · last {range}
+                Requests by requester country · {windowDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -782,7 +793,7 @@ function AnalyticsPage() {
             <CardHeader>
               <CardTitle>Bandwidth saved over time</CardTitle>
               <CardDescription>
-                Per bucket and cumulative · last {range}
+                Per bucket and cumulative · {windowDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -794,7 +805,7 @@ function AnalyticsPage() {
             <CardHeader>
               <CardTitle>Requests by status</CardTitle>
               <CardDescription>
-                2xx / 3xx / 4xx / 5xx · last {range}
+                2xx / 3xx / 4xx / 5xx · {windowDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
