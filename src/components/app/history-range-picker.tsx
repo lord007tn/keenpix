@@ -27,6 +27,7 @@ export const HISTORY_RANGES: Array<{
   { buttonLabel: '30 days', label: 'Last 30 days', value: '30d' },
   { buttonLabel: '90 days', label: 'Last 90 days', value: '90d' },
   { buttonLabel: '365 days', label: 'Last 365 days', value: '365d' },
+  { buttonLabel: 'All time', label: 'All available', value: 'all' },
   { buttonLabel: 'Custom', label: 'Custom dates', value: 'custom' },
 ]
 
@@ -49,8 +50,6 @@ export function HistoryRangePicker({
   let visibleRange = range
   if (range === '365d' && maxDays < 365) {
     visibleRange = '90d'
-  } else if (range === 'all') {
-    visibleRange = maxDays >= 365 ? '365d' : '90d'
   }
   let visibleTo = to ?? today
   if (dayjs(visibleTo).isBefore(earliest, 'day')) {
