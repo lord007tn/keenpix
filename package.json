@@ -110,6 +110,7 @@
     "pino": "^10.3.1",
     "prisma": "^7.8.0",
     "react": "^19.2.4",
+    "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.4",
     "recharts": "3.8.0",
     "shadcn": "^4.8.0",
