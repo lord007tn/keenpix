@@ -29,8 +29,25 @@ export interface Project {
 
 export type AnalyticsRange = '24h' | '7d' | '30d' | '90d'
 
+export type HistoricalAnalyticsRange =
+  | AnalyticsRange
+  | '365d'
+  | 'all'
+  | 'custom'
+
 export function isAnalyticsRange(value: unknown): value is AnalyticsRange {
   return value === '24h' || value === '7d' || value === '30d' || value === '90d'
+}
+
+export function isHistoricalAnalyticsRange(
+  value: unknown,
+): value is HistoricalAnalyticsRange {
+  return (
+    isAnalyticsRange(value) ||
+    value === '365d' ||
+    value === 'all' ||
+    value === 'custom'
+  )
 }
 
 export interface TimePoint {
@@ -41,6 +58,7 @@ export interface TimePoint {
   label: string
   optimized: number
   requests: number
+  start: string
   successful: number
 }
 
