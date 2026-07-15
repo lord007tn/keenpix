@@ -12,7 +12,7 @@ No unreleased changes.
 
 - Managed cloud mode with multi-tenant organizations, self-serve signup, email verification, Google OAuth support, and an operator console.
 - Polar-backed trials, subscriptions, usage metering, spending caps, billing alerts, dunning handling, and organization-scoped billing recovery.
-- Consent-aware GTM/GA4 funnel events and sampled first-party Core Web Vitals reporting with a privacy-choice surface.
+- Consent-aware GTM/GA4 funnel events, a cookie-choice surface, and Cloudflare Web Analytics RUM for page performance and Core Web Vitals.
 - Public pricing, comparison, self-hosting, changelog, trust, security, status, support, author, and editorial-methodology pages.
 - A 10-article blog with focused image-CDN guides, comparison research, dated primary-source disclosures, RSS, and required article-specific social images.
 - A disclosed, code-backed JoodCMS integration case study with a generated 1600×900 WebP cover and 1200×630 JPEG Open Graph asset; no unsupported performance outcome is claimed.
@@ -36,6 +36,9 @@ No unreleased changes.
 
 ### Fixed
 
+- Corrected image analytics so failed responses no longer count as cache hits or optimized deliveries, cache-hit rates use successful deliveries consistently, and an exact rollup migration repairs existing counters.
+- Made Postgres request-log and rollup writes atomic with transient retries, and ensured a batch queued during a long flush cannot remain stranded.
+- Removed the duplicate first-party Web Vitals endpoint and browser package; Cloudflare RUM is now the single field-performance collector.
 - Corrected misleading Vercel 402, Cloudinary quota, ImageKit custom-domain, migration-URL, and unsupported universal image-savings claims.
 - Added missing Polar trial/uncancel webhook documentation and prevented duplicate checkout-based plan switches.
 - Fixed public header overflow at 320–412px through compact navigation and intrinsic-width containment.

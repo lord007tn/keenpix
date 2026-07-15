@@ -11,12 +11,7 @@ const { clientEnv } = vi.hoisted(() => ({
 
 vi.mock('@/env/client', () => ({ clientEnv }))
 
-import {
-  loadGoogleAnalytics,
-  loadGoogleTagManager,
-  setAnalyticsConsent,
-  trackEvent,
-} from './client'
+import { loadGoogleAnalytics, setAnalyticsConsent, trackEvent } from './client'
 
 describe('consent-aware Google analytics', () => {
   beforeEach(() => {
@@ -41,26 +36,19 @@ describe('consent-aware Google analytics', () => {
     expect(window.dataLayer).toEqual([])
   })
 
-  it('prefers direct GA4 over GTM after consent', () => {
+  it('prefers GTM over direct GA4 after consent', () => {
     clientEnv.VITE_GA_MEASUREMENT_ID = 'G-KEENPIX123'
     clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
 
     setAnalyticsConsent('granted')
-    loadGoogleTagManager()
+    loadGoogleAnalytics()
 
     const script = document.querySelector('script')
-    expect(script?.dataset.keenpixGa).toBe('G-KEENPIX123')
+    expect(script?.dataset.keenpixGtm).toBe('GTM-KEENPIX123')
     expect(script?.src).toBe(
-      'https://www.googletagmanager.com/gtag/js?id=G-KEENPIX123',
+      'https://www.googletagmanager.com/gtm.js?id=GTM-KEENPIX123',
     )
-    expect(document.querySelector('[data-keenpix-gtm]')).toBeNull()
-    expect(
-      window.dataLayer?.some(
-        (entry) =>
-          Reflect.get(entry, '0') === 'config' &&
-          Reflect.get(entry, '1') === 'G-KEENPIX123',
-      ),
-    ).toBe(true)
+    expect(document.querySelector('[data-keenpix-ga]')).toBeNull()
   })
 
   it('sends direct GA4 events through gtag commands', () => {
@@ -83,7 +71,7 @@ describe('consent-aware Google analytics', () => {
     ).toBe(true)
   })
 
-  it('retains GTM as the fallback when direct GA4 is unset', () => {
+  it('loads GTM when direct GA4 is unset', () => {
     clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
 
     setAnalyticsConsent('granted')
@@ -93,5 +81,15 @@ describe('consent-aware Google analytics', () => {
     expect(script?.src).toBe(
       'https://www.googletagmanager.com/gtm.js?id=GTM-KEENPIX123',
     )
+  })
+
+  it('pushes custom events for GTM to route to GA4', () => {
+    clientEnv.VITE_GA_MEASUREMENT_ID = 'G-KEENPIX123'
+    clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
+    setAnalyticsConsent('granted')
+
+    trackEvent('project_created')
+
+    expect(window.dataLayer).toContainEqual({ event: 'project_created' })
   })
 })

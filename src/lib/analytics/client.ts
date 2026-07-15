@@ -7,7 +7,7 @@ declare global {
 }
 
 const ANALYTICS_CONSENT_KEY = 'keenpix.analytics-consent.v1'
-export const ANALYTICS_CONSENT_EVENT = 'keenpix:analytics-consent'
+const ANALYTICS_CONSENT_EVENT = 'keenpix:analytics-consent'
 
 export type AnalyticsConsent = 'granted' | 'denied'
 
@@ -94,12 +94,13 @@ export function setAnalyticsConsent(consent: AnalyticsConsent) {
 }
 
 export function loadGoogleAnalytics() {
-  const measurementId = clientEnv.VITE_GA_MEASUREMENT_ID
-  if (!measurementId) {
+  if (clientEnv.VITE_GTM_CONTAINER_ID) {
     loadGoogleTagManager()
     return
   }
+  const measurementId = clientEnv.VITE_GA_MEASUREMENT_ID
   if (
+    !measurementId ||
     getAnalyticsConsent() !== 'granted' ||
     document.querySelector(`script[data-keenpix-ga="${measurementId}"]`)
   ) {
@@ -118,10 +119,7 @@ export function loadGoogleAnalytics() {
   trackAcquisitionContext()
 }
 
-export function loadGoogleTagManager() {
-  if (clientEnv.VITE_GA_MEASUREMENT_ID) {
-    return
-  }
+function loadGoogleTagManager() {
   const containerId = clientEnv.VITE_GTM_CONTAINER_ID
   if (
     !containerId ||
@@ -176,10 +174,10 @@ export function trackEvent(
     return
   }
   window.dataLayer ??= []
-  if (clientEnv.VITE_GA_MEASUREMENT_ID) {
-    pushGoogleCommand('event', event, parameters)
-  } else {
+  if (clientEnv.VITE_GTM_CONTAINER_ID) {
     window.dataLayer.push({ event, ...parameters })
+  } else if (clientEnv.VITE_GA_MEASUREMENT_ID) {
+    pushGoogleCommand('event', event, parameters)
   }
 }
 

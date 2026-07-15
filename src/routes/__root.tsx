@@ -9,7 +9,6 @@ import type { ReactNode } from 'react'
 
 import { AnalyticsConsent } from '@/components/app/analytics-consent'
 import { NotFoundPage } from '@/components/app/error-page'
-import { WebVitalsReporter } from '@/components/app/web-vitals-reporter'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -122,7 +121,6 @@ function RootDocument({ children }: { children: ReactNode }) {
           <Toaster richColors />
         </ThemeProvider>
         <AnalyticsConsent />
-        <WebVitalsReporter />
         {import.meta.env.DEV ? <Devtools /> : null}
         <Scripts />
       </body>

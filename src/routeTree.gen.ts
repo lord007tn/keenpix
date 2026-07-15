@@ -39,7 +39,6 @@ import { Route as CompareSlugRouteImport } from './routes/compare/$slug'
 import { Route as BlogRssDotxmlRouteImport } from './routes/blog/rss[.]xml'
 import { Route as BlogSplatRouteImport } from './routes/blog/$'
 import { Route as AuthorsRaedBahriRouteImport } from './routes/authors/raed-bahri'
-import { Route as ApiWebVitalsRouteImport } from './routes/api/web-vitals'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as DotwellKnownSecurityDottxtRouteImport } from './routes/[.]well-known/security[.]txt'
@@ -219,11 +218,6 @@ const AuthorsRaedBahriRoute = AuthorsRaedBahriRouteImport.update({
   path: '/authors/raed-bahri',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiWebVitalsRoute = ApiWebVitalsRouteImport.update({
-  id: '/api/web-vitals',
-  path: '/api/web-vitals',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
   id: '/api/search',
   path: '/api/search',
@@ -387,7 +381,6 @@ export interface FileRoutesByFullPath {
   '/.well-known/security.txt': typeof DotwellKnownSecurityDottxtRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
-  '/api/web-vitals': typeof ApiWebVitalsRoute
   '/authors/raed-bahri': typeof AuthorsRaedBahriRoute
   '/blog/$': typeof BlogSplatRoute
   '/blog/rss.xml': typeof BlogRssDotxmlRoute
@@ -445,7 +438,6 @@ export interface FileRoutesByTo {
   '/.well-known/security.txt': typeof DotwellKnownSecurityDottxtRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
-  '/api/web-vitals': typeof ApiWebVitalsRoute
   '/authors/raed-bahri': typeof AuthorsRaedBahriRoute
   '/blog/$': typeof BlogSplatRoute
   '/blog/rss.xml': typeof BlogRssDotxmlRoute
@@ -506,7 +498,6 @@ export interface FileRoutesById {
   '/.well-known/security.txt': typeof DotwellKnownSecurityDottxtRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
-  '/api/web-vitals': typeof ApiWebVitalsRoute
   '/authors/raed-bahri': typeof AuthorsRaedBahriRoute
   '/blog/$': typeof BlogSplatRoute
   '/blog/rss.xml': typeof BlogRssDotxmlRoute
@@ -568,7 +559,6 @@ export interface FileRouteTypes {
     | '/.well-known/security.txt'
     | '/api/health'
     | '/api/search'
-    | '/api/web-vitals'
     | '/authors/raed-bahri'
     | '/blog/$'
     | '/blog/rss.xml'
@@ -626,7 +616,6 @@ export interface FileRouteTypes {
     | '/.well-known/security.txt'
     | '/api/health'
     | '/api/search'
-    | '/api/web-vitals'
     | '/authors/raed-bahri'
     | '/blog/$'
     | '/blog/rss.xml'
@@ -686,7 +675,6 @@ export interface FileRouteTypes {
     | '/.well-known/security.txt'
     | '/api/health'
     | '/api/search'
-    | '/api/web-vitals'
     | '/authors/raed-bahri'
     | '/blog/$'
     | '/blog/rss.xml'
@@ -747,7 +735,6 @@ export interface RootRouteChildren {
   DotwellKnownSecurityDottxtRoute: typeof DotwellKnownSecurityDottxtRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSearchRoute: typeof ApiSearchRoute
-  ApiWebVitalsRoute: typeof ApiWebVitalsRoute
   AuthorsRaedBahriRoute: typeof AuthorsRaedBahriRoute
   BlogSplatRoute: typeof BlogSplatRoute
   BlogRssDotxmlRoute: typeof BlogRssDotxmlRoute
@@ -981,13 +968,6 @@ declare module '@tanstack/react-router' {
       path: '/authors/raed-bahri'
       fullPath: '/authors/raed-bahri'
       preLoaderRoute: typeof AuthorsRaedBahriRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/web-vitals': {
-      id: '/api/web-vitals'
-      path: '/api/web-vitals'
-      fullPath: '/api/web-vitals'
-      preLoaderRoute: typeof ApiWebVitalsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/search': {
@@ -1253,7 +1233,6 @@ const rootRouteChildren: RootRouteChildren = {
   DotwellKnownSecurityDottxtRoute: DotwellKnownSecurityDottxtRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSearchRoute: ApiSearchRoute,
-  ApiWebVitalsRoute: ApiWebVitalsRoute,
   AuthorsRaedBahriRoute: AuthorsRaedBahriRoute,
   BlogSplatRoute: BlogSplatRoute,
   BlogRssDotxmlRoute: BlogRssDotxmlRoute,
