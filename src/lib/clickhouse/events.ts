@@ -160,6 +160,14 @@ export async function searchRequestEvents(params: {
     conditions.push('project_id = {projectId:String}')
     qp.projectId = params.projectId
   }
+  if (f?.gte) {
+    conditions.push('ts >= {gte:DateTime64(3)}')
+    qp.gte = toClickhouseDateTime(f.gte)
+  }
+  if (f?.lt) {
+    conditions.push('ts < {lt:DateTime64(3)}')
+    qp.lt = toClickhouseDateTime(f.lt)
+  }
   if (f?.format && f.format.length > 0) {
     conditions.push('format IN {formats:Array(String)}')
     qp.formats = f.format.filter(isLogFormat)

@@ -1,34 +1,41 @@
 import { createServerFn } from '@tanstack/react-start'
 import { readLogs } from '@/actions/logs'
 import { getOrgPlan } from '@/data-access/subscriptions'
+import {
+  getHistoryWindowDates,
+  limitHistorySearch,
+} from '@/helpers/history/window'
 import { authMiddleware, requireActiveOrg } from '@/lib/auth/guards'
-import { BASIC_LOG_LIMIT } from '@/lib/billing/plans'
+import { BASIC_LOG_LIMIT, DEFAULT_HISTORY_DAYS } from '@/lib/billing/plans'
 import { logsQuerySchema } from '@/schemas/logs'
 import { isCloud } from '@/server/deployment'
 
 const ADVANCED_LOG_LIMIT = 500
-
-// Log tiering: self-host always gets full logs; cloud gets the plan's tier —
-// advanced (Pro+) sees full history + search, basic sees only the most-recent
-// window (BASIC_LOG_LIMIT) with search disabled. The store is ClickHouse for all
-// tiers (with a Postgres fallback) — see readLogs; the tier only governs the row
-// limit and whether search is allowed.
-async function orgLogsAdvanced(orgId: string): Promise<boolean> {
-  if (!isCloud()) {
-    return true
-  }
-  const plan = await getOrgPlan(orgId)
-  return plan?.advancedLogs ?? false
-}
 
 export const listLogsFn = createServerFn({ method: 'GET' })
   .inputValidator(logsQuerySchema)
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
     const orgId = requireActiveOrg(context)
-    const advanced = await orgLogsAdvanced(orgId)
+    const cloud = isCloud()
+    const plan = cloud ? await getOrgPlan(orgId) : null
+    const advanced = !cloud || (plan?.advancedLogs ?? false)
     const limit = advanced ? ADVANCED_LOG_LIMIT : BASIC_LOG_LIMIT
-    // Basic can't full-text search history — it only sees the recent window.
-    const filters = advanced ? data : { ...data, search: undefined }
+    const window = limitHistorySearch(
+      data,
+      cloud ? (plan?.historyDays ?? DEFAULT_HISTORY_DAYS) : undefined,
+    )
+    const dates = getHistoryWindowDates(window)
+    // Basic can select its retained date window, but full-text search remains a
+    // Pro feature. Every filter is still enforced inside the caller's org.
+    const filters = {
+      cache: data.cache,
+      domain: data.domain,
+      format: data.format,
+      gte: dates.gte,
+      lt: dates.lt,
+      search: advanced ? data.search : undefined,
+      status: data.status,
+    }
     return readLogs(orgId, data.project, limit, filters)
   })

@@ -76,7 +76,11 @@ export function AppTopnav({
             <Link
               className={tabClassName(active)}
               key={tab.to}
-              search={(prev) => ({ ...prev, project: projectId })}
+              search={(prev) => ({
+                ...prev,
+                project: projectId,
+                range: prev.range ?? '24h',
+              })}
               to={tab.to}
             >
               <Icon className={cn('size-4', active && 'text-primary')} />

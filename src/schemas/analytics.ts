@@ -1,21 +1,12 @@
-import dayjs from 'dayjs'
 import { z } from 'zod'
 import {
   analyticsRangeSchema,
+  historicalAnalyticsRangeSchema,
   nonEmptyStringSchema,
   optionalNonEmptyParamSchema,
   stringArrayParamSchema,
+  validateHistoricalWindow,
 } from './common'
-
-const historicalAnalyticsRangeSchema = z.enum([
-  '24h',
-  '7d',
-  '30d',
-  '90d',
-  '365d',
-  'all',
-  'custom',
-])
 
 export const analyticsInputSchema = z
   .object({
@@ -27,43 +18,7 @@ export const analyticsInputSchema = z
     status: stringArrayParamSchema,
     to: z.iso.date().optional(),
   })
-  .superRefine((value, ctx) => {
-    if (value.range !== 'custom') {
-      return
-    }
-    if (!value.from) {
-      ctx.addIssue({ code: 'custom', path: ['from'], message: 'Required' })
-    }
-    if (!value.to) {
-      ctx.addIssue({ code: 'custom', path: ['to'], message: 'Required' })
-    }
-    if (!(value.from && value.to)) {
-      return
-    }
-    const from = dayjs(value.from)
-    const to = dayjs(value.to)
-    if (from.isAfter(to)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['to'],
-        message: 'Must be on or after the start date',
-      })
-    }
-    if (to.diff(from, 'day') > 3650) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['to'],
-        message: 'Custom windows are limited to 10 years',
-      })
-    }
-    if (to.isAfter(dayjs(), 'day')) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['to'],
-        message: 'Cannot be in the future',
-      })
-    }
-  })
+  .superRefine(validateHistoricalWindow)
 
 export const dashboardInputSchema = z.object({
   project: optionalNonEmptyParamSchema,

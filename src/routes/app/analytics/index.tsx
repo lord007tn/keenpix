@@ -16,6 +16,10 @@ import {
 import { type ReactNode, useMemo, useState } from 'react'
 import { BarList } from '@/components/app/bar-list'
 import { DataFilters, type FilterField } from '@/components/app/data-filters'
+import {
+  HISTORY_RANGES,
+  HistoryRangePicker,
+} from '@/components/app/history-range-picker'
 import { PageHeader } from '@/components/app/page-header'
 import { RefreshingIndicator } from '@/components/app/refreshing-indicator'
 import { Button } from '@/components/ui/button'
@@ -26,7 +30,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -54,7 +57,8 @@ import { useAnalyticsQuery } from '@/features/analytics/use-analytics-query'
 import { useEdgeStats } from '@/features/analytics/use-edge-stats'
 import { getBillingStateFn } from '@/functions/billing'
 import { analyticsSeriesCsv } from '@/helpers/analytics/export-csv'
-import { getPlan } from '@/lib/billing/plans'
+import { limitHistorySearch } from '@/helpers/history/window'
+import { DEFAULT_HISTORY_DAYS, getPlan } from '@/lib/billing/plans'
 import { compactNumber, humanBytes } from '@/shared/format'
 import { appPageHead } from '@/shared/seo'
 import {
@@ -63,16 +67,6 @@ import {
   isHistoricalAnalyticsRange,
 } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
-
-const RANGES: Array<{ label: string; value: HistoricalAnalyticsRange }> = [
-  { label: 'Last 24 hours', value: '24h' },
-  { label: 'Last 7 days', value: '7d' },
-  { label: 'Last 30 days', value: '30d' },
-  { label: 'Last 90 days', value: '90d' },
-  { label: 'Last 365 days', value: '365d' },
-  { label: 'All time', value: 'all' },
-  { label: 'Custom dates', value: 'custom' },
-]
 
 const EMPTY_AVAILABLE = { formats: [], statuses: [], domains: [] }
 
@@ -252,14 +246,29 @@ function AnalyticsPage() {
     queryKey: ['billing-state'],
     staleTime: 30_000,
   })
+  const maxHistoryDays = cloud
+    ? (getPlan(billing?.plan)?.historyDays ?? DEFAULT_HISTORY_DAYS)
+    : 3650
+  const boundedWindow = limitHistorySearch(
+    { range, from, to },
+    cloud ? maxHistoryDays : undefined,
+  )
+  const visibleRange = range === 'all' ? range : boundedWindow.range
+  const visibleFrom =
+    boundedWindow.range === 'custom' ? boundedWindow.from : from
+  const visibleTo = boundedWindow.range === 'custom' ? boundedWindow.to : to
   const advancedAnalytics =
     !cloud || (getPlan(billing?.plan)?.advancedAnalytics ?? false)
   // Stale-while-revalidate: the previous window stays on screen while a new
   // range/filter loads; `isRefreshing` drives the inline indicator.
-  const { data, isPending, isFetching, isError, refetch } =
-    useAnalyticsQuery(search)
+  const { data, isPending, isFetching, isError, refetch } = useAnalyticsQuery({
+    ...search,
+    ...boundedWindow,
+  })
   const isRefreshing = isFetching && !isPending
-  const edgeRange = isAnalyticsRange(range) ? range : undefined
+  const edgeRange = isAnalyticsRange(boundedWindow.range)
+    ? boundedWindow.range
+    : undefined
   // Cloudflare edge stats load off the critical path; the edge cards/lenses
   // fill in afterward. Range-aware now that we persist edge history.
   const {
@@ -274,10 +283,11 @@ function AnalyticsPage() {
   const [lens, setLens] = useState<ChartLens>('funnel')
   const [topMetric, setTopMetric] = useState<'requests' | 'bytes'>('requests')
   const selectedRangeLabel =
-    RANGES.find((item) => item.value === range)?.label ?? range
+    HISTORY_RANGES.find((item) => item.value === visibleRange)?.label ??
+    visibleRange
   const windowDescription =
-    range === 'custom' && from && to
-      ? `${from} to ${to}`
+    visibleRange === 'custom' && visibleFrom && visibleTo
+      ? `${visibleFrom} to ${visibleTo}`
       : selectedRangeLabel.toLowerCase()
   // Top images carry both dimensions; rank and format by the selected metric.
   const topImages = useMemo(
@@ -370,89 +380,18 @@ function AnalyticsPage() {
             active={isRefreshing}
             error={isError && Boolean(data)}
           />
-          <Select
-            onValueChange={(next) => {
-              if (!isHistoricalAnalyticsRange(next)) {
-                return
-              }
+          <HistoryRangePicker
+            from={visibleFrom}
+            label="Analytics"
+            maxDays={maxHistoryDays}
+            onChange={(next) =>
               navigate({
-                search: (previous) => ({
-                  ...previous,
-                  range: next,
-                  from:
-                    next === 'custom'
-                      ? (previous.from ??
-                        dayjs().subtract(30, 'day').format('YYYY-MM-DD'))
-                      : undefined,
-                  to:
-                    next === 'custom'
-                      ? (previous.to ?? dayjs().format('YYYY-MM-DD'))
-                      : undefined,
-                }),
+                search: (previous) => ({ ...previous, ...next }),
               })
-            }}
-            value={range}
-          >
-            <SelectTrigger
-              aria-label="Analytics range"
-              className="w-40"
-              size="lg"
-            >
-              <SelectValue>
-                {(value) =>
-                  RANGES.find((item) => item.value === value)?.label ??
-                  String(value)
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {RANGES.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {range === 'custom' ? (
-            <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:w-auto">
-              <Input
-                aria-label="Analytics start date"
-                autoComplete="off"
-                className="h-11 w-full min-w-0 sm:w-36"
-                max={to ?? dayjs().format('YYYY-MM-DD')}
-                name="analytics-start-date"
-                onChange={(event) =>
-                  navigate({
-                    search: (previous) => ({
-                      ...previous,
-                      from: event.target.value,
-                    }),
-                  })
-                }
-                type="date"
-                value={from ?? ''}
-              />
-              <span className="text-muted-foreground text-xs">to</span>
-              <Input
-                aria-label="Analytics end date"
-                autoComplete="off"
-                className="h-11 w-full min-w-0 sm:w-36"
-                max={dayjs().format('YYYY-MM-DD')}
-                min={from}
-                name="analytics-end-date"
-                onChange={(event) =>
-                  navigate({
-                    search: (previous) => ({
-                      ...previous,
-                      to: event.target.value,
-                    }),
-                  })
-                }
-                type="date"
-                value={to ?? ''}
-              />
-            </div>
-          ) : null}
+            }
+            range={visibleRange}
+            to={visibleTo}
+          />
           <Button
             aria-label="Export analytics CSV"
             className="h-11"
@@ -585,7 +524,7 @@ function AnalyticsPage() {
           >
             Upgrade to Pro
           </Link>{' '}
-          for advanced log search and 90-day raw-request retention. Durable
+          for advanced log search and 365-day retained history. Durable
           aggregate history remains available here.
         </p>
       )}

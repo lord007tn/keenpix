@@ -38,6 +38,12 @@ describe('plan catalog', () => {
     expect(PLANS.pro.advancedLogs).toBe(true)
     expect(BASIC_LOG_LIMIT).toBe(200)
   })
+
+  it('keeps analytics and log history for 90 days on Basic and 365 on Pro+', () => {
+    expect(PLANS.basic.historyDays).toBe(90)
+    expect(PLANS.pro.historyDays).toBe(365)
+    expect(PLANS.business.historyDays).toBe(365)
+  })
 })
 
 describe('catalogPricing', () => {

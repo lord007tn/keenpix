@@ -1,5 +1,10 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { createFileRoute, Link, useRouteContext } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  Link,
+  useNavigate,
+  useRouteContext,
+} from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import {
   ChevronDownIcon,
@@ -10,6 +15,7 @@ import {
 } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { DataFilters, type FilterField } from '@/components/app/data-filters'
+import { HistoryRangePicker } from '@/components/app/history-range-picker'
 import { PageHeader } from '@/components/app/page-header'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -24,10 +30,19 @@ import {
 } from '@/components/ui/table'
 import { getBillingStateFn } from '@/functions/billing'
 import { listLogsFn } from '@/functions/logs'
-import { BASIC_LOG_LIMIT, getPlan } from '@/lib/billing/plans'
+import { limitHistorySearch } from '@/helpers/history/window'
+import {
+  BASIC_LOG_LIMIT,
+  DEFAULT_HISTORY_DAYS,
+  getPlan,
+} from '@/lib/billing/plans'
 import { humanBytes } from '@/shared/format'
 import { appPageHead } from '@/shared/seo'
-import type { LogRow } from '@/shared/types'
+import {
+  type HistoricalAnalyticsRange,
+  isHistoricalAnalyticsRange,
+  type LogRow,
+} from '@/shared/types'
 import { useProject } from '@/stores/project-context'
 
 const EMPTY_VALUES: string[] = []
@@ -38,11 +53,45 @@ export const Route = createFileRoute('/app/logs/')({
       'Live logs',
       'Live Keenpix request logs with status, format, cache state, latency, and response size filters.',
     ),
-  validateSearch: (search: Record<string, unknown>): { project?: string } => ({
-    project: typeof search.project === 'string' ? search.project : undefined,
-  }),
-  loaderDeps: ({ search }) => ({ project: search.project }),
-  loader: ({ deps }) => listLogsFn({ data: { project: deps.project } }),
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): {
+    from?: string
+    project?: string
+    range: HistoricalAnalyticsRange
+    to?: string
+  } => {
+    const range = isHistoricalAnalyticsRange(search.range)
+      ? search.range
+      : '24h'
+    let from: string | undefined
+    let to: string | undefined
+    if (range === 'custom') {
+      const today = dayjs().format('YYYY-MM-DD')
+      const start = typeof search.from === 'string' ? dayjs(search.from) : null
+      const end = typeof search.to === 'string' ? dayjs(search.to) : null
+      from =
+        start?.isValid() && start.format('YYYY-MM-DD') === search.from
+          ? search.from
+          : dayjs().subtract(9, 'day').format('YYYY-MM-DD')
+      to =
+        end?.isValid() && end.format('YYYY-MM-DD') === search.to
+          ? search.to
+          : today
+      if (dayjs(from).isAfter(to) || dayjs(to).isAfter(today)) {
+        from = dayjs().subtract(9, 'day').format('YYYY-MM-DD')
+        to = today
+      }
+    }
+    return {
+      from,
+      project: typeof search.project === 'string' ? search.project : undefined,
+      range,
+      to,
+    }
+  },
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps }) => listLogsFn({ data: deps }),
   component: LogsPage,
 })
 
@@ -78,7 +127,8 @@ function exportNdjson(rows: LogRow[]) {
 
 function LogsPage() {
   const initialLogs = Route.useLoaderData()
-  const { project } = Route.useSearch()
+  const { from, project, range, to } = Route.useSearch()
+  const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, projects } = useProject()
   const projectName = new Map(projects.map((p) => [p.id, p.name]))
   const { cloud } = useRouteContext({ from: '/app' })
@@ -88,6 +138,17 @@ function LogsPage() {
     queryKey: ['billing-state'],
     staleTime: 30_000,
   })
+  const maxHistoryDays = cloud
+    ? (getPlan(billing?.plan)?.historyDays ?? DEFAULT_HISTORY_DAYS)
+    : 3650
+  const boundedWindow = limitHistorySearch(
+    { range, from, to },
+    cloud ? maxHistoryDays : undefined,
+  )
+  const visibleRange = range === 'all' ? range : boundedWindow.range
+  const visibleFrom =
+    boundedWindow.range === 'custom' ? boundedWindow.from : from
+  const visibleTo = boundedWindow.range === 'custom' ? boundedWindow.to : to
   // Basic tier is capped at the most-recent BASIC_LOG_LIMIT with no search
   // server-side, so surface that instead of presenting a full-history search.
   const limitedLogs = cloud && !(getPlan(billing?.plan)?.advancedLogs ?? false)
@@ -116,11 +177,24 @@ function LogsPage() {
       cache: cacheStates,
       domain: domains,
       format: formats,
+      from: boundedWindow.from,
       project,
+      range: boundedWindow.range,
       search: debouncedSearch || undefined,
       status: statuses,
+      to: boundedWindow.to,
     }),
-    [cacheStates, debouncedSearch, domains, formats, project, statuses],
+    [
+      boundedWindow.from,
+      boundedWindow.range,
+      boundedWindow.to,
+      cacheStates,
+      debouncedSearch,
+      domains,
+      formats,
+      project,
+      statuses,
+    ],
   )
   const filteredLogsQuery = useQuery({
     enabled: hasServerFilters,
@@ -141,7 +215,7 @@ function LogsPage() {
   }, [filter])
 
   useEffect(() => {
-    if (!live || hasServerFilters) {
+    if (!live || hasServerFilters || visibleRange !== '24h') {
       return
     }
     const params = new URLSearchParams()
@@ -173,7 +247,7 @@ function LogsPage() {
       })
     })
     return () => source.close()
-  }, [hasServerFilters, live, project])
+  }, [hasServerFilters, live, project, visibleRange])
 
   useEffect(() => {
     if (!live) {
@@ -238,7 +312,11 @@ function LogsPage() {
     cacheStates.length > 0 ||
     domains.length > 0
   // Distinguish a brand-new project that has served nothing from a filter miss.
-  const noTraffic = !hasActiveFilters && visibleLogs.length === 0
+  const noTraffic =
+    visibleRange === '24h' && !hasActiveFilters && visibleLogs.length === 0
+  const emptyMessage = hasActiveFilters
+    ? 'No requests match these filters.'
+    : 'No requests in this date range.'
 
   const fields = useMemo<FilterField[]>(() => {
     const f: FilterField[] = [
@@ -274,7 +352,9 @@ function LogsPage() {
   const streamHealthy = streamConnected || hasServerFilters
   let liveLabel = 'Paused'
   let liveVariant: 'outline' | 'success' | 'warning' = 'outline'
-  if (live) {
+  if (visibleRange !== '24h') {
+    liveLabel = 'Historical'
+  } else if (live) {
     liveLabel = streamHealthy ? 'Live' : 'Reconnecting…'
     liveVariant = streamHealthy ? 'success' : 'warning'
   }
@@ -284,7 +364,20 @@ function LogsPage() {
       <PageHeader
         actions={
           <>
+            <HistoryRangePicker
+              from={visibleFrom}
+              label="Logs"
+              maxDays={maxHistoryDays}
+              onChange={(next) =>
+                navigate({
+                  search: (previous) => ({ ...previous, ...next }),
+                })
+              }
+              range={visibleRange}
+              to={visibleTo}
+            />
             <Button
+              disabled={visibleRange !== '24h'}
               onClick={() => setLive((v) => !v)}
               size="sm"
               variant={liveVariant}
@@ -342,8 +435,8 @@ function LogsPage() {
         </div>
         {limitedLogs ? (
           <p className="text-muted-foreground text-xs">
-            Your plan shows the most recent {BASIC_LOG_LIMIT} requests without
-            full search.{' '}
+            Your plan shows up to {BASIC_LOG_LIMIT} requests in the selected{' '}
+            {maxHistoryDays}-day retained window without full search.{' '}
             <Link
               className="text-primary hover:underline"
               search={{ section: 'billing' }}
@@ -351,7 +444,7 @@ function LogsPage() {
             >
               Upgrade to Pro
             </Link>{' '}
-            for full history and search.
+            for 365-day retained history and search.
           </p>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
@@ -546,7 +639,7 @@ function LogsPage() {
                       </span>
                     </span>
                   ) : (
-                    'No requests match these filters.'
+                    emptyMessage
                   )}
                 </TableCell>
               </TableRow>
