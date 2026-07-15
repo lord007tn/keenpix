@@ -44,7 +44,10 @@ interface CachedTransformInput {
   transformOptions: TransformOptions
 }
 
-const inflightTransforms = new Map<string, Promise<Buffer>>()
+const inflightTransforms = new Map<
+  string,
+  Promise<{ bytesIn: number; out: Buffer }>
+>()
 
 function logPath(src: string) {
   try {
@@ -97,7 +100,13 @@ async function readOrCreateTransform({
 
   const existing = inflightTransforms.get(cacheKey)
   if (existing) {
-    return { out: await existing, cached: false, bytesIn: 0, originalBytes: 0 }
+    const result = await existing
+    return {
+      out: result.out,
+      cached: false,
+      bytesIn: 0,
+      originalBytes: result.bytesIn,
+    }
   }
 
   const work = startTransformRefresh({
@@ -147,10 +156,7 @@ function startTransformRefresh(input: CachedTransformInput) {
     return { bytesIn, out: output }
   })
 
-  inflightTransforms.set(
-    input.cacheKey,
-    work.then((result) => result.out),
-  )
+  inflightTransforms.set(input.cacheKey, work)
   work.then(
     () => inflightTransforms.delete(input.cacheKey),
     () => inflightTransforms.delete(input.cacheKey),

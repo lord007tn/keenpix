@@ -295,8 +295,10 @@ model RequestLog {
   latencyMs  Float
   bytesIn    Int
   bytesOut   Int
-  // Bytes the optimizer trimmed off the origin original on this request
-  // (max(0, bytesIn - bytesOut); 0 for cache hits, which never fetch origin).
+  // Counterfactual delivery savings versus the origin original. Cache hits and
+  // coalesced deliveries retain the known original size while bytesIn stays 0,
+  // so savings are measured per successful delivery without double-counting
+  // origin transfer.
   bytesSaved Int      @default(0)
   region     String?
   country    String?

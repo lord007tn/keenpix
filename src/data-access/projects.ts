@@ -26,9 +26,9 @@ function toProject(
   }
 }
 
-// Returns the id only when it belongs to a real project in the org, so an
-// unknown/stale ?project= id consistently collapses to "all projects" for both
-// the data scope and the rendered scope.
+// Returns the id only when it belongs to a real project in the org. Callers must
+// keep an explicitly requested but missing id scoped to no data; they must not
+// widen it to the organization's all-projects view.
 export async function resolveProjectId(id: string | undefined, orgId: string) {
   if (!id) {
     return

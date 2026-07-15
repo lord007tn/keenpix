@@ -65,7 +65,7 @@ function buildArea(data: TimePoint[], view: AreaView): AreaBuild {
       keys: ['hit'],
       chartData: data.map((d) => ({
         ...d,
-        hit: d.requests === 0 ? 0 : (d.cached / d.requests) * 100,
+        hit: d.successful === 0 ? 0 : (d.cached / d.successful) * 100,
       })),
       yFormat: (v: number) => `${Math.round(v)}%`,
       yDomain: [0, 100],

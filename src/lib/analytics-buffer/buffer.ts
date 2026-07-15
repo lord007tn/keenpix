@@ -14,10 +14,10 @@ import { errorContext, logger } from '@/lib/logger/logger'
 // now enqueue in memory and a flusher writes batches: one createMany for the
 // rows, one upsert per DISTINCT rollup bucket per flush (a thousand requests to
 // the same image collapse into a single upsert), one ClickHouse batch insert.
-// Analytics stays best-effort: a failed flush is logged and dropped, never
-// retried into the serving path. Trade-off: logs/rollups lag up to ~2s, well
-// inside the live-log poll interval; billing reads hourly buckets and only
-// meters COMPLETE hours, so metering is unaffected.
+// Analytics stays off the serving path. A flush is one atomic Postgres
+// transaction, retried briefly for transient failures, so RequestLog and the
+// hourly rollups cannot diverge. Logs/rollups lag up to ~2s, within the live-log
+// poll interval; complete-hour billing reads those same rollups.
 
 const MAX_BUFFER = 500
 const FLUSH_INTERVAL_MS = 2000
@@ -46,37 +46,60 @@ export function enqueueRequestLog(log: NewRequestLog): void {
 }
 
 async function writeBatch(batch: BufferedRequestLog[]): Promise<void> {
-  await prisma.requestLog.createMany({
-    data: batch.map((log) => ({
-      id: log.id,
-      ts: log.ts,
-      orgId: log.orgId,
-      projectId: log.projectId,
-      path: log.path,
-      width: log.width ?? null,
-      quality: log.quality ?? null,
-      format: log.format,
-      status: log.status,
-      cached: log.cached,
-      latencyMs: log.latencyMs,
-      bytesIn: log.bytesIn,
-      bytesOut: log.bytesOut,
-      bytesSaved: log.bytesSaved,
-      region: log.region ?? null,
-      country: log.country ?? null,
-      sourceHost: log.sourceHost ?? null,
-    })),
-  })
-  for (const increment of aggregateRollupIncrements(batch)) {
-    await applyRollupIncrement(prisma, increment)
+  const increments = aggregateRollupIncrements(batch)
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      await prisma.$transaction(
+        async (db) => {
+          await db.requestLog.createMany({
+            data: batch.map((log) => ({
+              id: log.id,
+              ts: log.ts,
+              orgId: log.orgId,
+              projectId: log.projectId,
+              path: log.path,
+              width: log.width ?? null,
+              quality: log.quality ?? null,
+              format: log.format,
+              status: log.status,
+              cached: log.cached,
+              latencyMs: log.latencyMs,
+              bytesIn: log.bytesIn,
+              bytesOut: log.bytesOut,
+              bytesSaved: log.bytesSaved,
+              region: log.region ?? null,
+              country: log.country ?? null,
+              sourceHost: log.sourceHost ?? null,
+            })),
+          })
+          for (const increment of increments) {
+            await applyRollupIncrement(db, increment)
+          }
+        },
+        { timeout: 15_000 },
+      )
+      break
+    } catch (error) {
+      if (attempt === 3) {
+        throw error
+      }
+      logger.warn(
+        { ...errorContext(error), attempt, rows: batch.length },
+        'analytics flush failed; retrying',
+      )
+      await new Promise((resolve) =>
+        setTimeout(resolve, attempt === 1 ? 100 : 500),
+      )
+    }
   }
   // Mirrors into ClickHouse only after Postgres committed, same as before.
   recordRequestEvents(batch)
 }
 
 // Flush the current buffer. Single-flight: a flush already in progress absorbs
-// the wait; anything enqueued meanwhile goes out with the NEXT flush (triggered
-// by its own timer or the size threshold).
+// the wait; anything enqueued meanwhile goes out with the NEXT flush. The
+// completion handler drains that next batch immediately, because its timer may
+// already have fired while the first (potentially retried) transaction ran.
 export function flushRequestLogs(): Promise<void> {
   if (flushing) {
     return flushing
@@ -99,6 +122,9 @@ export function flushRequestLogs(): Promise<void> {
     })
     .finally(() => {
       flushing = null
+      if (buffer.length > 0) {
+        flushRequestLogs()
+      }
     })
   return flushing
 }

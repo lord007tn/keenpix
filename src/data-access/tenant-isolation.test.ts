@@ -5,16 +5,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 // We mock Prisma and assert the `where` handed to it is org-scoped — no DB, fast,
 // and it fails loudly the moment a query drops org scoping.
 
-const { findMany, aggregate, groupBy } = vi.hoisted(() => ({
+const { findMany, groupBy } = vi.hoisted(() => ({
   findMany: vi.fn(),
-  aggregate: vi.fn(),
   groupBy: vi.fn(),
 }))
 
 vi.mock('@/db', () => ({
   prisma: {
     requestLog: { findMany },
-    analyticsRollupHourly: { aggregate, groupBy },
+    analyticsRollupHourly: { groupBy },
   },
 }))
 
@@ -24,7 +23,6 @@ const { aggregateRollupSummary, groupRollupsByProject, groupRollupsByHost } =
 
 beforeEach(() => {
   findMany.mockResolvedValue([])
-  aggregate.mockResolvedValue({ _sum: {} })
   groupBy.mockResolvedValue([])
 })
 
@@ -44,7 +42,7 @@ describe('tenant isolation: reads are org-scoped', () => {
 
   it('analytics summary filters by the caller org', async () => {
     await aggregateRollupSummary({ orgId: 'org_b', gte: new Date(0) })
-    expect(aggregate).toHaveBeenCalledWith(
+    expect(groupBy).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ orgId: 'org_b' }),
       }),

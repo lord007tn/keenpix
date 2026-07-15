@@ -64,4 +64,13 @@ describe('aggregateRollupIncrements', () => {
     expect(inc.sourceHost).toBe('')
     expect(inc.country).toBe('')
   })
+
+  it('never counts failed requests as successful cache hits or live optimizations', () => {
+    const [inc] = aggregateRollupIncrements([
+      log({ status: 502, cached: false, bytesIn: 0, bytesOut: 0 }),
+    ])
+    expect(inc.requests).toBe(1)
+    expect(inc.cachedRequests).toBe(0)
+    expect(inc.optimizedRequests).toBe(0)
+  })
 })

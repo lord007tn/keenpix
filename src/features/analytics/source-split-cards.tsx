@@ -18,7 +18,14 @@ import type { AnalyticsSummary, EdgeCacheStats } from '@/shared/types'
 // AnalyticsSummary and the dashboard's KPI payload can satisfy it.
 type CardSummary = Pick<
   AnalyticsSummary,
-  'bandwidthOut' | 'bandwidthSaved' | 'totalRequests' | 'hitRate'
+  | 'bandwidthOut'
+  | 'bandwidthSaved'
+  | 'cacheHits'
+  | 'failedRequests'
+  | 'hitRate'
+  | 'liveOptimizations'
+  | 'successfulDeliveries'
+  | 'totalRequests'
 >
 
 // Optional vs-previous-window trends (Overview only). They only attach to cards
@@ -150,7 +157,7 @@ export function reconciledCards(
         },
         {
           source: 'live',
-          label: 'Optimized live',
+          label: 'Optimized delivery',
           value: `${compactNumber(liveReached)} · ${Math.round(ratio(liveReached, edge.requests))}%`,
         },
       ],
@@ -187,8 +194,8 @@ function originOnlyCards(
   const dash = { source: 'none', label: 'Edge', value: '—' } as const
   // Of everything that reached keenpix, the split between disk-cache hits and
   // fresh optimizes.
-  const diskHits = Math.round((summary.totalRequests * summary.hitRate) / 100)
-  const liveServed = summary.totalRequests - diskHits
+  const diskHits = summary.cacheHits
+  const liveServed = summary.liveOptimizations
   return [
     {
       label: 'Bandwidth delivered',
@@ -204,9 +211,9 @@ function originOnlyCards(
       ],
     },
     {
-      label: 'Client requests',
+      label: 'Image requests',
       value: compactNumber(summary.totalRequests),
-      sub: 'reached keenpix',
+      sub: `${compactNumber(summary.successfulDeliveries)} delivered`,
       delta: deltas?.requests,
       bar: [
         { source: 'disk', pct: summary.hitRate },
@@ -221,9 +228,18 @@ function originOnlyCards(
         },
         {
           source: 'live',
-          label: 'Optimized live',
+          label: 'Optimized deliveries',
           value: `${compactNumber(liveServed)} · ${Math.round(100 - summary.hitRate)}%`,
         },
+        ...(summary.failedRequests > 0
+          ? [
+              {
+                source: 'none' as const,
+                label: 'Recorded failures',
+                value: compactNumber(summary.failedRequests),
+              },
+            ]
+          : []),
       ],
     },
     {

@@ -66,7 +66,7 @@ function DashboardPage() {
   // range/project loads in the background; `isRefreshing` drives the indicator.
   const { data, isPending, isFetching, isError, refetch } =
     useDashboardQuery(search)
-  const requestCount = data?.kpis.requests.value ?? 0
+  const requestCount = data?.latencySummary.successfulDeliveries ?? 0
   useEffect(() => {
     if (requestCount > 0) {
       trackFunnelMilestone('first_image_served')
@@ -149,6 +149,7 @@ function DashboardPage() {
   // The KPI row is the same source-split cards as the analytics page, fed from
   // the dashboard's KPI payload, so the two pages always show identical numbers.
   const cardSummary = {
+    ...latencySummary,
     bandwidthOut: kpis.bandwidthOut,
     bandwidthSaved: kpis.bandwidthSaved.value,
     totalRequests: kpis.requests.value,

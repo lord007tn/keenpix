@@ -16,6 +16,22 @@ function edgeStats(over: Partial<EdgeCacheStats>): EdgeCacheStats {
   }
 }
 
+function summary(over: {
+  bandwidthOut: number
+  bandwidthSaved: number
+  hitRate: number
+  totalRequests: number
+}) {
+  const cacheHits = Math.round((over.totalRequests * over.hitRate) / 100)
+  return {
+    ...over,
+    cacheHits,
+    failedRequests: 0,
+    liveOptimizations: over.totalRequests - cacheHits,
+    successfulDeliveries: over.totalRequests,
+  }
+}
+
 describe('reconciledCards — end-to-end cache hit rate', () => {
   it('stays at or below 100% when keenpix logged far more than reached the edge', () => {
     // Cloudflare: 100.7k client requests, 78.2k served at the edge -> 22.5k
@@ -28,14 +44,14 @@ describe('reconciledCards — end-to-end cache hit rate', () => {
       hitRate: 77.6,
       requests: 100_700,
     })
-    const summary = {
+    const origin = summary({
       bandwidthOut: 3_600_000_000,
       bandwidthSaved: 10_300_000_000,
       hitRate: 41.3,
       totalRequests: 56_900,
-    }
+    })
 
-    const card = reconciledCards(edge, summary).find(
+    const card = reconciledCards(edge, origin).find(
       (c) => c.label === 'Cache hit rate',
     )
     const pct = Number.parseFloat(card?.value ?? '0')
@@ -58,13 +74,13 @@ describe('reconciledCards — end-to-end cache hit rate', () => {
       hitRate: 60,
       requests: 100,
     })
-    const summary = {
+    const origin = summary({
       bandwidthOut: 1,
       bandwidthSaved: 1,
       hitRate: 0,
       totalRequests: 40,
-    }
-    const card = reconciledCards(edge, summary).find(
+    })
+    const card = reconciledCards(edge, origin).find(
       (c) => c.label === 'Cache hit rate',
     )
     expect(card?.value).toBe('60.0%')
@@ -82,13 +98,13 @@ describe('reconciledCards — bandwidth saved', () => {
       hitRate: 70,
       requests: 100,
     })
-    const summary = {
+    const origin = summary({
       bandwidthOut: 3.6e9,
       bandwidthSaved: 10.3e9,
       hitRate: 40,
       totalRequests: 30,
-    }
-    const card = reconciledCards(edge, summary).find(
+    })
+    const card = reconciledCards(edge, origin).find(
       (c) => c.label === 'Bandwidth saved',
     )
     const edgeRow = card?.rows.find((r) => r.label === 'Edge')
@@ -106,13 +122,13 @@ describe('reconciledCards — bandwidth saved', () => {
     // Zero edge bytes still counts as "edge present" (reconciled), so this is a
     // light guard that the estimate path stays self-consistent at the boundary.
     const edge = edgeStats({ bytesFromEdge: 0, requests: 10 })
-    const summary = {
+    const origin = summary({
       bandwidthOut: 1000,
       bandwidthSaved: 2000,
       hitRate: 50,
       totalRequests: 10,
-    }
-    const card = reconciledCards(edge, summary).find(
+    })
+    const card = reconciledCards(edge, origin).find(
       (c) => c.label === 'Bandwidth saved',
     )
     const edgeRow = card?.rows.find((r) => r.label === 'Edge')

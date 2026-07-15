@@ -31,11 +31,13 @@ function latencyCountsFrom(
 export async function aggregatePlatformSummary(
   gte: Date,
 ): Promise<RollupSummaryAgg> {
-  const { _sum } = await prisma.analyticsRollupHourly.aggregate({
+  const rows = await prisma.analyticsRollupHourly.groupBy({
+    by: ['status'],
     where: { bucketStart: { gte } },
     _sum: {
       requests: true,
       cachedRequests: true,
+      optimizedRequests: true,
       bytesIn: true,
       bytesOut: true,
       bytesSaved: true,
@@ -43,9 +45,40 @@ export async function aggregatePlatformSummary(
       ...LATENCY_SUM_SELECT,
     },
   })
+  const _sum = rows.reduce(
+    (sum, row) => {
+      sum.requests += row._sum.requests ?? 0
+      sum.cachedRequests += row._sum.cachedRequests ?? 0
+      sum.optimizedRequests += row._sum.optimizedRequests ?? 0
+      sum.bytesIn += row._sum.bytesIn ?? 0n
+      sum.bytesOut += row._sum.bytesOut ?? 0n
+      sum.bytesSaved += row._sum.bytesSaved ?? 0n
+      sum.latencyMsSum += row._sum.latencyMsSum ?? 0
+      if (row.status >= 200 && row.status < 300) {
+        sum.successfulRequests += row._sum.requests ?? 0
+      }
+      for (const bucket of LATENCY_BUCKETS) {
+        sum[bucket.field] += row._sum[bucket.field] ?? 0
+      }
+      return sum
+    },
+    {
+      requests: 0,
+      cachedRequests: 0,
+      optimizedRequests: 0,
+      successfulRequests: 0,
+      bytesIn: 0n,
+      bytesOut: 0n,
+      bytesSaved: 0n,
+      latencyMsSum: 0,
+      ...emptyLatencyBucketCounts(),
+    },
+  )
   return {
     requests: _sum.requests ?? 0,
     cachedRequests: _sum.cachedRequests ?? 0,
+    optimizedRequests: _sum.optimizedRequests ?? 0,
+    successfulRequests: _sum.successfulRequests,
     bytesIn: Number(_sum.bytesIn ?? 0n),
     bytesOut: Number(_sum.bytesOut ?? 0n),
     bytesSaved: Number(_sum.bytesSaved ?? 0n),

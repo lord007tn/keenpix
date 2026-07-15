@@ -4,7 +4,6 @@
 import * as pgAnalytics from '@/data-access/analytics-aggregates'
 // biome-ignore lint/performance/noNamespaceImport: runtime source strategy, server-only
 import * as chAnalytics from '@/data-access/clickhouse-analytics'
-import { getOrgPlan } from '@/data-access/subscriptions'
 import { clickhouseEnabled } from '@/lib/clickhouse/config'
 import { errorContext, logger } from '@/lib/logger/logger'
 import { isCloud } from '@/server/deployment'
@@ -13,22 +12,18 @@ import { isCloud } from '@/server/deployment'
 // shapes, so callers are source-agnostic.
 export type AnalyticsSource = typeof pgAnalytics | typeof chAnalytics
 
-// Choose where analytics aggregates are read from. ClickHouse (raw request_events,
-// full fidelity) backs the advanced tier when it's configured; everyone else uses
-// the Postgres hourly rollups. Self-host is always "advanced", so it uses
-// ClickHouse whenever it's configured. Dashboard and Analytics both call this so
-// the two pages never disagree.
-export async function pickAnalyticsSource(
-  orgId: string,
-): Promise<AnalyticsSource> {
+// Cloud dashboards always read the transactional Postgres rollups, which are the
+// authoritative organization/project totals used for billing. ClickHouse remains
+// an optional self-host analytics source and raw-log mirror; a missed best-effort
+// mirror can therefore never silently undercount a cloud customer's dashboard.
+export function pickAnalyticsSource(_orgId: string): AnalyticsSource {
+  if (isCloud()) {
+    return pgAnalytics
+  }
   if (!clickhouseEnabled()) {
     return pgAnalytics
   }
-  if (!isCloud()) {
-    return chAnalytics
-  }
-  const plan = await getOrgPlan(orgId)
-  return plan?.advancedAnalytics ? chAnalytics : pgAnalytics
+  return chAnalytics
 }
 
 // Run an analytics computation against the org's chosen source, falling back to

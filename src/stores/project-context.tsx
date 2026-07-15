@@ -44,7 +44,10 @@ export function ProjectProvider({
       setProject: (id: string | null) => {
         navigate({
           to: '.',
-          search: (prev) => ({ ...prev, project: id ?? undefined }),
+          search: (prev: Record<string, unknown>) => ({
+            ...prev,
+            project: id ?? undefined,
+          }),
         })
       },
     }
