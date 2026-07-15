@@ -13,10 +13,15 @@ project-scoped request log and atomically accumulated into
 hourly rollups are retained as the durable historical record. Deleting a project
 deletes its rollups through the project relationship.
 
-The Analytics page supports 24 hours, 7 days, 30 days, 90 days, 365 days, all
-time, and an inclusive custom date window. Long windows are charted in bounded
-weekly or coarse buckets, so the browser never receives every raw request.
-The current filtered series can be exported as CSV.
+The Analytics and Live logs pages share the same Google-Analytics-style range
+picker: 24 hours, 7 days, 30 days, 90 days, all available retained history, and
+an inclusive custom date window. Pro and Business can query up to 365 days;
+Basic can query up to 90 days. The 365-day preset is shown only when the active
+plan supports it, and both the browser and authenticated server functions clamp
+custom dates to the plan boundary. Long analytics windows are charted in bounded
+weekly or coarse buckets, so the browser never receives every raw request. The
+current filtered analytics series can be exported as CSV, and visible log rows
+can be exported as NDJSON.
 
 Historical fields are exact when Keenpix recorded them. Records created before
 the per-delivery savings field existed cannot reconstruct an original-image size
@@ -67,6 +72,8 @@ project-scoped origin history and separate operator-only aggregate edge history.
 - Confirm its group count is non-zero when `/img/*` traffic exists.
 - Confirm `EdgeRollupHourly` advances without opening the dashboard.
 - Confirm a regular cloud tenant receives no zone-wide edge figures.
-- Confirm 365-day, all-time, and custom windows never return another
+- Confirm 365-day, all-available, and custom windows never return another
   organization’s project or rollup rows.
+- Confirm Basic cannot query before its rolling 90-day boundary and Pro or
+  Business cannot query before their rolling 365-day boundary.
 - Confirm exported CSV totals match the visible filtered series.

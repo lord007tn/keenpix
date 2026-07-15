@@ -1,0 +1,85 @@
+import dayjs from 'dayjs'
+import type { HistoricalAnalyticsRange } from '@/shared/types'
+
+export interface HistorySearch {
+  from?: string
+  range: HistoricalAnalyticsRange
+  to?: string
+}
+
+// Apply a cloud plan's rolling history ceiling without trusting the browser.
+// "All available" becomes the full retained plan window; self-host callers omit
+// maxDays and retain their unbounded all-time behavior.
+export function limitHistorySearch(
+  input: HistorySearch,
+  maxDays?: number,
+  now = dayjs(),
+): HistorySearch {
+  if (!maxDays) {
+    return input
+  }
+  const days = Math.max(1, maxDays)
+  const earliest = now
+    .startOf('day')
+    .subtract(days - 1, 'day')
+    .format('YYYY-MM-DD')
+  const today = now.format('YYYY-MM-DD')
+
+  if (input.range === 'all') {
+    return { range: 'custom', from: earliest, to: today }
+  }
+  if (input.range === '365d' && days < 365) {
+    return { range: '90d' }
+  }
+  if (input.range !== 'custom') {
+    return input
+  }
+
+  let from = input.from ?? earliest
+  let to = input.to ?? today
+  if (dayjs(from).isBefore(earliest, 'day')) {
+    from = earliest
+  }
+  if (dayjs(to).isBefore(earliest, 'day')) {
+    to = earliest
+  } else if (dayjs(to).isAfter(today, 'day')) {
+    to = today
+  }
+  if (dayjs(from).isAfter(to, 'day')) {
+    from = to
+  }
+  return { range: 'custom', from, to }
+}
+
+export function getHistoryWindowDates(input: HistorySearch, now = dayjs()) {
+  if (input.range === 'all') {
+    return { gte: undefined, lt: now.add(1, 'millisecond').toDate() }
+  }
+  if (input.range === 'custom') {
+    return {
+      gte: dayjs(`${input.from}T00:00:00.000Z`).toDate(),
+      lt: dayjs(`${input.to}T00:00:00.000Z`).add(1, 'day').toDate(),
+    }
+  }
+  if (input.range === '24h') {
+    return {
+      gte: now.subtract(24, 'hour').toDate(),
+      lt: now.add(1, 'millisecond').toDate(),
+    }
+  }
+  let days = 7
+  if (input.range === '30d') {
+    days = 30
+  } else if (input.range === '90d') {
+    days = 90
+  } else if (input.range === '365d') {
+    days = 365
+  }
+  return {
+    gte: now
+      .startOf('day')
+      .subtract(days - 1, 'day')
+      .toDate(),
+    lt: now.add(1, 'millisecond').toDate(),
+  }
+}

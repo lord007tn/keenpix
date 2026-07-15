@@ -122,9 +122,9 @@ const MATRIX: Array<{
     feature: 'Log history & search',
     values: [
       'Unlimited',
-      `Recent logs · ${PLANS.basic.logRetentionDays}-day retention`,
-      `Full search · ${PLANS.pro.logRetentionDays}-day retention`,
-      `Full search · ${PLANS.business.logRetentionDays}-day retention`,
+      `Recent logs · ${PLANS.basic.historyDays}-day retention`,
+      `Full search · ${PLANS.pro.historyDays}-day retention`,
+      `Full search · ${PLANS.business.historyDays}-day retention`,
     ],
   },
   {

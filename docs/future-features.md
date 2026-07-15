@@ -11,7 +11,8 @@ aggregated in SQL, persisted zone/host-wide Cloudflare edge rollups
 (`EdgeRollupHourly`, so edge works beyond Cloudflare's ~24h window), geo
 distribution (`CF-IPCountry`), status-class trends over time, per-time-bucket
 latency percentiles, top images by delivered bytes, scheduled hourly edge
-capture, 365-day/all-time/custom windows, and filtered CSV export.
+capture, plan-bounded 365-day/all-available/custom windows, and filtered CSV
+export. Live logs use the same plan-bounded date picker.
 
 Still future, building on those:
 

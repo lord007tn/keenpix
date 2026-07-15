@@ -13,9 +13,11 @@ export interface Plan {
   aiCreditsPerMonth: number
   // null = unlimited, 0 = none
   customDomains: number | null
+  // Maximum query window for analytics and raw request logs. The retention
+  // sweep uses the same value so the UI never promises dates the store prunes.
+  historyDays: number
   id: PlanId
   includedBandwidthBytes: number
-  logRetentionDays: number
   // null = unlimited
   maxProjects: number | null
   maxSeats: number
@@ -39,7 +41,7 @@ export const PLANS: Record<PlanId, Plan> = {
     advancedAnalytics: false,
     advancedLogs: false,
     customDomains: 0,
-    logRetentionDays: 7,
+    historyDays: 90,
   },
   pro: {
     id: 'pro',
@@ -53,7 +55,7 @@ export const PLANS: Record<PlanId, Plan> = {
     advancedAnalytics: true,
     advancedLogs: true,
     customDomains: 3,
-    logRetentionDays: 90,
+    historyDays: 365,
   },
   business: {
     id: 'business',
@@ -67,7 +69,7 @@ export const PLANS: Record<PlanId, Plan> = {
     advancedAnalytics: true,
     advancedLogs: true,
     customDomains: null,
-    logRetentionDays: 365,
+    historyDays: 365,
   },
 }
 
@@ -116,6 +118,8 @@ const PLAN_RANK: Record<PlanId, number> = {
 // The most-recent-only log window shown to plans without advanced logs (and the
 // self-host default is unlimited, so this only applies to gated cloud tiers).
 export const BASIC_LOG_LIMIT = 200
+
+export const DEFAULT_HISTORY_DAYS = 90
 
 export function isPlanId(value: unknown): value is PlanId {
   return value === 'basic' || value === 'pro' || value === 'business'

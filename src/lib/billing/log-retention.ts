@@ -1,17 +1,16 @@
 import { prisma } from '@/db'
-import { getPlan } from '@/lib/billing/plans'
+import { DEFAULT_HISTORY_DAYS, getPlan } from '@/lib/billing/plans'
 import { deleteRequestEventsBefore } from '@/lib/clickhouse/retention'
 import { errorContext, logger } from '@/lib/logger/logger'
 import { isCloud } from '@/server/deployment'
 
 // Per-plan log retention enforcement (cloud only; self-host keeps everything —
 // it's the operator's own disk). Each org's raw request logs are deleted past
-// its plan's logRetentionDays, in Postgres AND ClickHouse, so the retention the
+// its plan's historyDays, in Postgres AND ClickHouse, so the retention the
 // pricing page and privacy policy promise is real. Entitled orgs use their
 // plan's window; lapsed/unsubscribed orgs fall back to the default below rather
 // than keeping data forever (or losing it the moment a card fails).
 const ENTITLED = new Set(['active', 'trialing'])
-const DEFAULT_RETENTION_DAYS = 90
 const DAY_MS = 86_400_000
 
 export interface RetentionResult {
@@ -26,7 +25,7 @@ async function orgRetentionDays(): Promise<Map<string, number>> {
   const retention = new Map<string, number>()
   for (const sub of subs) {
     const plan = ENTITLED.has(sub.status) ? getPlan(sub.plan) : null
-    retention.set(sub.orgId, plan?.logRetentionDays ?? DEFAULT_RETENTION_DAYS)
+    retention.set(sub.orgId, plan?.historyDays ?? DEFAULT_HISTORY_DAYS)
   }
   // Orgs with logs but no subscription row at all (never subscribed, or an
   // internal grant) get the default window too.
@@ -36,7 +35,7 @@ async function orgRetentionDays(): Promise<Map<string, number>> {
   })
   for (const row of orgsWithLogs) {
     if (!retention.has(row.orgId)) {
-      retention.set(row.orgId, DEFAULT_RETENTION_DAYS)
+      retention.set(row.orgId, DEFAULT_HISTORY_DAYS)
     }
   }
   return retention

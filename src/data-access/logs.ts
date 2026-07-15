@@ -6,6 +6,8 @@ export interface LogListFilters {
   cache?: string[]
   domain?: string[]
   format?: string[]
+  gte?: Date
+  lt?: Date
   search?: string
   status?: string[]
 }
@@ -28,6 +30,9 @@ export async function listLogs({
 
   if (projectId) {
     where.projectId = projectId
+  }
+  if (filters?.gte || filters?.lt) {
+    where.ts = { gte: filters.gte, lt: filters.lt }
   }
   if (filters?.format && filters.format.length > 0) {
     where.format = { in: filters.format.filter(isLogFormat) }
