@@ -118,7 +118,7 @@ export const getCustomerAnalyticsFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
-    return getCustomerUsageSeries(data.orgId, data.range)
+    return getCustomerUsageSeries(data.orgId, data)
   })
 
 export const getOperationsHealthFn = createServerFn({ method: 'GET' })

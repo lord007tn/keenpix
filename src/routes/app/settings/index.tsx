@@ -1,4 +1,4 @@
-import { createFileRoute, useRouteContext } from '@tanstack/react-router'
+import { createFileRoute, Link, useRouteContext } from '@tanstack/react-router'
 import {
   CreditCardIcon,
   ImageIcon,
@@ -9,6 +9,14 @@ import {
   UsersRoundIcon,
 } from 'lucide-react'
 import { PageHeader } from '@/components/app/page-header'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
 import {
   Card,
   CardContent,
@@ -74,28 +82,30 @@ export const Route = createFileRoute('/app/settings/')({
 
 function SubNavItem({
   active,
-  onClick,
   section,
 }: {
   active: boolean
-  onClick: () => void
   section: Section
 }) {
   const { label, icon: Icon } = SECTION_META[section]
   return (
-    <button
+    <Link
+      aria-current={active ? 'page' : undefined}
       className={cn(
-        'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left font-medium text-sm transition-colors',
+        'flex min-h-11 items-center gap-2.5 rounded-md px-2.5 py-2 text-left font-medium text-sm transition-colors',
         active
           ? 'bg-accent text-foreground'
           : 'text-muted-foreground hover:bg-accent hover:text-foreground',
       )}
-      onClick={onClick}
-      type="button"
+      search={(prev) => ({ ...prev, section })}
+      to="/app/settings"
     >
-      <Icon className={cn('size-4', active && 'text-primary')} />
+      <Icon
+        aria-hidden="true"
+        className={cn('size-4', active && 'text-primary')}
+      />
       {label}
-    </button>
+    </Link>
   )
 }
 
@@ -108,17 +118,16 @@ function SubNavGroup({ label }: { label: string }) {
 }
 
 function SettingsPage() {
-  const { currentProject, isAll, projects, setProject } = useProject()
+  const { currentProject, projects, setProject } = useProject()
   const { cloud, orgRole, productAccess } = useRouteContext({ from: '/app' })
   const { section } = Route.useSearch()
-  const navigate = Route.useNavigate()
   // Owner/admin may edit/delete projects; members get read-only (server enforces).
   const canManageProject = !cloud || orgRole === 'owner' || orgRole === 'admin'
 
   const projectSections: Section[] =
-    currentProject && productAccess ? ['general', 'pipeline', 'security'] : []
+    currentProject && productAccess ? ['general'] : []
   if (currentProject && productAccess && canManageProject) {
-    projectSections.push('api-keys')
+    projectSections.push('pipeline', 'security', 'api-keys')
   }
   // Billing + Team are per-org and cloud-only (self-host is single-tenant/free),
   // shown to every member of the org. API keys are the org's JSON-API credentials
@@ -140,15 +149,11 @@ function SettingsPage() {
   ]
   const active = section && available.includes(section) ? section : available[0]
 
-  function goTo(next: Section) {
-    navigate({ search: (prev) => ({ ...prev, section: next }) })
-  }
-
   // No project selected and no instance access: there is nothing to configure
   // until a project is picked or created.
   if (!active) {
     return (
-      <div className="flex max-w-4xl flex-col gap-6 p-6">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-6">
         <PageHeader
           eyebrow="All projects"
           subtitle="Per-project configuration."
@@ -196,27 +201,61 @@ function SettingsPage() {
     )
   }
 
+  const activeMeta = SECTION_META[active]
+  const organizationSection = active === 'billing' || active === 'team'
+  let subtitle = 'Configure this project.'
+  if (active === 'billing') {
+    subtitle = 'Manage this organization’s plan, usage, and billing settings.'
+  } else if (active === 'team') {
+    subtitle = 'Manage organization members, invitations, and roles.'
+  } else if (active === 'api-keys') {
+    subtitle = 'Manage credentials scoped to the selected project.'
+  } else if (active === 'pipeline') {
+    subtitle = 'Set the default image optimization behavior for this project.'
+  } else if (active === 'security') {
+    subtitle = 'Control allowed origins and request signing for this project.'
+  }
+
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 md:p-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              render={
+                <Link
+                  search={(prev) => ({ ...prev, section: undefined })}
+                  to="/app/settings"
+                />
+              }
+            >
+              Settings
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{activeMeta.label}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <PageHeader
-        eyebrow={isAll ? 'Workspace' : currentProject?.name}
-        subtitle="Project and organization configuration."
-        title="Settings"
+        eyebrow={
+          organizationSection
+            ? 'Organization'
+            : `${currentProject?.name ?? 'Selected'} project`
+        }
+        subtitle={subtitle}
+        title={activeMeta.label}
       />
 
-      <div className="grid gap-6 md:grid-cols-[200px_minmax(0,1fr)]">
+      <div className="grid gap-6 md:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="md:sticky md:top-24 md:self-start">
           <nav className="flex flex-col gap-0.5">
             {projectSections.length > 0 ? (
               <>
                 <SubNavGroup label={currentProject?.name ?? 'Project'} />
                 {projectSections.map((s) => (
-                  <SubNavItem
-                    active={active === s}
-                    key={s}
-                    onClick={() => goTo(s)}
-                    section={s}
-                  />
+                  <SubNavItem active={active === s} key={s} section={s} />
                 ))}
               </>
             ) : null}
@@ -224,12 +263,7 @@ function SettingsPage() {
               <>
                 <SubNavGroup label="Billing" />
                 {billingSections.map((s) => (
-                  <SubNavItem
-                    active={active === s}
-                    key={s}
-                    onClick={() => goTo(s)}
-                    section={s}
-                  />
+                  <SubNavItem active={active === s} key={s} section={s} />
                 ))}
               </>
             ) : null}
@@ -237,12 +271,7 @@ function SettingsPage() {
               <>
                 <SubNavGroup label="Organization" />
                 {teamSections.map((s) => (
-                  <SubNavItem
-                    active={active === s}
-                    key={s}
-                    onClick={() => goTo(s)}
-                    section={s}
-                  />
+                  <SubNavItem active={active === s} key={s} section={s} />
                 ))}
               </>
             ) : null}
@@ -250,12 +279,7 @@ function SettingsPage() {
               <>
                 <SubNavGroup label="Developers" />
                 {apiKeySections.map((s) => (
-                  <SubNavItem
-                    active={active === s}
-                    key={s}
-                    onClick={() => goTo(s)}
-                    section={s}
-                  />
+                  <SubNavItem active={active === s} key={s} section={s} />
                 ))}
               </>
             ) : null}

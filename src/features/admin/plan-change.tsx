@@ -68,9 +68,11 @@ export function PlanChange({
   const [saving, setSaving] = useState(false)
 
   const changed =
-    selected !== initialPlan ||
-    reason !== initialReason ||
-    expiresAt !== initialExpiry
+    selected === 'none'
+      ? initialPlan !== 'none'
+      : selected !== initialPlan ||
+        reason !== initialReason ||
+        expiresAt !== initialExpiry
 
   const target = getPlan(selected)
   const usage = customer.usage30d
@@ -180,6 +182,7 @@ export function PlanChange({
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="grant-reason">Reason (internal)</Label>
           <Input
+            disabled={selected === 'none'}
             id="grant-reason"
             onChange={(event) => setReason(event.target.value)}
             placeholder="Partner account, trial extension…"

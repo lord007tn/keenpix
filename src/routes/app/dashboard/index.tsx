@@ -1,5 +1,6 @@
 import {
   createFileRoute,
+  redirect,
   useNavigate,
   useRouteContext,
 } from '@tanstack/react-router'
@@ -39,6 +40,11 @@ function relDelta(v: { prev: number; value: number }): number | null {
 }
 
 export const Route = createFileRoute('/app/dashboard/')({
+  beforeLoad: ({ context }) => {
+    if (context.cloud && !context.workspaceReady) {
+      throw redirect({ to: '/app/onboarding' })
+    }
+  },
   head: () =>
     appPageHead(
       'Overview',
@@ -59,12 +65,7 @@ function DashboardPage() {
   const search = Route.useSearch()
   const { range } = search
   const navigate = useNavigate({ from: Route.fullPath })
-  const {
-    currentProject,
-    isAll,
-    projects: workspaceProjects,
-    setProject,
-  } = useProject()
+  const { currentProject, isAll, setProject } = useProject()
   const { user, cloud, orgRole, productAccess, workspaceReady } =
     useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
@@ -91,19 +92,6 @@ function DashboardPage() {
     edgePending,
     edgeError,
   } = useEdgeStats(workspaceReady ? range : undefined)
-
-  if (!workspaceReady) {
-    return (
-      <div className="flex flex-1 flex-col">
-        <OnboardingChecklist
-          cloud={cloud}
-          entitled={productAccess}
-          hasProjects={workspaceProjects.length > 0}
-          orgRole={orgRole}
-        />
-      </div>
-    )
-  }
 
   const header = (
     <PageHeader

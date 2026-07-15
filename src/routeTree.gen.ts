@@ -49,6 +49,7 @@ import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as AppSettingsIndexRouteImport } from './routes/app/settings/index'
 import { Route as AppOperationsIndexRouteImport } from './routes/app/operations/index'
+import { Route as AppOnboardingIndexRouteImport } from './routes/app/onboarding/index'
 import { Route as AppLogsIndexRouteImport } from './routes/app/logs/index'
 import { Route as AppDashboardIndexRouteImport } from './routes/app/dashboard/index'
 import { Route as AppAnalyticsIndexRouteImport } from './routes/app/analytics/index'
@@ -269,6 +270,11 @@ const AppOperationsIndexRoute = AppOperationsIndexRouteImport.update({
   path: '/operations/',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppOnboardingIndexRoute = AppOnboardingIndexRouteImport.update({
+  id: '/onboarding/',
+  path: '/onboarding/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppLogsIndexRoute = AppLogsIndexRouteImport.update({
   id: '/logs/',
   path: '/logs/',
@@ -410,6 +416,7 @@ export interface FileRoutesByFullPath {
   '/app/analytics/': typeof AppAnalyticsIndexRoute
   '/app/dashboard/': typeof AppDashboardIndexRoute
   '/app/logs/': typeof AppLogsIndexRoute
+  '/app/onboarding/': typeof AppOnboardingIndexRoute
   '/app/operations/': typeof AppOperationsIndexRoute
   '/app/settings/': typeof AppSettingsIndexRoute
   '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
@@ -467,6 +474,7 @@ export interface FileRoutesByTo {
   '/app/analytics': typeof AppAnalyticsIndexRoute
   '/app/dashboard': typeof AppDashboardIndexRoute
   '/app/logs': typeof AppLogsIndexRoute
+  '/app/onboarding': typeof AppOnboardingIndexRoute
   '/app/operations': typeof AppOperationsIndexRoute
   '/app/settings': typeof AppSettingsIndexRoute
   '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
@@ -527,6 +535,7 @@ export interface FileRoutesById {
   '/app/analytics/': typeof AppAnalyticsIndexRoute
   '/app/dashboard/': typeof AppDashboardIndexRoute
   '/app/logs/': typeof AppLogsIndexRoute
+  '/app/onboarding/': typeof AppOnboardingIndexRoute
   '/app/operations/': typeof AppOperationsIndexRoute
   '/app/settings/': typeof AppSettingsIndexRoute
   '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
@@ -588,6 +597,7 @@ export interface FileRouteTypes {
     | '/app/analytics/'
     | '/app/dashboard/'
     | '/app/logs/'
+    | '/app/onboarding/'
     | '/app/operations/'
     | '/app/settings/'
     | '/api/auth/polar/sandbox-webhooks'
@@ -645,6 +655,7 @@ export interface FileRouteTypes {
     | '/app/analytics'
     | '/app/dashboard'
     | '/app/logs'
+    | '/app/onboarding'
     | '/app/operations'
     | '/app/settings'
     | '/api/auth/polar/sandbox-webhooks'
@@ -704,6 +715,7 @@ export interface FileRouteTypes {
     | '/app/analytics/'
     | '/app/dashboard/'
     | '/app/logs/'
+    | '/app/onboarding/'
     | '/app/operations/'
     | '/app/settings/'
     | '/api/auth/polar/sandbox-webhooks'
@@ -1040,6 +1052,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOperationsIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/app/onboarding/': {
+      id: '/app/onboarding/'
+      path: '/onboarding'
+      fullPath: '/app/onboarding/'
+      preLoaderRoute: typeof AppOnboardingIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/app/logs/': {
       id: '/app/logs/'
       path: '/logs'
@@ -1192,6 +1211,7 @@ interface AppRouteRouteChildren {
   AppAnalyticsIndexRoute: typeof AppAnalyticsIndexRoute
   AppDashboardIndexRoute: typeof AppDashboardIndexRoute
   AppLogsIndexRoute: typeof AppLogsIndexRoute
+  AppOnboardingIndexRoute: typeof AppOnboardingIndexRoute
   AppOperationsIndexRoute: typeof AppOperationsIndexRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
@@ -1202,6 +1222,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppAnalyticsIndexRoute: AppAnalyticsIndexRoute,
   AppDashboardIndexRoute: AppDashboardIndexRoute,
   AppLogsIndexRoute: AppLogsIndexRoute,
+  AppOnboardingIndexRoute: AppOnboardingIndexRoute,
   AppOperationsIndexRoute: AppOperationsIndexRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
 }

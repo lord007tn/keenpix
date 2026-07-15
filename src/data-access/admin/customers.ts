@@ -45,6 +45,7 @@ const customerOrgArgs = {
     },
     subscription: {
       select: {
+        cancelAtPeriodEnd: true,
         plan: true,
         status: true,
         currentPeriodEnd: true,
@@ -129,6 +130,7 @@ function mapCustomerAccount(org: CustomerOrg, usage: UsageRow | undefined) {
       createdAt: dayjs(member.user.createdAt).toISOString(),
     })),
     billing: {
+      cancelAtPeriodEnd: org.subscription?.cancelAtPeriodEnd ?? false,
       plan: billingPlan?.id ?? null,
       planName: billingPlan?.name ?? null,
       status: org.subscription?.status ?? null,
@@ -149,6 +151,7 @@ function mapCustomerAccount(org: CustomerOrg, usage: UsageRow | undefined) {
       : null,
     effectivePlan: effectivePlan
       ? {
+          historyDays: effectivePlan.historyDays,
           plan: effectivePlan.id,
           planName: effectivePlan.name,
           source: effectivePlanSource,

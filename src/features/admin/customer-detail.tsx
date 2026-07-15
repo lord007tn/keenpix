@@ -1,4 +1,5 @@
-import { Link } from '@tanstack/react-router'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import {
   ArrowLeftIcon,
@@ -10,9 +11,19 @@ import {
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
+import { HistoryRangePicker } from '@/components/app/history-range-picker'
 import { PageHeader } from '@/components/app/page-header'
+import { RefreshingIndicator } from '@/components/app/refreshing-indicator'
 import { StatCard } from '@/components/app/stat-card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -41,7 +52,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { getErrorMessage } from '@/errors/common'
 import { PlanChange } from '@/features/admin/plan-change'
 import {
@@ -49,22 +59,14 @@ import {
   getCustomerAnalyticsFn,
   setOrgSuspensionFn,
 } from '@/functions/admin'
+import { limitHistorySearch } from '@/helpers/history/window'
 import { authClient } from '@/lib/auth/client'
+import { DEFAULT_HISTORY_DAYS } from '@/lib/billing/plans'
 import { compactNumber, humanBytes } from '@/shared/format'
-import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 
 type CustomerAccount = NonNullable<
   Awaited<ReturnType<typeof getCustomerAccountFn>>
 >
-type CustomerAnalytics = Awaited<ReturnType<typeof getCustomerAnalyticsFn>>
-
-const RANGES: { value: AnalyticsRange; label: string }[] = [
-  { value: '90d', label: '90d' },
-  { value: '30d', label: '30d' },
-  { value: '7d', label: '7d' },
-  { value: '24h', label: '24h' },
-]
-
 function planBadgeVariant(source: string | undefined) {
   if (source === 'internal') {
     return 'info' as const
@@ -86,13 +88,25 @@ function Fact({ label, value }: { label: string; value: React.ReactNode }) {
 
 export function CustomerDetail({ orgId }: { orgId: string }) {
   const [customer, setCustomer] = useState<CustomerAccount | null>(null)
-  const [analytics, setAnalytics] = useState<CustomerAnalytics | null>(null)
-  const [range, setRange] = useState<AnalyticsRange>('30d')
   const [loading, setLoading] = useState(true)
   const [impersonating, setImpersonating] = useState(false)
   const [confirmSuspend, setConfirmSuspend] = useState(false)
   const [suspendReason, setSuspendReason] = useState('')
   const [suspending, setSuspending] = useState(false)
+  const search = useSearch({ from: '/admin/customers/$orgId/' })
+  const navigate = useNavigate({ from: '/admin/customers/$orgId/' })
+  const selectedRange = search.range ?? '30d'
+  const selectedSection = search.section ?? 'overview'
+  const maxHistoryDays =
+    customer?.effectivePlan?.historyDays ?? DEFAULT_HISTORY_DAYS
+  const visibleSearch = limitHistorySearch(
+    {
+      from: search.from,
+      range: selectedRange,
+      to: search.to,
+    },
+    maxHistoryDays,
+  )
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -109,22 +123,28 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
     load()
   }, [load])
 
-  useEffect(() => {
-    let active = true
-    setAnalytics(null)
-    getCustomerAnalyticsFn({ data: { orgId, range } })
-      .then((result) => {
-        if (active) {
-          setAnalytics(result)
-        }
-      })
-      .catch(() => {
-        // Non-fatal: the chart/KPI tiles just show their empty state.
-      })
-    return () => {
-      active = false
-    }
-  }, [orgId, range])
+  const analyticsQuery = useQuery({
+    queryKey: [
+      'admin-customer-analytics',
+      orgId,
+      visibleSearch.range,
+      visibleSearch.from,
+      visibleSearch.to,
+      maxHistoryDays,
+    ],
+    queryFn: () =>
+      getCustomerAnalyticsFn({
+        data: {
+          from: visibleSearch.from,
+          orgId,
+          range: visibleSearch.range,
+          to: visibleSearch.to,
+        },
+      }),
+    enabled: Boolean(customer),
+    placeholderData: keepPreviousData,
+  })
+  const analytics = analyticsQuery.data
 
   const owner = customer?.owners[0]
 
@@ -212,17 +232,34 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
   const suspended = Boolean(customer.suspendedAt)
   const suspendActionLabel = suspended ? 'Reactivate' : 'Suspend'
   const summary = analytics?.summary
+  const windowLabel = analytics
+    ? `${dayjs(`${analytics.window.from}T12:00:00`).format('MMM D, YYYY')} – ${dayjs(`${analytics.window.to}T12:00:00`).format('MMM D, YYYY')}`
+    : 'Loading selected window…'
+  let billingPeriodLabel = 'Ends'
+  if (customer.billing.cancelAtPeriodEnd) {
+    billingPeriodLabel = 'Ends'
+  } else if (customer.billing.status === 'trialing') {
+    billingPeriodLabel = 'Trial ends'
+  } else if (customer.billing.status === 'active') {
+    billingPeriodLabel = 'Renews'
+  }
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6">
+    <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-6 p-4 md:p-6">
       <div className="flex flex-col gap-3">
-        <Link
-          className="inline-flex w-fit items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
-          to="/admin/customers"
-        >
-          <ArrowLeftIcon className="size-4" />
-          Back to customers
-        </Link>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink render={<Link to="/admin/customers" />}>
+                Customers
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{customer.name}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         <PageHeader
           actions={
             <>
@@ -254,74 +291,115 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
               </Button>
             </>
           }
-          eyebrow="Customer"
           subtitle={
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              <span className="font-mono text-xs">{customer.slug}</span>
-              <span>·</span>
-              <span>
-                Created {dayjs(customer.createdAt).format('MMM D, YYYY')}
+            <span className="flex flex-col gap-2">
+              <span className="flex flex-wrap items-center gap-2">
+                {customer.owners.some(
+                  (member) => member.platformRole === 'super_admin',
+                ) ? (
+                  <Badge variant="info">
+                    <ShieldCheckIcon data-icon="inline-start" />
+                    Operator workspace
+                  </Badge>
+                ) : null}
+                {suspended ? (
+                  <Badge variant="destructive">Suspended</Badge>
+                ) : null}
+                <Badge
+                  variant={planBadgeVariant(customer.effectivePlan?.source)}
+                >
+                  {customer.effectivePlan?.planName ?? 'No plan'}
+                </Badge>
               </span>
-              {owner ? (
-                <>
-                  <span>·</span>
-                  <span>Owner {owner.name || owner.email}</span>
-                </>
-              ) : null}
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span className="font-mono text-xs">{customer.slug}</span>
+                <span>·</span>
+                <span>
+                  Created {dayjs(customer.createdAt).format('MMM D, YYYY')}
+                </span>
+                {owner ? (
+                  <>
+                    <span>·</span>
+                    <span>Owner {owner.name || owner.email}</span>
+                  </>
+                ) : null}
+              </span>
             </span>
           }
-          title={
-            <span className="flex items-center gap-2">
-              {customer.name}
-              {customer.owners.some(
-                (member) => member.platformRole === 'super_admin',
-              ) ? (
-                <ShieldCheckIcon className="size-4 text-primary" />
-              ) : null}
-              {suspended ? (
-                <Badge variant="destructive">Suspended</Badge>
-              ) : null}
-              <Badge variant={planBadgeVariant(customer.effectivePlan?.source)}>
-                {customer.effectivePlan?.planName ?? 'No plan'}
-              </Badge>
-            </span>
-          }
+          title={customer.name}
         />
       </div>
 
-      <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="plan">Plan &amp; billing</TabsTrigger>
-          <TabsTrigger value="members">
+      <Tabs
+        onValueChange={(section) =>
+          navigate({ search: (prev) => ({ ...prev, section }) })
+        }
+        value={selectedSection}
+      >
+        <TabsList
+          className="w-full justify-start overflow-x-auto border-b p-0"
+          variant="line"
+        >
+          <TabsTrigger className="h-11 flex-none px-3" value="overview">
+            Overview
+          </TabsTrigger>
+          <TabsTrigger className="h-11 flex-none px-3" value="plan">
+            Plan &amp; billing
+          </TabsTrigger>
+          <TabsTrigger className="h-11 flex-none px-3" value="members">
             Members
             <Badge variant="outline">{customer.seats}</Badge>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent className="flex flex-col gap-6 pt-4" value="overview">
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-medium text-muted-foreground text-sm">
-              Usage
-            </span>
-            <ToggleGroup
-              onValueChange={(value: string[]) => {
-                const next = value[0]
-                if (isAnalyticsRange(next)) {
-                  setRange(next)
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="font-medium text-sm">Usage</span>
+              <span className="text-muted-foreground text-xs">
+                {windowLabel}
+              </span>
+            </div>
+            <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+              <RefreshingIndicator
+                active={analyticsQuery.isFetching}
+                error={analyticsQuery.isError && Boolean(analytics)}
+              />
+              <HistoryRangePicker
+                from={visibleSearch.from}
+                label="Customer usage"
+                maxDays={maxHistoryDays}
+                onChange={(next) =>
+                  navigate({
+                    search: (prev) => ({ ...prev, ...next }),
+                  })
                 }
-              }}
-              size="sm"
-              value={[range]}
-              variant="outline"
-            >
-              {RANGES.map((option) => (
-                <ToggleGroupItem key={option.value} value={option.value}>
-                  {option.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+                range={visibleSearch.range}
+                to={visibleSearch.to}
+              />
+            </div>
           </div>
+
+          {analyticsQuery.isError ? (
+            <Card>
+              <CardContent
+                aria-live="assertive"
+                className="flex flex-col items-start justify-between gap-3 py-4 sm:flex-row sm:items-center"
+                role="alert"
+              >
+                <p className="text-destructive text-sm">
+                  Couldn’t load usage for this date range.
+                </p>
+                <Button
+                  onClick={() => analyticsQuery.refetch()}
+                  size="sm"
+                  variant="outline"
+                >
+                  Try again
+                </Button>
+              </CardContent>
+            </Card>
+          ) : null}
 
           {summary ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -346,19 +424,19 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
                 value={`${summary.avg}ms`}
               />
             </div>
-          ) : (
+          ) : null}
+          {!summary && analyticsQuery.isPending ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {['a', 'b', 'c', 'd'].map((key) => (
                 <Skeleton className="h-24" key={key} />
               ))}
             </div>
-          )}
+          ) : null}
 
-          {analytics ? (
-            <ChartAreaInteractive data={analytics.series} />
-          ) : (
+          {analytics ? <ChartAreaInteractive data={analytics.series} /> : null}
+          {!analytics && analyticsQuery.isPending ? (
             <Skeleton className="h-72" />
-          )}
+          ) : null}
 
           <Card>
             <CardHeader>
@@ -372,7 +450,7 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
                 value={
                   customer.usage30d.lastTrafficAt
                     ? dayjs(customer.usage30d.lastTrafficAt).format(
-                        'MMM D, YYYY',
+                        'MMM D, YYYY, h:mm A',
                       )
                     : 'No traffic yet'
                 }
@@ -407,14 +485,14 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
               />
               <Fact
                 label="Source"
-                value={customer.effectivePlan?.source ?? 'not served'}
+                value={customer.effectivePlan?.source ?? 'No entitled plan'}
               />
               <Fact
                 label="Subscription status"
                 value={customer.billing.status ?? '—'}
               />
               <Fact
-                label="Current period ends"
+                label={billingPeriodLabel}
                 value={
                   customer.billing.currentPeriodEnd
                     ? dayjs(customer.billing.currentPeriodEnd).format(
@@ -430,11 +508,19 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
               <Fact
                 label="Internal grant"
                 value={
-                  customer.internalGrant?.active
-                    ? `${customer.internalGrant.planName}${customer.internalGrant.expiresAt ? ` · until ${dayjs(customer.internalGrant.expiresAt).format('MMM D, YYYY')}` : ''}`
+                  customer.internalGrant
+                    ? `${customer.internalGrant.planName} · ${customer.internalGrant.active ? 'active' : 'expired'}${customer.internalGrant.expiresAt ? ` · until ${dayjs(customer.internalGrant.expiresAt).format('MMM D, YYYY')}` : ''}`
                     : 'None'
                 }
               />
+              {customer.internalGrant ? (
+                <Fact
+                  label="Grant updated"
+                  value={dayjs(customer.internalGrant.updatedAt).format(
+                    'MMM D, YYYY, h:mm A',
+                  )}
+                />
+              ) : null}
             </CardContent>
           </Card>
 
@@ -447,7 +533,11 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <PlanChange customer={customer} onSaved={load} />
+              <PlanChange
+                customer={customer}
+                key={customer.internalGrant?.updatedAt ?? 'none'}
+                onSaved={load}
+              />
             </CardContent>
           </Card>
         </TabsContent>
