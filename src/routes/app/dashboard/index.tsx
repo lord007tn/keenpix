@@ -59,13 +59,21 @@ function DashboardPage() {
   const search = Route.useSearch()
   const { range } = search
   const navigate = useNavigate({ from: Route.fullPath })
-  const { currentProject, isAll, setProject } = useProject()
-  const { user, cloud } = useRouteContext({ from: '/app' })
+  const {
+    currentProject,
+    isAll,
+    projects: workspaceProjects,
+    setProject,
+  } = useProject()
+  const { user, cloud, orgRole, productAccess, workspaceReady } =
+    useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
   // Stale-while-revalidate: the previous payload stays on screen while a new
   // range/project loads in the background; `isRefreshing` drives the indicator.
-  const { data, isPending, isFetching, isError, refetch } =
-    useDashboardQuery(search)
+  const { data, isPending, isFetching, isError, refetch } = useDashboardQuery(
+    search,
+    workspaceReady,
+  )
   const requestCount = data?.latencySummary.successfulDeliveries ?? 0
   useEffect(() => {
     if (requestCount > 0) {
@@ -82,7 +90,20 @@ function DashboardPage() {
     edgeRefreshing,
     edgePending,
     edgeError,
-  } = useEdgeStats(range)
+  } = useEdgeStats(workspaceReady ? range : undefined)
+
+  if (!workspaceReady) {
+    return (
+      <div className="flex flex-1 flex-col">
+        <OnboardingChecklist
+          cloud={cloud}
+          entitled={productAccess}
+          hasProjects={workspaceProjects.length > 0}
+          orgRole={orgRole}
+        />
+      </div>
+    )
+  }
 
   const header = (
     <PageHeader
@@ -197,7 +218,12 @@ function DashboardPage() {
   if (projects.length === 0) {
     return (
       <div className="flex flex-1 flex-col">
-        <OnboardingChecklist cloud={cloud} hasProjects={false} />
+        <OnboardingChecklist
+          cloud={cloud}
+          entitled={productAccess}
+          hasProjects={false}
+          orgRole={orgRole}
+        />
       </div>
     )
   }

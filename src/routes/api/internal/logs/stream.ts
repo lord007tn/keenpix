@@ -3,6 +3,7 @@ import { readLogs } from '@/actions/logs'
 import { getMemberRole } from '@/data-access/members'
 import { resolveActiveOrgId } from '@/lib/auth/active-org'
 import { auth } from '@/lib/auth/server'
+import { hasWorkspaceAccess } from '@/lib/billing/quota'
 import { isCloud } from '@/server/deployment'
 
 const STREAM_INTERVAL_MS = 2500
@@ -42,6 +43,11 @@ export async function handleLogStream(request: Request) {
   if (isCloud() && !(await getMemberRole(userId, orgId))) {
     return new Response('Organization access revoked', { status: 403 })
   }
+  if (!(await hasWorkspaceAccess(orgId))) {
+    return new Response('Complete onboarding to access live logs', {
+      status: 402,
+    })
+  }
   // Narrowed to a definite string for capture by the interval closure below.
   const scopedOrgId = orgId
 
@@ -52,6 +58,7 @@ export async function handleLogStream(request: Request) {
     undefined
   const encoder = new TextEncoder()
   const seen = new Set<string>()
+  let lastAccessCheckAt = Date.now()
 
   const stream = new ReadableStream({
     start(controller) {
@@ -64,6 +71,14 @@ export async function handleLogStream(request: Request) {
             clearInterval(id)
             controller.close()
             return
+          }
+          if (isCloud() && Date.now() - lastAccessCheckAt >= 30_000) {
+            lastAccessCheckAt = Date.now()
+            if (!(await hasWorkspaceAccess(scopedOrgId))) {
+              clearInterval(id)
+              controller.close()
+              return
+            }
           }
           const rows = await readLogs(scopedOrgId, project, STREAM_FETCH_LIMIT)
           const next = rows.filter((row) => !seen.has(row.id))

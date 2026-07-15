@@ -4,10 +4,10 @@ import {
   getAnalytics,
   getEdgeCacheStats,
 } from '@/actions/analytics'
-import { getOrgPlan } from '@/data-access/subscriptions'
 import { limitHistorySearch } from '@/helpers/history/window'
 import { authMiddleware, requireActiveOrg } from '@/lib/auth/guards'
 import { DEFAULT_HISTORY_DAYS } from '@/lib/billing/plans'
+import { assertHasWorkspaceAccess } from '@/lib/billing/quota'
 import {
   allowedHostStatsSchema,
   analyticsInputSchema,
@@ -23,7 +23,7 @@ export const getAnalyticsFn = createServerFn({ method: 'GET' })
   .handler(async ({ data, context }) => {
     const orgId = requireActiveOrg(context)
     const cloud = isCloud()
-    const plan = cloud ? await getOrgPlan(orgId) : null
+    const plan = cloud ? await assertHasWorkspaceAccess(orgId) : null
     const window = limitHistorySearch(
       data,
       cloud ? (plan?.historyDays ?? DEFAULT_HISTORY_DAYS) : undefined,
@@ -44,6 +44,8 @@ export const getEdgeCacheStatsFn = createServerFn({ method: 'GET' })
 export const getAllowedHostStatsFn = createServerFn({ method: 'GET' })
   .inputValidator(allowedHostStatsSchema)
   .middleware([authMiddleware])
-  .handler(({ data, context }) =>
-    getAllowedHostStats(requireActiveOrg(context), data.projectId, data.range),
-  )
+  .handler(async ({ data, context }) => {
+    const orgId = requireActiveOrg(context)
+    await assertHasWorkspaceAccess(orgId)
+    return getAllowedHostStats(orgId, data.projectId, data.range)
+  })

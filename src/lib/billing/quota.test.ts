@@ -4,6 +4,7 @@ import { PLANS } from './plans'
 const NEEDS_SUB = /active subscription/i
 const BASIC = /Basic/
 const FREE_TRIAL = /free trial/i
+const FIRST_PROJECT = /first project/i
 
 const isCloud = vi.hoisted(() => vi.fn())
 const getOrgPlan = vi.hoisted(() => vi.fn())
@@ -29,9 +30,16 @@ vi.mock('@/db', () => ({
   },
 }))
 
-const { assertCanCreateProject, assertCanAddSeat, orgCanServe } = await import(
-  './quota'
-)
+const {
+  assertCanAddSeat,
+  assertCanCreateProject,
+  assertHasProductAccess,
+  assertHasWorkspaceAccess,
+  getWorkspaceAccess,
+  hasProductAccess,
+  hasWorkspaceAccess,
+  orgCanServe,
+} = await import('./quota')
 
 afterEach(() => {
   vi.clearAllMocks()
@@ -43,6 +51,12 @@ describe('quota — self-host is unlimited', () => {
     await expect(assertCanCreateProject('org_default')).resolves.toBeUndefined()
     await expect(assertCanAddSeat('org_default')).resolves.toBeUndefined()
     expect(await orgCanServe('org_default')).toBe(true)
+    expect(await hasProductAccess('org_default')).toBe(true)
+    expect(await hasWorkspaceAccess('org_default')).toBe(true)
+    await expect(getWorkspaceAccess('org_default')).resolves.toEqual({
+      entitled: true,
+      ready: true,
+    })
     expect(getOrgPlan).not.toHaveBeenCalled()
   })
 })
@@ -54,7 +68,35 @@ describe('quota — cloud enforcement', () => {
     orgIsServable.mockResolvedValue(false)
     await expect(assertCanCreateProject('org_a')).rejects.toThrow(NEEDS_SUB)
     await expect(assertCanAddSeat('org_a')).rejects.toThrow(NEEDS_SUB)
+    await expect(assertHasProductAccess('org_a')).rejects.toThrow(NEEDS_SUB)
+    await expect(assertHasWorkspaceAccess('org_a')).rejects.toThrow(NEEDS_SUB)
+    expect(await hasProductAccess('org_a')).toBe(false)
+    expect(await hasWorkspaceAccess('org_a')).toBe(false)
     expect(await orgCanServe('org_a')).toBe(false)
+  })
+
+  it('grants product access to an entitled plan or internal grant', async () => {
+    isCloud.mockReturnValue(true)
+    getOrgPlan.mockResolvedValue(PLANS.pro)
+    await expect(assertHasProductAccess('org_a')).resolves.toEqual(PLANS.pro)
+    expect(await hasProductAccess('org_a')).toBe(true)
+  })
+
+  it('requires a project before the product workspace is ready', async () => {
+    isCloud.mockReturnValue(true)
+    getOrgPlan.mockResolvedValue(PLANS.pro)
+    projectCount.mockResolvedValue(0)
+    await expect(getWorkspaceAccess('org_a')).resolves.toEqual({
+      entitled: true,
+      ready: false,
+    })
+    await expect(assertHasWorkspaceAccess('org_a')).rejects.toThrow(
+      FIRST_PROJECT,
+    )
+
+    projectCount.mockResolvedValue(1)
+    expect(await hasWorkspaceAccess('org_a')).toBe(true)
+    await expect(assertHasWorkspaceAccess('org_a')).resolves.toEqual(PLANS.pro)
   })
 
   it('keeps serving during the dunning grace but blocks new resources', async () => {

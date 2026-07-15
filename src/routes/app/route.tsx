@@ -4,6 +4,7 @@ import { AppNotFound, RouteError } from '@/components/app/error-page'
 import { ImpersonationBanner } from '@/components/app/impersonation-banner'
 import { ServingBanner } from '@/components/app/serving-banner'
 import { getActiveOrgRoleFn, getSessionFn } from '@/functions/auth'
+import { getWorkspaceAccessFn } from '@/functions/billing'
 import { getPublicConfigFn } from '@/functions/config'
 import { listProjectsFn } from '@/functions/projects'
 import { appPageHead } from '@/shared/seo'
@@ -33,8 +34,19 @@ export const Route = createFileRoute('/app')({
     // of the requireSelfHost server guard. `orgRole` (cloud only) drives client-
     // side gating of org-scoped mutations so members aren't shown controls they
     // can't use; the server guards still enforce it.
-    const orgRole = config.cloud ? await getActiveOrgRoleFn() : null
-    return { user, cloud: config.cloud, orgRole }
+    const [orgRole, workspaceAccess] = await Promise.all([
+      config.cloud ? getActiveOrgRoleFn() : Promise.resolve(null),
+      config.cloud
+        ? getWorkspaceAccessFn()
+        : Promise.resolve({ entitled: true, ready: true }),
+    ])
+    return {
+      user,
+      cloud: config.cloud,
+      orgRole,
+      productAccess: workspaceAccess.entitled,
+      workspaceReady: workspaceAccess.ready,
+    }
   },
   loader: () => listProjectsFn(),
   head: () => ({
@@ -51,11 +63,11 @@ export const Route = createFileRoute('/app')({
 
 function AppLayout() {
   const projects = Route.useLoaderData()
-  const { user, cloud } = Route.useRouteContext()
+  const { user, cloud, workspaceReady } = Route.useRouteContext()
   return (
     <ProjectProvider projects={projects}>
       <div className="flex min-h-svh flex-col bg-background">
-        <AppTopnav cloud={cloud} user={user} />
+        <AppTopnav cloud={cloud} user={user} workspaceReady={workspaceReady} />
         <ImpersonationBanner user={user} />
         <ServingBanner cloud={cloud} />
         <main className="flex flex-1 flex-col overflow-auto" id="main-content">

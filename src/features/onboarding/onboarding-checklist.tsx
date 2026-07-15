@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { CheckCircle2Icon, CircleIcon, LockIcon } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -104,10 +105,14 @@ function Step({
 // Self-host skips the subscribe step (unlimited).
 export function OnboardingChecklist({
   cloud,
+  entitled,
   hasProjects,
+  orgRole,
 }: {
   cloud: boolean
+  entitled?: boolean
   hasProjects: boolean
+  orgRole?: string | null
 }) {
   const { data, isError, isPending, refetch } = useQuery({
     queryKey: ['billing-state'],
@@ -116,7 +121,16 @@ export function OnboardingChecklist({
     staleTime: 30_000,
   })
   const subscribed =
-    !cloud || data?.status === 'active' || data?.status === 'trialing'
+    !cloud ||
+    entitled === true ||
+    data?.status === 'active' ||
+    data?.status === 'trialing' ||
+    data?.status === 'internal'
+  const canManageBilling = !cloud || orgRole === 'owner' || orgRole === 'admin'
+  const needsBillingRecovery =
+    data?.status === 'past_due' ||
+    data?.status === 'unpaid' ||
+    data?.hasBillingCustomer === true
 
   useEffect(() => {
     if (data?.status === 'trialing') {
@@ -130,7 +144,23 @@ export function OnboardingChecklist({
   // loading placeholder while billing state resolves and a retry when it fails
   // — this is the exact moment churn is cheapest.
   let planAction: ReactNode = null
-  if (data?.orgId) {
+  if (data?.orgId && needsBillingRecovery && canManageBilling) {
+    planAction = (
+      <Button
+        nativeButton={false}
+        render={<Link search={{ section: 'billing' }} to="/app/settings" />}
+        size="sm"
+      >
+        Review billing
+      </Button>
+    )
+  } else if (data?.orgId && !canManageBilling) {
+    planAction = (
+      <span className="text-muted-foreground text-sm">
+        Ask an organization owner or admin to activate the workspace.
+      </span>
+    )
+  } else if (data?.orgId) {
     planAction = <ChoosePlanDialog orgId={data.orgId} />
   } else if (isError) {
     planAction = (
@@ -149,6 +179,15 @@ export function OnboardingChecklist({
         Loading…
       </Button>
     )
+  }
+
+  let planDescription = `Every plan starts with a ${TRIAL.days}-day free trial — trial usage is never billed, and plans start at $${PLANS.basic.priceMonthlyUsd}/mo with unlimited transforms.`
+  if (subscribed) {
+    planDescription =
+      'Your organization has access through an active plan or internal grant.'
+  } else if (needsBillingRecovery) {
+    planDescription =
+      'Review the existing billing account to restore workspace access.'
   }
 
   return (
@@ -172,9 +211,13 @@ export function OnboardingChecklist({
           {cloud ? (
             <Step
               action={planAction}
-              description={`Every plan starts with a ${TRIAL.days}-day free trial — trial usage is never billed, and plans start at $${PLANS.basic.priceMonthlyUsd}/mo with unlimited transforms.`}
+              description={planDescription}
               done={subscribed}
-              title="Start your free trial"
+              title={
+                needsBillingRecovery
+                  ? 'Restore workspace access'
+                  : 'Activate your workspace'
+              }
             />
           ) : null}
           <Step
@@ -187,7 +230,7 @@ export function OnboardingChecklist({
           <Step
             description="Request /img/<source-url>?project=<id> — Keenpix fetches, optimizes, caches, and delivers it. No API key needed."
             done={false}
-            locked={!hasProjects}
+            locked={!hasProjects || (cloud && !subscribed)}
             title="Make your first request"
           />
         </CardContent>

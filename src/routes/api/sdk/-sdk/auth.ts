@@ -1,6 +1,7 @@
 import { getOrgApiKeyAccess } from '@/actions/api-keys'
 import { DEFAULT_ORG_ID } from '@/lib/auth/active-org'
 import { auth } from '@/lib/auth/server'
+import { hasProductAccess } from '@/lib/billing/quota'
 import { isCloud } from '@/server/deployment'
 import type { SdkApiActivityContext } from './activity'
 import { jsonError } from './responses'
@@ -53,6 +54,9 @@ export async function verifySdkApiKey(
     }
     if (scope?.projectId && projectId && scope.projectId !== projectId) {
       throw jsonError('API key cannot access this project', 403)
+    }
+    if (!(await hasProductAccess(orgId))) {
+      throw jsonError('An active subscription is required', 402)
     }
     return {
       orgId,

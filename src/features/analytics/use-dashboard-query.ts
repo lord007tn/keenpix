@@ -4,13 +4,17 @@ import type { AnalyticsRange } from '@/shared/types'
 
 // Overview payload, fetched client-side with stale-while-revalidate (see
 // use-analytics-query for the shared rationale).
-export function useDashboardQuery(params: {
-  project?: string
-  range: AnalyticsRange
-}) {
+export function useDashboardQuery(
+  params: {
+    project?: string
+    range: AnalyticsRange
+  },
+  enabled = true,
+) {
   const query = useQuery({
     queryKey: ['dashboard', params.range, params.project],
     queryFn: () => getDashboardFn({ data: params }),
+    enabled,
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   })

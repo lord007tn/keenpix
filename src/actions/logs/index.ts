@@ -10,7 +10,7 @@ import { errorContext, logger } from '@/lib/logger/logger'
 // RequestLog is a transparent fallback for when ClickHouse is unconfigured (a
 // self-host instance without it) or momentarily unreachable, so logs never go
 // dark. Project resolution is org-scoped so a foreign ?project= id can't select
-// another tenant's logs; an unknown id collapses to the org-wide view. The row
+// another tenant's logs; an unknown id fails closed to an impossible scope. The row
 // shape is identical from either store, so callers are store-agnostic.
 export async function readLogs(
   orgId: string,
@@ -19,9 +19,16 @@ export async function readLogs(
   filters?: LogListFilters,
 ) {
   const projectId = await resolveProjectId(project, orgId)
+  const scopedProjectId =
+    project && !projectId ? '__invalid_project_scope__' : projectId
   if (clickhouseEnabled()) {
     try {
-      return await searchRequestEvents({ orgId, filters, limit, projectId })
+      return await searchRequestEvents({
+        orgId,
+        filters,
+        limit,
+        projectId: scopedProjectId,
+      })
     } catch (error) {
       logger.warn(
         errorContext(error),
@@ -29,5 +36,5 @@ export async function readLogs(
       )
     }
   }
-  return listLogsInDb({ orgId, filters, limit, projectId })
+  return listLogsInDb({ orgId, filters, limit, projectId: scopedProjectId })
 }

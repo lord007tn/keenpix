@@ -1,15 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getOrgApiKeyAccess, isCloud, verifyApiKey } = vi.hoisted(() => ({
-  getOrgApiKeyAccess: vi.fn(),
-  isCloud: vi.fn(),
-  verifyApiKey: vi.fn(),
-}))
+const { getOrgApiKeyAccess, hasProductAccess, isCloud, verifyApiKey } =
+  vi.hoisted(() => ({
+    getOrgApiKeyAccess: vi.fn(),
+    hasProductAccess: vi.fn(),
+    isCloud: vi.fn(),
+    verifyApiKey: vi.fn(),
+  }))
 
 vi.mock('@/actions/api-keys', () => ({ getOrgApiKeyAccess }))
 vi.mock('@/lib/auth/server', () => ({
   auth: { api: { verifyApiKey } },
 }))
+vi.mock('@/lib/billing/quota', () => ({ hasProductAccess }))
 vi.mock('@/server/deployment', () => ({ isCloud }))
 
 const { verifySdkApiKey } = await import('./auth')
@@ -20,6 +23,7 @@ const request = new Request('https://keenpix.com/api/sdk/projects/project_a', {
 
 beforeEach(() => {
   isCloud.mockReturnValue(true)
+  hasProductAccess.mockResolvedValue(true)
   verifyApiKey.mockResolvedValue({
     valid: true,
     key: {
@@ -79,6 +83,15 @@ describe('SDK API-key tenant isolation', () => {
   it('rejects an organization-wide key in cloud', async () => {
     getOrgApiKeyAccess.mockResolvedValue({ orgId: 'org_real', projectId: null })
     await expectStatus(verifySdkApiKey(request, 'write', 'project_a'), 403)
+  })
+
+  it('rejects an otherwise valid key when product access has ended', async () => {
+    getOrgApiKeyAccess.mockResolvedValue({
+      orgId: 'org_real',
+      projectId: 'project_a',
+    })
+    hasProductAccess.mockResolvedValue(false)
+    await expectStatus(verifySdkApiKey(request, 'read', 'project_a'), 402)
   })
 
   it('retains organization-wide keys for single-tenant self-host installs', async () => {
