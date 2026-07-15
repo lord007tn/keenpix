@@ -41,6 +41,7 @@ export interface TimePoint {
   label: string
   optimized: number
   requests: number
+  successful: number
 }
 
 // One time bucket of requests split by HTTP status class, for the reliability
@@ -131,13 +132,17 @@ export interface AnalyticsSummary {
   bandwidthIn: number
   bandwidthOut: number
   bandwidthSaved: number
+  cacheHits: number
+  failedRequests: number
   hitRate: number
+  liveOptimizations: number
   p50: number
   p75: number
   p90: number
   p95: number
   p99: number
   savingsPct: number
+  successfulDeliveries: number
   totalRequests: number
 }
 

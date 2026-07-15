@@ -110,7 +110,9 @@ export async function aggregateRollupSummary(
   const rows = await selectRows<Record<string, number>>(
     `SELECT
        count() AS requests,
-       countIf(cached = 1) AS cachedRequests,
+       countIf(status >= 200 AND status < 300) AS successfulRequests,
+       countIf(status >= 200 AND status < 300 AND cached = 1) AS cachedRequests,
+       countIf(status >= 200 AND status < 300 AND cached = 0) AS optimizedRequests,
        sum(bytes_in) AS bytesIn,
        sum(bytes_out) AS bytesOut,
        sum(bytes_saved) AS bytesSaved,
@@ -124,6 +126,8 @@ export async function aggregateRollupSummary(
   return {
     requests: Number(row.requests ?? 0),
     cachedRequests: Number(row.cachedRequests ?? 0),
+    optimizedRequests: Number(row.optimizedRequests ?? 0),
+    successfulRequests: Number(row.successfulRequests ?? 0),
     bytesIn: Number(row.bytesIn ?? 0),
     bytesOut: Number(row.bytesOut ?? 0),
     bytesSaved: Number(row.bytesSaved ?? 0),
@@ -140,8 +144,8 @@ export async function groupRollupsByBucket(
     `SELECT
        toString(toStartOfHour(ts)) AS bucketStart,
        count() AS requests,
-       countIf(cached = 1) AS cachedRequests,
-       countIf(cached = 0) AS optimizedRequests,
+       countIf(status >= 200 AND status < 300 AND cached = 1) AS cachedRequests,
+       countIf(status >= 200 AND status < 300 AND cached = 0) AS optimizedRequests,
        sum(bytes_in) AS bytesIn,
        sum(bytes_out) AS bytesOut,
        sum(bytes_saved) AS bytesSaved,
@@ -265,13 +269,15 @@ export async function groupRollupsByProject(
     projectId: string
     requests: number
     cachedRequests: number
+    optimizedRequests: number
     bytesSaved: number
     latencyMsSum: number
   }>(
     `SELECT
        project_id AS projectId,
        count() AS requests,
-       countIf(cached = 1) AS cachedRequests,
+       countIf(status >= 200 AND status < 300 AND cached = 1) AS cachedRequests,
+       countIf(status >= 200 AND status < 300 AND cached = 0) AS optimizedRequests,
        sum(bytes_saved) AS bytesSaved,
        sum(latency_ms) AS latencyMsSum
      FROM request_events
@@ -283,6 +289,7 @@ export async function groupRollupsByProject(
     projectId: r.projectId,
     requests: Number(r.requests ?? 0),
     cachedRequests: Number(r.cachedRequests ?? 0),
+    optimizedRequests: Number(r.optimizedRequests ?? 0),
     bytesSaved: Number(r.bytesSaved ?? 0),
     latencyMsSum: Number(r.latencyMsSum ?? 0),
   }))
@@ -294,6 +301,7 @@ export async function groupRollupsByHost(opts: WindowOpts): Promise<HostAgg[]> {
     sourceHost: string
     requests: number
     cachedRequests: number
+    optimizedRequests: number
     bytesSaved: number
     latencyMsSum: number
     lastSeen: string
@@ -301,7 +309,8 @@ export async function groupRollupsByHost(opts: WindowOpts): Promise<HostAgg[]> {
     `SELECT
        source_host AS sourceHost,
        count() AS requests,
-       countIf(cached = 1) AS cachedRequests,
+       countIf(status >= 200 AND status < 300 AND cached = 1) AS cachedRequests,
+       countIf(status >= 200 AND status < 300 AND cached = 0) AS optimizedRequests,
        sum(bytes_saved) AS bytesSaved,
        sum(latency_ms) AS latencyMsSum,
        toString(max(ts)) AS lastSeen
@@ -314,6 +323,7 @@ export async function groupRollupsByHost(opts: WindowOpts): Promise<HostAgg[]> {
     sourceHost: r.sourceHost,
     requests: Number(r.requests ?? 0),
     cachedRequests: Number(r.cachedRequests ?? 0),
+    optimizedRequests: Number(r.optimizedRequests ?? 0),
     bytesSaved: Number(r.bytesSaved ?? 0),
     latencyMsSum: Number(r.latencyMsSum ?? 0),
     lastSeen: r.lastSeen ? toDate(r.lastSeen) : null,

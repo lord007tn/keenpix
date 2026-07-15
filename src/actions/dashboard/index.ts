@@ -23,12 +23,12 @@ export async function getDashboard(
   input: z.output<typeof dashboardInputSchema>,
 ) {
   const projects = await listProjects(orgId)
-  // Unknown/stale id means "all projects". Per-project comparison stats power
-  // the all-projects table only, so skip them when scoped to one project.
-  const project =
-    input.project && projects.some((p) => p.id === input.project)
-      ? input.project
-      : undefined
+  // An unknown, stale, or foreign id is scoped to an impossible project instead
+  // of widening to every project in the active organization.
+  const project = input.project
+    ? (projects.find((candidate) => candidate.id === input.project)?.id ??
+      '__invalid_project_scope__')
+    : undefined
 
   // One aggregate of the current window powers KPIs, the chart series, latency,
   // and (all-projects) the per-project table; a second aggregate of the disjoint

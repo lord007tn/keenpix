@@ -33,7 +33,9 @@ export interface RollupSummaryAgg {
   cachedRequests: number
   latency: LatencyBucketCounts
   latencyMsSum: number
+  optimizedRequests: number
   requests: number
+  successfulRequests: number
 }
 
 export function summarizeAgg(agg: RollupSummaryAgg) {
@@ -42,11 +44,17 @@ export function summarizeAgg(agg: RollupSummaryAgg) {
   const bandwidthSaved = agg.bytesSaved
   return {
     totalRequests,
+    successfulDeliveries: agg.successfulRequests,
+    liveOptimizations: agg.optimizedRequests,
+    cacheHits: agg.cachedRequests,
+    failedRequests: Math.max(0, totalRequests - agg.successfulRequests),
     bandwidthIn: agg.bytesIn,
     bandwidthOut,
     bandwidthSaved,
     hitRate:
-      totalRequests === 0 ? 0 : (agg.cachedRequests / totalRequests) * 100,
+      agg.successfulRequests === 0
+        ? 0
+        : (agg.cachedRequests / agg.successfulRequests) * 100,
     savingsPct:
       bandwidthSaved + bandwidthOut === 0
         ? 0
@@ -93,6 +101,7 @@ export function timeSeriesFromBuckets(
     requests: 0,
     cached: 0,
     optimized: 0,
+    successful: 0,
     bandwidthIn: 0,
     bandwidthOut: 0,
     bandwidthSaved: 0,
@@ -102,6 +111,7 @@ export function timeSeriesFromBuckets(
     bucket.requests += b.requests
     bucket.cached += b.cachedRequests
     bucket.optimized += b.optimizedRequests
+    bucket.successful += b.cachedRequests + b.optimizedRequests
     bucket.bandwidthIn += b.bytesIn
     bucket.bandwidthOut += b.bytesOut
     bucket.bandwidthSaved += b.bytesSaved
@@ -231,6 +241,7 @@ export interface ProjectAgg {
   bytesSaved: number
   cachedRequests: number
   latencyMsSum: number
+  optimizedRequests: number
   projectId: string
   requests: number
 }
@@ -240,7 +251,10 @@ export function projectStats(rows: ProjectAgg[]) {
   for (const r of rows) {
     out[r.projectId] = {
       requests: r.requests,
-      hitRate: r.requests === 0 ? 0 : (r.cachedRequests / r.requests) * 100,
+      hitRate:
+        r.cachedRequests + r.optimizedRequests === 0
+          ? 0
+          : (r.cachedRequests / (r.cachedRequests + r.optimizedRequests)) * 100,
     }
   }
   return out
@@ -256,7 +270,10 @@ export function projectBreakdown(
       name: nameById.get(r.projectId) ?? r.projectId,
       requests: r.requests,
       bandwidthSaved: r.bytesSaved,
-      hitRate: r.requests === 0 ? 0 : (r.cachedRequests / r.requests) * 100,
+      hitRate:
+        r.cachedRequests + r.optimizedRequests === 0
+          ? 0
+          : (r.cachedRequests / (r.cachedRequests + r.optimizedRequests)) * 100,
       avgLatency:
         r.requests === 0 ? 0 : Math.round(r.latencyMsSum / r.requests),
     }))
@@ -268,6 +285,7 @@ export interface HostAgg {
   cachedRequests: number
   lastSeen: Date | null
   latencyMsSum: number
+  optimizedRequests: number
   requests: number
   sourceHost: string
 }
@@ -279,7 +297,10 @@ export function domainBreakdown(rows: HostAgg[]): DomainBreakdownRow[] {
       domain: r.sourceHost,
       requests: r.requests,
       bandwidthSaved: r.bytesSaved,
-      hitRate: r.requests === 0 ? 0 : (r.cachedRequests / r.requests) * 100,
+      hitRate:
+        r.cachedRequests + r.optimizedRequests === 0
+          ? 0
+          : (r.cachedRequests / (r.cachedRequests + r.optimizedRequests)) * 100,
       avgLatency:
         r.requests === 0 ? 0 : Math.round(r.latencyMsSum / r.requests),
       lastSeen: r.lastSeen ? dayjs(r.lastSeen).format('MMM D, HH:mm') : null,
@@ -302,7 +323,10 @@ export function hostTraffic(rows: HostAgg[]) {
     }
     map.set(r.sourceHost, {
       requests: r.requests,
-      hitRate: r.requests === 0 ? 0 : (r.cachedRequests / r.requests) * 100,
+      hitRate:
+        r.cachedRequests + r.optimizedRequests === 0
+          ? 0
+          : (r.cachedRequests / (r.cachedRequests + r.optimizedRequests)) * 100,
       bandwidthSaved: r.bytesSaved,
       lastSeen: r.lastSeen ? dayjs(r.lastSeen).format('MMM D, HH:mm') : null,
     })

@@ -43,10 +43,13 @@ export async function getAnalytics(
   orgId: string,
   input: z.output<typeof analyticsInputSchema>,
 ) {
-  // Validate the requested project within the caller's org so an unknown/stale/
-  // foreign id collapses to "all projects" for the data exactly as the UI's
-  // project switcher does — a foreign id can never widen scope.
-  const project = await resolveProjectId(input.project, orgId)
+  // Validate the requested project within the caller's org. An unknown, stale,
+  // or foreign id is scoped to an impossible project instead of widening to the
+  // organization's all-projects view.
+  const resolvedProject = await resolveProjectId(input.project, orgId)
+  const project = input.project
+    ? (resolvedProject ?? '__invalid_project_scope__')
+    : undefined
   const filters = {
     // Domain filtering is only meaningful within a single project's allowlist.
     domain: project ? (input.domain ?? []) : [],
