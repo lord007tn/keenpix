@@ -1,12 +1,12 @@
 import { createServerFn } from '@tanstack/react-start'
 import { readLogs } from '@/actions/logs'
-import { getOrgPlan } from '@/data-access/subscriptions'
 import {
   getHistoryWindowDates,
   limitHistorySearch,
 } from '@/helpers/history/window'
 import { authMiddleware, requireActiveOrg } from '@/lib/auth/guards'
 import { BASIC_LOG_LIMIT, DEFAULT_HISTORY_DAYS } from '@/lib/billing/plans'
+import { assertHasWorkspaceAccess } from '@/lib/billing/quota'
 import { logsQuerySchema } from '@/schemas/logs'
 import { isCloud } from '@/server/deployment'
 
@@ -18,7 +18,7 @@ export const listLogsFn = createServerFn({ method: 'GET' })
   .handler(async ({ data, context }) => {
     const orgId = requireActiveOrg(context)
     const cloud = isCloud()
-    const plan = cloud ? await getOrgPlan(orgId) : null
+    const plan = cloud ? await assertHasWorkspaceAccess(orgId) : null
     const advanced = !cloud || (plan?.advancedLogs ?? false)
     const limit = advanced ? ADVANCED_LOG_LIMIT : BASIC_LOG_LIMIT
     const window = limitHistorySearch(

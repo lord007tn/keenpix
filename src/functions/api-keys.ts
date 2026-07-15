@@ -6,6 +6,7 @@ import {
   listOrgApiKeyActivitiesPage,
 } from '@/actions/api-keys'
 import { authMiddleware, requireOrgAdmin } from '@/lib/auth/guards'
+import { assertHasProductAccess } from '@/lib/billing/quota'
 import {
   apiKeyActivityPageSchema,
   apiKeyWorkspaceSchema,
@@ -19,16 +20,18 @@ import {
 export const getOrgApiKeysFn = createServerFn({ method: 'GET' })
   .inputValidator(apiKeyWorkspaceSchema)
   .middleware([authMiddleware])
-  .handler(({ context, data }) => {
+  .handler(async ({ context, data }) => {
     const orgId = requireOrgAdmin(context)
+    await assertHasProductAccess(orgId)
     return getOrgApiKeyWorkspace(orgId, data.projectId || undefined)
   })
 
 export const createOrgApiKeyFn = createServerFn({ method: 'POST' })
   .inputValidator(createApiKeySchema)
   .middleware([authMiddleware])
-  .handler(({ context, data }) => {
+  .handler(async ({ context, data }) => {
     const orgId = requireOrgAdmin(context)
+    await assertHasProductAccess(orgId)
     return createOrgApiKey({
       orgId,
       userId: context.userId,
@@ -40,16 +43,18 @@ export const createOrgApiKeyFn = createServerFn({ method: 'POST' })
 export const disableOrgApiKeyFn = createServerFn({ method: 'POST' })
   .inputValidator(disableApiKeySchema)
   .middleware([authMiddleware])
-  .handler(({ context, data }) => {
+  .handler(async ({ context, data }) => {
     const orgId = requireOrgAdmin(context)
+    await assertHasProductAccess(orgId)
     return disableOrgApiKey(data.id, orgId)
   })
 
 export const getOrgApiKeyActivitiesFn = createServerFn({ method: 'GET' })
   .inputValidator(apiKeyActivityPageSchema)
   .middleware([authMiddleware])
-  .handler(({ context, data }) => {
+  .handler(async ({ context, data }) => {
     const orgId = requireOrgAdmin(context)
+    await assertHasProductAccess(orgId)
     return listOrgApiKeyActivitiesPage(
       orgId,
       data.page,

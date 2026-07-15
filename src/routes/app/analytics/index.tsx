@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   createFileRoute,
   Link,
+  redirect,
   useNavigate,
   useRouteContext,
 } from '@tanstack/react-router'
@@ -91,6 +92,11 @@ function getDateParam(value: unknown) {
 }
 
 export const Route = createFileRoute('/app/analytics/')({
+  beforeLoad: ({ context }) => {
+    if (!context.workspaceReady) {
+      throw redirect({ to: '/app/dashboard', search: { range: '24h' } })
+    }
+  },
   head: () =>
     appPageHead(
       'Analytics',

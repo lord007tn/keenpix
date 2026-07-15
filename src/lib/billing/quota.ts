@@ -38,6 +38,59 @@ async function noPlanError(orgId: string): Promise<Error> {
   return new Error(NO_SUBSCRIPTION)
 }
 
+export async function hasProductAccess(orgId: string) {
+  if (!isCloud()) {
+    return true
+  }
+  return Boolean(await getOrgPlan(orgId))
+}
+
+export async function assertHasProductAccess(orgId: string) {
+  if (!isCloud()) {
+    return null
+  }
+  const plan = await getOrgPlan(orgId)
+  if (plan) {
+    return plan
+  }
+  throw await noPlanError(orgId)
+}
+
+export async function getWorkspaceAccess(orgId: string) {
+  if (!isCloud()) {
+    return { entitled: true, ready: true }
+  }
+  const [plan, projectCount] = await Promise.all([
+    getOrgPlan(orgId),
+    prisma.project.count({ where: { orgId } }),
+  ])
+  return {
+    entitled: Boolean(plan),
+    ready: Boolean(plan && projectCount > 0),
+  }
+}
+
+export async function hasWorkspaceAccess(orgId: string) {
+  return (await getWorkspaceAccess(orgId)).ready
+}
+
+export async function assertHasWorkspaceAccess(orgId: string) {
+  if (!isCloud()) {
+    return null
+  }
+  const [plan, projectCount] = await Promise.all([
+    getOrgPlan(orgId),
+    prisma.project.count({ where: { orgId } }),
+  ])
+  if (!plan) {
+    throw await noPlanError(orgId)
+  }
+  if (projectCount === 0) {
+    throw new Error('Complete onboarding by creating your first project.')
+  }
+  return plan
+}
+
 export async function assertCanCreateProject(orgId: string): Promise<void> {
   if (!isCloud()) {
     return

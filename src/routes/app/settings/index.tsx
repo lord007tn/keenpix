@@ -109,16 +109,15 @@ function SubNavGroup({ label }: { label: string }) {
 
 function SettingsPage() {
   const { currentProject, isAll, projects, setProject } = useProject()
-  const { cloud, orgRole } = useRouteContext({ from: '/app' })
+  const { cloud, orgRole, productAccess } = useRouteContext({ from: '/app' })
   const { section } = Route.useSearch()
   const navigate = Route.useNavigate()
   // Owner/admin may edit/delete projects; members get read-only (server enforces).
   const canManageProject = !cloud || orgRole === 'owner' || orgRole === 'admin'
 
-  const projectSections: Section[] = currentProject
-    ? ['general', 'pipeline', 'security']
-    : []
-  if (currentProject && canManageProject) {
+  const projectSections: Section[] =
+    currentProject && productAccess ? ['general', 'pipeline', 'security'] : []
+  if (currentProject && productAccess && canManageProject) {
     projectSections.push('api-keys')
   }
   // Billing + Team are per-org and cloud-only (self-host is single-tenant/free),
@@ -130,7 +129,9 @@ function SettingsPage() {
   // Cloud credentials belong to one selected project. Self-host retains the
   // legacy organization-wide key surface when no project is selected.
   const apiKeySections: Section[] =
-    !cloud && canManageProject && !currentProject ? ['api-keys'] : []
+    !cloud && productAccess && canManageProject && !currentProject
+      ? ['api-keys']
+      : []
   const available = [
     ...projectSections,
     ...billingSections,

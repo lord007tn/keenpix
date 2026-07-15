@@ -9,6 +9,7 @@ import {
   requireActiveOrg,
   requireOrgAdmin,
 } from '@/lib/auth/guards'
+import { getWorkspaceAccess } from '@/lib/billing/quota'
 import { bustServingEntitlement } from '@/lib/billing/service-gate'
 import { spendCapSchema } from '@/schemas/billing'
 import { isCloud } from '@/server/deployment'
@@ -26,6 +27,10 @@ export const getBillingStateFn = createServerFn({ method: 'GET' })
       !isCloud() || context.orgRole === 'owner' || context.orgRole === 'admin'
     return { ...state, canManage }
   })
+
+export const getWorkspaceAccessFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(({ context }) => getWorkspaceAccess(requireActiveOrg(context)))
 
 // Owner/admin-only: set or clear the org's overage spending cap.
 export const setSpendCapFn = createServerFn({ method: 'POST' })

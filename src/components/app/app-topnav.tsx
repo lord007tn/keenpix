@@ -33,9 +33,11 @@ function tabClassName(active: boolean): string {
 
 export function AppTopnav({
   cloud,
+  workspaceReady,
   user,
 }: {
   cloud: boolean
+  workspaceReady: boolean
   user: SessionUser
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -56,7 +58,7 @@ export function AppTopnav({
         <span className="mx-0.5 hidden text-lg text-muted-foreground/40 md:inline">
           /
         </span>
-        <ProjectSwitcher />
+        {workspaceReady ? <ProjectSwitcher /> : null}
         <div className="flex-1" />
         <a
           className="mr-1 hidden text-muted-foreground text-sm transition-colors hover:text-foreground md:inline"
@@ -69,7 +71,9 @@ export function AppTopnav({
       </div>
 
       <nav className="flex items-center gap-1 overflow-x-auto px-2">
-        {BASE_TABS.map((tab) => {
+        {BASE_TABS.filter(
+          (tab) => workspaceReady || tab.to === '/app/dashboard',
+        ).map((tab) => {
           const Icon = tab.icon
           const active = pathname.startsWith(tab.to)
           return (

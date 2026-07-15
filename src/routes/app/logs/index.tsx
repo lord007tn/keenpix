@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   createFileRoute,
   Link,
+  redirect,
   useNavigate,
   useRouteContext,
 } from '@tanstack/react-router'
@@ -48,6 +49,11 @@ import { useProject } from '@/stores/project-context'
 const EMPTY_VALUES: string[] = []
 
 export const Route = createFileRoute('/app/logs/')({
+  beforeLoad: ({ context }) => {
+    if (!context.workspaceReady) {
+      throw redirect({ to: '/app/dashboard', search: { range: '24h' } })
+    }
+  },
   head: () =>
     appPageHead(
       'Live logs',
