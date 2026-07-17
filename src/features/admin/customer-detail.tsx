@@ -346,7 +346,7 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
       >
         <div className="overflow-x-auto overflow-y-hidden pb-1.5">
           <TabsList
-            className="h-11 w-max min-w-full justify-start border-b p-0"
+            className="w-max min-w-full justify-start border-b p-0 group-data-horizontal/tabs:h-11"
             variant="line"
           >
             <TabsTrigger className="h-11 flex-none px-3" value="overview">
