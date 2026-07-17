@@ -4,11 +4,13 @@ import {
   DatabaseIcon,
   HardDriveIcon,
   ServerIcon,
+  TriangleAlertIcon,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { SettingRow } from '@/components/app/setting-row'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -48,11 +50,14 @@ function Value({ children }: { children: React.ReactNode }) {
 
 export function PlatformSettings() {
   const [config, setConfig] = useState<PlatformConfig | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   const load = useCallback(async () => {
+    setLoadFailed(false)
     try {
       setConfig(await getPlatformConfigFn())
     } catch (error) {
+      setLoadFailed(true)
       toast.error(getErrorMessage(error, 'Could not load configuration'))
     }
   }, [])
@@ -62,6 +67,24 @@ export function PlatformSettings() {
   }, [load])
 
   if (!config) {
+    if (loadFailed) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>Couldn’t load platform configuration</CardTitle>
+            <CardDescription>
+              The operator settings request failed. Retry to run the live
+              integration checks again.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={load} variant="outline">
+              Try again
+            </Button>
+          </CardContent>
+        </Card>
+      )
+    }
     return (
       <div className="grid gap-6 lg:grid-cols-2">
         <Skeleton className="h-56" />
@@ -73,6 +96,22 @@ export function PlatformSettings() {
   const { deployment, cache, cloudflare } = config
   const isCloud = deployment.mode === 'cloud'
   const immutable = cache.cacheControl.includes('immutable')
+  let cloudflareStatus = <Badge variant="outline">Not configured</Badge>
+  if (cloudflare.connectionStatus === 'connected') {
+    cloudflareStatus = (
+      <Badge variant="success">
+        <CheckCircle2Icon data-icon="inline-start" />
+        Connected
+      </Badge>
+    )
+  } else if (cloudflare.connectionStatus === 'failed') {
+    cloudflareStatus = (
+      <Badge variant="destructive">
+        <TriangleAlertIcon data-icon="inline-start" />
+        Connection check failed
+      </Badge>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -185,14 +224,7 @@ export function PlatformSettings() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <SettingRow description="Live integration status" label="Status">
-            {cloudflare.enabled && cloudflare.tokenSet ? (
-              <Badge variant="success">
-                <CheckCircle2Icon data-icon="inline-start" />
-                Connected
-              </Badge>
-            ) : (
-              <Badge variant="outline">Not configured</Badge>
-            )}
+            {cloudflareStatus}
           </SettingRow>
           <SettingRow description="Resolved from" label="Source">
             <Badge variant={cloudflare.source === 'none' ? 'outline' : 'info'}>

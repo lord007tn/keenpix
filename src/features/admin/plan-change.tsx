@@ -37,6 +37,10 @@ function projectsLabel(max: number | null) {
   return max === null ? 'Unlimited projects' : `${max} projects`
 }
 
+function customDomainsLabel(max: number | null) {
+  return max === null ? 'Unlimited custom domains' : `${max} custom domains`
+}
+
 // Complimentary access is a local subscription snapshot with no Polar id and
 // zero revenue. Provider-managed rows are read-only in the operator console.
 export function PlanChange({
@@ -136,6 +140,14 @@ export function PlanChange({
                   </span>
                   <span>{projectsLabel(plan.maxProjects)}</span>
                   <span>{plan.maxSeats} seats</span>
+                  <span>{customDomainsLabel(plan.customDomains)}</span>
+                  <span>{plan.historyDays} days analytics history</span>
+                  <span>{plan.logRetentionDays} days raw log retention</span>
+                  <span>
+                    {plan.advancedLogs
+                      ? 'Full log search'
+                      : 'Latest 200 logs visible'}
+                  </span>
                 </div>
               ) : (
                 <span className="text-muted-foreground text-xs">
@@ -173,6 +185,14 @@ export function PlanChange({
             </span>
             <span>
               Seats: {customer.seats}/{target.maxSeats}
+            </span>
+            <span>
+              Custom domains: {customDomainsLabel(target.customDomains)}
+            </span>
+            <span>Analytics history: {target.historyDays} days</span>
+            <span>Raw log retention: {target.logRetentionDays} days</span>
+            <span>
+              Logs: {target.advancedLogs ? 'Full search' : 'Latest 200 visible'}
             </span>
           </div>
           {warnings.length > 0 ? (

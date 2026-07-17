@@ -47,6 +47,7 @@ function statusBadge(status: string) {
 export function CustomDomains({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient()
   const [copied, setCopied] = useState<string | null>(null)
+  const [provisionError, setProvisionError] = useState<string | null>(null)
   const [removeId, setRemoveId] = useState<string | null>(null)
   const queryKey = ['custom-domains', projectId]
   const query = useQuery({
@@ -85,6 +86,7 @@ export function CustomDomains({ projectId }: { projectId: string }) {
       onSubmit: createCustomDomainSchema,
     },
     onSubmit: async ({ value }) => {
+      setProvisionError(null)
       try {
         await createCustomDomainFn({
           data: createCustomDomainSchema.parse({ ...value, projectId }),
@@ -93,7 +95,9 @@ export function CustomDomains({ projectId }: { projectId: string }) {
         toast.success('Custom domain added — configure the DNS records below')
         await queryClient.invalidateQueries({ queryKey })
       } catch (error) {
-        toast.error(getErrorMessage(error, 'Could not add custom domain'))
+        const message = getErrorMessage(error, 'Could not add custom domain')
+        setProvisionError(message)
+        toast.error(message)
       }
     },
   })
@@ -211,6 +215,11 @@ export function CustomDomains({ projectId }: { projectId: string }) {
                   </div>
                   {error ? (
                     <p className="text-destructive text-xs">{error}</p>
+                  ) : null}
+                  {provisionError ? (
+                    <p className="text-destructive text-xs" role="alert">
+                      {provisionError}
+                    </p>
                   ) : null}
                 </div>
               )

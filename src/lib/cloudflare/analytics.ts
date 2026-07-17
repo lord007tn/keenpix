@@ -80,7 +80,11 @@ async function queryAdaptiveGroups(
       res.errors[0]?.message || 'Cloudflare analytics query failed.',
     )
   }
-  return res.data?.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups ?? []
+  const zone = res.data?.viewer?.zones?.[0]
+  if (!zone) {
+    throw new Error('The token cannot access the configured Cloudflare zone.')
+  }
+  return zone.httpRequestsAdaptiveGroups ?? []
 }
 
 export interface EdgeAdaptiveGroup {

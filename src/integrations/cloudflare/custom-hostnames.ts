@@ -30,13 +30,6 @@ export interface CloudflareCustomHostname {
   }
   status?: string
   verification_errors?: string[]
-  workerRouteId?: string
-}
-
-interface CloudflareWorkerRoute {
-  id: string
-  pattern: string
-  script?: string
 }
 
 export function customDomainsConfigured() {
@@ -109,16 +102,6 @@ export function getCloudflareCustomHostname(id: string) {
   )
 }
 
-export function createCloudflareCustomHostnameRoute(hostname: string) {
-  return cloudflareRequest<CloudflareWorkerRoute>('/workers/routes', {
-    method: 'POST',
-    body: JSON.stringify({
-      pattern: `${hostname}/*`,
-      script: env.CLOUDFLARE_SAAS_WORKER_SCRIPT,
-    }),
-  })
-}
-
 export function retryCloudflareCustomHostname(id: string) {
   return cloudflareRequest<CloudflareCustomHostname>(
     `/custom_hostnames/${encodeURIComponent(id)}`,
@@ -139,20 +122,6 @@ export async function deleteCloudflareCustomHostname(id: string) {
   try {
     await cloudflareRequest<unknown>(
       `/custom_hostnames/${encodeURIComponent(id)}`,
-      { method: 'DELETE' },
-    )
-  } catch (error) {
-    if ((error as { status?: number }).status === 404) {
-      return
-    }
-    throw error
-  }
-}
-
-export async function deleteCloudflareCustomHostnameRoute(id: string) {
-  try {
-    await cloudflareRequest<unknown>(
-      `/workers/routes/${encodeURIComponent(id)}`,
       { method: 'DELETE' },
     )
   } catch (error) {

@@ -5,7 +5,10 @@ import {
   getPublicTransformErrorMessage,
   getTransformErrorStatus,
 } from '@/errors/transform'
-import { getTrustedCustomDomainHostname } from '@/helpers/custom-domains/edge-request'
+import {
+  getTrustedCustomDomainHostname,
+  validateCustomDomainCachePartition,
+} from '@/helpers/custom-domains/edge-request'
 import { cacheControl } from '@/lib/cache/cache'
 import { getContentType } from '@/shared/transform'
 
@@ -31,6 +34,14 @@ export async function handleTransformRequest(
     request,
     env.CLOUDFLARE_SAAS_EDGE_SECRET,
   )
+  if (!validateCustomDomainCachePartition(searchParams, edgeHostname)) {
+    return new Response(
+      edgeHostname
+        ? 'Invalid custom-domain edge request'
+        : 'Reserved query parameter',
+      { status: 400 },
+    )
+  }
   let projectId = edgeHostname
     ? await resolveCustomDomainProject(edgeHostname)
     : searchParams.get('project')
