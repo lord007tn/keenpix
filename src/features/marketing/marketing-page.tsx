@@ -53,7 +53,7 @@ const FEATURES = [
   {
     icon: WalletIcon,
     title: 'No surprise bills',
-    body: 'One published, linear overage rate — no pooled credits, no per-transform metering. A hard spending cap ships on by default, and delivery pauses at the cap instead of billing past it.',
+    body: 'One published, linear overage rate — no pooled credits and no per-transform metering. Paid delivery stays online while usage accrues for the end-of-period invoice.',
   },
   {
     icon: GlobeIcon,
@@ -242,8 +242,9 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
               <p className="mt-5 max-w-xl text-balance text-lg text-white/80 leading-relaxed sm:text-xl">
                 Keenpix transforms and delivers your images in modern formats
                 from one URL — with one honest, published price. No pooled
-                credits, no per-transform metering, and a hard spending cap you
-                control. Or self-host the whole thing, free.
+                credits, no per-transform metering, and uninterrupted paid
+                overage billed at the end of the period. Or self-host the whole
+                thing, free.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
@@ -454,8 +455,9 @@ Vary: Accept`}</CodeBlock>
               <p className="max-w-md text-muted-foreground leading-relaxed">
                 Every plan bills on bytes returned by Keenpix — never per
                 transform. Upstream CDN edge hits are not added to the meter.
-                Overage is one linear published rate with a hard cap, on by
-                default. Every plan starts with a 14-day free trial.
+                Overage is one linear published rate and paid delivery remains
+                online throughout the billing period. Every plan starts with a
+                14-day free trial.
               </p>
             </div>
             <div className="grid items-stretch gap-4 lg:grid-cols-3">

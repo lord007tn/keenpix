@@ -25,7 +25,7 @@ export const imgixComparison = {
     {
       scenario: '1 TB delivered / month',
       competitor: '$300/mo Growth (1,875 credits)',
-      keenpix: '$29/mo Business — 1 TB included',
+      keenpix: '$39/mo Business — 1 TB included',
     },
     {
       scenario: '50 GB of cached originals under management',
@@ -36,8 +36,7 @@ export const imgixComparison = {
       scenario: 'Overage beyond plan',
       competitor:
         'Published packages end at $500/mo Growth Plus; larger needs require current terms',
-      keenpix:
-        '$0.05–0.08/GB, published; your spend cap pauses delivery instead',
+      keenpix: '$0.05–0.08/GB, published; paid delivery stays online',
     },
     {
       scenario: 'Transformations',
@@ -109,7 +108,7 @@ export const imgixComparison = {
     {
       feature: 'Overage behavior',
       competitor: 'Confirm current credit-limit handling with imgix',
-      keenpix: 'Customer-set spend cap, on by default',
+      keenpix: 'Usage alerts and projected charges; no normal hard stop',
     },
     {
       feature: 'Vendor profile',
@@ -129,9 +128,9 @@ export const imgixComparison = {
         'Keenpix publishes rates and overage ($0.05–0.08/GB depending on plan) for every self-serve tier. imgix publishes packages through Growth Plus at $500/month; larger requirements need current terms. Compare a written imgix quote with your measured workload rather than relying on third-party anecdotes.',
     },
     {
-      title: 'A spend cap instead of a blocked account',
+      title: 'Always-on paid usage with transparent rates',
       detail:
-        'imgix publishes credit allowances, but teams should confirm current overage and enforcement behavior directly for their plan. Keenpix ships a hard overage cap that you control, on by default at roughly 2x your plan price; delivery pauses when that customer-set limit is reached.',
+        'imgix publishes credit allowances, but teams should confirm current overage and enforcement behavior directly for their plan. Keenpix continues paid delivery at its published per-GB rate and shows projected charges throughout the billing period.',
     },
     {
       title: 'An AGPL self-host option in v0.2.0',
@@ -147,7 +146,7 @@ export const imgixComparison = {
   whenCompetitorWins: [
     "You depend on imgix's deep rendering features — face-aware cropping, text overlays, palette extraction, and the long tail of parameters Keenpix doesn't replicate.",
     'You need video processing and delivery from the same pipeline; Keenpix is images only.',
-    "You need a custom delivery domain today — Keenpix doesn't offer them yet.",
+    'You need the broader mature imgix ecosystem rather than Keenpix’s focused transform-and-deliver workflow.',
     'You want an established vendor (operating since 2011) with enterprise support and SLAs rather than a young, solo-founder product.',
     "Your usage fits comfortably inside a current imgix plan and renewal terms you've confirmed — switching has real costs, and 'it works and the price is known' is a fine reason to stay.",
   ],
@@ -157,7 +156,7 @@ export const imgixComparison = {
     'Rewrite the URL shape: https://yoursub.imgix.net/hero.jpg?w=800&fm=avif becomes /img/https://origin.example.com/hero.jpg?project=yourproject&w=800&fmt=avif. You can usually drop fm entirely — Keenpix negotiates AVIF/WebP automatically from the Accept header.',
     'Update your image URL helper or framework <Image> loader. Most codebases build imgix URLs in one function, so this is typically a single-file change.',
     "Put Keenpix behind your existing CDN (Cloudflare or similar — it's designed for that) and run both services side by side on a slice of traffic, diffing output with the live request logs.",
-    'Confirm your overage spend cap (on by default at about 2x plan price) and watch cache hit rate and application response bytes in the dashboard for a week.',
+    'Watch projected overage, cache hit rate, and application response bytes in the dashboard for a week.',
     'Cut the remaining traffic over and cancel imgix before the next credit-cycle renewal.',
   ],
   faq: [
@@ -175,7 +174,7 @@ export const imgixComparison = {
     },
     {
       q: 'How does Keenpix billing work?',
-      a: 'One meter: bandwidth delivered. Basic is $9/mo for 100 GB then $0.08/GB, Pro $19/mo for 400 GB then $0.06/GB, and Business $29/mo for 1 TB then $0.05/GB. Transformations are unlimited on every monthly plan, and a customer-set spend cap (on by default) pauses delivery rather than letting overage run.',
+      a: 'One meter: bandwidth delivered. Basic is $9/mo for 100 GB then $0.08/GB, Pro $19/mo for 400 GB then $0.06/GB, and Business $39/mo for 1 TB then $0.05/GB. Transformations are unlimited on every monthly plan; paid usage continues and accumulated overage is charged at the end of the period.',
     },
     {
       q: 'Can I self-host Keenpix instead of paying for cloud?',
@@ -183,7 +182,7 @@ export const imgixComparison = {
     },
     {
       q: 'What does Keenpix not do?',
-      a: "No video, no storage or DAM (it transforms and delivers from origins you already have), and custom domains aren't available yet. It is also a young product from a solo founder, so buyers should weigh vendor maturity and support needs.",
+      a: 'No video, storage, or DAM: Keenpix transforms and delivers from origins you already have. Managed custom domains are included on Pro and Business. It is also a young product from a solo founder, so buyers should weigh vendor maturity and support needs.',
     },
   ],
   sources: [

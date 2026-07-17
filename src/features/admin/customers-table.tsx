@@ -30,11 +30,11 @@ import { compactNumber, humanBytes } from '@/shared/format'
 
 type CustomerAccount = Awaited<ReturnType<typeof getCustomerAccountsFn>>[number]
 
-function planBadgeVariant(source: string | undefined) {
-  if (source === 'internal') {
+function planBadgeVariant(source: string | null | undefined) {
+  if (source === 'admin_grant') {
     return 'info' as const
   }
-  if (source === 'billing') {
+  if (source === 'polar') {
     return 'success' as const
   }
   return 'outline' as const
@@ -101,14 +101,18 @@ const columns: ColumnDef<CustomerAccount>[] = [
     header: 'Plan',
     cell: ({ row }) => {
       const { effectivePlan } = row.original
+      let sourceLabel = 'Free'
+      if (effectivePlan?.source === 'polar') {
+        sourceLabel = 'Polar'
+      } else if (effectivePlan?.source === 'admin_grant') {
+        sourceLabel = 'Complimentary'
+      }
       return (
         <div className="flex flex-col gap-0.5">
           <Badge variant={planBadgeVariant(effectivePlan?.source)}>
-            {effectivePlan?.planName ?? 'No plan'}
+            {effectivePlan?.planName ?? 'Free'}
           </Badge>
-          <span className="text-muted-foreground text-xs">
-            {effectivePlan?.source ?? 'blocked'}
-          </span>
+          <span className="text-muted-foreground text-xs">{sourceLabel}</span>
         </div>
       )
     },

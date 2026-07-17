@@ -10,7 +10,7 @@ export const imagekitComparison = {
   heroSubhead:
     'ImageKit and Keenpix both publish bandwidth-based pricing. Keenpix bundles more bandwidth at its entry tier and the upcoming v0.2.0 code is AGPL-3.0, while ImageKit offers a much broader media platform.',
   verdict:
-    "If you want an all-in-one media platform — upload widgets, a media library your marketing team can browse, video streaming, and a free tier under 20 GB/month — ImageKit is the better product. Keenpix deliberately does none of that. Pick Keenpix if your images already live on origins you control and you need optimization and delivery with predictable costs: the same $9 entry buys 100 GB instead of 40 GB, published overage runs $0.05–0.08/GB, and a spend cap is on by default. The upcoming v0.2.0 code also provides an AGPL-3.0 self-host path. Keenpix is younger and solo-built — weigh that honestly against ImageKit's maturity.",
+    "If you want an all-in-one media platform — upload widgets, a media library your marketing team can browse, video streaming, and a free tier under 20 GB/month — ImageKit is the better product. Keenpix deliberately does none of that. Pick Keenpix if your images already live on origins you control and you need optimization and delivery with predictable costs: the same $9 entry buys 100 GB instead of 40 GB, published overage runs $0.05–0.08/GB, and paid delivery stays online. The upcoming v0.2.0 code also provides an AGPL-3.0 self-host path. Keenpix is younger and solo-built — weigh that honestly against ImageKit's maturity.",
   pricingRows: [
     {
       scenario: '20 GB delivered / month',
@@ -35,7 +35,7 @@ export const imagekitComparison = {
     {
       scenario: '1 TB delivered / month',
       competitor: '~$438 (Pro $89 + 775 GB × $0.45)',
-      keenpix: '$29 (Business — included)',
+      keenpix: '$39 (Business — included)',
     },
   ],
   featureRows: [
@@ -67,7 +67,7 @@ export const imagekitComparison = {
     {
       feature: 'When you hit the limit',
       competitor: 'Free plan: hard-stop mid-month',
-      keenpix: 'Pauses at your cap (~2x plan, adjustable, on by default)',
+      keenpix: 'Paid plans keep serving at the published overage rate',
     },
     {
       feature: 'Self-hosting',
@@ -125,7 +125,7 @@ export const imagekitComparison = {
     {
       title: 'A cap you set instead of a meter you fear',
       detail:
-        'ImageKit documents a 20 GB free-plan delivery allowance and an account-level usage limit; confirm the current enforcement and notification behavior for your account. Keenpix ships a hard spend cap, on by default at roughly 2x your plan price, so delivery pauses at a number you chose.',
+        'ImageKit documents a 20 GB free-plan delivery allowance and an account-level usage limit; confirm the current enforcement and notification behavior for your account. Keenpix paid plans keep serving at the published overage rate and surface projected charges in billing.',
     },
     {
       title: 'One meter, no storage bill',
@@ -142,7 +142,7 @@ export const imagekitComparison = {
     'You want a media library / DAM: uploading, organizing, tagging, and letting non-developers browse assets. Keenpix has no storage at all — that is a deliberate omission, but it is an omission.',
     'You need video. ImageKit ships video transformation and streaming; Keenpix is images only.',
     "You stay under 20 GB/month and want genuinely free managed hosting. ImageKit's free tier costs $0 forever; Keenpix cloud starts at $9 after a 14-day trial (self-hosting is the free option).",
-    'You need a custom delivery domain today. ImageKit offers it on paid plans; Keenpix does not yet.',
+    'You need ImageKit’s DAM, upload, and media-management workflow in addition to delivery.',
     'You want a mature product with a full team, established support operations, and a broader media platform; Keenpix is a young, solo-founder product.',
   ],
   migrationSteps: [
@@ -151,7 +151,7 @@ export const imagekitComparison = {
     "Map the URL grammar: ImageKit's path transforms like ik.imagekit.io/<id>/tr:w-400,q-80,f-auto/hero.jpg become keenpix query params: /img/<origin-url>?project=<id>&w=400&q=80. Format selection (AVIF/WebP) is negotiated automatically — add &fmt= only to force one.",
     'Swap your image helper or component to emit Keenpix URLs behind a flag, and run both services side by side during the 14-day trial. The analytics dashboard shows output sizes, format mix, and cache hit rate to compare against your ImageKit bill.',
     'Keep (or add) your CDN in front — Keenpix is designed to sit behind Cloudflare or any edge cache, so repeat hits never touch the meter.',
-    'Set your spend cap (it defaults to ~2x plan price) and, if your transforms should not be publicly enumerable, enable HMAC signed URLs.',
+    'Review projected overage and, if your transforms should not be publicly enumerable, enable HMAC signed URLs.',
     'After a week of clean analytics, remove the ImageKit URLs, or self-host a released Keenpix version if its measured operational cost and responsibilities fit your team.',
   ],
   faq: [
@@ -169,7 +169,7 @@ export const imagekitComparison = {
     },
     {
       q: 'What happens when I exceed my bandwidth quota?',
-      a: "Overage bills at your plan's per-GB rate ($0.08 on Basic down to $0.05 on Business) until you hit your spend cap, which is on by default at roughly 2x your plan price — then delivery pauses. You choose the cap, and payment issues never instantly cut delivery. Compare ImageKit's free tier, which stops serving images mid-month with no cap to raise.",
+      a: "Overage bills at your plan's per-GB rate ($0.08 on Basic down to $0.05 on Business) through the end of the billing period without interrupting paid delivery. Usage alerts and projected charges remain visible, and payment issues receive a dunning grace period. Compare ImageKit's free-tier behavior separately.",
     },
     {
       q: 'Can I self-host Keenpix?',

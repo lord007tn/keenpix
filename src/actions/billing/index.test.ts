@@ -2,43 +2,53 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const getOrgSubscription = vi.hoisted(() => vi.fn())
 const getBillingCustomer = vi.hoisted(() => vi.fn())
-const getActiveInternalPlanGrant = vi.hoisted(() => vi.fn())
+const getSubscriptionAddon = vi.hoisted(() => vi.fn())
 const orgHasBillingCustomer = vi.hoisted(() => vi.fn())
 const billingUsageSnapshot = vi.hoisted(() => vi.fn())
 const createCustomerSession = vi.hoisted(() => vi.fn())
+const createCheckout = vi.hoisted(() => vi.fn())
+const getCustomDomainAddonProductId = vi.hoisted(() => vi.fn())
 vi.mock('@/data-access/subscriptions', () => ({
   getBillingCustomer,
   getOrgSubscription,
   orgHasBillingCustomer,
 }))
-vi.mock('@/data-access/internal-plan-grants', () => ({
-  getActiveInternalPlanGrant,
-}))
+vi.mock('@/data-access/subscription-addons', () => ({ getSubscriptionAddon }))
 vi.mock('@/data-access/usage', () => ({ billingUsageSnapshot }))
 vi.mock('@/lib/billing/polar-client', () => ({
   createPolarClient: () => ({
+    checkouts: { create: createCheckout },
     customerSessions: { create: createCustomerSession },
   }),
+}))
+vi.mock('@/lib/billing/polar-checkout-products', () => ({
+  getCustomDomainAddonProductId,
 }))
 vi.mock('@/server/deployment', () => ({
   getAppUrl: () => 'https://keenpix.com',
 }))
 
-const { createBillingPortalSession, getBillingState } = await import('./index')
+const {
+  createBillingPortalSession,
+  createCustomDomainAddonCheckout,
+  getBillingState,
+} = await import('./index')
 
 const GB = 1024 ** 3
+const ACTIVE_BUSINESS = /active Business/i
 const CONTACT_SUPPORT = /contact support/i
 
 afterEach(() => {
   vi.clearAllMocks()
+  getSubscriptionAddon.mockResolvedValue(null)
 })
 
 describe('getBillingState', () => {
   it('maps an active subscription onto the plan snapshot with usage + overage', async () => {
-    getActiveInternalPlanGrant.mockResolvedValue(null)
     const start = new Date('2026-07-01T00:00:00.000Z')
     const end = new Date('2026-08-01T00:00:00.000Z')
     getOrgSubscription.mockResolvedValue({
+      polarSubscriptionId: 'sub_1',
       plan: 'pro',
       status: 'active',
       currentPeriodStart: start,
@@ -55,7 +65,7 @@ describe('getBillingState', () => {
     const state = await getBillingState('org_a')
     expect(state.plan).toBe('pro')
     expect(state.planName).toBe('Pro')
-    expect(state.planSource).toBe('billing')
+    expect(state.billingSource).toBe('polar')
     expect(state.status).toBe('active')
     expect(state.hasBillingCustomer).toBe(true)
     // Active but set to cancel → surfaced so the UI says "Ends", not "Renews".
@@ -70,7 +80,6 @@ describe('getBillingState', () => {
   })
 
   it('returns an unsubscribed snapshot (no allowance, no overage) when there is no row', async () => {
-    getActiveInternalPlanGrant.mockResolvedValue(null)
     getOrgSubscription.mockResolvedValue(null)
     orgHasBillingCustomer.mockResolvedValue(false)
     billingUsageSnapshot.mockResolvedValue({
@@ -80,7 +89,7 @@ describe('getBillingState', () => {
     })
     const state = await getBillingState('org_a')
     expect(state.plan).toBeNull()
-    expect(state.planSource).toBeNull()
+    expect(state.billingSource).toBe('free')
     expect(state.status).toBeNull()
     expect(state.hasBillingCustomer).toBe(false)
     expect(state.cancelAtPeriodEnd).toBe(false)
@@ -92,8 +101,8 @@ describe('getBillingState', () => {
   })
 
   it('reports the raw status even when not entitled (e.g. past_due)', async () => {
-    getActiveInternalPlanGrant.mockResolvedValue(null)
     getOrgSubscription.mockResolvedValue({
+      polarSubscriptionId: 'sub_1',
       plan: 'basic',
       status: 'past_due',
       currentPeriodStart: new Date('2026-01-01T00:00:00.000Z'),
@@ -104,7 +113,7 @@ describe('getBillingState', () => {
     const state = await getBillingState('org_a')
     expect(state.status).toBe('past_due')
     expect(state.plan).toBeNull()
-    expect(state.planSource).toBeNull()
+    expect(state.billingSource).toBe('polar')
     expect(state.currentPeriodEnd).toBeNull()
     // past_due isn't entitled, so usage falls back to the calendar month rather
     // than the stale subscription period.
@@ -117,8 +126,8 @@ describe('getBillingState', () => {
     // Polar keeps cancel_at_period_end=true on the revoked/canceled payload after
     // the period ends. Gating on entitlement stops the UI from showing a stale
     // "you'll keep access until {past date}" notice for a churned org.
-    getActiveInternalPlanGrant.mockResolvedValue(null)
     getOrgSubscription.mockResolvedValue({
+      polarSubscriptionId: 'sub_1',
       plan: 'pro',
       status: 'canceled',
       currentPeriodStart: new Date('2026-05-01T00:00:00.000Z'),
@@ -133,9 +142,14 @@ describe('getBillingState', () => {
     expect(state.cancelAtPeriodEnd).toBe(false)
   })
 
-  it('uses an internal grant as the effective plan without overage cost', async () => {
-    getActiveInternalPlanGrant.mockResolvedValue({ plan: 'business' })
-    getOrgSubscription.mockResolvedValue(null)
+  it('uses complimentary access without overage cost or provider billing', async () => {
+    getOrgSubscription.mockResolvedValue({
+      polarSubscriptionId: null,
+      plan: 'business',
+      status: 'active',
+      currentPeriodStart: null,
+      currentPeriodEnd: null,
+    })
     orgHasBillingCustomer.mockResolvedValue(false)
     billingUsageSnapshot.mockResolvedValue({
       bytes: 1200 * GB,
@@ -144,35 +158,107 @@ describe('getBillingState', () => {
     })
     const state = await getBillingState('org_a')
     expect(state.plan).toBe('business')
-    expect(state.planSource).toBe('internal')
-    expect(state.status).toBe('internal')
+    expect(state.billingSource).toBe('admin_grant')
+    expect(state.status).toBe('active')
     expect(state.hasBillingCustomer).toBe(false)
-    // Internal grants don't bill, so they never "cancel at period end".
+    // Complimentary plans don't bill, so they never cancel at period end.
     expect(state.cancelAtPeriodEnd).toBe(false)
+    expect(state.currentPeriodEnd).toBeNull()
+    expect(state.domainAddon.canPurchase).toBe(false)
     expect(state.usage.includedBytes).toBe(1000 * GB)
     expect(state.usage.overageBytes).toBe(200 * GB)
     expect(state.usage.overageCostCents).toBe(0)
   })
 
-  it('keeps a higher paid plan effective when an internal grant is lower', async () => {
-    const start = new Date('2026-07-01T00:00:00.000Z')
-    getActiveInternalPlanGrant.mockResolvedValue({ plan: 'basic' })
+  it('offers one +5 domain pack to an active Business subscription', async () => {
     getOrgSubscription.mockResolvedValue({
-      plan: 'pro',
+      polarSubscriptionId: 'sub_1',
+      plan: 'business',
       status: 'active',
-      currentPeriodStart: start,
-      currentPeriodEnd: null,
+      currentPeriodStart: new Date('2026-07-01T00:00:00.000Z'),
+      currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
     })
     orgHasBillingCustomer.mockResolvedValue(true)
-    billingUsageSnapshot.mockResolvedValue({
-      bytes: 0,
-      projects: 1,
-      seats: 1,
-    })
+    billingUsageSnapshot.mockResolvedValue({ bytes: 0, projects: 1, seats: 1 })
+
     const state = await getBillingState('org_a')
-    expect(state.plan).toBe('pro')
-    expect(state.planSource).toBe('billing')
-    expect(state.status).toBe('active')
+
+    expect(state.domainAddon).toEqual({
+      canPurchase: true,
+      cancelAtPeriodEnd: false,
+      priceMonthlyUsd: 5,
+      status: null,
+      units: 0,
+    })
+  })
+
+  it('adds five domains only while the add-on is entitled', async () => {
+    getOrgSubscription.mockResolvedValue({
+      polarSubscriptionId: 'sub_1',
+      plan: 'business',
+      status: 'active',
+      currentPeriodStart: new Date('2026-07-01T00:00:00.000Z'),
+      currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
+    })
+    getSubscriptionAddon.mockResolvedValue({
+      cancelAtPeriodEnd: true,
+      status: 'active',
+      units: 5,
+    })
+    orgHasBillingCustomer.mockResolvedValue(true)
+    billingUsageSnapshot.mockResolvedValue({ bytes: 0, projects: 1, seats: 1 })
+
+    const state = await getBillingState('org_a')
+
+    expect(state.domainAddon).toEqual({
+      canPurchase: false,
+      cancelAtPeriodEnd: true,
+      priceMonthlyUsd: 5,
+      status: 'active',
+      units: 5,
+    })
+  })
+})
+
+describe('createCustomDomainAddonCheckout', () => {
+  it('creates a no-trial checkout for the existing Business customer', async () => {
+    getOrgSubscription.mockResolvedValue({
+      polarSubscriptionId: 'sub_1',
+      plan: 'business',
+      status: 'active',
+    })
+    getBillingCustomer.mockResolvedValue({ polarCustomerId: 'cus_org_a' })
+    getSubscriptionAddon.mockResolvedValue(null)
+    getCustomDomainAddonProductId.mockResolvedValue('prod_domains')
+    createCheckout.mockResolvedValue({
+      url: 'https://polar.sh/checkout/domain',
+    })
+
+    await expect(createCustomDomainAddonCheckout('org_a')).resolves.toEqual({
+      url: 'https://polar.sh/checkout/domain',
+    })
+    expect(createCheckout).toHaveBeenCalledWith({
+      allowTrial: false,
+      customerId: 'cus_org_a',
+      metadata: { addon: 'custom_domains', orgId: 'org_a', units: 5 },
+      products: ['prod_domains'],
+      returnUrl: 'https://keenpix.com/app/account?section=billing',
+      successUrl: 'https://keenpix.com/app/account?section=billing',
+    })
+  })
+
+  it('rejects add-on checkout outside an active Business subscription', async () => {
+    getOrgSubscription.mockResolvedValue({
+      polarSubscriptionId: 'sub_1',
+      plan: 'pro',
+      status: 'active',
+    })
+    getBillingCustomer.mockResolvedValue({ polarCustomerId: 'cus_org_a' })
+
+    await expect(createCustomDomainAddonCheckout('org_a')).rejects.toThrow(
+      ACTIVE_BUSINESS,
+    )
+    expect(createCheckout).not.toHaveBeenCalled()
   })
 })
 

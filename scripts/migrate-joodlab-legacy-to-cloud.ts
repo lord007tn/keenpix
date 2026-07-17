@@ -21,9 +21,8 @@ const TARGET_ORG_NAME = process.env.TARGET_ORG_NAME ?? 'Joodlab'
 const TARGET_ORG_SLUG = process.env.TARGET_ORG_SLUG ?? 'joodlab'
 const TARGET_OWNER_EMAIL = process.env.TARGET_OWNER_EMAIL ?? 'fariq@joodlab.com'
 const TARGET_MEMBER_ROLE = process.env.TARGET_MEMBER_ROLE ?? 'owner'
-const TARGET_INTERNAL_PLAN = process.env.TARGET_INTERNAL_PLAN ?? 'business'
-const INTERNAL_GRANT_REASON =
-  process.env.INTERNAL_GRANT_REASON ?? 'Migrated legacy Joodlab workspace'
+const TARGET_COMPLIMENTARY_PLAN =
+  process.env.TARGET_COMPLIMENTARY_PLAN ?? 'business'
 const BATCH_SIZE = Number(process.env.MIGRATION_BATCH_SIZE ?? 1000)
 const SKIP_RAW_LOGS = process.argv.includes('--skip-raw-logs')
 const SKIP_ROLLUPS = process.argv.includes('--skip-rollups')
@@ -288,24 +287,25 @@ async function main() {
     )
 
     await target.query(
-      `insert into "InternalPlanGrant" (
-         id, "orgId", plan, reason, "grantedById", "createdAt", "updatedAt"
+      `insert into "Subscription" (
+         id, "orgId", plan, status, "amountCents", "createdAt", "updatedAt"
        )
-       values ($1, $2, $3, $4, $5, now(), now())
+       values ($1, $2, $3, 'active', 0, now(), now())
        on conflict ("orgId")
        do update set
          plan = excluded.plan,
-         reason = excluded.reason,
-         "grantedById" = excluded."grantedById",
-         "expiresAt" = null,
-         "updatedAt" = now()`,
-      [
-        cuid(),
-        targetOrgId,
-        TARGET_INTERNAL_PLAN,
-        INTERNAL_GRANT_REASON,
-        targetUserId,
-      ],
+         status = 'active',
+         "amountCents" = 0,
+         "updatedAt" = now()
+       where "Subscription"."polarSubscriptionId" is null`,
+      [cuid(), targetOrgId, TARGET_COMPLIMENTARY_PLAN],
+    )
+    await target.query(
+      `insert into "SubscriptionGrantAudit" (
+         id, "orgId", "actorId", action, plan, "createdAt"
+       )
+       values ($1, $2, $3, 'migration_requested', $4, now())`,
+      [cuid(), targetOrgId, targetUserId, TARGET_COMPLIMENTARY_PLAN],
     )
     await target.query('commit')
 

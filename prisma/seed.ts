@@ -98,21 +98,50 @@ async function main() {
     create: { organizationId: ORG_ID, userId: admin.id, role: 'owner' },
   })
 
-  await prisma.internalPlanGrant.upsert({
+  const subscription = await prisma.subscription.findUnique({
     where: { orgId: ORG_ID },
-    update: {
-      plan: 'business',
-      reason: 'Default operator internal entitlement',
-      grantedById: admin.id,
-      expiresAt: null,
-    },
-    create: {
-      orgId: ORG_ID,
-      plan: 'business',
-      reason: 'Default operator internal entitlement',
-      grantedById: admin.id,
-    },
   })
+  if (!subscription) {
+    await prisma.$transaction([
+      prisma.subscription.create({
+        data: {
+          orgId: ORG_ID,
+          plan: 'business',
+          status: 'active',
+          amountCents: 0,
+        },
+      }),
+      prisma.subscriptionGrantAudit.create({
+        data: {
+          orgId: ORG_ID,
+          actorId: admin.id,
+          action: 'seeded',
+          plan: 'business',
+        },
+      }),
+    ])
+  } else if (
+    !subscription.polarSubscriptionId &&
+    subscription.plan !== 'business'
+  ) {
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.subscription.updateMany({
+        where: { orgId: ORG_ID, polarSubscriptionId: null },
+        data: { plan: 'business', status: 'active', amountCents: 0 },
+      })
+      if (updated.count > 0) {
+        await tx.subscriptionGrantAudit.create({
+          data: {
+            orgId: ORG_ID,
+            actorId: admin.id,
+            action: 'seed_updated',
+            previousPlan: subscription.plan,
+            plan: 'business',
+          },
+        })
+      }
+    })
+  }
 
   console.log(`Seeded default org and super admin user ${SUPER_ADMIN_EMAIL}.`)
 }

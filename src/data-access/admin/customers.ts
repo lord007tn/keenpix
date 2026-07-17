@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import { prisma } from '@/db'
 import type { Prisma } from '@/generated/prisma/client'
-import { getPlan, getPlanRank } from '@/lib/billing/plans'
+import { getPlan } from '@/lib/billing/plans'
 
 // Operator kill-switch write: set suspendedAt/reason (suspend) or clear (both null
 // to reactivate). Enforced by the serving gate via isOrgSuspended.
@@ -50,15 +50,8 @@ const customerOrgArgs = {
         status: true,
         currentPeriodEnd: true,
         overageAllowed: true,
-      },
-    },
-    internalPlanGrant: {
-      select: {
-        plan: true,
-        reason: true,
-        grantedById: true,
-        expiresAt: true,
-        createdAt: true,
+        polarSubscriptionId: true,
+        amountCents: true,
         updatedAt: true,
       },
     },
@@ -81,28 +74,22 @@ function numberFromBigInt(value: bigint | number | null | undefined) {
   return Number(value ?? 0)
 }
 
-// Resolve the effective plan the same way the customer billing UI and serving
-// gate do: an active internal grant only wins when it out-ranks an entitled
-// billing plan, otherwise the (entitled) billing plan applies.
+// Provider linkage is the billing-source discriminator. A null Polar id is a
+// local complimentary entitlement with zero revenue.
 function mapCustomerAccount(org: CustomerOrg, usage: UsageRow | undefined) {
   const requests = usage?._sum.requests ?? 0
   const cachedRequests = usage?._sum.cachedRequests ?? 0
-  const internalPlan = getPlan(org.internalPlanGrant?.plan)
-  const billingPlan = getPlan(org.subscription?.plan)
-  const billingActive = org.subscription
+  const subscriptionPlan = getPlan(org.subscription?.plan)
+  const subscriptionActive = org.subscription
     ? ENTITLED_SUBSCRIPTION_STATUSES.has(org.subscription.status)
     : false
-  const billingEntitledPlan = billingActive ? billingPlan : null
-  const internalActive =
-    internalPlan &&
-    (!org.internalPlanGrant?.expiresAt ||
-      dayjs(org.internalPlanGrant.expiresAt).isAfter(dayjs()))
-  const internalWins =
-    Boolean(internalActive) &&
-    getPlanRank(internalPlan) > getPlanRank(billingEntitledPlan)
-  const effectivePlan = internalWins ? internalPlan : billingEntitledPlan
-  const effectivePlanSource =
-    effectivePlan && internalWins ? 'internal' : 'billing'
+  const effectivePlan = subscriptionActive ? subscriptionPlan : null
+  let subscriptionSource: 'admin_grant' | 'free' | 'polar' = 'free'
+  if (org.subscription) {
+    subscriptionSource = org.subscription.polarSubscriptionId
+      ? 'polar'
+      : 'admin_grant'
+  }
 
   return {
     id: org.id,
@@ -131,30 +118,25 @@ function mapCustomerAccount(org: CustomerOrg, usage: UsageRow | undefined) {
     })),
     billing: {
       cancelAtPeriodEnd: org.subscription?.cancelAtPeriodEnd ?? false,
-      plan: billingPlan?.id ?? null,
-      planName: billingPlan?.name ?? null,
+      plan: subscriptionPlan?.id ?? null,
+      planName: subscriptionPlan?.name ?? null,
       status: org.subscription?.status ?? null,
       currentPeriodEnd:
         org.subscription?.currentPeriodEnd?.toISOString() ?? null,
       overageAllowed: org.subscription?.overageAllowed ?? false,
+      source: subscriptionSource,
+      amountCents:
+        subscriptionSource === 'polar'
+          ? (org.subscription?.amountCents ?? 0)
+          : 0,
+      updatedAt: org.subscription?.updatedAt.toISOString() ?? null,
     },
-    internalGrant: org.internalPlanGrant
-      ? {
-          plan: internalPlan?.id ?? org.internalPlanGrant.plan,
-          planName: internalPlan?.name ?? org.internalPlanGrant.plan,
-          active: Boolean(internalActive),
-          reason: org.internalPlanGrant.reason,
-          grantedById: org.internalPlanGrant.grantedById,
-          expiresAt: org.internalPlanGrant.expiresAt?.toISOString() ?? null,
-          updatedAt: org.internalPlanGrant.updatedAt.toISOString(),
-        }
-      : null,
     effectivePlan: effectivePlan
       ? {
           historyDays: effectivePlan.historyDays,
           plan: effectivePlan.id,
           planName: effectivePlan.name,
-          source: effectivePlanSource,
+          source: subscriptionSource,
         }
       : null,
     usage30d: {

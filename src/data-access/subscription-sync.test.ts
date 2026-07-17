@@ -3,9 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const subFindUnique = vi.hoisted(() => vi.fn())
 const subUpsert = vi.hoisted(() => vi.fn())
 const customerUpsert = vi.hoisted(() => vi.fn())
+const createAudit = vi.hoisted(() => vi.fn())
 vi.mock('@/db', () => {
   const tx = {
     subscription: { findUnique: subFindUnique, upsert: subUpsert },
+    subscriptionGrantAudit: { create: createAudit },
     billingCustomer: { upsert: customerUpsert },
   }
   return {
@@ -14,10 +16,6 @@ vi.mock('@/db', () => {
     },
   }
 })
-vi.mock('./internal-plan-grants', () => ({
-  getActiveInternalPlanGrant: vi.fn().mockResolvedValue(null),
-}))
-
 const { upsertSubscription, upsertSubscriptionWithCustomer } = await import(
   './subscriptions'
 )
@@ -88,6 +86,35 @@ describe('webhook out-of-order guard', () => {
       snapshot({ polarSubscriptionId: 'sub_2', polarModifiedAt: OLDER }),
     )
     expect(subUpsert).toHaveBeenCalledOnce()
+  })
+
+  it('lets a provider snapshot replace complimentary access', async () => {
+    subFindUnique.mockResolvedValue({
+      polarSubscriptionId: null,
+      plan: 'business',
+      status: 'active',
+      polarModifiedAt: null,
+    })
+    await upsertSubscription(snapshot())
+    expect(subUpsert).toHaveBeenCalledWith({
+      where: { orgId: 'org_a' },
+      update: expect.objectContaining({
+        polarSubscriptionId: 'sub_1',
+        amountCents: 1900,
+      }),
+      create: expect.objectContaining({
+        polarSubscriptionId: 'sub_1',
+        amountCents: 1900,
+      }),
+    })
+    expect(createAudit).toHaveBeenCalledWith({
+      data: {
+        orgId: 'org_a',
+        action: 'replaced_by_provider',
+        previousPlan: 'business',
+        plan: 'pro',
+      },
+    })
   })
 
   it('applies events without a modifiedAt (older payload shapes)', async () => {

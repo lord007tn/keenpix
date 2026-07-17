@@ -7,7 +7,7 @@ export const Route = createFileRoute('/admin/customers/')({
   head: () =>
     appPageHead(
       'Customers',
-      'Review customer organizations, usage, plans, and internal grants.',
+      'Review customer organizations, usage, paid plans, and complimentary access.',
     ),
   component: CustomersAdminPage,
 })

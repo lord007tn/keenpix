@@ -1,12 +1,6 @@
 import { prisma } from '@/db'
 import type { Prisma } from '@/generated/prisma/client'
-import {
-  defaultSpendCapCents,
-  getPlan,
-  getPlanRank,
-  type Plan,
-} from '@/lib/billing/plans'
-import { getActiveInternalPlanGrant } from './internal-plan-grants'
+import { getPlan, type Plan } from '@/lib/billing/plans'
 
 // Statuses that grant plan entitlements (features + quota). `trialing` is
 // included so a trial has full access; past_due/canceled/etc. fall through to
@@ -23,25 +17,9 @@ export function getOrgSubscription(orgId: string) {
   return prisma.subscription.findUnique({ where: { orgId } })
 }
 
-// Set (or clear, with null) the customer's per-period overage spending cap.
-// Throws if the org has no subscription row — only subscribed orgs have a cap.
-export function setSubscriptionSpendCap(
-  orgId: string,
-  spendCapCents: number | null,
-) {
-  return prisma.subscription.update({
-    where: { orgId },
-    data: { spendCapCents },
-  })
-}
-
 // Whether an org may serve transforms right now, including the dunning grace.
 // Cloud-only concern; self-host never calls this (it always serves).
 export async function orgIsServable(orgId: string): Promise<boolean> {
-  const grant = await getActiveInternalPlanGrant(orgId)
-  if (getPlan(grant?.plan)) {
-    return true
-  }
   const sub = await prisma.subscription.findUnique({
     where: { orgId },
     select: { status: true },
@@ -77,21 +55,11 @@ export function getBillingCustomer(orgId: string) {
 // The org's effective plan, or null when it has no entitled subscription. Cloud
 // gates a null-plan org; self-host never calls this (it runs unlimited).
 export async function getOrgPlan(orgId: string): Promise<Plan | null> {
-  const [grant, sub] = await Promise.all([
-    getActiveInternalPlanGrant(orgId),
-    prisma.subscription.findUnique({
-      where: { orgId },
-      select: { plan: true, status: true },
-    }),
-  ])
-  const grantedPlan = getPlan(grant?.plan)
-  if (!(sub && ENTITLED.has(sub.status))) {
-    return grantedPlan
-  }
-  const billingPlan = getPlan(sub.plan)
-  return getPlanRank(grantedPlan) > getPlanRank(billingPlan)
-    ? grantedPlan
-    : billingPlan
+  const sub = await prisma.subscription.findUnique({
+    where: { orgId },
+    select: { plan: true, status: true },
+  })
+  return sub && ENTITLED.has(sub.status) ? getPlan(sub.plan) : null
 }
 
 export interface SubscriptionSnapshot {
@@ -132,7 +100,12 @@ async function applySubscriptionSync(
 ): Promise<SubscriptionSyncResult> {
   const existing = await db.subscription.findUnique({
     where: { orgId: input.orgId },
-    select: { polarModifiedAt: true, polarSubscriptionId: true, status: true },
+    select: {
+      plan: true,
+      polarModifiedAt: true,
+      polarSubscriptionId: true,
+      status: true,
+    },
   })
   const previousStatus = existing?.status ?? null
   if (existing && existing.polarSubscriptionId === input.polarSubscriptionId) {
@@ -147,13 +120,26 @@ async function applySubscriptionSync(
       return { applied: false, previousStatus }
     }
   }
+  const plan = getPlan(input.plan)
+  const providerSnapshot = {
+    ...input,
+    amountCents: plan ? plan.priceMonthlyUsd * 100 : 0,
+  }
   await db.subscription.upsert({
     where: { orgId: input.orgId },
-    update: input,
-    // A brand-new subscription starts with the default spend cap ("no surprise
-    // bill" is default-on); updates never touch the customer's own setting.
-    create: { ...input, spendCapCents: defaultSpendCapCents(input.plan) },
+    update: providerSnapshot,
+    create: providerSnapshot,
   })
+  if (existing && !existing.polarSubscriptionId) {
+    await db.subscriptionGrantAudit.create({
+      data: {
+        orgId: input.orgId,
+        action: 'replaced_by_provider',
+        previousPlan: existing.plan,
+        plan: input.plan,
+      },
+    })
+  }
   return { applied: true, previousStatus }
 }
 

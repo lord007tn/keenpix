@@ -11,8 +11,8 @@ import {
 } from '@/helpers/analytics/rollup-shapers'
 import type { AnalyticsRange } from '@/shared/types'
 
-type PlanBucket = 'none' | 'basic' | 'pro' | 'business'
-const PLAN_ORDER: PlanBucket[] = ['business', 'pro', 'basic', 'none']
+type PlanBucket = 'free' | 'basic' | 'pro' | 'business'
+const PLAN_ORDER: PlanBucket[] = ['business', 'pro', 'basic', 'free']
 
 // Platform-wide analytics for the operator Overview + Analytics dashboards:
 // cross-org totals and timeseries plus customer-level distribution derived from
@@ -30,15 +30,21 @@ export async function getPlatformAnalytics(range: AnalyticsRange) {
   )
 
   const planCounts: Record<PlanBucket, number> = {
-    none: 0,
+    free: 0,
     basic: 0,
     pro: 0,
     business: 0,
   }
   for (const account of accounts) {
-    const plan = account.effectivePlan?.plan ?? 'none'
+    const plan = account.effectivePlan?.plan ?? 'free'
     planCounts[plan] += 1
   }
+  const paidAccounts = accounts.filter(
+    (account) =>
+      account.billing.source === 'polar' &&
+      (account.billing.status === 'active' ||
+        account.billing.status === 'trialing'),
+  )
 
   return {
     range,
@@ -56,6 +62,14 @@ export async function getPlatformAnalytics(range: AnalyticsRange) {
       count: planCounts[plan],
     })),
     customerCount: accounts.length,
+    activePaidSubscriptionCount: paidAccounts.length,
+    paidMrrCents: paidAccounts.reduce(
+      (total, account) => total + account.billing.amountCents,
+      0,
+    ),
+    complimentaryCustomerCount: accounts.filter(
+      (account) => account.billing.source === 'admin_grant',
+    ).length,
     suspendedCount: accounts.filter((account) => account.suspendedAt).length,
     servedCount: accounts.filter(
       (account) => account.effectivePlan && !account.suspendedAt,

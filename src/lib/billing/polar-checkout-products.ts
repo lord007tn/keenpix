@@ -1,4 +1,5 @@
 import type { Polar } from '@polar-sh/sdk'
+import { CUSTOM_DOMAIN_ADDON } from '@/lib/billing/addons'
 import { isPlanId } from '@/lib/billing/plans'
 
 // Resolve the launchable catalog without hardcoding environment-specific Polar
@@ -37,4 +38,31 @@ export async function listCheckoutProducts(
   } catch {
     return []
   }
+}
+
+export async function getCustomDomainAddonProductId(client: Polar) {
+  const matches: string[] = []
+  const iterator = await client.products.list({
+    isArchived: false,
+    limit: 100,
+  })
+  for await (const page of iterator) {
+    for (const product of page.result.items) {
+      const units = product.metadata?.units
+      if (
+        product.metadata?.addon === CUSTOM_DOMAIN_ADDON.kind &&
+        product.metadata?.interval === 'month' &&
+        (units === CUSTOM_DOMAIN_ADDON.units ||
+          units === String(CUSTOM_DOMAIN_ADDON.units))
+      ) {
+        matches.push(product.id)
+      }
+    }
+  }
+  if (matches.length !== 1) {
+    throw new Error(
+      `Expected exactly one active monthly custom-domain add-on, found ${matches.length}.`,
+    )
+  }
+  return matches[0]
 }

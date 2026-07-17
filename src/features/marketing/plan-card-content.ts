@@ -33,9 +33,9 @@ export const PLAN_CARD_FEATURES: Record<
       'Unlimited transforms — AVIF, WebP + 6 more formats',
       `${PLANS.basic.maxProjects} projects`,
       'Bandwidth-saved, cache-hit & top-image analytics',
-      `Live request logs · ${PLANS.basic.historyDays}-day retention`,
+      `Live request logs · ${PLANS.basic.logRetentionDays}-day retention`,
       'Signed URLs + per-project allowlists',
-      `Spending cap on by default · ${overage('basic')}/GB overage`,
+      `Always-on overage · ${overage('basic')}/GB`,
     ],
   },
   pro: {
@@ -43,9 +43,10 @@ export const PLAN_CARD_FEATURES: Record<
     features: [
       `${gb(PLANS.pro.includedBandwidthBytes)} delivered / month`,
       'Advanced analytics — geo, latency percentiles, 365-day history',
-      `Full log search · ${PLANS.pro.historyDays}-day retention`,
+      `Full log search · ${PLANS.pro.logRetentionDays}-day retention`,
       `${PLANS.pro.maxProjects} projects`,
-      `Cheaper overage · ${overage('pro')}/GB, hard-capped`,
+      `${PLANS.pro.customDomains} custom delivery domain`,
+      `Cheaper overage · ${overage('pro')}/GB, billed monthly`,
     ],
   },
   business: {
@@ -53,8 +54,10 @@ export const PLAN_CARD_FEATURES: Record<
     features: [
       `${gb(PLANS.business.includedBandwidthBytes)} delivered / month`,
       'Unlimited projects',
-      `${PLANS.business.historyDays}-day log retention`,
-      `Lowest overage · ${overage('business')}/GB, hard-capped`,
+      `${PLANS.business.customDomains} custom delivery domains`,
+      'Add 5 more custom domains for $5/month',
+      `${PLANS.business.logRetentionDays}-day log retention`,
+      `Lowest overage · ${overage('business')}/GB, billed monthly`,
     ],
   },
 }

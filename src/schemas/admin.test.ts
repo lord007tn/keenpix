@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { customerAnalyticsSchema } from './admin'
+import { customerAnalyticsSchema, updateComplimentaryPlanSchema } from './admin'
 
 describe('customerAnalyticsSchema', () => {
   it('rejects malformed custom calendar dates', () => {
@@ -11,5 +11,18 @@ describe('customerAnalyticsSchema', () => {
     })
 
     expect(result.success).toBe(false)
+  })
+})
+
+describe('updateComplimentaryPlanSchema', () => {
+  it('uses Free as the explicit grant-revocation choice', () => {
+    expect(
+      updateComplimentaryPlanSchema.safeParse({ orgId: 'org_1', plan: 'free' })
+        .success,
+    ).toBe(true)
+    expect(
+      updateComplimentaryPlanSchema.safeParse({ orgId: 'org_1', plan: 'none' })
+        .success,
+    ).toBe(false)
   })
 })

@@ -5,12 +5,12 @@ export const vercelComparison = {
   competitor: 'Vercel Image Optimization',
   title: 'Vercel Image Optimization Alternative: Keenpix (2026)',
   metaDescription:
-    'Keenpix vs Vercel Image Optimization: one meter vs three, unlimited transforms, next/image loader support, and a hard spend cap. Pricing as of July 2026.',
+    'Keenpix vs Vercel Image Optimization: one meter vs three, unlimited transforms, next/image loader support, and always-on paid usage. Pricing as of July 2026.',
   heroHeadline: 'Keenpix vs Vercel Image Optimization: a portable alternative',
   heroSubhead:
-    'Vercel Image Optimization bills transformations, cache reads, and cache writes — plus data transfer — and Hobby can return 402 at its included limits. Keenpix bills optimized response bytes returned by the application and also pauses delivery at a spend cap you set. Upstream CDN edge hits do not reach the Keenpix meter.',
+    'Vercel Image Optimization bills transformations, cache reads, and cache writes — plus data transfer — and Hobby can return 402 at its included limits. Keenpix bills optimized response bytes returned by the application; paid usage continues at the published overage rate. Upstream CDN edge hits do not reach the Keenpix meter.',
   verdict:
-    "If your site fits inside Vercel's Hobby allowances, or you already pay for Vercel Pro and image usage costs little, stay put — the default next/image loader is zero-config and Keenpix cannot beat free or nearly-free. Consider Keenpix when you prefer one bandwidth meter, image-specific analytics, a customer-set spend cap, and the upcoming v0.2.0 AGPL-3.0 self-host path. Keenpix is a young, focused product with no video, storage, or custom domains, so the trade is portability and predictability for platform breadth and maturity.",
+    "If your site fits inside Vercel's Hobby allowances, or you already pay for Vercel Pro and image usage costs little, stay put — the default next/image loader is zero-config and Keenpix cannot beat free or nearly-free. Consider Keenpix when you prefer one bandwidth meter, image-specific analytics, managed custom domains, always-on paid usage, and the upcoming v0.2.0 AGPL-3.0 self-host path. Keenpix is a young, focused product with no video or storage, so the trade is portability and predictability for platform breadth and maturity.",
   pricingRows: [
     {
       scenario: 'Small site within Hobby caps (<5k transforms/mo)',
@@ -33,14 +33,14 @@ export const vercelComparison = {
       scenario: '1 TB delivered / month',
       competitor:
         "Pro metered usage + Fast Data Transfer at Vercel's regional rates",
-      keenpix: '$29/mo Business — 1 TB included, then $0.05/GB',
+      keenpix: '$39/mo Business — 1 TB included, then $0.05/GB',
     },
     {
       scenario: 'Crawler spike: 3× unique widths requested',
       competitor:
         'Extra transforms + cache writes billed; Hobby can 402 mid-month',
       keenpix:
-        '$0 extra unless delivered GB rises; cap pauses delivery at your limit',
+        '$0 extra unless delivered GB rises; published overage after that',
     },
   ],
   featureRows: [
@@ -62,8 +62,7 @@ export const vercelComparison = {
     {
       feature: 'Behavior at limits',
       competitor: 'Hobby: hard 402 — images break',
-      keenpix:
-        'Spend cap pauses delivery (on by default, ~2x plan); dunning grace',
+      keenpix: 'Paid usage stays online; dunning grace for payment failures',
     },
     {
       feature: 'next/image support',
@@ -125,9 +124,9 @@ export const vercelComparison = {
         "Responsive srcsets, DPR variants, and format experiments multiply unique transformations — the exact meter that breaks Hobby's 5k cap. On Keenpix every transform is free on every plan, so serving 3 sizes or 8 costs the same. Only the bytes you deliver are billed.",
     },
     {
-      title: 'A spend cap instead of a 402',
+      title: 'Paid usage stays online instead of returning a 402',
       detail:
-        'When Vercel Hobby hits a cap, images stop rendering with a hard 402. Keenpix ships a customer-set overage cap, on by default at roughly 2x your plan price — delivery pauses at your limit instead of producing a surprise bill, and payment hiccups get a dunning grace period rather than an instant cutoff.',
+        'When Vercel Hobby hits a cap, images can stop rendering with a hard 402. Keenpix paid plans continue serving at the published per-GB rate, show projected overage, and give payment hiccups a dunning grace period rather than an instant cutoff.',
     },
     {
       title: 'Analytics that answer image questions',
@@ -144,7 +143,7 @@ export const vercelComparison = {
     "Your image usage fits Hobby's free allowances (under 5k transformations, 300k cache reads, 100k cache writes a month) — free beats $9.",
     'You already pay for Vercel Pro and your image meters total a dollar or two a month — the incremental cost undercuts Keenpix Basic.',
     'You want zero configuration: the default next/image loader needs no loader file, no second dashboard, no extra vendor.',
-    'You need images served from your own domain today — Keenpix custom domains are not available yet.',
+    'You want image optimization embedded directly into the rest of your Vercel bill and deployment workflow.',
     'You value one vendor for hosting, preview deploys, and images, with a single bill and a single support channel.',
   ],
   migrationSteps: [
@@ -153,7 +152,7 @@ export const vercelComparison = {
     'For a custom Next.js loader, src becomes /img/<origin-url>, width maps to ?w=, and quality maps to ?q=; add your project id as ?project=. Validate any additional application-specific transforms in a preview deployment.',
     'Leave format selection automatic — Keenpix negotiates AVIF/WebP from the Accept header — or pin an output with ?fmt= where you need it.',
     'Deploy a preview and confirm traffic in Keenpix live request logs, then route the image path through your existing CDN (e.g. Cloudflare) so edge caching stays free — Keenpix is designed to sit behind it.',
-    'Review your overage spend cap (on by default at ~2x plan price) and compare the single bandwidth meter against your Vercel usage page during the trial.',
+    'Compare the single bandwidth meter and projected overage against your Vercel usage page during the trial.',
     'Optionally enable HMAC signed URLs to lock transform parameters before going to production.',
   ],
   faq: [
@@ -167,7 +166,7 @@ export const vercelComparison = {
     },
     {
       q: 'What happens when I hit a limit?',
-      a: 'On Vercel Hobby, crossing any of the three image caps returns a hard 402 and your images stop rendering. On Keenpix, delivery pauses only when it reaches the overage spend cap you set (on by default at roughly 2x your plan price), and payment issues trigger a dunning grace period rather than an instant cutoff.',
+      a: 'On Vercel Hobby, crossing an included image limit can return a hard 402. Keenpix paid plans continue serving at their published per-GB overage rate, while payment issues trigger a dunning grace period rather than an instant cutoff.',
     },
     {
       q: 'Do I have to move my app off Vercel?',
@@ -175,7 +174,7 @@ export const vercelComparison = {
     },
     {
       q: 'Why do LLM crawlers make Vercel image bills unpredictable?',
-      a: "Crawlers request image URLs at widths and combinations real users never hit, and every new variant is a fresh transformation plus a cache write — two billed meters on Vercel, and the fastest way to blow through Hobby's 5k-transform cap. On Keenpix transformations are free, so crawler traffic only costs whatever bandwidth it actually pulls, and your spend cap bounds even that.",
+      a: "Crawlers request image URLs at widths and combinations real users never hit, and every new variant is a fresh transformation plus a cache write — two billed meters on Vercel, and the fastest way to blow through Hobby's 5k-transform cap. On Keenpix transformations are free, so crawler traffic only costs the bandwidth it actually pulls; signed URLs and origin allowlists help prevent abusive variants.",
     },
     {
       q: 'Can I self-host Keenpix?',

@@ -5,7 +5,7 @@ import {
   getCustomerAccountById,
   getCustomerAccounts,
   setOrgSuspension,
-  updateCustomerInternalPlan,
+  updateCustomerComplimentaryPlan,
 } from '@/actions/admin/customers'
 import {
   acceptInvitation,
@@ -40,7 +40,7 @@ import {
   resourceTrendSchema,
   revokeInvitationSchema,
   suspendOrgSchema,
-  updateInternalPlanGrantSchema,
+  updateComplimentaryPlanSchema,
 } from '@/schemas/admin'
 
 export const getAdminWorkspaceFn = createServerFn({ method: 'GET' })
@@ -73,19 +73,17 @@ export const getPlatformAnalyticsFn = createServerFn({ method: 'GET' })
     return getPlatformAnalytics(data.range)
   })
 
-export const updateInternalPlanGrantFn = createServerFn({ method: 'POST' })
-  .inputValidator(updateInternalPlanGrantSchema)
+export const updateComplimentaryPlanFn = createServerFn({ method: 'POST' })
+  .inputValidator(updateComplimentaryPlanSchema)
   .middleware([authMiddleware])
   .handler(async ({ context, data }) => {
     requireSuperAdmin(context)
-    const result = await updateCustomerInternalPlan({
+    const result = await updateCustomerComplimentaryPlan({
       orgId: data.orgId,
       plan: data.plan,
-      reason: data.reason,
-      expiresAt: data.expiresAt,
-      grantedById: context.userId,
+      actorId: context.userId,
     })
-    // A grant can change whether/what an org is served — take effect on the next
+    // Complimentary access can change whether/what an org is served immediately.
     // request rather than after the serving gate's TTL.
     bustServingEntitlement(data.orgId)
     return result

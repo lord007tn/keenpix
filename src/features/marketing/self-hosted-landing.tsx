@@ -131,7 +131,7 @@ const LIMITATIONS = [
   'No video. Images only — if you need video transcoding, look at Cloudinary or Gumlet.',
   'No storage or DAM. Keenpix transforms and delivers from origins you already have — S3, R2, your app server. There is no upload API, no media library, no asset search.',
   'Young product. Keenpix is newer than the alternatives in the table above and built by a solo founder. The repository is available for teams to audit directly, but maturity and support depth should be evaluated against your own requirements.',
-  'Custom domains are not yet available on the managed cloud (self-hosters, of course, use whatever domain they want).',
+  'Managed custom delivery domains require Pro or Business; self-hosters use whatever domains their reverse proxy supports.',
 ]
 
 const ALTERNATIVES = [

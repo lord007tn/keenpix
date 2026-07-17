@@ -123,6 +123,17 @@ export const serverEnvSchema = {
   CLOUDFLARE_API_TOKEN: z.string().min(1).optional(),
   CLOUDFLARE_ZONE_ID: z.string().min(1).optional(),
   CLOUDFLARE_HOST: z.string().min(1).optional(),
+  // Cloudflare for SaaS provisions customer-owned delivery hostnames. These are
+  // separate from the read-only edge-analytics credentials above because the
+  // token needs SSL and Certificates edit plus Workers Routes edit access.
+  CLOUDFLARE_SAAS_API_TOKEN: z.string().min(1).optional(),
+  CLOUDFLARE_SAAS_ZONE_ID: z.string().min(1).optional(),
+  CLOUDFLARE_SAAS_CNAME_TARGET: z.string().min(1).optional(),
+  CLOUDFLARE_SAAS_WORKER_SCRIPT: z
+    .string()
+    .min(1)
+    .default('keenpix-custom-domain-edge'),
+  CLOUDFLARE_SAAS_EDGE_SECRET: z.string().min(32).optional(),
 }
 
 export const clientEnvSchema = {

@@ -16,7 +16,6 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { getErrorMessage } from '@/errors/common'
 import { getPlatformAnalyticsFn } from '@/functions/admin'
 import { getEdgeCacheStatsFn } from '@/functions/analytics'
-import { getPlan } from '@/lib/billing/plans'
 import { compactNumber, humanBytes } from '@/shared/format'
 import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 
@@ -31,7 +30,7 @@ const RANGES: { value: AnalyticsRange; label: string }[] = [
 ]
 
 const PLAN_LABEL: Record<string, string> = {
-  none: 'No plan',
+  free: 'Free',
   basic: 'Basic',
   pro: 'Pro',
   business: 'Business',
@@ -206,7 +205,6 @@ export function PlatformAnalyticsView() {
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {planDistribution.map((row) => {
-              const plan = getPlan(row.plan)
               const pct =
                 totalPlanned > 0 ? (row.count / totalPlanned) * 100 : 0
               return (
@@ -215,7 +213,6 @@ export function PlatformAnalyticsView() {
                     <span>{PLAN_LABEL[row.plan] ?? row.plan}</span>
                     <span className="text-muted-foreground tabular-nums">
                       {row.count}
-                      {plan ? ` · $${plan.priceMonthlyUsd}/mo` : ''}
                     </span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-muted">

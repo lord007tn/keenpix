@@ -26,7 +26,6 @@ function sub(overrides: Record<string, unknown> = {}) {
     orgId: 'org_a',
     plan: 'basic', // 100 GB included, 8¢/GB overage
     status: 'active',
-    spendCapCents: 1800, // $18 = default 2x Basic
     currentPeriodStart: new Date('2026-07-01T00:00:00Z'),
     organization: { name: 'Acme' },
     ...overrides,
@@ -45,19 +44,6 @@ describe('usageAlertsFor', () => {
 
   it('fires the 100% alert (not the 80% one) once past the allowance', () => {
     const kinds = usageAlertsFor(sub(), 120 * GB).map((alert) => alert.kind)
-    expect(kinds).toEqual(['usage_100'])
-  })
-
-  it('adds cap_reached when overage cost hits the spending cap', () => {
-    // Basic 8¢/GB: $18 cap → 225 GB overage → 100 included + 225 = 325 GB.
-    const kinds = usageAlertsFor(sub(), 326 * GB).map((alert) => alert.kind)
-    expect(kinds).toEqual(['usage_100', 'cap_reached'])
-  })
-
-  it('never fires cap_reached without a cap', () => {
-    const kinds = usageAlertsFor(sub({ spendCapCents: null }), 1000 * GB).map(
-      (alert) => alert.kind,
-    )
     expect(kinds).toEqual(['usage_100'])
   })
 

@@ -10,7 +10,7 @@ export const bunnyOptimizerComparison = {
   heroSubhead:
     'Bunny Optimizer charges $9.50 per website for unlimited optimizations, requests, and transformations, with Bunny CDN bandwidth billed separately. Keenpix bundles a bandwidth allowance and unlimited transforms into each plan.',
   verdict:
-    'Bunny Optimizer is a strong choice when you want a mature CDN, custom hostnames, per-website flat optimizer pricing, and broader website optimization including CSS and JavaScript minification. Keenpix is a focused alternative when you want image-only delivery, a single bundled bandwidth plan, detailed image analytics, a customer-set spend cap, or a self-operated path. Bunny can be cheaper at high volume depending on CDN region and tier; Keenpix may be simpler when a bundled allowance is more useful than a separate optimizer fee and bandwidth bill.',
+    'Bunny Optimizer is a strong choice when you want a mature CDN, custom hostnames, per-website flat optimizer pricing, and broader website optimization including CSS and JavaScript minification. Keenpix is a focused alternative when you want image-only delivery, a single bundled bandwidth plan, detailed image analytics, always-on metered overage, or a self-operated path. Bunny can be cheaper at high volume depending on CDN region and tier; Keenpix may be simpler when a bundled allowance is more useful than a separate optimizer fee and bandwidth bill.',
   pricingRows: [
     {
       scenario: 'Optimizer service',
@@ -35,7 +35,7 @@ export const bunnyOptimizerComparison = {
       scenario: '1 TB image delivery / month',
       competitor:
         '$9.50 + Bunny CDN bandwidth at the applicable regional/tier rate',
-      keenpix: '$29 Business, 1 TB included',
+      keenpix: '$39 Business, 1 TB included',
     },
     {
       scenario: 'Additional website / pull zone',
@@ -84,7 +84,7 @@ export const bunnyOptimizerComparison = {
     {
       feature: 'Spend control',
       competitor: 'Account billing and CDN controls',
-      keenpix: 'Customer-set hard spend cap',
+      keenpix: 'Usage alerts; paid delivery stays online',
     },
     {
       feature: 'Self-hosting',

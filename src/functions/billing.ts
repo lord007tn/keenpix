@@ -1,8 +1,8 @@
 import { createServerFn } from '@tanstack/react-start'
 import {
   createBillingPortalSession,
+  createCustomDomainAddonCheckout,
   getBillingState,
-  setSpendCap,
 } from '@/actions/billing'
 import {
   authMiddleware,
@@ -10,8 +10,6 @@ import {
   requireOrgAdmin,
 } from '@/lib/auth/guards'
 import { getWorkspaceAccess } from '@/lib/billing/quota'
-import { bustServingEntitlement } from '@/lib/billing/service-gate'
-import { spendCapSchema } from '@/schemas/billing'
 import { isCloud } from '@/server/deployment'
 
 // The signed-in org's billing snapshot (plan + status + whether the caller may
@@ -32,18 +30,6 @@ export const getWorkspaceAccessFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .handler(({ context }) => getWorkspaceAccess(requireActiveOrg(context)))
 
-// Owner/admin-only: set or clear the org's overage spending cap.
-export const setSpendCapFn = createServerFn({ method: 'POST' })
-  .middleware([authMiddleware])
-  .inputValidator(spendCapSchema)
-  .handler(async ({ context, data }) => {
-    const orgId = requireOrgAdmin(context)
-    await setSpendCap(orgId, data.spendCapCents)
-    // Drop the cached serving entitlement so the new cap applies immediately
-    // rather than after the gate's TTL.
-    bustServingEntitlement(orgId)
-  })
-
 // Owner/admin-only organization billing portal. The action resolves the Polar
 // customer linked to the active org so portal access is not tied to whichever
 // individual user happened to complete the first checkout.
@@ -51,4 +37,12 @@ export const createBillingPortalSessionFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(({ context }) =>
     createBillingPortalSession(requireOrgAdmin(context)),
+  )
+
+export const createCustomDomainAddonCheckoutFn = createServerFn({
+  method: 'POST',
+})
+  .middleware([authMiddleware])
+  .handler(({ context }) =>
+    createCustomDomainAddonCheckout(requireOrgAdmin(context)),
   )

@@ -67,11 +67,11 @@ import { compactNumber, humanBytes } from '@/shared/format'
 type CustomerAccount = NonNullable<
   Awaited<ReturnType<typeof getCustomerAccountFn>>
 >
-function planBadgeVariant(source: string | undefined) {
-  if (source === 'internal') {
+function planBadgeVariant(source: string | null | undefined) {
+  if (source === 'admin_grant') {
     return 'info' as const
   }
-  if (source === 'billing') {
+  if (source === 'polar') {
     return 'success' as const
   }
   return 'outline' as const
@@ -232,11 +232,19 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
   const suspended = Boolean(customer.suspendedAt)
   const suspendActionLabel = suspended ? 'Reactivate' : 'Suspend'
   const summary = analytics?.summary
+  let billingSourceLabel = 'Free'
+  if (customer.billing.source === 'polar') {
+    billingSourceLabel = 'Polar'
+  } else if (customer.billing.source === 'admin_grant') {
+    billingSourceLabel = 'Admin grant'
+  }
   const windowLabel = analytics
     ? `${dayjs(`${analytics.window.from}T12:00:00`).format('MMM D, YYYY')} – ${dayjs(`${analytics.window.to}T12:00:00`).format('MMM D, YYYY')}`
     : 'Loading selected window…'
-  let billingPeriodLabel = 'Ends'
-  if (customer.billing.cancelAtPeriodEnd) {
+  let billingPeriodLabel = 'Renewal'
+  if (customer.billing.source !== 'polar') {
+    billingPeriodLabel = 'Period end'
+  } else if (customer.billing.cancelAtPeriodEnd) {
     billingPeriodLabel = 'Ends'
   } else if (customer.billing.status === 'trialing') {
     billingPeriodLabel = 'Trial ends'
@@ -308,7 +316,7 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
                 <Badge
                   variant={planBadgeVariant(customer.effectivePlan?.source)}
                 >
-                  {customer.effectivePlan?.planName ?? 'No plan'}
+                  {customer.effectivePlan?.planName ?? 'Free'}
                 </Badge>
               </span>
               <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -336,21 +344,23 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
         }
         value={selectedSection}
       >
-        <TabsList
-          className="w-full justify-start overflow-x-auto border-b p-0"
-          variant="line"
-        >
-          <TabsTrigger className="h-11 flex-none px-3" value="overview">
-            Overview
-          </TabsTrigger>
-          <TabsTrigger className="h-11 flex-none px-3" value="plan">
-            Plan &amp; billing
-          </TabsTrigger>
-          <TabsTrigger className="h-11 flex-none px-3" value="members">
-            Members
-            <Badge variant="outline">{customer.seats}</Badge>
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-1.5">
+          <TabsList
+            className="w-max min-w-full justify-start border-b p-0"
+            variant="line"
+          >
+            <TabsTrigger className="h-11 flex-none px-3" value="overview">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger className="h-11 flex-none px-3" value="plan">
+              Plan &amp; billing
+            </TabsTrigger>
+            <TabsTrigger className="h-11 flex-none px-3" value="members">
+              Members
+              <Badge variant="outline">{customer.seats}</Badge>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent className="flex flex-col gap-6 pt-4" value="overview">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -468,8 +478,8 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
             <CardHeader>
               <CardTitle>Billing</CardTitle>
               <CardDescription>
-                The customer manages their subscription via Polar; operators can
-                override it with an internal grant below.
+                Polar-managed paid subscriptions are read-only here.
+                Complimentary access is local, free, and never changes Polar.
               </CardDescription>
             </CardHeader>
             <CardContent className="divide-y">
@@ -479,17 +489,15 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
                   <Badge
                     variant={planBadgeVariant(customer.effectivePlan?.source)}
                   >
-                    {customer.effectivePlan?.planName ?? 'No plan'}
+                    {customer.effectivePlan?.planName ?? 'Free'}
                   </Badge>
                 }
               />
+              <Fact label="Status" value={customer.billing.status ?? '—'} />
+              <Fact label="Billing source" value={billingSourceLabel} />
               <Fact
-                label="Source"
-                value={customer.effectivePlan?.source ?? 'No entitled plan'}
-              />
-              <Fact
-                label="Subscription status"
-                value={customer.billing.status ?? '—'}
+                label="Monthly revenue"
+                value={`$${(customer.billing.amountCents / 100).toFixed(2)}`}
               />
               <Fact
                 label={billingPeriodLabel}
@@ -505,18 +513,10 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
                 label="Overage allowed"
                 value={customer.billing.overageAllowed ? 'Yes' : 'No'}
               />
-              <Fact
-                label="Internal grant"
-                value={
-                  customer.internalGrant
-                    ? `${customer.internalGrant.planName} · ${customer.internalGrant.active ? 'active' : 'expired'}${customer.internalGrant.expiresAt ? ` · until ${dayjs(customer.internalGrant.expiresAt).format('MMM D, YYYY')}` : ''}`
-                    : 'None'
-                }
-              />
-              {customer.internalGrant ? (
+              {customer.billing.updatedAt ? (
                 <Fact
-                  label="Grant updated"
-                  value={dayjs(customer.internalGrant.updatedAt).format(
+                  label="Subscription updated"
+                  value={dayjs(customer.billing.updatedAt).format(
                     'MMM D, YYYY, h:mm A',
                   )}
                 />
@@ -526,16 +526,16 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Internal plan grant</CardTitle>
+              <CardTitle>Complimentary access</CardTitle>
               <CardDescription>
-                A free operator override that wins over billing when it
-                out-ranks the paid plan. Takes effect immediately.
+                Grant a local plan at $0 revenue. Provider-managed subscriptions
+                cannot be changed by this action.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <PlanChange
                 customer={customer}
-                key={customer.internalGrant?.updatedAt ?? 'none'}
+                key={customer.billing.updatedAt ?? 'none'}
                 onSaved={load}
               />
             </CardContent>

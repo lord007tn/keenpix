@@ -11,7 +11,7 @@ No unreleased changes.
 ### Added
 
 - Managed cloud mode with multi-tenant organizations, self-serve signup, email verification, Google OAuth support, and an operator console.
-- Polar-backed trials, subscriptions, usage metering, spending caps, billing alerts, dunning handling, and organization-scoped billing recovery.
+- Polar-backed trials, subscriptions, always-on usage metering, billing alerts, dunning handling, and organization-scoped billing recovery.
 - Consent-aware GTM/GA4 funnel events, a cookie-choice surface, and Cloudflare Web Analytics RUM for page performance and Core Web Vitals.
 - Public pricing, comparison, self-hosting, changelog, trust, security, status, support, author, and editorial-methodology pages.
 - A 10-article blog with focused image-CDN guides, comparison research, dated primary-source disclosures, RSS, and required article-specific social images.

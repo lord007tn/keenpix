@@ -38,12 +38,14 @@ export async function listBillingRecipients(orgId: string): Promise<string[]> {
 // traffic this period (entitled + dunning grace).
 export function listAlertableSubscriptions() {
   return prisma.subscription.findMany({
-    where: { status: { in: ['active', 'trialing', 'past_due', 'unpaid'] } },
+    where: {
+      polarSubscriptionId: { not: null },
+      status: { in: ['active', 'trialing', 'past_due', 'unpaid'] },
+    },
     select: {
       orgId: true,
       plan: true,
       status: true,
-      spendCapCents: true,
       currentPeriodStart: true,
       organization: { select: { name: true } },
     },

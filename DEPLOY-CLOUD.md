@@ -54,10 +54,24 @@ the CLOUD MODE section of `.env.example`.
      `pnpm billing:configure-benefits -- --server=production`, followed by the
      same command with `--apply`. The script preserves any existing benefits,
      refuses ambiguous catalogs, and never prints the access token.
-4. **Shared cache** — create a Cloudflare R2 bucket + R2 API token, set the five
+4. **Custom delivery domains** — enable Cloudflare for SaaS and create an
+   originless fallback such as `fallback.keenpix.com` (the Worker handles the
+   request before that placeholder origin). Deploy `workers/custom-domain-edge`
+   as `keenpix-custom-domain-edge`, set its `EDGE_SECRET`, and keep
+   `APP_ORIGIN=https://keenpix.com`. Create `customers.keenpix.com` as the CNAME
+   target customers use. The application token needs **Zone → SSL and
+   Certificates → Edit** and **Zone → Workers Routes → Edit**; a separate deploy
+   identity needs **Account → Workers Scripts → Edit**. Set
+   `CLOUDFLARE_SAAS_API_TOKEN`, `CLOUDFLARE_SAAS_ZONE_ID`,
+   `CLOUDFLARE_SAAS_CNAME_TARGET`, and `CLOUDFLARE_SAAS_EDGE_SECRET` together;
+   `CLOUDFLARE_SAAS_WORKER_SCRIPT` defaults to `keenpix-custom-domain-edge`.
+   Each customer domain receives an exact Worker route, so Coolify never needs
+   arbitrary customer hostnames or certificates. Cache rules for custom hosts
+   should match `/img/*` by path rather than a single host.
+5. **Shared cache** — create a Cloudflare R2 bucket + R2 API token, set the five
    `KEENPIX_CACHE_S3_*` (endpoint `https://<account>.r2.cloudflarestorage.com`,
    region `auto`). Or use the bundled maxio service.
-5. **Secrets** — `BETTER_AUTH_SECRET` (openssl rand -hex 32), `CLICKHOUSE_PASSWORD`,
+6. **Secrets** — `BETTER_AUTH_SECRET` (openssl rand -hex 32), `CLICKHOUSE_PASSWORD`,
    `CRON_SECRET` (random), Postgres/admin creds (Coolify generates `SERVICE_*`).
 
 ## Deploy
@@ -77,4 +91,7 @@ run `pnpm tsx scripts/backfill-clickhouse.ts` once so ClickHouse has history.
 - Subscribe to a plan → checkout → after payment, `Subscription` row appears
   (proves the webhook). The billing portal then works.
 - Transform an image under a subscribed org → 200; under an unsubscribed org → 402.
+- On Pro or Business, add a custom domain, create the displayed CNAME record,
+  refresh until DNS and TLS are active, then load `/img/<source-url>` on that
+  hostname without `?project=`.
 - After an hour (or trigger the cron), delivered GB shows on the Polar meter.

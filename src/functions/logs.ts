@@ -5,7 +5,10 @@ import {
   limitHistorySearch,
 } from '@/helpers/history/window'
 import { authMiddleware, requireActiveOrg } from '@/lib/auth/guards'
-import { BASIC_LOG_LIMIT, DEFAULT_HISTORY_DAYS } from '@/lib/billing/plans'
+import {
+  BASIC_LOG_LIMIT,
+  DEFAULT_LOG_RETENTION_DAYS,
+} from '@/lib/billing/plans'
 import { assertHasWorkspaceAccess } from '@/lib/billing/quota'
 import { logsQuerySchema } from '@/schemas/logs'
 import { isCloud } from '@/server/deployment'
@@ -23,7 +26,9 @@ export const listLogsFn = createServerFn({ method: 'GET' })
     const limit = advanced ? ADVANCED_LOG_LIMIT : BASIC_LOG_LIMIT
     const window = limitHistorySearch(
       data,
-      cloud ? (plan?.historyDays ?? DEFAULT_HISTORY_DAYS) : undefined,
+      cloud
+        ? (plan?.logRetentionDays ?? DEFAULT_LOG_RETENTION_DAYS)
+        : undefined,
     )
     const dates = getHistoryWindowDates(window)
     // Basic can select its retained date window, but full-text search remains a
