@@ -62,7 +62,7 @@ function DomainAddonCard({
     description = `Add-on status: ${addon.status}`
   }
   if (active) {
-    description = 'Your workspace can connect up to 15 custom domains.'
+    description = `Your workspace can connect up to ${data.usage.customDomains.limit ?? 'unlimited'} custom domains.`
   }
   return (
     <Card>
@@ -117,19 +117,27 @@ function periodEndLabel(
 function QuotaRow({
   label,
   limit,
+  pending = 0,
   used,
 }: {
   label: string
   limit: number | null
+  pending?: number
   used: number
 }) {
-  const pct = limit ? Math.min(100, (used / limit) * 100) : 0
+  let pct = 0
+  if (limit !== null && limit > 0) {
+    pct = Math.min(100, (used / limit) * 100)
+  } else if (used > 0) {
+    pct = 100
+  }
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium">{label}</span>
         <span className="text-muted-foreground">
           {limit === null ? `${used} · Unlimited` : `${used} of ${limit}`}
+          {pending > 0 ? ` · ${pending} pending` : ''}
         </span>
       </div>
       {limit === null ? null : <Progress value={pct} />}
@@ -188,11 +196,43 @@ function UsageCard({ data }: { data: BillingData }) {
           ) : null}
         </div>
         {hasPlan ? (
-          <QuotaRow
-            label="Projects"
-            limit={usage.projects.limit}
-            used={usage.projects.used}
-          />
+          <>
+            <QuotaRow
+              label="Projects"
+              limit={usage.projects.limit}
+              used={usage.projects.used}
+            />
+            <QuotaRow
+              label="Seats"
+              limit={usage.seats.limit}
+              pending={usage.seats.pending}
+              used={usage.seats.used}
+            />
+            <QuotaRow
+              label="Custom domains"
+              limit={usage.customDomains.limit}
+              used={usage.customDomains.used}
+            />
+            {data.planLimits ? (
+              <div className="grid gap-3 border-t pt-5 text-sm sm:grid-cols-2">
+                <div>
+                  <p className="font-medium">Analytics history</p>
+                  <p className="text-muted-foreground">
+                    {data.planLimits.analyticsHistoryDays} days included
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium">Raw log retention</p>
+                  <p className="text-muted-foreground">
+                    {data.planLimits.logRetentionDays} days included
+                  </p>
+                </div>
+              </div>
+            ) : null}
+            <p className="text-muted-foreground text-xs">
+              Bandwidth totals are updated after each completed hour.
+            </p>
+          </>
         ) : null}
       </CardContent>
     </Card>

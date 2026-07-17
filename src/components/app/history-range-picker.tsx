@@ -17,6 +17,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { HistorySearch } from '@/helpers/history/window'
+import { cn } from '@/lib/cn/utils'
 import type { HistoricalAnalyticsRange } from '@/shared/types'
 
 export const HISTORY_RANGES: Array<{
@@ -31,6 +32,39 @@ export const HISTORY_RANGES: Array<{
   { buttonLabel: '365 days', label: 'Last 365 days', value: '365d' },
   { buttonLabel: 'All time', label: 'All available', value: 'all' },
   { buttonLabel: 'Custom', label: 'Custom range', value: 'custom' },
+]
+
+export const PRIMARY_HISTORY_RANGES = HISTORY_RANGES.filter(
+  (item) => item.value === '7d' || item.value === '30d',
+)
+
+export type HistoryShortcutValue =
+  | Exclude<HistoricalAnalyticsRange, 'custom'>
+  | 'today'
+  | 'yesterday'
+  | 'this-week'
+  | 'this-month'
+  | 'last-month'
+  | 'year-to-date'
+  | 'last-calendar-year'
+
+export const HISTORY_SHORTCUTS: Array<{
+  label: string
+  value: HistoryShortcutValue
+}> = [
+  { label: 'Last 24 hours', value: '24h' },
+  { label: 'Today', value: 'today' },
+  { label: 'Yesterday', value: 'yesterday' },
+  { label: 'This week', value: 'this-week' },
+  { label: 'Last 7 days', value: '7d' },
+  { label: 'Last 30 days', value: '30d' },
+  { label: 'This month', value: 'this-month' },
+  { label: 'Last month', value: 'last-month' },
+  { label: 'Last 90 days', value: '90d' },
+  { label: 'Last 365 days', value: '365d' },
+  { label: 'Year to date', value: 'year-to-date' },
+  { label: 'Last calendar year', value: 'last-calendar-year' },
+  { label: 'All available', value: 'all' },
 ]
 
 function getHistoricalRangeDates(
@@ -57,6 +91,70 @@ function getHistoricalRangeDates(
     from: from.isBefore(earliest, 'day') ? earliest : from.format('YYYY-MM-DD'),
     to: today,
   }
+}
+
+export function getHistoryShortcutDates(
+  shortcut: HistoryShortcutValue,
+  earliest: string,
+  today: string,
+) {
+  if (
+    shortcut === '24h' ||
+    shortcut === '7d' ||
+    shortcut === '30d' ||
+    shortcut === '90d' ||
+    shortcut === '365d' ||
+    shortcut === 'all'
+  ) {
+    return getHistoricalRangeDates(shortcut, earliest, today)
+  }
+  if (shortcut === 'today') {
+    return { from: today, to: today }
+  }
+  if (shortcut === 'yesterday') {
+    const yesterday = dayjs(today).subtract(1, 'day').format('YYYY-MM-DD')
+    return { from: yesterday, to: yesterday }
+  }
+  if (shortcut === 'this-week') {
+    return {
+      from: dayjs(today).startOf('week').format('YYYY-MM-DD'),
+      to: today,
+    }
+  }
+  if (shortcut === 'this-month') {
+    return {
+      from: dayjs(today).startOf('month').format('YYYY-MM-DD'),
+      to: today,
+    }
+  }
+  if (shortcut === 'last-month') {
+    const lastMonth = dayjs(today).subtract(1, 'month')
+    return {
+      from: lastMonth.startOf('month').format('YYYY-MM-DD'),
+      to: lastMonth.endOf('month').format('YYYY-MM-DD'),
+    }
+  }
+  if (shortcut === 'last-calendar-year') {
+    const lastYear = dayjs(today).subtract(1, 'year')
+    return {
+      from: lastYear.startOf('year').format('YYYY-MM-DD'),
+      to: lastYear.endOf('year').format('YYYY-MM-DD'),
+    }
+  }
+  return { from: dayjs(today).startOf('year').format('YYYY-MM-DD'), to: today }
+}
+
+function isHistoricalPreset(
+  value: HistoryShortcutValue | 'custom',
+): value is Exclude<HistoricalAnalyticsRange, 'custom'> {
+  return (
+    value === '24h' ||
+    value === '7d' ||
+    value === '30d' ||
+    value === '90d' ||
+    value === '365d' ||
+    value === 'all'
+  )
 }
 
 export function HistoryRangePicker({
@@ -101,6 +199,9 @@ export function HistoryRangePicker({
 
   const [customOpen, setCustomOpen] = useState(false)
   const [draftRange, setDraftRange] = useState<DateRange | undefined>()
+  const [selectedShortcut, setSelectedShortcut] = useState<
+    HistoryShortcutValue | 'custom'
+  >('custom')
   const [calendarMonth, setCalendarMonth] = useState(
     dayjs(today).subtract(1, 'month').startOf('month').toDate(),
   )
@@ -113,17 +214,31 @@ export function HistoryRangePicker({
       !dayjs(draftFrom).isAfter(draftTo, 'day') &&
       !dayjs(draftTo).isAfter(today, 'day'),
   )
-  const presetRanges = HISTORY_RANGES.filter(
-    (item) =>
-      item.value !== 'custom' && (item.value !== '365d' || maxDays >= 365),
-  )
+  const availableShortcuts = HISTORY_SHORTCUTS.filter((item) => {
+    if (item.value === '90d' && maxDays < 90) {
+      return false
+    }
+    if (item.value === '365d' && maxDays < 365) {
+      return false
+    }
+    const dates = getHistoryShortcutDates(item.value, earliest, today)
+    return !dayjs(dates.from).isBefore(earliest, 'day')
+  })
 
-  const appliedCustomLabel =
-    visibleRange === 'custom' && from && to
-      ? `${dayjs(from).format('MMM D')}–${dayjs(to).format(
-          dayjs(from).isSame(to, 'year') ? 'MMM D' : 'MMM D, YYYY',
-        )}`
-      : 'Custom'
+  let dropdownLabel = 'Custom'
+  if (visibleRange === 'custom' && from && to) {
+    dropdownLabel = `${dayjs(from).format('MMM D')}–${dayjs(to).format(
+      dayjs(from).isSame(to, 'year') ? 'MMM D' : 'MMM D, YYYY',
+    )}`
+  } else if (
+    visibleRange !== '7d' &&
+    visibleRange !== '30d' &&
+    visibleRange !== 'custom'
+  ) {
+    dropdownLabel =
+      HISTORY_RANGES.find((item) => item.value === visibleRange)?.label ??
+      'Custom'
+  }
   let draftSummary = 'Select a start date.'
   if (draftFrom && draftTo) {
     draftSummary = `${dayjs(draftFrom).format('MMM D, YYYY')} – ${dayjs(draftTo).format('MMM D, YYYY')} · ${dayjs(draftTo).diff(dayjs(draftFrom), 'day') + 1} days`
@@ -147,6 +262,9 @@ export function HistoryRangePicker({
                 .startOf('month')
                 .toDate(),
             )
+            setSelectedShortcut(
+              visibleRange === 'custom' ? 'custom' : visibleRange,
+            )
           }
           setCustomOpen(nextOpen)
         }}
@@ -157,7 +275,9 @@ export function HistoryRangePicker({
           className="flex-wrap gap-1"
           onValueChange={(values) => {
             const next = values[0]
-            const preset = presetRanges.find((item) => item.value === next)
+            const preset = PRIMARY_HISTORY_RANGES.find(
+              (item) => item.value === next,
+            )
             if (!preset) {
               return
             }
@@ -165,9 +285,13 @@ export function HistoryRangePicker({
             onChange({ range: preset.value, from: undefined, to: undefined })
           }}
           size="sm"
-          value={[visibleRange]}
+          value={[
+            visibleRange === '7d' || visibleRange === '30d'
+              ? visibleRange
+              : 'custom',
+          ]}
         >
-          {presetRanges.map((item) => (
+          {PRIMARY_HISTORY_RANGES.map((item) => (
             <ToggleGroupItem
               className="h-11"
               key={item.value}
@@ -180,8 +304,8 @@ export function HistoryRangePicker({
             render={
               <ToggleGroupItem
                 aria-label={
-                  visibleRange === 'custom' && from && to
-                    ? `Custom range, ${dayjs(from).format('MMMM D, YYYY')} to ${dayjs(to).format('MMMM D, YYYY')}, selected`
+                  visibleRange !== '7d' && visibleRange !== '30d'
+                    ? `${dropdownLabel}, selected. Choose a date range`
                     : 'Choose a custom date range'
                 }
                 className="h-11 aria-expanded:bg-accent aria-expanded:text-accent-foreground"
@@ -190,13 +314,13 @@ export function HistoryRangePicker({
             }
           >
             <CalendarRangeIcon aria-hidden="true" data-icon="inline-start" />
-            {appliedCustomLabel}
+            {dropdownLabel}
           </PopoverTrigger>
         </ToggleGroup>
 
         <PopoverContent
           align="end"
-          className="max-h-[calc(100vh-1rem)] w-[37rem] max-w-[calc(100vw-1rem)] gap-0 overflow-y-auto p-0"
+          className="max-h-[calc(100dvh-1rem)] w-[50rem] max-w-[calc(100vw-1rem)] gap-0 overflow-hidden p-0"
           sideOffset={8}
         >
           <PopoverHeader className="border-b px-4 py-3">
@@ -208,85 +332,145 @@ export function HistoryRangePicker({
           </PopoverHeader>
 
           <form
+            className="flex min-h-0 flex-1 flex-col"
             onSubmit={(event) => {
               event.preventDefault()
               if (!(draftIsValid && draftFrom && draftTo)) {
                 return
               }
-              onChange({
-                range: 'custom',
-                from: dayjs(draftFrom).format('YYYY-MM-DD'),
-                to: dayjs(draftTo).format('YYYY-MM-DD'),
-              })
+              if (isHistoricalPreset(selectedShortcut)) {
+                onChange({
+                  range: selectedShortcut,
+                  from: undefined,
+                  to: undefined,
+                })
+              } else {
+                onChange({
+                  range: 'custom',
+                  from: dayjs(draftFrom).format('YYYY-MM-DD'),
+                  to: dayjs(draftTo).format('YYYY-MM-DD'),
+                })
+              }
               setCustomOpen(false)
             }}
           >
-            <div className="min-w-0">
-              <div className="grid grid-cols-2 gap-3 border-b p-4">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor={`${inputId}-date-from`}>Start date</Label>
-                  <Input
-                    id={`${inputId}-date-from`}
-                    max={dayjs(draftTo ?? today).format('YYYY-MM-DD')}
-                    min={earliest}
-                    onChange={(event) => {
-                      const nextFrom = event.target.value
+            <div className="grid min-h-0 flex-1 sm:grid-cols-[11rem_minmax(0,1fr)]">
+              <nav
+                aria-label="Date range shortcuts"
+                className="flex gap-1 overflow-x-auto overscroll-contain border-b p-2 sm:flex-col sm:overflow-y-auto sm:overflow-x-hidden sm:border-r sm:border-b-0"
+              >
+                {availableShortcuts.map((shortcut) => (
+                  <Button
+                    aria-pressed={selectedShortcut === shortcut.value}
+                    className={cn(
+                      'h-9 shrink-0 justify-start',
+                      selectedShortcut === shortcut.value &&
+                        'bg-accent text-accent-foreground',
+                    )}
+                    key={shortcut.value}
+                    onClick={() => {
+                      const dates = getHistoryShortcutDates(
+                        shortcut.value,
+                        earliest,
+                        today,
+                      )
                       setDraftRange({
-                        from: nextFrom ? dayjs(nextFrom).toDate() : undefined,
-                        to: draftTo,
+                        from: dayjs(dates.from).toDate(),
+                        to: dayjs(dates.to).toDate(),
                       })
-                      if (nextFrom) {
-                        setCalendarMonth(
-                          dayjs(nextFrom).startOf('month').toDate(),
-                        )
-                      }
+                      setCalendarMonth(
+                        dayjs(dates.to)
+                          .subtract(1, 'month')
+                          .startOf('month')
+                          .toDate(),
+                      )
+                      setSelectedShortcut(shortcut.value)
                     }}
-                    type="date"
-                    value={
-                      draftFrom ? dayjs(draftFrom).format('YYYY-MM-DD') : ''
-                    }
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor={`${inputId}-date-to`}>End date</Label>
-                  <Input
-                    id={`${inputId}-date-to`}
-                    max={today}
-                    min={
-                      draftFrom
-                        ? dayjs(draftFrom).format('YYYY-MM-DD')
-                        : earliest
-                    }
-                    onChange={(event) => {
-                      const nextTo = event.target.value
-                      setDraftRange({
-                        from: draftFrom,
-                        to: nextTo ? dayjs(nextTo).toDate() : undefined,
-                      })
-                    }}
-                    type="date"
-                    value={draftTo ? dayjs(draftTo).format('YYYY-MM-DD') : ''}
-                  />
-                </div>
-              </div>
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    {shortcut.label}
+                  </Button>
+                ))}
+              </nav>
 
-              <Calendar
-                captionLayout="dropdown"
-                className="mx-auto p-3 [--cell-size:--spacing(8)]"
-                disabled={{
-                  before: dayjs(earliest).toDate(),
-                  after: dayjs(today).toDate(),
-                }}
-                endMonth={dayjs(today).toDate()}
-                mode="range"
-                month={calendarMonth}
-                numberOfMonths={2}
-                onMonthChange={setCalendarMonth}
-                onSelect={setDraftRange}
-                selected={draftRange}
-                showOutsideDays={false}
-                startMonth={dayjs(earliest).toDate()}
-              />
+              <div className="min-w-0 overflow-y-auto overscroll-contain">
+                <div className="grid grid-cols-1 gap-3 border-b p-4 sm:grid-cols-2">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor={`${inputId}-date-from`}>Start date</Label>
+                    <Input
+                      autoComplete="off"
+                      id={`${inputId}-date-from`}
+                      max={dayjs(draftTo ?? today).format('YYYY-MM-DD')}
+                      min={earliest}
+                      name="from"
+                      onChange={(event) => {
+                        const nextFrom = event.target.value
+                        setDraftRange({
+                          from: nextFrom ? dayjs(nextFrom).toDate() : undefined,
+                          to: draftTo,
+                        })
+                        setSelectedShortcut('custom')
+                        if (nextFrom) {
+                          setCalendarMonth(
+                            dayjs(nextFrom).startOf('month').toDate(),
+                          )
+                        }
+                      }}
+                      type="date"
+                      value={
+                        draftFrom ? dayjs(draftFrom).format('YYYY-MM-DD') : ''
+                      }
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor={`${inputId}-date-to`}>End date</Label>
+                    <Input
+                      autoComplete="off"
+                      id={`${inputId}-date-to`}
+                      max={today}
+                      min={
+                        draftFrom
+                          ? dayjs(draftFrom).format('YYYY-MM-DD')
+                          : earliest
+                      }
+                      name="to"
+                      onChange={(event) => {
+                        const nextTo = event.target.value
+                        setDraftRange({
+                          from: draftFrom,
+                          to: nextTo ? dayjs(nextTo).toDate() : undefined,
+                        })
+                        setSelectedShortcut('custom')
+                      }}
+                      type="date"
+                      value={draftTo ? dayjs(draftTo).format('YYYY-MM-DD') : ''}
+                    />
+                  </div>
+                </div>
+
+                <Calendar
+                  captionLayout="dropdown"
+                  className="mx-auto p-3 [--cell-size:--spacing(8)]"
+                  disabled={{
+                    before: dayjs(earliest).toDate(),
+                    after: dayjs(today).toDate(),
+                  }}
+                  endMonth={dayjs(today).toDate()}
+                  mode="range"
+                  month={calendarMonth}
+                  numberOfMonths={2}
+                  onMonthChange={setCalendarMonth}
+                  onSelect={(nextRange) => {
+                    setDraftRange(nextRange)
+                    setSelectedShortcut('custom')
+                  }}
+                  selected={draftRange}
+                  showOutsideDays={false}
+                  startMonth={dayjs(earliest).toDate()}
+                />
+              </div>
             </div>
 
             <Separator />

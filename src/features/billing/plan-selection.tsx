@@ -65,14 +65,13 @@ function planFeatures(plan: Plan): string[] {
   const features = [
     `${formatBandwidth(plan.includedBandwidthBytes)} delivered / mo`,
     `$${(plan.overagePerGbCents / 100).toFixed(2)}/GB overage`,
-    plan.advancedAnalytics ? 'Advanced analytics' : 'Core analytics',
-    plan.advancedLogs ? 'Full log history + search' : 'Recent logs (last 200)',
     projects,
+    `${plan.maxSeats} seats`,
+    formatDomains(plan.customDomains),
+    `${plan.historyDays} days analytics history`,
+    `${plan.logRetentionDays} days raw log retention${plan.advancedLogs ? ' + search' : ' · latest 200 visible'}`,
   ]
   // Custom domains are live; AI tools remain roadmap-only.
-  if (plan.customDomains === null || plan.customDomains > 0) {
-    features.push(formatDomains(plan.customDomains))
-  }
   if (plan.aiCreditsPerMonth > 0) {
     features.push(`${plan.aiCreditsPerMonth} AI credits / mo (coming soon)`)
   }
