@@ -5,9 +5,12 @@ import { getHistoryWindowDates, limitHistorySearch } from './window'
 describe('limitHistorySearch', () => {
   const now = dayjs('2026-07-15T12:00:00.000Z')
 
-  it('maps a disallowed 365-day Basic request to the 90-day ceiling', () => {
+  it('maps a preset beyond retention to the matching retained preset', () => {
     expect(limitHistorySearch({ range: '365d' }, 90, now)).toEqual({
       range: '90d',
+    })
+    expect(limitHistorySearch({ range: '90d' }, 30, now)).toEqual({
+      range: '30d',
     })
   })
 

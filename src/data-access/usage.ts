@@ -40,15 +40,30 @@ export async function deliveredBytesSince(
 }
 
 // Period usage for the billing panel: delivered bytes since the period start,
-// plus the resource counts that plan limits apply to (projects, seats). One
-// round-trip so the billing UI can show a full usage picture.
+// plus every resource count that a plan limits. Pending, unexpired invitations
+// reserve seats so the displayed number matches invitation enforcement.
 export async function billingUsageSnapshot(orgId: string, since: Date) {
-  const [delivered, projects, seats] = await Promise.all([
-    deliveredBytesSince(orgId, since),
-    prisma.project.count({ where: { orgId } }),
-    prisma.member.count({ where: { organizationId: orgId } }),
-  ])
-  return { bytes: delivered.bytes, projects, seats }
+  const [delivered, projects, seats, pendingSeats, customDomains] =
+    await Promise.all([
+      deliveredBytesSince(orgId, since),
+      prisma.project.count({ where: { orgId } }),
+      prisma.member.count({ where: { organizationId: orgId } }),
+      prisma.invitation.count({
+        where: {
+          organizationId: orgId,
+          status: 'pending',
+          expiresAt: { gt: new Date() },
+        },
+      }),
+      prisma.customDomain.count({ where: { project: { orgId } } }),
+    ])
+  return {
+    bytes: delivered.bytes,
+    customDomains,
+    pendingSeats,
+    projects,
+    seats,
+  }
 }
 
 export function listUsageBillingCustomers(db: Db = prisma) {

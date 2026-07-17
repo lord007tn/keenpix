@@ -344,9 +344,9 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
         }
         value={selectedSection}
       >
-        <div className="overflow-x-auto pb-1.5">
+        <div className="overflow-x-auto overflow-y-hidden pb-1.5">
           <TabsList
-            className="w-max min-w-full justify-start border-b p-0"
+            className="h-11 w-max min-w-full justify-start border-b p-0"
             variant="line"
           >
             <TabsTrigger className="h-11 flex-none px-3" value="overview">

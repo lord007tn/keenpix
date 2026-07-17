@@ -28,8 +28,27 @@ export function limitHistorySearch(
   if (input.range === 'all') {
     return { range: 'custom', from: earliest, to: today }
   }
-  if (input.range === '365d' && days < 365) {
-    return { range: '90d' }
+  let presetDays = 0
+  if (input.range === '365d') {
+    presetDays = 365
+  } else if (input.range === '90d') {
+    presetDays = 90
+  } else if (input.range === '30d') {
+    presetDays = 30
+  } else if (input.range === '7d') {
+    presetDays = 7
+  }
+  if (presetDays > days) {
+    if (days === 90) {
+      return { range: '90d' }
+    }
+    if (days === 30) {
+      return { range: '30d' }
+    }
+    if (days === 7) {
+      return { range: '7d' }
+    }
+    return { range: 'custom', from: earliest, to: today }
   }
   if (input.range !== 'custom') {
     return input

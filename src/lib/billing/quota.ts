@@ -128,14 +128,28 @@ export async function assertCanAddSeat(orgId: string): Promise<void> {
   if (!plan) {
     throw await noPlanError(orgId)
   }
-  const count = await prisma.member.count({
-    where: { organizationId: orgId },
-  })
-  if (count >= plan.maxSeats) {
+  const [members, pendingInvitations] = await Promise.all([
+    prisma.member.count({ where: { organizationId: orgId } }),
+    prisma.invitation.count({
+      where: {
+        organizationId: orgId,
+        status: 'pending',
+        expiresAt: { gt: new Date() },
+      },
+    }),
+  ])
+  if (members + pendingInvitations >= plan.maxSeats) {
     throw new Error(
       `Your ${plan.name} plan includes ${plan.maxSeats} seats. Upgrade to add more.`,
     )
   }
+}
+
+export async function getSeatLimit(orgId: string) {
+  if (!isCloud()) {
+    return Number.MAX_SAFE_INTEGER
+  }
+  return (await getOrgPlan(orgId))?.maxSeats ?? 0
 }
 
 // Whether an org may serve transforms. Cloud requires a subscription in a serving

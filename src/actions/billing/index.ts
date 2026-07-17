@@ -19,6 +19,7 @@ const ENTITLED = new Set(['active', 'trialing'])
 export interface UsageState {
   // Delivered bytes over the period — the metered quantity billed to Polar.
   bandwidthBytes: number
+  customDomains: { used: number; limit: number | null }
   // Plan's included bytes, or null when unsubscribed (no allowance).
   includedBytes: number | null
   // Bytes past the included allowance (0 when within it or unsubscribed).
@@ -30,7 +31,7 @@ export interface UsageState {
   // or the current calendar month when unsubscribed).
   periodStart: string
   projects: { used: number; limit: number | null }
-  seats: { used: number; limit: number | null }
+  seats: { used: number; limit: number | null; pending: number }
 }
 
 export interface BillingState {
@@ -53,6 +54,10 @@ export interface BillingState {
   orgId: string
   // The plan the org's subscription grants, or null when unsubscribed.
   plan: PlanId | null
+  planLimits: {
+    analyticsHistoryDays: number
+    logRetentionDays: number
+  } | null
   planName: string | null
   // Local subscription status (active/trialing/past_due/canceled/…), or null.
   status: string | null
@@ -110,11 +115,21 @@ export async function getBillingState(orgId: string): Promise<BillingState> {
     plan && !trialing
       ? Math.round((overageBytes / GB) * plan.overagePerGbCents)
       : 0
+  const addonUnits =
+    domainAddon && ENTITLED.has(domainAddon.status) ? domainAddon.units : 0
+  const customDomainLimit =
+    plan && plan.customDomains !== null ? plan.customDomains + addonUnits : null
 
   return {
     orgId,
     plan: plan?.id ?? null,
     planName: plan?.name ?? null,
+    planLimits: plan
+      ? {
+          analyticsHistoryDays: plan.historyDays,
+          logRetentionDays: plan.logRetentionDays,
+        }
+      : null,
     billingSource,
     status: sub?.status ?? null,
     hasBillingCustomer,
@@ -140,8 +155,7 @@ export async function getBillingState(orgId: string): Promise<BillingState> {
       cancelAtPeriodEnd: Boolean(domainAddon?.cancelAtPeriodEnd),
       priceMonthlyUsd: CUSTOM_DOMAIN_ADDON.priceMonthlyUsd,
       status: domainAddon?.status ?? null,
-      units:
-        domainAddon && ENTITLED.has(domainAddon.status) ? domainAddon.units : 0,
+      units: addonUnits,
     },
     usage: {
       periodStart: periodStart.toISOString(),
@@ -149,11 +163,19 @@ export async function getBillingState(orgId: string): Promise<BillingState> {
       includedBytes,
       overageBytes,
       overageCostCents: complimentary ? 0 : overageCostCents,
+      customDomains: {
+        used: snapshot.customDomains,
+        limit: customDomainLimit,
+      },
       projects: {
         used: snapshot.projects,
         limit: trialing ? TRIAL.maxProjects : (plan?.maxProjects ?? null),
       },
-      seats: { used: snapshot.seats, limit: plan?.maxSeats ?? null },
+      seats: {
+        used: snapshot.seats + snapshot.pendingSeats,
+        limit: plan?.maxSeats ?? null,
+        pending: snapshot.pendingSeats,
+      },
     },
   }
 }

@@ -59,6 +59,8 @@ describe('getBillingState', () => {
     // 450 GB used against Pro's 400 GB allowance → 50 GB overage at 6¢/GB.
     billingUsageSnapshot.mockResolvedValue({
       bytes: 450 * GB,
+      customDomains: 1,
+      pendingSeats: 1,
       projects: 3,
       seats: 2,
     })
@@ -76,7 +78,12 @@ describe('getBillingState', () => {
     expect(state.usage.overageBytes).toBe(50 * GB)
     expect(state.usage.overageCostCents).toBe(300)
     expect(state.usage.projects).toEqual({ used: 3, limit: 25 })
-    expect(state.usage.seats).toEqual({ used: 2, limit: 10 })
+    expect(state.usage.customDomains).toEqual({ used: 1, limit: 1 })
+    expect(state.usage.seats).toEqual({ used: 3, limit: 10, pending: 1 })
+    expect(state.planLimits).toEqual({
+      analyticsHistoryDays: 365,
+      logRetentionDays: 90,
+    })
   })
 
   it('returns an unsubscribed snapshot (no allowance, no overage) when there is no row', async () => {
@@ -84,6 +91,8 @@ describe('getBillingState', () => {
     orgHasBillingCustomer.mockResolvedValue(false)
     billingUsageSnapshot.mockResolvedValue({
       bytes: 10 * GB,
+      customDomains: 0,
+      pendingSeats: 0,
       projects: 1,
       seats: 1,
     })
@@ -109,7 +118,13 @@ describe('getBillingState', () => {
       currentPeriodEnd: null,
     })
     orgHasBillingCustomer.mockResolvedValue(true)
-    billingUsageSnapshot.mockResolvedValue({ bytes: 0, projects: 0, seats: 1 })
+    billingUsageSnapshot.mockResolvedValue({
+      bytes: 0,
+      customDomains: 0,
+      pendingSeats: 0,
+      projects: 0,
+      seats: 1,
+    })
     const state = await getBillingState('org_a')
     expect(state.status).toBe('past_due')
     expect(state.plan).toBeNull()
@@ -135,7 +150,13 @@ describe('getBillingState', () => {
       cancelAtPeriodEnd: true,
     })
     orgHasBillingCustomer.mockResolvedValue(true)
-    billingUsageSnapshot.mockResolvedValue({ bytes: 0, projects: 0, seats: 1 })
+    billingUsageSnapshot.mockResolvedValue({
+      bytes: 0,
+      customDomains: 0,
+      pendingSeats: 0,
+      projects: 0,
+      seats: 1,
+    })
     const state = await getBillingState('org_a')
     expect(state.status).toBe('canceled')
     expect(state.plan).toBeNull()
@@ -153,6 +174,8 @@ describe('getBillingState', () => {
     orgHasBillingCustomer.mockResolvedValue(false)
     billingUsageSnapshot.mockResolvedValue({
       bytes: 1200 * GB,
+      customDomains: 4,
+      pendingSeats: 0,
       projects: 8,
       seats: 3,
     })
@@ -179,7 +202,13 @@ describe('getBillingState', () => {
       currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
     })
     orgHasBillingCustomer.mockResolvedValue(true)
-    billingUsageSnapshot.mockResolvedValue({ bytes: 0, projects: 1, seats: 1 })
+    billingUsageSnapshot.mockResolvedValue({
+      bytes: 0,
+      customDomains: 8,
+      pendingSeats: 0,
+      projects: 1,
+      seats: 1,
+    })
 
     const state = await getBillingState('org_a')
 
@@ -206,7 +235,13 @@ describe('getBillingState', () => {
       units: 5,
     })
     orgHasBillingCustomer.mockResolvedValue(true)
-    billingUsageSnapshot.mockResolvedValue({ bytes: 0, projects: 1, seats: 1 })
+    billingUsageSnapshot.mockResolvedValue({
+      bytes: 0,
+      customDomains: 11,
+      pendingSeats: 0,
+      projects: 1,
+      seats: 1,
+    })
 
     const state = await getBillingState('org_a')
 
@@ -217,6 +252,7 @@ describe('getBillingState', () => {
       status: 'active',
       units: 5,
     })
+    expect(state.usage.customDomains).toEqual({ used: 11, limit: 15 })
   })
 })
 

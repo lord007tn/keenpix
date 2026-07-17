@@ -14,6 +14,7 @@ import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { prisma } from '@/db'
 import { env } from '@/env/server'
 import { buildPolarPlugin } from '@/lib/billing/polar-plugin'
+import { assertCanAddSeat, getSeatLimit } from '@/lib/billing/quota'
 import { sendPlatformEmail } from '@/lib/email/send'
 import { escapeEmailHtml } from '@/lib/email/utils/html/escape'
 import { errorContext, logger } from '@/lib/logger/logger'
@@ -388,6 +389,11 @@ export const auth = betterAuth({
       roles: organizationRoles,
       allowUserToCreateOrganization: isCloud(),
       invitationExpiresIn: 60 * 60 * 48,
+      membershipLimit: (_user, organization) => getSeatLimit(organization.id),
+      organizationHooks: {
+        beforeCreateInvitation: ({ organization }) =>
+          assertCanAddSeat(organization.id),
+      },
       sendInvitationEmail: (data) => {
         const url = `${getAppUrl()}/accept-invite?id=${data.id}`
         const who = data.inviter.user.name || data.inviter.user.email

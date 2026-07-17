@@ -14,6 +14,7 @@ const isOrgSuspended = vi.hoisted(() => vi.fn())
 const deliveredBytesSince = vi.hoisted(() => vi.fn())
 const projectCount = vi.hoisted(() => vi.fn())
 const memberCount = vi.hoisted(() => vi.fn())
+const invitationCount = vi.hoisted(() => vi.fn())
 
 vi.mock('@/server/deployment', () => ({ isCloud }))
 vi.mock('@/data-access/subscriptions', () => ({
@@ -27,6 +28,7 @@ vi.mock('@/db', () => ({
   prisma: {
     project: { count: projectCount },
     member: { count: memberCount },
+    invitation: { count: invitationCount },
   },
 }))
 
@@ -172,9 +174,13 @@ describe('quota — cloud enforcement', () => {
   it('blocks a new seat at the plan seat limit', async () => {
     isCloud.mockReturnValue(true)
     getOrgPlan.mockResolvedValue(PLANS.basic) // maxSeats: 3
+    invitationCount.mockResolvedValue(0)
     memberCount.mockResolvedValue(3)
     await expect(assertCanAddSeat('org_a')).rejects.toThrow(BASIC)
     memberCount.mockResolvedValue(2)
     await expect(assertCanAddSeat('org_a')).resolves.toBeUndefined()
+
+    invitationCount.mockResolvedValue(1)
+    await expect(assertCanAddSeat('org_a')).rejects.toThrow(BASIC)
   })
 })

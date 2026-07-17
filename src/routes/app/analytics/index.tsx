@@ -113,19 +113,17 @@ export const Route = createFileRoute('/app/analytics/')({
     status?: string[]
     to?: string
   } => {
-    const range = isHistoricalAnalyticsRange(search.range)
-      ? search.range
-      : '24h'
+    const range = isHistoricalAnalyticsRange(search.range) ? search.range : '7d'
     let from: string | undefined
     let to: string | undefined
     if (range === 'custom') {
       const today = dayjs().format('YYYY-MM-DD')
       from =
         getDateParam(search.from) ??
-        dayjs().subtract(30, 'day').format('YYYY-MM-DD')
+        dayjs().subtract(29, 'day').format('YYYY-MM-DD')
       to = getDateParam(search.to) ?? today
       if (dayjs(from).isAfter(to) || dayjs(to).isAfter(today)) {
-        from = dayjs().subtract(30, 'day').format('YYYY-MM-DD')
+        from = dayjs().subtract(29, 'day').format('YYYY-MM-DD')
         to = today
       }
     }
