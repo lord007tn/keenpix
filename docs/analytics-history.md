@@ -14,14 +14,15 @@ hourly rollups are retained as the durable historical record. Deleting a project
 deletes its rollups through the project relationship.
 
 The Analytics and Live logs pages share the same Google-Analytics-style range
-picker: 24 hours, 7 days, 30 days, 90 days, all available retained history, and
-an inclusive custom date window. Pro and Business can query up to 365 days;
-Basic can query up to 90 days. The 365-day preset is shown only when the active
-plan supports it, and both the browser and authenticated server functions clamp
-custom dates to the plan boundary. Long analytics windows are charted in bounded
-weekly or coarse buckets, so the browser never receives every raw request. The
-current filtered analytics series can be exported as CSV, and visible log rows
-can be exported as NDJSON.
+picker. The compact strip exposes 7 days, 30 days, and Custom. Opening Custom
+shows shortcuts for 24 hours, today, yesterday, week/month/year windows, 90 and
+365 days, and all available retained history beside the inclusive calendar.
+Pro and Business can query up to 365 days; Basic can query up to 90 days. Both
+the browser and authenticated server functions clamp custom dates to the plan
+boundary. Long analytics windows are charted in bounded weekly or coarse
+buckets, so the browser never receives every raw request. The current filtered
+analytics series can be exported as CSV, and visible log rows can be exported
+as NDJSON.
 
 Historical fields are exact when Keenpix recorded them. Records created before
 the per-delivery savings field existed cannot reconstruct an original-image size
