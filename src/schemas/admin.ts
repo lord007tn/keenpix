@@ -7,7 +7,7 @@ import {
 } from './common'
 
 const staffRoleSchema = z.enum(['admin', 'staff'])
-const internalPlanSchema = z.enum(['none', 'basic', 'pro', 'business'])
+const complimentaryPlanSchema = z.enum(['free', 'basic', 'pro', 'business'])
 
 export const createInvitationSchema = z.object({
   email: z.email('Enter a valid email address.'),
@@ -74,12 +74,9 @@ export const customerAnalyticsSchema = z
   })
   .superRefine(validateHistoricalWindow)
 
-export const updateInternalPlanGrantSchema = z.object({
+export const updateComplimentaryPlanSchema = z.object({
   orgId: nonEmptyStringSchema(),
-  plan: internalPlanSchema,
-  reason: z.string().trim().max(500, 'Use 500 characters or fewer.').optional(),
-  // Optional YYYY-MM-DD expiry; empty/omitted = no expiry (permanent grant).
-  expiresAt: z.string().optional(),
+  plan: complimentaryPlanSchema,
 })
 
 export const suspendOrgSchema = z.object({
@@ -90,6 +87,6 @@ export const suspendOrgSchema = z.object({
 
 export type CreateInvitationInput = z.input<typeof createInvitationSchema>
 export type CacheMaintenanceInput = z.input<typeof cacheMaintenanceSchema>
-export type UpdateInternalPlanGrantInput = z.input<
-  typeof updateInternalPlanGrantSchema
+export type UpdateComplimentaryPlanInput = z.input<
+  typeof updateComplimentaryPlanSchema
 >

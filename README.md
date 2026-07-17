@@ -119,6 +119,8 @@ All via environment variables (see `.env.example`):
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM_EMAIL` / `SMTP_FROM_NAME` | – | SMTP connection (when `EMAIL_PROVIDER=smtp`; `SMTP_HOST` + `SMTP_FROM_EMAIL` required). |
 | `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ZONE_ID` | – | Optional Cloudflare edge analytics fallback when Settings → CDN cache is not enabled. Token needs zone **Analytics → Read**. |
 | `CLOUDFLARE_HOST` | – | Optional hostname filter for Cloudflare edge analytics when one zone serves multiple `/img/*` hosts. |
+| `CLOUDFLARE_SAAS_API_TOKEN` / `CLOUDFLARE_SAAS_ZONE_ID` / `CLOUDFLARE_SAAS_CNAME_TARGET` / `CLOUDFLARE_SAAS_EDGE_SECRET` | – | Managed-cloud custom delivery domains. Configure the fallback origin and edge Worker first. The token needs zone **SSL and Certificates → Edit** and **Workers Routes → Edit**. |
+| `CLOUDFLARE_SAAS_WORKER_SCRIPT` | `keenpix-custom-domain-edge` | Worker that securely forwards exact customer-hostname routes to the canonical Keenpix origin. |
 | `KEENPIX_MODE` | – | `selfhost` (default) or `cloud`. Self-host is single-tenant with no public marketing site, self-signup, or billing. |
 | `KEENPIX_RUN_MIGRATIONS` / `KEENPIX_RUN_SEED` | – | Docker entrypoint controls for running migrations and bootstrap seed before app start. Defaults to `true`. |
 | `KEENPIX_CACHE_DIR` | – | Disk cache location (default `./.keenpix-cache`). |
@@ -177,6 +179,12 @@ Keenpix also supports internal stale-while-revalidate for the disk cache. After 
 For good cache hit rates, keep frontend widths normalized. Instead of generating arbitrary widths from every viewport value, choose a small shared ladder such as `320`, `480`, `640`, `768`, `960`, and `1280`, then reuse those values across your CMS and frontend. Each unique `src + project + w + h + q + fmt + fit + dpr + blur` combination is a separate variant.
 
 For Cloudflare, create a Cache Rule matching `http.host eq "keenpix.joodlab.com" and starts_with(http.request.uri.path, "/img/")` that marks responses eligible for cache. On non-Enterprise plans, leave the Cache key section unset; Cloudflare's default/standard cache key already includes the full request URI with query string, so each `?w=` / `?fmt=` variant is cached separately. Do not enable "Ignore query string". If using `fmt=auto`, the cache key also needs to vary by `Accept`, which requires custom cache-key header support; otherwise prefer explicit `fmt=avif` / `fmt=webp` URLs from integrations.
+
+On Keenpix Cloud, Pro and Business customers can connect branded delivery
+hostnames under Settings → Custom domains. Once the displayed CNAME is active,
+`https://images.customer.com/img/<source-url>` resolves the associated project
+without exposing `?project=`. Self-hosters configure the same host routing and
+TLS behavior in their own reverse proxy.
 
 Framework image components usually map their `format` prop directly to `fmt`. Leave that prop unset for browser-based AVIF/WebP negotiation; `format="avif"` or `format="webp"` forces that format.
 

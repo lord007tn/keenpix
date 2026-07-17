@@ -16,7 +16,7 @@ export const SITE_DESCRIPTION =
 export const SITE_KEYWORDS =
   'image optimization CDN, image CDN, Cloudinary alternative, imgix alternative, ImageKit alternative, WebP, AVIF, sharp image transforms, self-hosted image optimization, open-source image CDN, bandwidth pricing'
 export const PRICING_DESCRIPTION =
-  'Keenpix pricing starts at $9/month for 100 GB delivered, with unlimited transforms, a 14-day trial, and spending caps. Or self-host free under AGPL.'
+  'Keenpix pricing starts at $9/month for 100 GB delivered, with unlimited transforms, a 14-day trial, and always-on metered overage. Or self-host free under AGPL.'
 export const BRAND_IMAGE_PATH = '/brand/keenpix-og-card.png'
 const BRAND_ICON_PATH = '/android-chrome-512x512.png'
 // Twitter attribution handle reused across the card meta tags.

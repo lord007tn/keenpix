@@ -57,12 +57,12 @@ export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
   },
   {
     question: 'What happens when I use more than my included bandwidth?',
-    answer: `Delivery keeps working and additional gigabytes are billed at your plan's single published overage rate ($${(PLANS.basic.overagePerGbCents / 100).toFixed(2)}/GB on Basic, $${(PLANS.pro.overagePerGbCents / 100).toFixed(2)} on Pro, $${(PLANS.business.overagePerGbCents / 100).toFixed(2)} on Business) — no tiers, no penalty pricing. Overage accrues only up to your spending cap.`,
+    answer: `Delivery keeps working and additional gigabytes are billed at your plan's single published overage rate ($${(PLANS.basic.overagePerGbCents / 100).toFixed(2)}/GB on Basic, $${(PLANS.pro.overagePerGbCents / 100).toFixed(2)} on Pro, $${(PLANS.business.overagePerGbCents / 100).toFixed(2)} on Business) — no tiers or penalty pricing. Polar charges accumulated usage at the end of the billing period.`,
   },
   {
-    question: 'What is the spending cap and what happens when I hit it?',
+    question: 'Can overage take my images offline?',
     answer:
-      'Every new subscription starts with a hard overage spending cap of 2× your plan price — you can raise, lower, or remove it in billing settings. If your accrued overage cost reaches the cap, image delivery pauses for the rest of the period (your account is never suspended, and delivery resumes the moment you raise the cap or the period rolls over). You get an email at 80% and at the cap.',
+      'No. Basic, Pro, and Business continue serving after their included bandwidth is used. The dashboard shows estimated overage and Keenpix emails you as usage approaches and passes the included allowance. Only an ended subscription, an exhausted free trial, or a separate fraud or abuse intervention stops delivery.',
   },
   {
     question: 'What happens if my payment fails?',
@@ -116,15 +116,20 @@ const MATRIX: Array<{
   },
   {
     feature: 'Analytics',
-    values: ['Full (Postgres)', 'Core', 'Advanced', 'Advanced'],
+    values: [
+      'Full (Postgres)',
+      `Core · ${PLANS.basic.historyDays} days`,
+      `Advanced · ${PLANS.pro.historyDays} days`,
+      `Advanced · ${PLANS.business.historyDays} days`,
+    ],
   },
   {
     feature: 'Log history & search',
     values: [
       'Unlimited',
-      `Recent logs · ${PLANS.basic.historyDays}-day retention`,
-      `Full search · ${PLANS.pro.historyDays}-day retention`,
-      `Full search · ${PLANS.business.historyDays}-day retention`,
+      `Recent logs · ${PLANS.basic.logRetentionDays}-day retention`,
+      `Full search · ${PLANS.pro.logRetentionDays}-day retention`,
+      `Full search · ${PLANS.business.logRetentionDays}-day retention`,
     ],
   },
   {
@@ -132,8 +137,8 @@ const MATRIX: Array<{
     values: ['Included', 'Included', 'Included', 'Included'],
   },
   {
-    feature: 'Hard spending cap',
-    values: ['—', 'On by default', 'On by default', 'On by default'],
+    feature: 'Paid overage behavior',
+    values: ['—', 'Keeps serving', 'Keeps serving', 'Keeps serving'],
   },
   {
     feature: 'Free trial',
@@ -146,7 +151,12 @@ const MATRIX: Array<{
   },
   {
     feature: 'Custom domains',
-    values: ['Your domain', 'Coming soon', 'Coming soon', 'Coming soon'],
+    values: [
+      'Your reverse proxy',
+      '—',
+      String(PLANS.pro.customDomains),
+      `${PLANS.business.customDomains} · +5 for $5/mo`,
+    ],
   },
   {
     feature: 'Ops, upgrades, backups',
@@ -171,8 +181,9 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-balance text-lg text-muted-foreground leading-relaxed">
               Unlimited transforms on every plan. A single published overage
-              rate with a hard cap, on by default. A {TRIAL.days}-day free trial
-              that is never billed. Or self-host the whole engine, free.
+              rate, metered through the period without interrupting delivery. A{' '}
+              {TRIAL.days}-day free trial that is never billed. Or self-host the
+              whole engine, free.
             </p>
 
             <div className="mt-8 grid gap-4 text-left lg:grid-cols-3">

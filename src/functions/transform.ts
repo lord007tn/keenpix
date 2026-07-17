@@ -1,8 +1,11 @@
+import { resolveCustomDomainProject } from '@/actions/custom-domains'
 import { optimizeProjectImage } from '@/actions/transform'
+import { env } from '@/env/server'
 import {
   getPublicTransformErrorMessage,
   getTransformErrorStatus,
 } from '@/errors/transform'
+import { getTrustedCustomDomainHostname } from '@/helpers/custom-domains/edge-request'
 import { cacheControl } from '@/lib/cache/cache'
 import { getContentType } from '@/shared/transform'
 
@@ -24,9 +27,21 @@ export async function handleTransformRequest(
     return new Response('Missing source image URL', { status: 400 })
   }
 
-  const projectId = searchParams.get('project')
+  const edgeHostname = getTrustedCustomDomainHostname(
+    request,
+    env.CLOUDFLARE_SAAS_EDGE_SECRET,
+  )
+  let projectId = edgeHostname
+    ? await resolveCustomDomainProject(edgeHostname)
+    : searchParams.get('project')
   if (!projectId) {
-    return new Response('Missing ?project', { status: 400 })
+    projectId =
+      (await resolveCustomDomainProject(new URL(request.url).hostname)) ?? null
+  }
+  if (!projectId) {
+    return new Response('Missing ?project or verified custom domain', {
+      status: 400,
+    })
   }
 
   // The edge tells us the requester's country (Cloudflare/Vercel set these);

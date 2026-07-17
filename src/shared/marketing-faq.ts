@@ -22,12 +22,16 @@ const { basic, pro, business } = PLANS
 export const MARKETING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'How does Keenpix pricing work?',
-    answer: `Keenpix bills on one thing — optimized response bytes returned by the Keenpix application — and never per transform. Managed cloud starts at $${basic.priceMonthlyUsd}/mo for ${gb(basic.includedBandwidthBytes)} with unlimited transforms, and scales to Pro ($${pro.priceMonthlyUsd}/mo, ${gb(pro.includedBandwidthBytes)}) and Business ($${business.priceMonthlyUsd}/mo, ${gb(business.includedBandwidthBytes)}). Overage is a single published linear rate between ${cents(business.overagePerGbCents)} and ${cents(basic.overagePerGbCents)} per GB depending on tier, and every subscription starts with a hard spending cap (2× your plan price, adjustable or removable any time). A request served as an upstream Cloudflare edge HIT never reaches Keenpix and is not in the billing meter; optional Cloudflare analytics reports edge delivery separately. Prefer to pay nothing? Self-host the same open-source engine for free.`,
+    answer: `Keenpix bills on one thing — optimized response bytes returned by the Keenpix application — and never per transform. Managed cloud starts at $${basic.priceMonthlyUsd}/mo for ${gb(basic.includedBandwidthBytes)} with unlimited transforms, and scales to Pro ($${pro.priceMonthlyUsd}/mo, ${gb(pro.includedBandwidthBytes)}) and Business ($${business.priceMonthlyUsd}/mo, ${gb(business.includedBandwidthBytes)}). After the included allowance, delivery continues at the plan's published linear rate between ${cents(business.overagePerGbCents)} and ${cents(basic.overagePerGbCents)} per GB, and Polar charges accumulated usage at the end of the billing period. A request served as an upstream Cloudflare edge HIT never reaches Keenpix and is not in the billing meter; optional Cloudflare analytics reports edge delivery separately. Prefer to pay nothing? Self-host the same open-source engine for free.`,
   },
   {
-    question: 'What happens when I hit my spending cap?',
+    question: 'Does delivery stop when I use my included bandwidth?',
     answer:
-      'Delivery pauses — you are never billed past the cap. Every subscription starts with the cap on by default at 2× your plan price, you get email alerts as you approach and reach it, and you can raise, lower, or remove it any time from billing settings. If you would rather never pause, remove the cap and pay the published linear overage rate instead. Images already cached at your CDN edge keep serving.',
+      'No. Paid plans stay online after the included bandwidth is used. Keenpix continues metering returned bytes, shows the estimated overage in billing, sends usage alerts, and Polar charges the accumulated overage at the end of the billing period. Trial allowances and abuse controls remain bounded, but normal paid usage does not pause image delivery.',
+  },
+  {
+    question: 'How do custom domains work?',
+    answer: `Custom-domain allowances belong to the organization and each hostname is assigned to one project. Basic uses the standard Keenpix hostname, Pro includes ${pro.customDomains} custom domain, and Business includes ${business.customDomains}. An active paid Business workspace can add one five-domain pack for $5/month, raising its organization limit to 15; the add-on can be managed separately in the billing portal.`,
   },
   {
     question: 'Does Keenpix replace my CDN?',

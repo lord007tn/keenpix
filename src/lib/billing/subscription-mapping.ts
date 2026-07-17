@@ -1,4 +1,9 @@
+import type { SubscriptionAddonSnapshot } from '@/data-access/subscription-addons'
 import type { SubscriptionSnapshot } from '@/data-access/subscriptions'
+import {
+  CUSTOM_DOMAIN_ADDON,
+  isSubscriptionAddonKind,
+} from '@/lib/billing/addons'
 import { getPlan } from '@/lib/billing/plans'
 
 // The subset of a Polar subscription webhook payload we read. Declared locally
@@ -59,6 +64,41 @@ export function mapSubscriptionSnapshot(
     currentPeriodStart: toDate(sub.currentPeriodStart),
     currentPeriodEnd: toDate(sub.currentPeriodEnd),
     overageAllowed: false,
+    cancelAtPeriodEnd: Boolean(sub.cancelAtPeriodEnd),
+    polarModifiedAt: toDate(sub.modifiedAt),
+  }
+}
+
+export function mapSubscriptionAddonSnapshot(
+  sub: PolarSubscriptionData,
+  status: string,
+): SubscriptionAddonSnapshot | null {
+  const orgId = resolveOrgId(sub)
+  const kind = sub.product?.metadata?.addon
+  const rawUnits = sub.product?.metadata?.units
+  let units = Number.NaN
+  if (typeof rawUnits === 'number') {
+    units = rawUnits
+  } else if (typeof rawUnits === 'string') {
+    units = Number.parseInt(rawUnits, 10)
+  }
+  if (
+    !(
+      orgId &&
+      isSubscriptionAddonKind(kind) &&
+      units === CUSTOM_DOMAIN_ADDON.units
+    )
+  ) {
+    return null
+  }
+  return {
+    orgId,
+    polarSubscriptionId: sub.id,
+    kind,
+    units,
+    status,
+    currentPeriodStart: toDate(sub.currentPeriodStart),
+    currentPeriodEnd: toDate(sub.currentPeriodEnd),
     cancelAtPeriodEnd: Boolean(sub.cancelAtPeriodEnd),
     polarModifiedAt: toDate(sub.modifiedAt),
   }

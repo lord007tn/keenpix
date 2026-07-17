@@ -33,7 +33,7 @@ export const Route = createFileRoute('/pricing')({
       links: [{ rel: 'canonical', href: canonicalUrl }],
       meta: [
         ...seo({
-          title: 'Pricing — one honest meter, hard-capped - Keenpix',
+          title: 'Pricing — one honest usage meter - Keenpix',
           description: PRICING_DESCRIPTION,
           url: canonicalUrl,
         }),

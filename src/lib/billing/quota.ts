@@ -6,10 +6,8 @@ import {
 } from '@/data-access/subscriptions'
 import { deliveredBytesSince } from '@/data-access/usage'
 import { prisma } from '@/db'
-import { getPlan, TRIAL } from '@/lib/billing/plans'
+import { TRIAL } from '@/lib/billing/plans'
 import { isCloud } from '@/server/deployment'
-
-const GB = 1024 ** 3
 
 // Start of the current UTC month — the usage window when there's no billing
 // period to anchor to (mirrors getBillingState).
@@ -156,7 +154,6 @@ export async function orgCanServe(orgId: string): Promise<boolean> {
   if (!servable) {
     return false
   }
-  // Internal-grant orgs have no subscription row: no trial cap, no spend cap.
   const sub = await getOrgSubscription(orgId)
   if (!sub) {
     return true
@@ -164,20 +161,18 @@ export async function orgCanServe(orgId: string): Promise<boolean> {
   if (!(await orgWithinTrialAllowance(orgId, sub))) {
     return false
   }
-  return orgWithinSpendCap(orgId, sub)
+  return true
 }
 
 interface ServingSubscription {
   currentPeriodStart?: Date | null
-  plan: string
-  spendCapCents: number | null
   status?: string
 }
 
 // Trial bandwidth cap. Trial usage is never metered to Polar, so this cap is the
 // platform's total exposure per trial: once a trialing org has delivered
 // TRIAL.bandwidthBytes this period, serving pauses until the trial converts.
-// Same ~1h approximation as the spend cap (hourly rollups + 60s gate cache).
+// Approximate by design: hourly rollups plus the 60-second serving-gate cache.
 async function orgWithinTrialAllowance(
   orgId: string,
   sub: ServingSubscription,
@@ -188,29 +183,4 @@ async function orgWithinTrialAllowance(
   const periodStart = sub.currentPeriodStart ?? startOfMonthUtc(new Date())
   const { bytes } = await deliveredBytesSince(orgId, periodStart)
   return bytes <= TRIAL.bandwidthBytes
-}
-
-// Hard spending cap. Once an org's accrued overage cost this period reaches the
-// cap it set (in cents), it stops being served. Approximate by design — usage is
-// read from hourly rollups and the serving gate caches this decision for 60s — so
-// real spend can overshoot the cap by up to ~1h of traffic. It's a runaway-bill
-// backstop, not a to-the-cent ceiling. A null cap or no billing plan means no cap.
-async function orgWithinSpendCap(
-  orgId: string,
-  sub: ServingSubscription,
-): Promise<boolean> {
-  if (sub.spendCapCents === null) {
-    return true
-  }
-  const plan = getPlan(sub.plan)
-  if (!plan) {
-    return true
-  }
-  const periodStart = sub.currentPeriodStart ?? startOfMonthUtc(new Date())
-  const { bytes } = await deliveredBytesSince(orgId, periodStart)
-  const overageBytes = Math.max(0, bytes - plan.includedBandwidthBytes)
-  const overageCostCents = Math.round(
-    (overageBytes / GB) * plan.overagePerGbCents,
-  )
-  return overageCostCents <= sub.spendCapCents
 }

@@ -1,6 +1,9 @@
 import type { Polar } from '@polar-sh/sdk'
 import { describe, expect, it } from 'vitest'
-import { listCheckoutProducts } from './polar-checkout-products'
+import {
+  getCustomDomainAddonProductId,
+  listCheckoutProducts,
+} from './polar-checkout-products'
 
 function polarWithProducts(products: unknown[]) {
   return {
@@ -34,6 +37,8 @@ const monthlyProducts = [
     metadata: { plan: 'business', interval: 'month' },
   },
 ]
+const FOUND_NONE = /found 0/
+const FOUND_TWO = /found 2/
 
 describe('listCheckoutProducts', () => {
   it('exposes exactly the three monthly checkout slugs', async () => {
@@ -47,6 +52,10 @@ describe('listCheckoutProducts', () => {
         {
           id: 'prod_unknown',
           metadata: { plan: 'enterprise', interval: 'month' },
+        },
+        {
+          id: 'prod_domains',
+          metadata: { addon: 'custom_domains', interval: 'month', units: '5' },
         },
       ]),
     )
@@ -76,5 +85,53 @@ describe('listCheckoutProducts', () => {
     await expect(
       listCheckoutProducts(polarWithProducts(monthlyProducts.slice(0, 2))),
     ).resolves.toEqual([])
+  })
+})
+
+describe('getCustomDomainAddonProductId', () => {
+  it('finds exactly one active monthly five-domain pack', async () => {
+    await expect(
+      getCustomDomainAddonProductId(
+        polarWithProducts([
+          ...monthlyProducts,
+          {
+            id: 'prod_domains',
+            metadata: {
+              addon: 'custom_domains',
+              interval: 'month',
+              units: '5',
+            },
+          },
+        ]),
+      ),
+    ).resolves.toBe('prod_domains')
+  })
+
+  it('rejects missing, altered, or duplicate packs', async () => {
+    await expect(
+      getCustomDomainAddonProductId(polarWithProducts(monthlyProducts)),
+    ).rejects.toThrow(FOUND_NONE)
+    await expect(
+      getCustomDomainAddonProductId(
+        polarWithProducts([
+          {
+            id: 'prod_domains_a',
+            metadata: {
+              addon: 'custom_domains',
+              interval: 'month',
+              units: 5,
+            },
+          },
+          {
+            id: 'prod_domains_b',
+            metadata: {
+              addon: 'custom_domains',
+              interval: 'month',
+              units: '5',
+            },
+          },
+        ]),
+      ),
+    ).rejects.toThrow(FOUND_TWO)
   })
 })

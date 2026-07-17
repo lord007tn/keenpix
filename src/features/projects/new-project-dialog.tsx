@@ -51,11 +51,7 @@ export function NewProjectDialog({
     enabled: cloud && open,
     staleTime: 30_000,
   })
-  const needsPlan =
-    cloud &&
-    billing !== undefined &&
-    billing.planSource !== 'internal' &&
-    !(billing.status === 'active' || billing.status === 'trialing')
+  const needsPlan = cloud && billing !== undefined && billing.plan === null
   const form = useForm({
     defaultValues: DEFAULT_VALUES,
     validators: {

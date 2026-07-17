@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  mapSubscriptionAddonSnapshot,
   mapSubscriptionSnapshot,
   type PolarSubscriptionData,
 } from './subscription-mapping'
@@ -82,5 +83,51 @@ describe('mapSubscriptionSnapshot', () => {
       customer: { id: 'cus_1', externalId: null },
     }
     expect(mapSubscriptionSnapshot(sub, 'active')).toBeNull()
+  })
+})
+
+describe('mapSubscriptionAddonSnapshot', () => {
+  it('maps the configured custom-domain pack without replacing the plan', () => {
+    const addon = {
+      ...base,
+      id: 'sub_addon',
+      product: {
+        metadata: { addon: 'custom_domains', units: '5' },
+      },
+    }
+
+    expect(mapSubscriptionAddonSnapshot(addon, 'active')).toEqual({
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
+      currentPeriodStart: new Date('2026-07-01T00:00:00.000Z'),
+      kind: 'custom_domains',
+      orgId: 'org_a',
+      polarModifiedAt: null,
+      polarSubscriptionId: 'sub_addon',
+      status: 'active',
+      units: 5,
+    })
+    expect(mapSubscriptionSnapshot(addon, 'active')).toBeNull()
+  })
+
+  it('rejects unknown add-ons and altered pack sizes', () => {
+    expect(
+      mapSubscriptionAddonSnapshot(
+        {
+          ...base,
+          product: { metadata: { addon: 'custom_domains', units: 10 } },
+        },
+        'active',
+      ),
+    ).toBeNull()
+    expect(
+      mapSubscriptionAddonSnapshot(
+        {
+          ...base,
+          product: { metadata: { addon: 'storage', units: 5 } },
+        },
+        'active',
+      ),
+    ).toBeNull()
   })
 })

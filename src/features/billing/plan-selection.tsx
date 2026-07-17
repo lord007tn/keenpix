@@ -41,6 +41,9 @@ function formatDomains(customDomains: number | null): string {
   if (customDomains === 0) {
     return 'No custom domains'
   }
+  if (customDomains === 1) {
+    return '1 custom domain'
+  }
   return `${customDomains} custom domains`
 }
 
@@ -66,10 +69,9 @@ function planFeatures(plan: Plan): string[] {
     plan.advancedLogs ? 'Full log history + search' : 'Recent logs (last 200)',
     projects,
   ]
-  // Custom domains + AI tools are on the roadmap but not shipped yet, so mark
-  // them "coming soon" rather than promising them at checkout.
+  // Custom domains are live; AI tools remain roadmap-only.
   if (plan.customDomains === null || plan.customDomains > 0) {
-    features.push(`${formatDomains(plan.customDomains)} (coming soon)`)
+    features.push(formatDomains(plan.customDomains))
   }
   if (plan.aiCreditsPerMonth > 0) {
     features.push(`${plan.aiCreditsPerMonth} AI credits / mo (coming soon)`)

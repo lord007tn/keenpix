@@ -34,7 +34,7 @@ import { listLogsFn } from '@/functions/logs'
 import { limitHistorySearch } from '@/helpers/history/window'
 import {
   BASIC_LOG_LIMIT,
-  DEFAULT_HISTORY_DAYS,
+  DEFAULT_LOG_RETENTION_DAYS,
   getPlan,
 } from '@/lib/billing/plans'
 import { humanBytes } from '@/shared/format'
@@ -145,7 +145,7 @@ function LogsPage() {
     staleTime: 30_000,
   })
   const maxHistoryDays = cloud
-    ? (getPlan(billing?.plan)?.historyDays ?? DEFAULT_HISTORY_DAYS)
+    ? (getPlan(billing?.plan)?.logRetentionDays ?? DEFAULT_LOG_RETENTION_DAYS)
     : 3650
   const boundedWindow = limitHistorySearch(
     { range, from, to },

@@ -39,10 +39,25 @@ describe('plan catalog', () => {
     expect(BASIC_LOG_LIMIT).toBe(200)
   })
 
-  it('keeps analytics and log history for 90 days on Basic and 365 on Pro+', () => {
+  it('bounds managed custom-domain cost by tier', () => {
+    expect(PLANS.basic.customDomains).toBe(0)
+    expect(PLANS.pro.customDomains).toBe(1)
+    expect(PLANS.business.customDomains).toBe(10)
+  })
+
+  it('does not promise undelivered AI credits', () => {
+    expect(PLANS.basic.aiCreditsPerMonth).toBe(0)
+    expect(PLANS.pro.aiCreditsPerMonth).toBe(0)
+    expect(PLANS.business.aiCreditsPerMonth).toBe(0)
+  })
+
+  it('keeps aggregate analytics longer than raw logs on lower tiers', () => {
     expect(PLANS.basic.historyDays).toBe(90)
     expect(PLANS.pro.historyDays).toBe(365)
     expect(PLANS.business.historyDays).toBe(365)
+    expect(PLANS.basic.logRetentionDays).toBe(30)
+    expect(PLANS.pro.logRetentionDays).toBe(90)
+    expect(PLANS.business.logRetentionDays).toBe(365)
   })
 })
 

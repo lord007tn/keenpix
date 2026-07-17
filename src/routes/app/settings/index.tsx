@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useRouteContext } from '@tanstack/react-router'
 import {
   CreditCardIcon,
+  Globe2Icon,
   ImageIcon,
   InfoIcon,
   KeyRoundIcon,
@@ -27,6 +28,7 @@ import {
 import { ApiKeyManagement } from '@/features/api-keys/api-key-management'
 import { BillingPanel } from '@/features/billing/billing-panel'
 import { AllowedHosts } from '@/features/projects/allowed-hosts'
+import { CustomDomains } from '@/features/projects/custom-domains'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { PipelineSettings } from '@/features/projects/pipeline-settings'
 import { ProjectGeneral } from '@/features/projects/project-general'
@@ -43,6 +45,7 @@ const SECTIONS = [
   'general',
   'pipeline',
   'security',
+  'domains',
   'billing',
   'team',
   'api-keys',
@@ -58,6 +61,7 @@ const SECTION_META: Record<Section, { label: string; icon: LucideIcon }> = {
   general: { label: 'General', icon: InfoIcon },
   pipeline: { label: 'Pipeline', icon: ImageIcon },
   security: { label: 'Security', icon: ShieldIcon },
+  domains: { label: 'Custom domains', icon: Globe2Icon },
   billing: { label: 'Plan & billing', icon: CreditCardIcon },
   team: { label: 'Team', icon: UsersRoundIcon },
   'api-keys': { label: 'API keys', icon: KeyRoundIcon },
@@ -128,6 +132,9 @@ function SettingsPage() {
     currentProject && productAccess ? ['general'] : []
   if (currentProject && productAccess && canManageProject) {
     projectSections.push('pipeline', 'security', 'api-keys')
+    if (cloud) {
+      projectSections.push('domains')
+    }
   }
   // Billing + Team are per-org and cloud-only (self-host is single-tenant/free),
   // shown to every member of the org. API keys are the org's JSON-API credentials
@@ -214,6 +221,8 @@ function SettingsPage() {
     subtitle = 'Set the default image optimization behavior for this project.'
   } else if (active === 'security') {
     subtitle = 'Control allowed origins and request signing for this project.'
+  } else if (active === 'domains') {
+    subtitle = 'Serve this project from customer-owned delivery domains.'
   }
 
   return (
@@ -350,6 +359,24 @@ function SettingsPage() {
                 </Card>
               ) : null}
             </>
+          ) : null}
+
+          {active === 'domains' && currentProject ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Custom delivery domains</CardTitle>
+                <CardDescription>
+                  Connect a customer-owned hostname. Keenpix provisions TLS and
+                  maps requests on that hostname directly to this project.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CustomDomains
+                  key={currentProject.id}
+                  projectId={currentProject.id}
+                />
+              </CardContent>
+            </Card>
           ) : null}
 
           {active === 'billing' ? <BillingPanel /> : null}

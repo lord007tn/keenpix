@@ -52,6 +52,39 @@ export const env = createEnv({
             'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be configured together.',
         })
       }
+      const cloudflareSaasValues = [
+        value.CLOUDFLARE_SAAS_API_TOKEN,
+        value.CLOUDFLARE_SAAS_ZONE_ID,
+        value.CLOUDFLARE_SAAS_CNAME_TARGET,
+        value.CLOUDFLARE_SAAS_EDGE_SECRET,
+      ]
+      if (
+        cloudflareSaasValues.some(Boolean) &&
+        !cloudflareSaasValues.every(Boolean)
+      ) {
+        const when =
+          'when any Cloudflare for SaaS custom-domain variable is configured'
+        requireVar(
+          'CLOUDFLARE_SAAS_API_TOKEN',
+          value.CLOUDFLARE_SAAS_API_TOKEN,
+          when,
+        )
+        requireVar(
+          'CLOUDFLARE_SAAS_ZONE_ID',
+          value.CLOUDFLARE_SAAS_ZONE_ID,
+          when,
+        )
+        requireVar(
+          'CLOUDFLARE_SAAS_CNAME_TARGET',
+          value.CLOUDFLARE_SAAS_CNAME_TARGET,
+          when,
+        )
+        requireVar(
+          'CLOUDFLARE_SAAS_EDGE_SECRET',
+          value.CLOUDFLARE_SAAS_EDGE_SECRET,
+          when,
+        )
+      }
       if (
         value.POLAR_SANDBOX_WEBHOOK_SECRET &&
         value.POLAR_SANDBOX_WEBHOOK_SECRET === value.POLAR_WEBHOOK_SECRET

@@ -53,6 +53,11 @@ export async function billingUsageSnapshot(orgId: string, since: Date) {
 
 export function listUsageBillingCustomers(db: Db = prisma) {
   return db.billingCustomer.findMany({
+    where: {
+      organization: {
+        subscription: { is: { polarSubscriptionId: { not: null } } },
+      },
+    },
     select: { orgId: true, polarCustomerId: true, lastUsageReportAt: true },
   })
 }

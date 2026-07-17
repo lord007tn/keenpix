@@ -15,7 +15,7 @@ const BELIEFS = [
   },
   {
     title: 'Transparency by default',
-    body: 'One published overage rate, a hard cap you set, and built-in analytics that show the bandwidth and bytes saved per project. No surprises on the invoice.',
+    body: 'One published overage rate and built-in analytics that show bandwidth, projected charges, and bytes saved per project. Paid delivery remains online as usage grows.',
   },
 ]
 

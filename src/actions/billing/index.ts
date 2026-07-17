@@ -1,12 +1,13 @@
-import { getActiveInternalPlanGrant } from '@/data-access/internal-plan-grants'
+import { getSubscriptionAddon } from '@/data-access/subscription-addons'
 import {
   getBillingCustomer,
   getOrgSubscription,
   orgHasBillingCustomer,
-  setSubscriptionSpendCap,
 } from '@/data-access/subscriptions'
 import { billingUsageSnapshot } from '@/data-access/usage'
-import { getPlan, getPlanRank, type PlanId, TRIAL } from '@/lib/billing/plans'
+import { CUSTOM_DOMAIN_ADDON } from '@/lib/billing/addons'
+import { getPlan, type PlanId, TRIAL } from '@/lib/billing/plans'
+import { getCustomDomainAddonProductId } from '@/lib/billing/polar-checkout-products'
 import { createPolarClient } from '@/lib/billing/polar-client'
 import { getAppUrl } from '@/server/deployment'
 
@@ -33,22 +34,27 @@ export interface UsageState {
 }
 
 export interface BillingState {
+  billingSource: 'admin_grant' | 'free' | 'polar'
   // True when the subscription is set to cancel at period end: still active and
   // serving until currentPeriodEnd, but it will NOT renew. Lets the UI say
   // "Ends {date}" instead of "Renews {date}" and offer a resume affordance.
   cancelAtPeriodEnd: boolean
   // ISO timestamp the current paid period ends (renewal/expiry), or null.
   currentPeriodEnd: string | null
+  domainAddon: {
+    canPurchase: boolean
+    cancelAtPeriodEnd: boolean
+    priceMonthlyUsd: number
+    status: string | null
+    units: number
+  }
   // True once the org has a Polar customer — gates the portal even when canceled.
   hasBillingCustomer: boolean
   orgId: string
   // The plan the org's subscription grants, or null when unsubscribed.
   plan: PlanId | null
   planName: string | null
-  planSource: 'billing' | 'internal' | null
-  // Customer-set overage spending cap in cents, or null when no cap is set.
-  spendCapCents: number | null
-  // Raw Polar status (active/trialing/past_due/canceled/…), or null.
+  // Local subscription status (active/trialing/past_due/canceled/…), or null.
   status: string | null
   usage: UsageState
 }
@@ -64,28 +70,22 @@ function startOfMonthUtc(now: Date): Date {
 // Polar on the hot path, plus a period usage snapshot for the meter. Returns an
 // unsubscribed snapshot (usage still populated) when there's no row.
 export async function getBillingState(orgId: string): Promise<BillingState> {
-  const [sub, internalGrant] = await Promise.all([
+  const [sub, domainAddon] = await Promise.all([
     getOrgSubscription(orgId),
-    getActiveInternalPlanGrant(orgId),
+    getSubscriptionAddon(orgId, CUSTOM_DOMAIN_ADDON.kind),
   ])
-  const internalPlan = getPlan(internalGrant?.plan)
-  const billingPlan = getPlan(sub?.plan)
-  const billingEntitledPlan =
-    sub && ENTITLED.has(sub.status) ? billingPlan : null
-  const internalWins =
-    getPlanRank(internalPlan) > getPlanRank(billingEntitledPlan)
-  const plan = internalWins ? internalPlan : billingEntitledPlan
-  let planSource: BillingState['planSource'] = null
-  if (internalWins) {
-    planSource = 'internal'
-  } else if (billingEntitledPlan) {
-    planSource = 'billing'
-  }
   const entitled = Boolean(sub && ENTITLED.has(sub.status))
-  const internallyEntitled = Boolean(internalWins)
+  let billingSource: BillingState['billingSource'] = 'free'
+  if (sub?.polarSubscriptionId) {
+    billingSource = 'polar'
+  } else if (sub) {
+    billingSource = 'admin_grant'
+  }
+  const complimentary = entitled && billingSource === 'admin_grant'
+  const plan = entitled ? getPlan(sub?.plan) : null
   // Measure usage over the paid period when subscribed, else the calendar month.
   const periodStart =
-    (entitled && !internallyEntitled ? sub?.currentPeriodStart : null) ??
+    (entitled && !complimentary ? sub?.currentPeriodStart : null) ??
     startOfMonthUtc(new Date())
   const [snapshot, hasBillingCustomer] = await Promise.all([
     billingUsageSnapshot(orgId, periodStart),
@@ -96,7 +96,7 @@ export async function getBillingState(orgId: string): Promise<BillingState> {
   // TRIAL.bandwidthBytes (delivery pauses there) and nothing is billed — the
   // usage cron skips trialing orgs — so overage must read as $0, not a
   // projection against the plan allowance the org isn't paying for yet.
-  const trialing = Boolean(sub?.status === 'trialing' && !internalWins)
+  const trialing = Boolean(sub?.status === 'trialing' && !complimentary)
   const includedBytes = trialing
     ? TRIAL.bandwidthBytes
     : (plan?.includedBandwidthBytes ?? null)
@@ -115,28 +115,40 @@ export async function getBillingState(orgId: string): Promise<BillingState> {
     orgId,
     plan: plan?.id ?? null,
     planName: plan?.name ?? null,
-    planSource,
-    status: internallyEntitled ? 'internal' : (sub?.status ?? null),
+    billingSource,
+    status: sub?.status ?? null,
     hasBillingCustomer,
     // "Scheduled to cancel" only makes sense for a live subscription (active/
     // trialing). Polar keeps cancel_at_period_end=true on the terminal
     // revoked/canceled payload too, so gate on `entitled` — otherwise a
     // long-churned org would show a "you'll keep access until {past date}" notice.
-    // Internal grants don't bill, so they never cancel-at-period-end.
+    // Complimentary access does not renew or cancel through Polar.
     cancelAtPeriodEnd: Boolean(
-      entitled && !internallyEntitled && sub?.cancelAtPeriodEnd,
+      entitled && !complimentary && sub?.cancelAtPeriodEnd,
     ),
-    currentPeriodEnd: internallyEntitled
+    currentPeriodEnd: complimentary
       ? null
       : (sub?.currentPeriodEnd?.toISOString() ?? null),
-    // Cap only applies to a real billing subscription (internal grants don't bill).
-    spendCapCents: internallyEntitled ? null : (sub?.spendCapCents ?? null),
+    domainAddon: {
+      canPurchase: Boolean(
+        plan?.id === 'business' &&
+          !complimentary &&
+          Boolean(sub?.polarSubscriptionId) &&
+          sub?.status === 'active' &&
+          (!domainAddon || domainAddon.status === 'revoked'),
+      ),
+      cancelAtPeriodEnd: Boolean(domainAddon?.cancelAtPeriodEnd),
+      priceMonthlyUsd: CUSTOM_DOMAIN_ADDON.priceMonthlyUsd,
+      status: domainAddon?.status ?? null,
+      units:
+        domainAddon && ENTITLED.has(domainAddon.status) ? domainAddon.units : 0,
+    },
     usage: {
       periodStart: periodStart.toISOString(),
       bandwidthBytes: snapshot.bytes,
       includedBytes,
       overageBytes,
-      overageCostCents: internallyEntitled ? 0 : overageCostCents,
+      overageCostCents: complimentary ? 0 : overageCostCents,
       projects: {
         used: snapshot.projects,
         limit: trialing ? TRIAL.maxProjects : (plan?.maxProjects ?? null),
@@ -146,10 +158,48 @@ export async function getBillingState(orgId: string): Promise<BillingState> {
   }
 }
 
-// Set or clear (null) the org's overage spending cap. The serving-gate cache is
-// busted by the caller (functions/billing) so this action stays data-access only.
-export function setSpendCap(orgId: string, spendCapCents: number | null) {
-  return setSubscriptionSpendCap(orgId, spendCapCents)
+export async function createCustomDomainAddonCheckout(orgId: string) {
+  const [client, sub, customer, existing] = await Promise.all([
+    Promise.resolve(createPolarClient()),
+    getOrgSubscription(orgId),
+    getBillingCustomer(orgId),
+    getSubscriptionAddon(orgId, CUSTOM_DOMAIN_ADDON.kind),
+  ])
+  if (!client) {
+    throw new Error('Billing is not configured for this deployment.')
+  }
+  if (
+    !(
+      sub?.polarSubscriptionId &&
+      sub.plan === 'business' &&
+      sub.status === 'active'
+    )
+  ) {
+    throw new Error(
+      'The custom-domain pack is available to active Business subscriptions.',
+    )
+  }
+  if (!customer) {
+    throw new Error('No billing customer is linked to this workspace.')
+  }
+  if (existing && existing.status !== 'revoked') {
+    throw new Error('This workspace already has a custom-domain pack.')
+  }
+  const productId = await getCustomDomainAddonProductId(client)
+  const returnUrl = `${getAppUrl()}/app/account?section=billing`
+  const checkout = await client.checkouts.create({
+    allowTrial: false,
+    customerId: customer.polarCustomerId,
+    metadata: {
+      addon: CUSTOM_DOMAIN_ADDON.kind,
+      orgId,
+      units: CUSTOM_DOMAIN_ADDON.units,
+    },
+    products: [productId],
+    returnUrl,
+    successUrl: returnUrl,
+  })
+  return { url: checkout.url }
 }
 
 // Create the portal session from the org's mirrored Polar customer id, not the

@@ -10,8 +10,6 @@ import { errorContext, logger } from '@/lib/logger/logger'
 import { getAppUrl, isCloud } from '@/server/deployment'
 import { humanBytes } from '@/shared/format'
 
-const GB = 1024 ** 3
-
 // Start of the current UTC month — the fallback alert period for a subscription
 // without a period anchor (mirrors quota.ts / getBillingState).
 function startOfMonthUtc(now: Date): Date {
@@ -58,7 +56,6 @@ interface AlertableSubscription {
   organization: { name: string }
   orgId: string
   plan: string
-  spendCapCents: number | null
   status: string
 }
 
@@ -98,7 +95,7 @@ export function usageAlertsFor(
     alerts.push({
       kind: 'usage_100',
       subject: `Keenpix: ${org} used all included bandwidth this period`,
-      text: `${org} has delivered ${humanBytes(deliveredBytes)} this period — past the ${humanBytes(included)} included in your ${plan.name} plan. Additional delivery is billed at $${(plan.overagePerGbCents / 100).toFixed(2)}/GB${sub.spendCapCents === null ? '' : `, up to your $${(sub.spendCapCents / 100).toFixed(2)} spending cap`}.`,
+      text: `${org} has delivered ${humanBytes(deliveredBytes)} this period — past the ${humanBytes(included)} included in your ${plan.name} plan. Additional delivery keeps serving and is billed at $${(plan.overagePerGbCents / 100).toFixed(2)}/GB at the end of the billing period.`,
     })
   } else if (deliveredBytes >= included * 0.8) {
     alerts.push({
@@ -106,18 +103,6 @@ export function usageAlertsFor(
       subject: `Keenpix: ${org} used 80% of its included bandwidth`,
       text: `${org} has delivered ${humanBytes(deliveredBytes)} of the ${humanBytes(included)} included in your ${plan.name} plan this period. Past the allowance, delivery is billed at $${(plan.overagePerGbCents / 100).toFixed(2)}/GB.`,
     })
-  }
-  if (sub.spendCapCents !== null) {
-    const overageCostCents = Math.round(
-      (overageBytes / GB) * plan.overagePerGbCents,
-    )
-    if (overageCostCents >= sub.spendCapCents) {
-      alerts.push({
-        kind: 'cap_reached',
-        subject: `Keenpix: image delivery paused — ${org} reached its spending cap`,
-        text: `${org} reached its $${(sub.spendCapCents / 100).toFixed(2)} overage spending cap, so image delivery is paused for the rest of the period. Raise or remove the cap in billing settings to resume delivery immediately.`,
-      })
-    }
   }
   return alerts
 }

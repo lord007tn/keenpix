@@ -19,6 +19,11 @@ const CLOUD_KEYS = [
   'POLAR_WEBHOOK_SECRET',
   'POLAR_SANDBOX_WEBHOOK_SECRET',
   'CRON_SECRET',
+  'CLOUDFLARE_SAAS_API_TOKEN',
+  'CLOUDFLARE_SAAS_ZONE_ID',
+  'CLOUDFLARE_SAAS_CNAME_TARGET',
+  'CLOUDFLARE_SAAS_WORKER_SCRIPT',
+  'CLOUDFLARE_SAAS_EDGE_SECRET',
 ]
 
 const FULL_CLOUD_ENV = {
@@ -114,5 +119,26 @@ describe('cloud config env validation', () => {
   it('does not require cloud config in self-host mode', async () => {
     const env = await loadEnv({ KEENPIX_MODE: 'selfhost' })
     expect(env.KEENPIX_MODE).toBe('selfhost')
+  })
+
+  it('requires the complete Cloudflare for SaaS edge configuration', async () => {
+    vi.spyOn(console, 'error').mockImplementation(silence)
+    await expect(
+      loadEnv({
+        ...FULL_CLOUD_ENV,
+        CLOUDFLARE_SAAS_API_TOKEN: 'token',
+        CLOUDFLARE_SAAS_ZONE_ID: 'zone',
+        CLOUDFLARE_SAAS_CNAME_TARGET: 'customers.keenpix.com',
+      }),
+    ).rejects.toThrow()
+
+    const env = await loadEnv({
+      ...FULL_CLOUD_ENV,
+      CLOUDFLARE_SAAS_API_TOKEN: 'token',
+      CLOUDFLARE_SAAS_ZONE_ID: 'zone',
+      CLOUDFLARE_SAAS_CNAME_TARGET: 'customers.keenpix.com',
+      CLOUDFLARE_SAAS_EDGE_SECRET: 'a'.repeat(32),
+    })
+    expect(env.CLOUDFLARE_SAAS_WORKER_SCRIPT).toBe('keenpix-custom-domain-edge')
   })
 })

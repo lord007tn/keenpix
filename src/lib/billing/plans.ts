@@ -13,11 +13,13 @@ export interface Plan {
   aiCreditsPerMonth: number
   // null = unlimited, 0 = none
   customDomains: number | null
-  // Maximum query window for analytics and raw request logs. The retention
-  // sweep uses the same value so the UI never promises dates the store prunes.
+  // Maximum query window for aggregate analytics.
   historyDays: number
   id: PlanId
   includedBandwidthBytes: number
+  // Raw request-log query and storage window. Kept separate from aggregate
+  // analytics so lower tiers do not retain expensive event detail unnecessarily.
+  logRetentionDays: number
   // null = unlimited
   maxProjects: number | null
   maxSeats: number
@@ -42,6 +44,7 @@ export const PLANS: Record<PlanId, Plan> = {
     advancedLogs: false,
     customDomains: 0,
     historyDays: 90,
+    logRetentionDays: 30,
   },
   pro: {
     id: 'pro',
@@ -49,27 +52,31 @@ export const PLANS: Record<PlanId, Plan> = {
     priceMonthlyUsd: 19,
     includedBandwidthBytes: 400 * GB,
     overagePerGbCents: 6,
-    aiCreditsPerMonth: 150,
+    aiCreditsPerMonth: 0,
     maxProjects: 25,
     maxSeats: 10,
     advancedAnalytics: true,
     advancedLogs: true,
-    customDomains: 3,
+    customDomains: 1,
     historyDays: 365,
+    logRetentionDays: 90,
   },
   business: {
     id: 'business',
     name: 'Business',
-    priceMonthlyUsd: 29,
+    priceMonthlyUsd: 39,
     includedBandwidthBytes: 1000 * GB,
     overagePerGbCents: 5,
-    aiCreditsPerMonth: 500,
+    aiCreditsPerMonth: 0,
     maxProjects: null,
     maxSeats: 25,
     advancedAnalytics: true,
     advancedLogs: true,
-    customDomains: null,
+    // A finite allowance keeps Cloudflare's per-hostname cost bounded while
+    // still covering agencies managing many client sites.
+    customDomains: 10,
     historyDays: 365,
+    logRetentionDays: 365,
   },
 }
 
@@ -109,17 +116,12 @@ export const TRIAL = {
   bandwidthBytes: 20 * GB,
 } as const
 
-const PLAN_RANK: Record<PlanId, number> = {
-  basic: 1,
-  pro: 2,
-  business: 3,
-}
-
 // The most-recent-only log window shown to plans without advanced logs (and the
 // self-host default is unlimited, so this only applies to gated cloud tiers).
 export const BASIC_LOG_LIMIT = 200
 
 export const DEFAULT_HISTORY_DAYS = 90
+export const DEFAULT_LOG_RETENTION_DAYS = 30
 
 export function isPlanId(value: unknown): value is PlanId {
   return value === 'basic' || value === 'pro' || value === 'business'
@@ -127,18 +129,4 @@ export function isPlanId(value: unknown): value is PlanId {
 
 export function getPlan(planId: string | null | undefined): Plan | null {
   return isPlanId(planId) ? PLANS[planId] : null
-}
-
-// The overage spending cap a NEW subscription starts with: 2x the plan's monthly
-// price. "No surprise bill" must be the default, not an opt-in a customer has to
-// discover — they can raise, lower, or remove it any time in billing settings.
-export function defaultSpendCapCents(
-  planId: string | null | undefined,
-): number | null {
-  const plan = getPlan(planId)
-  return plan ? plan.priceMonthlyUsd * 100 * 2 : null
-}
-
-export function getPlanRank(plan: Plan | null | undefined) {
-  return plan ? PLAN_RANK[plan.id] : 0
 }

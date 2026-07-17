@@ -86,6 +86,25 @@ CLOUDFLARE_ZONE_ID=...
 CLOUDFLARE_HOST=keenpix.com
 ```
 
+Managed custom delivery domains use a separate write-capable Cloudflare for
+SaaS token. Deploy `workers/custom-domain-edge`, configure the zone's
+originless fallback origin, and set the application variables together:
+
+```dotenv
+CLOUDFLARE_SAAS_API_TOKEN=...
+CLOUDFLARE_SAAS_ZONE_ID=...
+CLOUDFLARE_SAAS_CNAME_TARGET=customers.keenpix.com
+CLOUDFLARE_SAAS_WORKER_SCRIPT=keenpix-custom-domain-edge
+CLOUDFLARE_SAAS_EDGE_SECRET=<same random 32+ byte value as the Worker's EDGE_SECRET>
+```
+
+The provisioning token needs **Zone → SSL and Certificates → Edit** and **Zone
+→ Workers Routes → Edit**. The Worker deployment identity additionally needs
+**Account → Workers Scripts → Edit**, but that permission does not belong in the
+application token. Keep the analytics token read-only and separate. Customers
+create a DNS-only CNAME to the target shown in Settings → Custom domains;
+Cloudflare provisions TLS and Keenpix installs an exact Worker route.
+
 For callback verification without a webhook subdomain, point Polar sandbox at
 `https://keenpix.com/api/auth/polar/sandbox-webhooks` and set that endpoint's
 distinct secret as `POLAR_SANDBOX_WEBHOOK_SECRET`. The route verifies the
@@ -150,9 +169,11 @@ For a full rebuild: create fresh volumes, start only `postgres`, copy a dump in
   `<app-url>/api/auth/polar/webhooks` (subscribe it to `subscription.created`,
   `active`, `updated`, `canceled`, `uncanceled`, AND `revoked` — `created`
   carries the trial state and `uncanceled` clears a scheduled cancellation).
-- Catalog: expose only the Basic, Pro, and Business monthly products. Archive
-  older annual products rather than deleting them so historical subscriptions
-  remain auditable; annual checkout is intentionally not linked by the app.
+- Catalog: expose only the Basic, Pro, and Business monthly plans publicly. Keep
+  the +5 custom-domain pack private; the app creates its checkout only for an
+  active paid Business organization. Archive older annual products rather than
+  deleting them so historical subscriptions remain auditable; annual checkout
+  is intentionally not linked by the app.
 - Usage cron: confirm `/api/internal/billing/report-usage` runs hourly in the
   `usage-cron` logs. It runs once immediately after app health succeeds, captures
   Cloudflare edge history, sweeps usage alerts, and prunes log retention at

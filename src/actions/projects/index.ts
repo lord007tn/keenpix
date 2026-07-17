@@ -1,4 +1,5 @@
 import type { z } from 'zod'
+import { listCustomDomainsForProjectDeletion } from '@/data-access/custom-domains'
 import {
   addAllowedOrigin,
   createProject as createProjectInDb,
@@ -11,6 +12,7 @@ import {
   updateProjectSettings as updateProjectSettingsInDb,
   updateProjectSigning as updateProjectSigningInDb,
 } from '@/data-access/projects'
+import { deleteCloudflareCustomHostname } from '@/integrations/cloudflare/custom-hostnames'
 import { generateSigningSecret } from '@/lib/transform-signing/signing'
 import type {
   internalCreateProjectSchema,
@@ -69,7 +71,13 @@ export function updateProject(
   return updateProjectInDb(projectId, orgId, patch)
 }
 
-export function deleteProject(orgId: string, projectId: string) {
+export async function deleteProject(orgId: string, projectId: string) {
+  const domains = await listCustomDomainsForProjectDeletion(orgId, projectId)
+  await Promise.all(
+    domains.map((domain) =>
+      deleteCloudflareCustomHostname(domain.providerHostnameId),
+    ),
+  )
   return deleteProjectFromDb(projectId, orgId)
 }
 

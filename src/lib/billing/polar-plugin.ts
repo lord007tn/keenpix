@@ -1,4 +1,5 @@
 import { checkout, polar, portal, webhooks } from '@polar-sh/better-auth'
+import { upsertSubscriptionAddon } from '@/data-access/subscription-addons'
 import {
   upsertSubscription,
   upsertSubscriptionWithCustomer,
@@ -9,6 +10,7 @@ import { errorContext, logger } from '@/lib/logger/logger'
 import { listCheckoutProducts } from './polar-checkout-products'
 import { createPolarClient } from './polar-client'
 import {
+  mapSubscriptionAddonSnapshot,
   mapSubscriptionSnapshot,
   type PolarSubscriptionData,
 } from './subscription-mapping'
@@ -22,6 +24,10 @@ async function syncSubscription(
 ): Promise<void> {
   const snapshot = mapSubscriptionSnapshot(sub, status)
   if (!snapshot) {
+    const addon = mapSubscriptionAddonSnapshot(sub, status)
+    if (addon) {
+      await upsertSubscriptionAddon(addon)
+    }
     return
   }
   const customerId = sub.customer?.id

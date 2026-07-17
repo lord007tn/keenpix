@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
 import { StatCard } from '@/components/app/stat-card'
-import { Badge } from '@/components/ui/badge'
 import {
   Card,
   CardContent,
@@ -14,13 +13,12 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { getErrorMessage } from '@/errors/common'
 import { getPlatformAnalyticsFn } from '@/functions/admin'
-import { getPlan } from '@/lib/billing/plans'
 import { compactNumber, humanBytes } from '@/shared/format'
 
 type PlatformAnalytics = Awaited<ReturnType<typeof getPlatformAnalyticsFn>>
 
 const PLAN_LABEL: Record<string, string> = {
-  none: 'No plan',
+  free: 'Free',
   basic: 'Basic',
   pro: 'Pro',
   business: 'Business',
@@ -43,7 +41,7 @@ export function PlatformOverview() {
 
   if (!data) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {['customers', 'requests', 'bandwidth', 'cache'].map((key) => (
           <Skeleton className="h-24" key={key} />
         ))}
@@ -61,6 +59,11 @@ export function PlatformOverview() {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Paid MRR"
+          sub={`${data.activePaidSubscriptionCount} active paid · ${data.complimentaryCustomerCount} complimentary`}
+          value={`$${(data.paidMrrCents / 100).toFixed(2)}`}
+        />
         <StatCard
           label="Customers"
           sub={`${data.servedCount} served · ${data.suspendedCount} suspended`}
@@ -141,20 +144,12 @@ export function PlatformOverview() {
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {planDistribution.map((row) => {
-              const plan = getPlan(row.plan)
               const pct =
                 totalPlanned > 0 ? (row.count / totalPlanned) * 100 : 0
               return (
                 <div className="flex flex-col gap-1" key={row.plan}>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2">
-                      {PLAN_LABEL[row.plan] ?? row.plan}
-                      {plan ? (
-                        <Badge variant="outline">
-                          ${plan.priceMonthlyUsd}/mo
-                        </Badge>
-                      ) : null}
-                    </span>
+                    <span>{PLAN_LABEL[row.plan] ?? row.plan}</span>
                     <span className="text-muted-foreground tabular-nums">
                       {row.count}
                     </span>

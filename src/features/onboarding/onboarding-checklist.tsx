@@ -124,8 +124,7 @@ export function OnboardingChecklist({
     !cloud ||
     entitled === true ||
     data?.status === 'active' ||
-    data?.status === 'trialing' ||
-    data?.status === 'internal'
+    data?.status === 'trialing'
   const canManageBilling = !cloud || orgRole === 'owner' || orgRole === 'admin'
   const needsBillingRecovery =
     !subscribed &&
@@ -185,7 +184,7 @@ export function OnboardingChecklist({
   let planDescription = `Every plan starts with a ${TRIAL.days}-day free trial — trial usage is never billed, and plans start at $${PLANS.basic.priceMonthlyUsd}/mo with unlimited transforms.`
   if (subscribed) {
     planDescription =
-      'Your organization has access through an active plan or internal grant.'
+      'Your organization has access through an active paid or complimentary plan.'
   } else if (needsBillingRecovery) {
     planDescription =
       'Review the existing billing account to restore workspace access.'
