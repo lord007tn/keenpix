@@ -14,10 +14,8 @@ import type { Prisma } from '@/generated/prisma/client'
 import {
   type CloudflareCustomHostname,
   createCloudflareCustomHostname,
-  createCloudflareCustomHostnameRoute,
   customDomainsConfigured,
   deleteCloudflareCustomHostname,
-  deleteCloudflareCustomHostnameRoute,
   getCloudflareCustomHostname,
   getCloudflareCustomHostnameRecords,
   getCloudflareCustomHostnameState,
@@ -126,12 +124,8 @@ export async function createCustomDomain(
   }
 
   let provisioned: CloudflareCustomHostname | undefined
-  let workerRouteId: string | undefined
   try {
     provisioned = await createCloudflareCustomHostname(hostname)
-    const route = await createCloudflareCustomHostnameRoute(hostname)
-    workerRouteId = route.id
-    provisioned = { ...provisioned, workerRouteId }
     const state = getCloudflareCustomHostnameState(provisioned)
     const created = await createCustomDomainRecord({
       dnsStatus: state.dnsStatus,
@@ -147,11 +141,6 @@ export async function createCustomDomain(
     })
     return customDomainView(created)
   } catch (error) {
-    if (workerRouteId) {
-      await deleteCloudflareCustomHostnameRoute(workerRouteId).catch(
-        () => undefined,
-      )
-    }
     if (provisioned) {
       await deleteCloudflareCustomHostname(provisioned.id).catch(
         () => undefined,
@@ -175,8 +164,6 @@ export async function refreshCustomDomain(
   if (current.status !== 'active' || current.ssl?.status !== 'active') {
     current = await retryCloudflareCustomHostname(domain.providerHostnameId)
   }
-  const stored = providerHostname(domain.providerData)
-  current = { ...current, workerRouteId: stored?.workerRouteId }
   const state = getCloudflareCustomHostnameState(current)
   const updated = await updateCustomDomainRecord(domain.id, {
     dnsStatus: state.dnsStatus,
@@ -196,10 +183,6 @@ export async function deleteCustomDomain(
   const domain = await getCustomDomain(orgId, projectId, id)
   if (!domain) {
     throw new Error('Custom domain not found')
-  }
-  const provider = providerHostname(domain.providerData)
-  if (provider?.workerRouteId) {
-    await deleteCloudflareCustomHostnameRoute(provider.workerRouteId)
   }
   await deleteCloudflareCustomHostname(domain.providerHostnameId)
   await deleteCustomDomainRecord(domain.id)

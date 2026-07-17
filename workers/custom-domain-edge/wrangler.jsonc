@@ -4,6 +4,10 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-07-17",
   "workers_dev": false,
+  // Cloudflare for SaaS custom hostnames are matched by one wildcard route.
+  // Keep the more-specific no-Worker routes for keenpix.com, www.keenpix.com,
+  // and fallback.keenpix.com in the zone so the app origin cannot loop.
+  "routes": [{ "pattern": "*/*", "zone_name": "keenpix.com" }],
   "vars": {
     "APP_ORIGIN": "https://keenpix.com"
   },
