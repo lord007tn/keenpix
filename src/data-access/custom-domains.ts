@@ -57,7 +57,9 @@ export function createCustomDomainRecord(input: {
   return prisma.$transaction(async (tx) => {
     // Serialize custom-domain creates per organization so simultaneous requests
     // cannot both observe the last free slot and exceed the paid allowance.
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${orgId}))`
+    await tx.$queryRaw<{ locked: number }[]>`
+      SELECT 1 AS locked
+      FROM pg_advisory_xact_lock(hashtext(${orgId}))`
     if (limit !== null) {
       const used = await tx.customDomain.count({
         where: { project: { orgId } },
