@@ -4,6 +4,8 @@ import { useState } from 'react'
 import type { DateRange } from 'react-day-picker'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Popover,
   PopoverContent,
@@ -28,8 +30,34 @@ export const HISTORY_RANGES: Array<{
   { buttonLabel: '90 days', label: 'Last 90 days', value: '90d' },
   { buttonLabel: '365 days', label: 'Last 365 days', value: '365d' },
   { buttonLabel: 'All time', label: 'All available', value: 'all' },
-  { buttonLabel: 'Custom', label: 'Custom dates', value: 'custom' },
+  { buttonLabel: 'Custom', label: 'Custom range', value: 'custom' },
 ]
+
+function getHistoricalRangeDates(
+  range: Exclude<HistoricalAnalyticsRange, 'custom'>,
+  earliest: string,
+  today: string,
+) {
+  if (range === 'all') {
+    return { from: earliest, to: today }
+  }
+  if (range === '24h') {
+    return { from: today, to: today }
+  }
+  let days = 7
+  if (range === '30d') {
+    days = 30
+  } else if (range === '90d') {
+    days = 90
+  } else if (range === '365d') {
+    days = 365
+  }
+  const from = dayjs(today).subtract(days - 1, 'day')
+  return {
+    from: from.isBefore(earliest, 'day') ? earliest : from.format('YYYY-MM-DD'),
+    to: today,
+  }
+}
 
 export function HistoryRangePicker({
   from,
@@ -64,11 +92,18 @@ export function HistoryRangePicker({
   ) {
     visibleFrom = earliest
   }
+
+  const appliedDates =
+    visibleRange === 'custom'
+      ? { from: visibleFrom, to: visibleTo }
+      : getHistoricalRangeDates(visibleRange, earliest, today)
+  const inputId = `${label.toLowerCase().replaceAll(' ', '-')}-history`
+
   const [customOpen, setCustomOpen] = useState(false)
   const [draftRange, setDraftRange] = useState<DateRange | undefined>()
-  const defaultCustomFrom = dayjs().subtract(9, 'day').isBefore(earliest, 'day')
-    ? earliest
-    : dayjs().subtract(9, 'day').format('YYYY-MM-DD')
+  const [calendarMonth, setCalendarMonth] = useState(
+    dayjs(today).subtract(1, 'month').startOf('month').toDate(),
+  )
   const draftFrom = draftRange?.from
   const draftTo = draftRange?.to
   const draftIsValid = Boolean(
@@ -90,10 +125,10 @@ export function HistoryRangePicker({
         )}`
       : 'Custom'
   let draftSummary = 'Select a start date.'
-  if (draftFrom && !draftTo) {
-    draftSummary = `${dayjs(draftFrom).format('MMM D, YYYY')} — select an end date.`
-  } else if (draftFrom && draftTo) {
+  if (draftFrom && draftTo) {
     draftSummary = `${dayjs(draftFrom).format('MMM D, YYYY')} – ${dayjs(draftTo).format('MMM D, YYYY')} · ${dayjs(draftTo).diff(dayjs(draftFrom), 'day') + 1} days`
+  } else if (draftFrom) {
+    draftSummary = `${dayjs(draftFrom).format('MMM D, YYYY')} — select an end date`
   }
 
   return (
@@ -103,9 +138,15 @@ export function HistoryRangePicker({
         onOpenChange={(nextOpen) => {
           if (nextOpen) {
             setDraftRange({
-              from: dayjs(from ? visibleFrom : defaultCustomFrom).toDate(),
-              to: dayjs(to ? visibleTo : today).toDate(),
+              from: dayjs(appliedDates.from).toDate(),
+              to: dayjs(appliedDates.to).toDate(),
             })
+            setCalendarMonth(
+              dayjs(appliedDates.to)
+                .subtract(1, 'month')
+                .startOf('month')
+                .toDate(),
+            )
           }
           setCustomOpen(nextOpen)
         }}
@@ -152,18 +193,20 @@ export function HistoryRangePicker({
             {appliedCustomLabel}
           </PopoverTrigger>
         </ToggleGroup>
+
         <PopoverContent
           align="end"
-          className="w-auto max-w-[calc(100vw-1rem)] gap-0 p-0"
+          className="max-h-[calc(100vh-1rem)] w-[37rem] max-w-[calc(100vw-1rem)] gap-0 overflow-y-auto p-0"
           sideOffset={8}
         >
-          <PopoverHeader className="p-4 pb-2">
+          <PopoverHeader className="border-b px-4 py-3">
             <PopoverTitle>Custom date range</PopoverTitle>
             <PopoverDescription>
               Select an inclusive range between{' '}
               {dayjs(earliest).format('MMM D, YYYY')} and today.
             </PopoverDescription>
           </PopoverHeader>
+
           <form
             onSubmit={(event) => {
               event.preventDefault()
@@ -178,40 +221,91 @@ export function HistoryRangePicker({
               setCustomOpen(false)
             }}
           >
-            <Calendar
-              captionLayout="dropdown"
-              className="p-0 [--cell-size:--spacing(11)] sm:p-3"
-              defaultMonth={draftFrom ?? dayjs(today).toDate()}
-              disabled={{
-                before: dayjs(earliest).toDate(),
-                after: dayjs(today).toDate(),
-              }}
-              endMonth={dayjs(today).toDate()}
-              mode="range"
-              onSelect={setDraftRange}
-              selected={draftRange}
-              showOutsideDays={false}
-              startMonth={dayjs(earliest).toDate()}
-            />
+            <div className="min-w-0">
+              <div className="grid grid-cols-2 gap-3 border-b p-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor={`${inputId}-date-from`}>Start date</Label>
+                  <Input
+                    id={`${inputId}-date-from`}
+                    max={dayjs(draftTo ?? today).format('YYYY-MM-DD')}
+                    min={earliest}
+                    onChange={(event) => {
+                      const nextFrom = event.target.value
+                      setDraftRange({
+                        from: nextFrom ? dayjs(nextFrom).toDate() : undefined,
+                        to: draftTo,
+                      })
+                      if (nextFrom) {
+                        setCalendarMonth(
+                          dayjs(nextFrom).startOf('month').toDate(),
+                        )
+                      }
+                    }}
+                    type="date"
+                    value={
+                      draftFrom ? dayjs(draftFrom).format('YYYY-MM-DD') : ''
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor={`${inputId}-date-to`}>End date</Label>
+                  <Input
+                    id={`${inputId}-date-to`}
+                    max={today}
+                    min={
+                      draftFrom
+                        ? dayjs(draftFrom).format('YYYY-MM-DD')
+                        : earliest
+                    }
+                    onChange={(event) => {
+                      const nextTo = event.target.value
+                      setDraftRange({
+                        from: draftFrom,
+                        to: nextTo ? dayjs(nextTo).toDate() : undefined,
+                      })
+                    }}
+                    type="date"
+                    value={draftTo ? dayjs(draftTo).format('YYYY-MM-DD') : ''}
+                  />
+                </div>
+              </div>
+
+              <Calendar
+                captionLayout="dropdown"
+                className="mx-auto p-3 [--cell-size:--spacing(8)]"
+                disabled={{
+                  before: dayjs(earliest).toDate(),
+                  after: dayjs(today).toDate(),
+                }}
+                endMonth={dayjs(today).toDate()}
+                mode="range"
+                month={calendarMonth}
+                numberOfMonths={2}
+                onMonthChange={setCalendarMonth}
+                onSelect={setDraftRange}
+                selected={draftRange}
+                showOutsideDays={false}
+                startMonth={dayjs(earliest).toDate()}
+              />
+            </div>
+
             <Separator />
-            <p
-              aria-live="polite"
-              className="min-h-10 px-4 py-2 text-muted-foreground text-sm"
-            >
-              {draftSummary}
-            </p>
-            <div className="flex justify-end gap-2 p-4 pt-2">
-              <Button
-                className="h-11"
-                onClick={() => setCustomOpen(false)}
-                type="button"
-                variant="outline"
-              >
-                Cancel
-              </Button>
-              <Button className="h-11" disabled={!draftIsValid} type="submit">
-                Apply range
-              </Button>
+            <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p aria-live="polite" className="text-muted-foreground text-sm">
+                {draftSummary}
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  onClick={() => setCustomOpen(false)}
+                  type="button"
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+                <Button disabled={!draftIsValid} type="submit">
+                  Apply range
+                </Button>
+              </div>
             </div>
           </form>
         </PopoverContent>
