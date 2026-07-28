@@ -1,8 +1,20 @@
 import 'dotenv/config'
+import { createHash } from 'node:crypto'
 import dayjs from 'dayjs'
 import pg from 'pg'
 
 const { Client } = pg
+
+type UserDisposition =
+  | {
+      disposition: 'exclude'
+      reason: string
+    }
+  | {
+      disposition: 'map'
+      targetEmail: string
+      targetRole: 'admin' | 'member' | 'owner'
+    }
 
 function requireEnv(name: string) {
   const value = process.env[name]?.trim()
@@ -21,7 +33,10 @@ const TARGET_ORG_ID = requireEnv('TARGET_ORG_ID')
 const TARGET_OWNER_EMAIL = requireEnv('TARGET_OWNER_EMAIL')
 const SOURCE_RELEASE = requireEnv('SOURCE_RELEASE')
 const TARGET_RELEASE = requireEnv('TARGET_RELEASE')
+const SOURCE_SCHEMA_MIGRATION = requireEnv('SOURCE_SCHEMA_MIGRATION')
+const TARGET_SCHEMA_MIGRATION = requireEnv('TARGET_SCHEMA_MIGRATION')
 const MIGRATION_RUN_ID = requireEnv('MIGRATION_RUN_ID')
+const SINCE_AT = dayjs(requireEnv('MIGRATION_SINCE_AT'))
 const CUTOVER_AT = dayjs(requireEnv('MIGRATION_CUTOVER_AT'))
 const SOURCE_API_KEY_IDS = requireEnv('SOURCE_API_KEY_IDS')
   .split(',')
@@ -30,19 +45,42 @@ const SOURCE_API_KEY_IDS = requireEnv('SOURCE_API_KEY_IDS')
 const API_KEY_PROJECTS = JSON.parse(
   requireEnv('SOURCE_API_KEY_PROJECTS'),
 ) as Record<string, string>
+const USER_DISPOSITIONS = JSON.parse(
+  requireEnv('SOURCE_USER_DISPOSITIONS'),
+) as Record<string, UserDisposition>
+const MIGRATION_MODE = requireEnv('MIGRATION_MODE')
 const BATCH_SIZE = Number(process.env.MIGRATION_BATCH_SIZE ?? 1000)
 const EXTRA_ID_BATCH_SIZE = 5000
-const DRY_RUN = process.argv.includes('--dry-run')
+const DRY_RUN = MIGRATION_MODE === 'dry-run'
 const SKIP_RAW_LOGS = process.argv.includes('--skip-raw-logs')
 const SKIP_ROLLUPS = process.argv.includes('--skip-rollups')
 
-if (
-  !CUTOVER_AT.isValid() ||
-  CUTOVER_AT.minute() !== 0 ||
-  CUTOVER_AT.second() !== 0 ||
-  CUTOVER_AT.millisecond() !== 0
-) {
-  throw new Error('MIGRATION_CUTOVER_AT must be an exact UTC hour boundary.')
+if (!['dry-run', 'execute'].includes(MIGRATION_MODE)) {
+  throw new Error('MIGRATION_MODE must be either dry-run or execute.')
+}
+for (const [name, value] of [
+  ['MIGRATION_SINCE_AT', SINCE_AT],
+  ['MIGRATION_CUTOVER_AT', CUTOVER_AT],
+] as const) {
+  if (
+    !value.isValid() ||
+    value.minute() !== 0 ||
+    value.second() !== 0 ||
+    value.millisecond() !== 0
+  ) {
+    throw new Error(`${name} must be an exact UTC hour boundary.`)
+  }
+}
+if (!SINCE_AT.isBefore(CUTOVER_AT)) {
+  throw new Error('MIGRATION_SINCE_AT must be before MIGRATION_CUTOVER_AT.')
+}
+for (const [name, value] of [
+  ['SOURCE_RELEASE', SOURCE_RELEASE],
+  ['TARGET_RELEASE', TARGET_RELEASE],
+] as const) {
+  if (!/^[\da-f]{40}$/i.test(value)) {
+    throw new Error(`${name} must be a full 40-character Git commit SHA.`)
+  }
 }
 if (!Number.isInteger(BATCH_SIZE) || BATCH_SIZE < 100 || BATCH_SIZE > 5000) {
   throw new Error('MIGRATION_BATCH_SIZE must be an integer from 100 to 5000.')
@@ -53,6 +91,53 @@ if (SOURCE_API_KEY_IDS.length === 0) {
 for (const id of SOURCE_API_KEY_IDS) {
   if (!API_KEY_PROJECTS[id]) {
     throw new Error(`SOURCE_API_KEY_PROJECTS is missing ${id}.`)
+  }
+}
+const identityManifest = Object.fromEntries(
+  Object.entries(USER_DISPOSITIONS).map(([email, disposition]) => [
+    email.trim().toLowerCase(),
+    disposition.disposition === 'map'
+      ? {
+          disposition: 'map',
+          targetEmail: disposition.targetEmail.trim().toLowerCase(),
+          targetRole: disposition.targetRole,
+        }
+      : {
+          disposition: 'exclude',
+          reason: disposition.reason.trim(),
+        },
+  ]),
+) as Record<string, UserDisposition>
+if (
+  Object.keys(identityManifest).length !== Object.keys(USER_DISPOSITIONS).length
+) {
+  throw new Error(
+    'SOURCE_USER_DISPOSITIONS contains duplicate case-insensitive emails.',
+  )
+}
+const identityManifestHash = createHash('sha256')
+  .update(JSON.stringify(identityManifest))
+  .digest('hex')
+for (const [email, disposition] of Object.entries(identityManifest)) {
+  if (!email.includes('@')) {
+    throw new Error(
+      'SOURCE_USER_DISPOSITIONS contains an invalid source email.',
+    )
+  }
+  if (
+    disposition.disposition === 'map' &&
+    !disposition.targetEmail.includes('@')
+  ) {
+    throw new Error(`SOURCE_USER_DISPOSITIONS is invalid for ${email}.`)
+  }
+  if (
+    disposition.disposition === 'map' &&
+    !['admin', 'member', 'owner'].includes(disposition.targetRole)
+  ) {
+    throw new Error(`SOURCE_USER_DISPOSITIONS is invalid for ${email}.`)
+  }
+  if (disposition.disposition === 'exclude' && !disposition.reason) {
+    throw new Error(`SOURCE_USER_DISPOSITIONS is invalid for ${email}.`)
   }
 }
 
@@ -87,6 +172,30 @@ async function queryCount(
 ) {
   const result = await client.query(sql, params)
   return Number(result.rows[0]?.count ?? 0)
+}
+
+async function verifySchemaMigration(
+  client: pg.Client,
+  migration: string,
+  label: string,
+) {
+  const result = await client.query(
+    `select migration_name, finished_at
+     from "_prisma_migrations"
+     where migration_name = $1
+       and finished_at is not null
+       and rolled_back_at is null`,
+    [migration],
+  )
+  if (!result.rows[0]) {
+    throw new Error(
+      `${label} database does not contain applied migration ${migration}.`,
+    )
+  }
+  return {
+    finishedAt: result.rows[0].finished_at,
+    migration: result.rows[0].migration_name,
+  }
 }
 
 async function writeRows(input: {
@@ -227,6 +336,7 @@ async function fingerprint(
 }
 
 async function listTargetOnlyIds(input: {
+  orderColumn: string
   source: pg.Client
   sourceParams: unknown[]
   sourceWhere: string
@@ -236,20 +346,26 @@ async function listTargetOnlyIds(input: {
   targetWhere: string
 }) {
   const extraIds: string[] = []
+  let lastOrder: unknown
   let lastId: string | undefined
 
   while (true) {
     const targetParams = [...input.targetParams]
     let cursor = ''
-    if (lastId) {
-      targetParams.push(lastId)
-      cursor = ` and id > $${targetParams.length}`
+    if (lastOrder !== undefined && lastId) {
+      targetParams.push(lastOrder, lastId)
+      cursor = ` and (
+        ${quoteIdent(input.orderColumn)} > $${targetParams.length - 1} or
+        (${quoteIdent(input.orderColumn)} = $${targetParams.length - 1}
+          and id > $${targetParams.length})
+      )`
     }
     targetParams.push(EXTRA_ID_BATCH_SIZE)
     const targetRows = await input.target.query(
-      `select id from ${quoteIdent(input.table)}
+      `select id, ${quoteIdent(input.orderColumn)} as "orderValue"
+       from ${quoteIdent(input.table)}
        where ${input.targetWhere}${cursor}
-       order by id
+       order by ${quoteIdent(input.orderColumn)}, id
        limit $${targetParams.length}`,
       targetParams,
     )
@@ -266,10 +382,61 @@ async function listTargetOnlyIds(input: {
     )
     const sourceIds = new Set(sourceRows.rows.map((row) => String(row.id)))
     extraIds.push(...ids.filter((id) => !sourceIds.has(id)))
-    lastId = ids.at(-1)
+    const lastRow = targetRows.rows.at(-1)
+    lastOrder = lastRow?.orderValue
+    lastId = String(lastRow?.id)
   }
 
   return extraIds
+}
+
+async function countRollupKeyCollisions(input: {
+  ids: string[]
+  since: string
+  source: pg.Client
+  sourceOrgId: string
+  target: pg.Client
+  until: string
+}) {
+  let collisions = 0
+  for (let offset = 0; offset < input.ids.length; offset += 500) {
+    const rows = await input.target.query(
+      `select "bucketStart", "projectId", "sourceHost", country, path, format, status
+       from "AnalyticsRollupHourly"
+       where id = any($1::text[])`,
+      [input.ids.slice(offset, offset + 500)],
+    )
+    if (rows.rows.length === 0) {
+      continue
+    }
+    collisions += await queryCount(
+      input.source,
+      `with keys as (
+         select *
+         from jsonb_to_recordset($4::jsonb) as k(
+           "bucketStart" timestamptz,
+           "projectId" text,
+           "sourceHost" text,
+           country text,
+           path text,
+           format text,
+           status integer
+         )
+       )
+       select count(*)
+       from "AnalyticsRollupHourly" r
+       join keys k on
+         r."bucketStart" = k."bucketStart" and
+         r."projectId" = k."projectId" and
+         r."sourceHost" is not distinct from k."sourceHost" and
+         r.country is not distinct from k.country and
+         r.path = k.path and r.format = k.format and r.status = k.status
+       where r."orgId" = $1
+         and r."bucketStart" >= $2 and r."bucketStart" < $3`,
+      [input.sourceOrgId, input.since, input.until, JSON.stringify(rows.rows)],
+    )
+  }
+  return collisions
 }
 
 async function main() {
@@ -280,9 +447,16 @@ async function main() {
   try {
     await source.query('begin isolation level repeatable read read only')
 
+    const [sourceSchema, targetSchema] = await Promise.all([
+      verifySchemaMigration(source, SOURCE_SCHEMA_MIGRATION, 'Source'),
+      verifySchemaMigration(target, TARGET_SCHEMA_MIGRATION, 'Target'),
+    ])
     const sourceOrg = await source.query('select id from "Org" where id = $1', [
       SOURCE_ORG_ID,
     ])
+    const sourceUsers = await source.query(
+      'select lower(email) as email from "User" order by lower(email)',
+    )
     const projects = await source.query(
       `select id, name, origin, "allowedOrigins", color1, color2,
               "createdAt", "autoFormat", "stripMetadata",
@@ -302,8 +476,16 @@ async function main() {
       `select u.id
        from "Member" m
        join "User" u on u.id = m."userId"
-       where m."organizationId" = $1 and lower(u.email) = lower($2)`,
+       where m."organizationId" = $1 and lower(u.email) = lower($2)
+         and m.role = 'owner'`,
       [TARGET_ORG_ID, TARGET_OWNER_EMAIL],
+    )
+    const targetMembers = await target.query(
+      `select lower(u.email) as email, m.role
+       from "Member" m
+       join "User" u on u.id = m."userId"
+       where m."organizationId" = $1`,
+      [TARGET_ORG_ID],
     )
 
     if (!sourceOrg.rows[0]) {
@@ -314,6 +496,38 @@ async function main() {
     }
     if (!targetOwner.rows[0]) {
       throw new Error('The reviewed target owner membership was not found.')
+    }
+    const sourceUserEmails = new Set(
+      sourceUsers.rows.map((user) => String(user.email)),
+    )
+    const dispositionEmails = new Set(Object.keys(identityManifest))
+    const missingDispositions = [...sourceUserEmails].filter(
+      (email) => !dispositionEmails.has(email),
+    )
+    const unknownDispositions = [...dispositionEmails].filter(
+      (email) => !sourceUserEmails.has(email),
+    )
+    if (missingDispositions.length > 0 || unknownDispositions.length > 0) {
+      throw new Error(
+        `SOURCE_USER_DISPOSITIONS coverage mismatch: missing=${missingDispositions.length}, unknown=${unknownDispositions.length}.`,
+      )
+    }
+    const targetMemberships = new Map(
+      targetMembers.rows.map((member) => [
+        String(member.email),
+        String(member.role),
+      ]),
+    )
+    for (const [sourceEmail, disposition] of Object.entries(identityManifest)) {
+      if (
+        disposition.disposition === 'map' &&
+        targetMemberships.get(disposition.targetEmail) !==
+          disposition.targetRole
+      ) {
+        throw new Error(
+          `Mapped cloud membership or role does not match for ${sourceEmail}.`,
+        )
+      }
     }
     if (projects.rows.length === 0) {
       throw new Error('The source organization has no projects.')
@@ -341,22 +555,48 @@ async function main() {
       throw new Error('A selected project ID belongs to another target org.')
     }
 
+    const since = SINCE_AT.toISOString()
     const cutover = CUTOVER_AT.toISOString()
+    const preexistingTargetOnlyRollupIds = await listTargetOnlyIds({
+      orderColumn: 'bucketStart',
+      source,
+      sourceParams: [SOURCE_ORG_ID, since, cutover],
+      sourceWhere:
+        '"orgId" = $1 and "bucketStart" >= $2 and "bucketStart" < $3',
+      table: 'AnalyticsRollupHourly',
+      target,
+      targetParams: [TARGET_ORG_ID, projectIds, since, cutover],
+      targetWhere:
+        '"orgId" = $1 and "projectId" = any($2) and "bucketStart" >= $3 and "bucketStart" < $4',
+    })
+    const rollupKeyCollisions = await countRollupKeyCollisions({
+      ids: preexistingTargetOnlyRollupIds,
+      since,
+      source,
+      sourceOrgId: SOURCE_ORG_ID,
+      target,
+      until: cutover,
+    })
+    if (rollupKeyCollisions > 0) {
+      throw new Error(
+        `${rollupKeyCollisions} cloud-only hourly rollups overlap legacy dimension keys. Stop before writes and approve an explicit merge/rebuild policy.`,
+      )
+    }
     const sourceCounts = {
       apiKeyActivity: await queryCount(
         source,
-        'select count(*) from "ApiKeyActivity" where "apiKeyId" = any($1) and "createdAt" < $2',
-        [SOURCE_API_KEY_IDS, cutover],
+        'select count(*) from "ApiKeyActivity" where "apiKeyId" = any($1) and "createdAt" >= $2 and "createdAt" < $3',
+        [SOURCE_API_KEY_IDS, since, cutover],
       ),
       requestLog: await queryCount(
         source,
-        'select count(*) from "RequestLog" where "orgId" = $1 and ts < $2',
-        [SOURCE_ORG_ID, cutover],
+        'select count(*) from "RequestLog" where "orgId" = $1 and ts >= $2 and ts < $3',
+        [SOURCE_ORG_ID, since, cutover],
       ),
       rollups: await queryCount(
         source,
-        'select count(*) from "AnalyticsRollupHourly" where "orgId" = $1 and "bucketStart" < $2',
-        [SOURCE_ORG_ID, cutover],
+        'select count(*) from "AnalyticsRollupHourly" where "orgId" = $1 and "bucketStart" >= $2 and "bucketStart" < $3',
+        [SOURCE_ORG_ID, since, cutover],
       ),
     }
     console.log(
@@ -365,12 +605,21 @@ async function main() {
           batchSize: BATCH_SIZE,
           cutover,
           dryRun: DRY_RUN,
+          identityManifestHash,
+          mappedUsers: Object.values(identityManifest).filter(
+            (disposition) => disposition.disposition === 'map',
+          ).length,
           runId: MIGRATION_RUN_ID,
+          since,
           sourceCounts,
+          sourceUsers: sourceUserEmails.size,
+          targetOnlyRollups: preexistingTargetOnlyRollupIds.length,
           sourceOrgId: SOURCE_ORG_ID,
           sourceRelease: SOURCE_RELEASE,
+          sourceSchema,
           targetOrgId: TARGET_ORG_ID,
           targetRelease: TARGET_RELEASE,
+          targetSchema,
         },
         null,
         2,
@@ -387,11 +636,16 @@ async function main() {
     const manifest = JSON.stringify({
       apiKeyProjects: API_KEY_PROJECTS,
       cutover,
+      identityManifestHash,
+      migrationMode: MIGRATION_MODE,
+      since,
       sourceApiKeyIds: SOURCE_API_KEY_IDS,
       sourceOrgId: SOURCE_ORG_ID,
       sourceRelease: SOURCE_RELEASE,
+      sourceSchemaMigration: SOURCE_SCHEMA_MIGRATION,
       targetOrgId: TARGET_ORG_ID,
       targetRelease: TARGET_RELEASE,
+      targetSchemaMigration: TARGET_SCHEMA_MIGRATION,
     })
     await target.query(`
       create table if not exists "_KeenpixMigrationCheckpoint" (
@@ -458,7 +712,18 @@ async function main() {
       conflict: `on conflict (id) do update set
         name = excluded.name, start = excluded.start, prefix = excluded.prefix,
         key = excluded.key, "configId" = excluded."configId",
-        "referenceId" = excluded."referenceId", enabled = excluded.enabled,
+        "referenceId" = excluded."referenceId",
+        "refillInterval" = excluded."refillInterval",
+        "refillAmount" = excluded."refillAmount",
+        "lastRefillAt" = excluded."lastRefillAt",
+        enabled = excluded.enabled,
+        "rateLimitEnabled" = excluded."rateLimitEnabled",
+        "rateLimitTimeWindow" = excluded."rateLimitTimeWindow",
+        "rateLimitMax" = excluded."rateLimitMax",
+        "requestCount" = excluded."requestCount",
+        remaining = excluded.remaining,
+        "lastRequest" = excluded."lastRequest",
+        "expiresAt" = excluded."expiresAt",
         permissions = excluded.permissions, metadata = excluded.metadata,
         "updatedAt" = excluded."updatedAt"`,
       rows: apiKeys.rows.map((apiKey) => ({
@@ -518,8 +783,9 @@ async function main() {
       manifest,
       orderColumn: 'createdAt',
       source,
-      sourceParams: [SOURCE_API_KEY_IDS, cutover],
-      sourceWhere: '"apiKeyId" = any($1) and "createdAt" < $2',
+      sourceParams: [SOURCE_API_KEY_IDS, since, cutover],
+      sourceWhere:
+        '"apiKeyId" = any($1) and "createdAt" >= $2 and "createdAt" < $3',
       table: 'ApiKeyActivity',
       target,
       transform: (row) => row,
@@ -609,8 +875,9 @@ async function main() {
         manifest,
         orderColumn: 'bucketStart',
         source,
-        sourceParams: [SOURCE_ORG_ID, cutover],
-        sourceWhere: '"orgId" = $1 and "bucketStart" < $2',
+        sourceParams: [SOURCE_ORG_ID, since, cutover],
+        sourceWhere:
+          '"orgId" = $1 and "bucketStart" >= $2 and "bucketStart" < $3',
         table: 'AnalyticsRollupHourly',
         target,
         transform: (row) => ({ ...row, orgId: TARGET_ORG_ID }),
@@ -663,8 +930,8 @@ async function main() {
         manifest,
         orderColumn: 'ts',
         source,
-        sourceParams: [SOURCE_ORG_ID, cutover],
-        sourceWhere: '"orgId" = $1 and ts < $2',
+        sourceParams: [SOURCE_ORG_ID, since, cutover],
+        sourceWhere: '"orgId" = $1 and ts >= $2 and ts < $3',
         table: 'RequestLog',
         target,
         transform: (row) => ({ ...row, orgId: TARGET_ORG_ID }),
@@ -682,32 +949,39 @@ async function main() {
     }
 
     const targetOnlyRequestLogIds = await listTargetOnlyIds({
+      orderColumn: 'ts',
       source,
-      sourceParams: [SOURCE_ORG_ID, cutover],
-      sourceWhere: '"orgId" = $1 and ts < $2',
+      sourceParams: [SOURCE_ORG_ID, since, cutover],
+      sourceWhere: '"orgId" = $1 and ts >= $2 and ts < $3',
       table: 'RequestLog',
       target,
-      targetParams: [TARGET_ORG_ID, projectIds, cutover],
-      targetWhere: '"orgId" = $1 and "projectId" = any($2) and ts < $3',
+      targetParams: [TARGET_ORG_ID, projectIds, since, cutover],
+      targetWhere:
+        '"orgId" = $1 and "projectId" = any($2) and ts >= $3 and ts < $4',
     })
     const targetOnlyRollupIds = await listTargetOnlyIds({
+      orderColumn: 'bucketStart',
       source,
-      sourceParams: [SOURCE_ORG_ID, cutover],
-      sourceWhere: '"orgId" = $1 and "bucketStart" < $2',
+      sourceParams: [SOURCE_ORG_ID, since, cutover],
+      sourceWhere:
+        '"orgId" = $1 and "bucketStart" >= $2 and "bucketStart" < $3',
       table: 'AnalyticsRollupHourly',
       target,
-      targetParams: [TARGET_ORG_ID, projectIds, cutover],
+      targetParams: [TARGET_ORG_ID, projectIds, since, cutover],
       targetWhere:
-        '"orgId" = $1 and "projectId" = any($2) and "bucketStart" < $3',
+        '"orgId" = $1 and "projectId" = any($2) and "bucketStart" >= $3 and "bucketStart" < $4',
     })
     const targetOnlyActivityIds = await listTargetOnlyIds({
+      orderColumn: 'createdAt',
       source,
-      sourceParams: [SOURCE_API_KEY_IDS, cutover],
-      sourceWhere: '"apiKeyId" = any($1) and "createdAt" < $2',
+      sourceParams: [SOURCE_API_KEY_IDS, since, cutover],
+      sourceWhere:
+        '"apiKeyId" = any($1) and "createdAt" >= $2 and "createdAt" < $3',
       table: 'ApiKeyActivity',
       target,
-      targetParams: [SOURCE_API_KEY_IDS, cutover],
-      targetWhere: '"apiKeyId" = any($1) and "createdAt" < $2',
+      targetParams: [SOURCE_API_KEY_IDS, since, cutover],
+      targetWhere:
+        '"apiKeyId" = any($1) and "createdAt" >= $2 and "createdAt" < $3',
     })
     console.log(
       `Preserving cloud-only rows: RequestLog=${targetOnlyRequestLogIds.length}, AnalyticsRollupHourly=${targetOnlyRollupIds.length}, ApiKeyActivity=${targetOnlyActivityIds.length}`,
@@ -720,15 +994,15 @@ async function main() {
         source: await fingerprint(
           source,
           'RequestLog',
-          '"orgId" = $1 and ts < $2',
-          [SOURCE_ORG_ID, cutover],
+          '"orgId" = $1 and ts >= $2 and ts < $3',
+          [SOURCE_ORG_ID, since, cutover],
           ['orgId'],
         ),
         target: await fingerprint(
           target,
           'RequestLog',
-          '"orgId" = $1 and "projectId" = any($2) and ts < $3 and id <> all($4::text[])',
-          [TARGET_ORG_ID, projectIds, cutover, targetOnlyRequestLogIds],
+          '"orgId" = $1 and "projectId" = any($2) and ts >= $3 and ts < $4 and id <> all($5::text[])',
+          [TARGET_ORG_ID, projectIds, since, cutover, targetOnlyRequestLogIds],
           ['orgId'],
         ),
       },
@@ -738,15 +1012,15 @@ async function main() {
         source: await fingerprint(
           source,
           'AnalyticsRollupHourly',
-          '"orgId" = $1 and "bucketStart" < $2',
-          [SOURCE_ORG_ID, cutover],
+          '"orgId" = $1 and "bucketStart" >= $2 and "bucketStart" < $3',
+          [SOURCE_ORG_ID, since, cutover],
           ['orgId'],
         ),
         target: await fingerprint(
           target,
           'AnalyticsRollupHourly',
-          '"orgId" = $1 and "projectId" = any($2) and "bucketStart" < $3 and id <> all($4::text[])',
-          [TARGET_ORG_ID, projectIds, cutover, targetOnlyRollupIds],
+          '"orgId" = $1 and "projectId" = any($2) and "bucketStart" >= $3 and "bucketStart" < $4 and id <> all($5::text[])',
+          [TARGET_ORG_ID, projectIds, since, cutover, targetOnlyRollupIds],
           ['orgId'],
         ),
       },
@@ -756,14 +1030,14 @@ async function main() {
         source: await fingerprint(
           source,
           'ApiKeyActivity',
-          '"apiKeyId" = any($1) and "createdAt" < $2 and id <> all($3::text[])',
-          [SOURCE_API_KEY_IDS, cutover, targetOnlyActivityIds],
+          '"apiKeyId" = any($1) and "createdAt" >= $2 and "createdAt" < $3',
+          [SOURCE_API_KEY_IDS, since, cutover],
         ),
         target: await fingerprint(
           target,
           'ApiKeyActivity',
-          '"apiKeyId" = any($1) and "createdAt" < $2',
-          [SOURCE_API_KEY_IDS, cutover],
+          '"apiKeyId" = any($1) and "createdAt" >= $2 and "createdAt" < $3 and id <> all($4::text[])',
+          [SOURCE_API_KEY_IDS, since, cutover, targetOnlyActivityIds],
         ),
       },
     ]
