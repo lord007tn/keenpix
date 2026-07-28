@@ -120,8 +120,9 @@ An off-host copy is retained on the separate data server at:
 ```
 
 Both locations contain the pre-cutover cloud dump, live legacy dump, frozen
-legacy dump, and a checksum manifest. All checksums passed. The temporary key
-used for the direct server-to-server transfer was removed.
+legacy dump, post-cutover cloud dump `cloud-final-20260728T1957Z.dump`, and a
+checksum manifest. All checksums passed at both locations. Temporary keys used
+for the direct server-to-server transfers were removed.
 
 The cloud PostgreSQL backup job remains scheduled daily with 14-day local
 retention. Off-host cutover artifacts are intentionally retained through the
