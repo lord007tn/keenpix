@@ -10,16 +10,18 @@ self-hosted Keenpix service to the current Keenpix cloud deployment.
 
 - Cloud application: Coolify resource `uijso803l7sfoj5f076ka3f3`
   (`keenpix-branch-cloud`), running commit
-  `935ed2f8b79ef3d62fb6ade0fa9ae69026f9afe8`.
+  `79bc56487a9565034764a223c8f58fd664cf11ed`.
 - Legacy application: Coolify service `gmy22ln5wjpzufn7i14p6nmb`, immutable
   revision `e8879d1e2e4839e86d6369b8266b6a60b591001f` (`v0.1.11`), stopped at
   `2026-07-28T19:13:17Z`.
 - The legacy PostgreSQL container remains healthy and read-only from the
   migration operator's perspective. The legacy app remains stopped.
 - `keenpix.com`, `www.keenpix.com`, and `keenpix.joodlab.com` route directly to
-  the cloud app over HTTPS. The configuration deployment
+  the cloud app over HTTPS. The routing configuration deployment
   `l9j15rroel2cxtrnjeeb4sio` completed successfully at
   `2026-07-28T19:36:13Z`.
+- The final code deployment `yvdq4flbysc21y8mkowii2q6` completed successfully
+  at `2026-07-28T19:54:31Z`.
 
 ## Identity and access
 
@@ -27,6 +29,9 @@ self-hosted Keenpix service to the current Keenpix cloud deployment.
   the `joodlab` organization (`cmrc25bc000000ot4edym1pmc`).
 - The account is not banned and has an active credential provider. Password
   material and sessions were not copied.
+- The organization has an active complimentary Business entitlement. It is not
+  linked to a Polar customer and therefore is correctly excluded from provider
+  usage ingestion while retaining Business serving and access limits.
 - `admin@example.com` was explicitly excluded as the legacy bootstrap
   placeholder, not a production identity.
 - Project `cmpv3wabq000001pektm701au` (`Joodcms.com`) belongs to the target
@@ -91,6 +96,9 @@ resumed after the rebuild.
 - All cloud compose services were running after deployment; the app,
   PostgreSQL, ClickHouse, Maxio, and Mailpit health checks were green.
 - The scheduled usage job resumed after the deployment startup interval.
+- The final live observation snapshot matched at 3,619,504 unique request IDs
+  in both PostgreSQL and ClickHouse, with the same maximum event timestamp.
+- The final application log window contained no severity-50 errors.
 - Recent transform errors were upstream `404` or invalid-image responses, not
   migration or database failures.
 - A Cloudflare analytics window error exposed during observation was fixed by
