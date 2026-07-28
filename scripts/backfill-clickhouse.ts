@@ -9,16 +9,22 @@
 //
 // Idempotency: request_events is a plain MergeTree and does NOT dedup, so a naive
 // re-run (or running while the app is live-teeing) would double-count every
-// overlapping event. This script refuses to run when the table already has rows,
-// unless you pass `--truncate` (clear + clean rebuild) or `--force` (append
-// anyway). Either way, stop the app's live tee first. The row mapping mirrors
-// src/lib/clickhouse/events.ts exactly.
+// overlapping event. CLICKHOUSE_BACKFILL_MODE must explicitly select
+// verify-empty, truncate, or force. Stop the app's live tee first. The row
+// mapping mirrors src/lib/clickhouse/events.ts exactly.
 import 'dotenv/config'
 import { createClient } from '@clickhouse/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '../src/generated/prisma/client'
 
 const BATCH = 5000
+const BACKFILL_MODE = process.env.CLICKHOUSE_BACKFILL_MODE?.trim()
+
+if (!['force', 'truncate', 'verify-empty'].includes(BACKFILL_MODE ?? '')) {
+  throw new Error(
+    'CLICKHOUSE_BACKFILL_MODE must be force, truncate, or verify-empty.',
+  )
+}
 
 const REQUEST_EVENTS_DDL = `
 CREATE TABLE IF NOT EXISTS request_events (
@@ -115,15 +121,12 @@ async function main() {
   })
 
   await ch.command({ query: REQUEST_EVENTS_DDL })
-  const truncate = process.argv.includes('--truncate')
-  const force = process.argv.includes('--force')
-  if (truncate) {
+  if (BACKFILL_MODE === 'truncate') {
     await ch.command({ query: 'TRUNCATE TABLE request_events' })
     process.stdout.write('truncated request_events\n')
-  } else if (!force) {
+  } else if (BACKFILL_MODE === 'verify-empty') {
     // Guard: plain MergeTree never dedups, so appending onto a populated table
-    // double-counts. Bail unless the operator explicitly opted into --truncate or
-    // --force.
+    // double-counts.
     const existing = await ch.query({
       query: 'SELECT count() AS c FROM request_events',
       format: 'JSONEachRow',
@@ -132,11 +135,12 @@ async function main() {
     const count = Number(row?.c ?? 0)
     if (count > 0) {
       throw new Error(
-        `request_events already has ${count} rows. Re-running would double-count (plain MergeTree does not dedup). Re-run with --truncate for a clean rebuild, or --force to append anyway. Stop the app's live tee first.`,
+        `request_events already has ${count} rows. Re-running would double-count (plain MergeTree does not dedup). Use truncate for a clean rebuild, or force to append anyway. Stop the app's live tee first.`,
       )
     }
   }
 
+  const expected = await prisma.requestLog.count()
   let cursor: string | null = null
   let total = 0
   for (;;) {
@@ -158,9 +162,31 @@ async function main() {
     process.stdout.write(`backfilled ${total}\n`)
   }
 
+  const verification = await ch.query({
+    query:
+      'SELECT count() AS count, uniqExact(id) AS uniqueIds FROM request_events',
+    format: 'JSONEachRow',
+  })
+  const [result] = await verification.json<{
+    count: string
+    uniqueIds: string
+  }>()
+  const count = Number(result?.count ?? 0)
+  const uniqueIds = Number(result?.uniqueIds ?? 0)
+  if (
+    BACKFILL_MODE !== 'force' &&
+    (total !== expected || count !== expected || uniqueIds !== expected)
+  ) {
+    throw new Error(
+      `ClickHouse reconciliation failed: postgres=${expected} replayed=${total} clickhouse=${count} uniqueIds=${uniqueIds}.`,
+    )
+  }
+
   await ch.close()
   await prisma.$disconnect()
-  process.stdout.write(`done: ${total} events backfilled\n`)
+  process.stdout.write(
+    `done: postgres=${expected} replayed=${total} clickhouse=${count} uniqueIds=${uniqueIds}\n`,
+  )
 }
 
 main().catch((error) => {
