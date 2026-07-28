@@ -96,6 +96,12 @@ resumed after the rebuild.
 - All cloud compose services were running after deployment; the app,
   PostgreSQL, ClickHouse, Maxio, and Mailpit health checks were green.
 - The scheduled usage job resumed after the deployment startup interval.
+- Postmark accepted the configured production server token (`200`) without a
+  test message being sent.
+- Polar's production API accepted the configured access token (`200`), and the
+  production webhook secret is present.
+- The deployed Cloudflare analytics capture completed with
+  `edgeHistory.configured: true`.
 - The final live observation snapshot matched at 3,619,504 unique request IDs
   in both PostgreSQL and ClickHouse, with the same maximum event timestamp.
 - The final application log window contained no severity-50 errors.
@@ -147,6 +153,10 @@ Do not run both application writers against the same hostname.
 
 - Keep the legacy application and its database recoverable through the agreed
   observation window. Retirement is a separate, explicit operation.
+- The owner should complete one interactive password sign-in and one SDK read
+  using the customer-held plaintext API key. No authenticated Keenpix browser
+  session or recoverable plaintext key was available during cutover, so the
+  migration deliberately did not reset the password or rotate the key.
 - Monitor cloud error rate, transform latency, PostgreSQL/ClickHouse count
   drift, backup completion, billing usage reporting, and Cloudflare edge
   history.
