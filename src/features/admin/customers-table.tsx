@@ -183,13 +183,16 @@ export function CustomersTable() {
   const [customers, setCustomers] = useState<CustomerAccount[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [sorting, setSorting] = useState<SortingState>([])
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError(false)
     try {
       setCustomers(await getCustomerAccountsFn())
     } catch (error) {
+      setLoadError(true)
       toast.error(getErrorMessage(error, 'Could not load customers'))
     } finally {
       setLoading(false)
@@ -227,6 +230,8 @@ export function CustomersTable() {
   let emptyMessage = 'No customers yet.'
   if (loading) {
     emptyMessage = 'Loading customers…'
+  } else if (loadError) {
+    emptyMessage = 'Couldn’t load customers. Use Refresh to try again.'
   } else if (query) {
     emptyMessage = 'No customers match your search.'
   }

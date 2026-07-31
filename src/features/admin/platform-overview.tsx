@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
 import { StatCard } from '@/components/app/stat-card'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -26,11 +27,14 @@ const PLAN_LABEL: Record<string, string> = {
 
 export function PlatformOverview() {
   const [data, setData] = useState<PlatformAnalytics | null>(null)
+  const [loadError, setLoadError] = useState(false)
 
   const load = useCallback(async () => {
+    setLoadError(false)
     try {
       setData(await getPlatformAnalyticsFn({ data: { range: '30d' } }))
     } catch (error) {
+      setLoadError(true)
       toast.error(getErrorMessage(error, 'Could not load platform analytics'))
     }
   }, [])
@@ -40,6 +44,18 @@ export function PlatformOverview() {
   }, [load])
 
   if (!data) {
+    if (loadError) {
+      return (
+        <div className="flex flex-col items-start gap-3">
+          <p className="text-destructive text-sm">
+            Couldn’t load the platform overview.
+          </p>
+          <Button onClick={load} size="sm" variant="outline">
+            Try again
+          </Button>
+        </div>
+      )
+    }
     return (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {['customers', 'requests', 'bandwidth', 'cache'].map((key) => (

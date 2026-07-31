@@ -180,6 +180,7 @@ services:
           curl -fsS --retry 12 --retry-all-errors --retry-delay 5
           --retry-max-time 120 -X POST -H "Authorization: Bearer ${CRON_SECRET}"
           http://app:3000/api/internal/billing/report-usage || true;
+          printf '\n';
           sleep 3600;
         done
 

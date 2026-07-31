@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import {
   createFileRoute,
   redirect,
@@ -6,12 +7,12 @@ import {
 } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
+import { HistoryRangePicker } from '@/components/app/history-range-picker'
 import { PageHeader } from '@/components/app/page-header'
 import { ProjectsDataTable } from '@/components/app/projects-data-table'
 import { RecentActivity } from '@/components/app/recent-activity'
 import { RefreshingIndicator } from '@/components/app/refreshing-indicator'
 import { Button } from '@/components/ui/button'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { ResponseLatencyCard } from '@/features/analytics/response-latency-card'
 import { DashboardBodySkeleton } from '@/features/analytics/skeletons'
 import { SourceSplitCards } from '@/features/analytics/source-split-cards'
@@ -19,17 +20,16 @@ import { useDashboardQuery } from '@/features/analytics/use-dashboard-query'
 import { useEdgeStats } from '@/features/analytics/use-edge-stats'
 import { OnboardingChecklist } from '@/features/onboarding/onboarding-checklist'
 import { QuickStart } from '@/features/onboarding/quick-start'
+import { getBillingStateFn } from '@/functions/billing'
+import { limitHistorySearch } from '@/helpers/history/window'
 import { trackFunnelMilestone } from '@/lib/analytics/client'
+import { DEFAULT_HISTORY_DAYS, getPlan } from '@/lib/billing/plans'
 import { appPageHead } from '@/shared/seo'
-import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
+import {
+  type HistoricalAnalyticsRange,
+  isHistoricalAnalyticsRange,
+} from '@/shared/types'
 import { useProject } from '@/stores/project-context'
-
-const RANGES: { value: AnalyticsRange; label: string }[] = [
-  { value: '90d', label: '90 days' },
-  { value: '30d', label: '30 days' },
-  { value: '7d', label: '7 days' },
-  { value: '24h', label: '24 hours' },
-]
 
 // Relative change vs the previous window; null means there is no baseline.
 function relDelta(v: { prev: number; value: number }): number | null {
@@ -52,27 +52,45 @@ export const Route = createFileRoute('/app/dashboard/')({
     ),
   validateSearch: (
     search: Record<string, unknown>,
-  ): { range: AnalyticsRange; project?: string } => ({
-    // 24h by default so the rollup data lines up with the 24h-only Cloudflare
-    // edge stats and the source split reconciles on landing.
-    range: isAnalyticsRange(search.range) ? search.range : '24h',
+  ): {
+    from?: string
+    project?: string
+    range: HistoricalAnalyticsRange
+    to?: string
+  } => ({
+    from: typeof search.from === 'string' ? search.from : undefined,
+    range: isHistoricalAnalyticsRange(search.range) ? search.range : '24h',
     project: typeof search.project === 'string' ? search.project : undefined,
+    to: typeof search.to === 'string' ? search.to : undefined,
   }),
   component: DashboardPage,
 })
 
 function DashboardPage() {
   const search = Route.useSearch()
-  const { range } = search
   const navigate = useNavigate({ from: Route.fullPath })
   const { currentProject, isAll, setProject } = useProject()
   const { user, cloud, orgRole, productAccess, workspaceReady } =
     useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
+  const { data: billing } = useQuery({
+    enabled: cloud,
+    queryFn: () => getBillingStateFn(),
+    queryKey: ['billing-state'],
+    staleTime: 30_000,
+  })
+  const maxHistoryDays = cloud
+    ? (getPlan(billing?.plan)?.historyDays ?? DEFAULT_HISTORY_DAYS)
+    : 3650
+  const boundedWindow = limitHistorySearch(
+    search,
+    cloud ? maxHistoryDays : undefined,
+  )
+  const dashboardSearch = { ...search, ...boundedWindow }
   // Stale-while-revalidate: the previous payload stays on screen while a new
   // range/project loads in the background; `isRefreshing` drives the indicator.
   const { data, isPending, isFetching, isError, refetch } = useDashboardQuery(
-    search,
+    dashboardSearch,
     workspaceReady,
   )
   const requestCount = data?.latencySummary.successfulDeliveries ?? 0
@@ -91,7 +109,7 @@ function DashboardPage() {
     edgeRefreshing,
     edgePending,
     edgeError,
-  } = useEdgeStats(workspaceReady ? range : undefined)
+  } = useEdgeStats(!cloud && workspaceReady ? boundedWindow : undefined)
 
   const header = (
     <PageHeader
@@ -101,23 +119,16 @@ function DashboardPage() {
             active={isRefreshing}
             error={isError && Boolean(data)}
           />
-          <ToggleGroup
-            onValueChange={(v: string[]) => {
-              const next = v[0]
-              if (isAnalyticsRange(next)) {
-                navigate({ search: (prev) => ({ ...prev, range: next }) })
-              }
-            }}
-            size="sm"
-            value={[range]}
-            variant="outline"
-          >
-            {RANGES.map((r) => (
-              <ToggleGroupItem key={r.value} value={r.value}>
-                {r.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+          <HistoryRangePicker
+            from={boundedWindow.from}
+            label="Overview"
+            maxDays={maxHistoryDays}
+            onChange={(next) =>
+              navigate({ search: (previous) => ({ ...previous, ...next }) })
+            }
+            range={boundedWindow.range}
+            to={boundedWindow.to}
+          />
         </>
       }
       eyebrow={isAll ? 'All projects' : currentProject?.name}
@@ -167,15 +178,14 @@ function DashboardPage() {
   // Edge is zone-wide, so it only reconciles at all-projects scope and only over
   // a window our captured history fully covers.
   const edgeGated = edgeConfigured && edge !== null && isAll && edgeCovered
-  // The edge/CDN dataset is whole-zone (aggregate across tenants). In cloud only
-  // the platform operator may see it; everyone sees it self-host. When it's not
-  // visible, no edge cards, notes, or connect prompt appear at all.
-  const canSeeEdge = !cloud || isSuperAdmin
+  // Cloud edge data is platform-wide and belongs in /admin, never beside one
+  // organization's origin totals. Self-host remains a single-instance view.
+  const canSeeEdge = !cloud
   // Only the operator can wire Cloudflare, so only the super-admin ever sees the
   // "connect" prompt. Regular tenants (and cloud users, who never own the zone)
   // just get the origin-only cards with no dead-end call to action.
   const edgeNotConfigured =
-    isSuperAdmin && !(edgePending || edgeError || edgeConfigured)
+    canSeeEdge && isSuperAdmin && !(edgePending || edgeError || edgeConfigured)
   // A background capture is in flight and the reconciled split isn't on screen
   // yet — show the "preparing" indicator (and hold the note) until it lands.
   const edgePreparing = edgeRefreshing && !edgeGated

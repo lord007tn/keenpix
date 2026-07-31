@@ -6,7 +6,10 @@ import {
   historicalRollupBucketing,
   rollupSinceFor,
 } from '@/data-access/analytics-rollups'
-import { edgeCoverageStart, listEdgeRollups } from '@/data-access/edge-rollups'
+import {
+  getEdgeCaptureState,
+  listEdgeRollups,
+} from '@/data-access/edge-rollups'
 import {
   getProject,
   listProjects,
@@ -25,7 +28,10 @@ import {
   summarizeAgg,
   timeSeriesFromBuckets,
 } from '@/helpers/analytics/rollup-shapers'
-import type { analyticsInputSchema } from '@/schemas/analytics'
+import type {
+  analyticsInputSchema,
+  edgeCacheStatsSchema,
+} from '@/schemas/analytics'
 import { isCloud } from '@/server/deployment'
 import type {
   AllowedHostStat,
@@ -179,13 +185,16 @@ function startEdgeCapture(
 // false when the window reaches before our captured history (so the UI can show
 // the edge data without reconciling misleading totals).
 export async function getEdgeCacheStats(
-  range: AnalyticsRange,
+  input: z.output<typeof edgeCacheStatsSchema>,
   viewerIsAdmin: boolean,
 ): Promise<{
   edge: EdgeCacheStats | null
   edgeConfigured: boolean
   edgeCovered: boolean
+  edgeError: string | null
+  edgeLastSuccessAt: string | null
   edgeRefreshing: boolean
+  edgeStatus: 'unconfigured' | 'ready' | 'ok_empty' | 'partial' | 'failed'
 }> {
   // The edge/CDN dataset is whole-zone — aggregate across every tenant, not
   // per-tenant. In cloud that makes it an operator-only view: the platform owns
@@ -198,7 +207,10 @@ export async function getEdgeCacheStats(
       edge: null,
       edgeConfigured: false,
       edgeCovered: false,
+      edgeError: null,
+      edgeLastSuccessAt: null,
       edgeRefreshing: false,
+      edgeStatus: 'unconfigured',
     }
   }
   const cloudflare = await getEffectiveCloudflareSettings()
@@ -207,14 +219,17 @@ export async function getEdgeCacheStats(
       edge: null,
       edgeConfigured: false,
       edgeCovered: false,
+      edgeError: null,
+      edgeLastSuccessAt: null,
       edgeRefreshing: false,
+      edgeStatus: 'unconfigured',
     }
   }
   const host = cloudflare.host ?? ''
   try {
-    const existing = await edgeCoverageStart(cloudflare.zoneId, host)
+    let captureState = await getEdgeCaptureState(cloudflare.zoneId, host)
     let refreshing = false
-    if (existing) {
+    if (captureState?.lastSuccessAt) {
       // Refresh in the background (throttled); don't block the read. Surface
       // whether a capture is actually in flight so the client polls until it
       // lands instead of waiting for a manual reload.
@@ -228,27 +243,52 @@ export async function getEdgeCacheStats(
     } else {
       // No history yet — capture once synchronously so there's data to show.
       await startEdgeCapture(cloudflare)
+      captureState = await getEdgeCaptureState(cloudflare.zoneId, host)
     }
-    const gte = rollupSinceFor(range)
-    const [rows, coverageStart] = await Promise.all([
-      listEdgeRollups(cloudflare.zoneId, host, gte),
-      existing
-        ? Promise.resolve(existing)
-        : edgeCoverageStart(cloudflare.zoneId, host),
-    ])
+    const coverageStart = captureState?.coveredFrom ?? null
+    const window = historicalRollupBucketing({
+      ...input,
+      coverageStart,
+    })
+    const rows = await listEdgeRollups(
+      cloudflare.zoneId,
+      host,
+      window.gte,
+      window.lt,
+    )
+    const coverageGraceMs = CAPTURE_THROTTLE_MS + 60_000
+    const covered = Boolean(
+      captureState?.coveredFrom &&
+        captureState.coveredUntil &&
+        captureState.coveredFrom.getTime() <= window.gte.getTime() &&
+        captureState.coveredUntil.getTime() + coverageGraceMs >=
+          window.lt.getTime(),
+    )
+    let edgeStatus: 'ready' | 'ok_empty' | 'partial' | 'failed' = 'partial'
+    if (captureState?.status === 'failed') {
+      edgeStatus = 'failed'
+    } else if (covered) {
+      edgeStatus = rows.length === 0 ? 'ok_empty' : 'ready'
+    }
     return {
-      edge: rows.length > 0 ? reconstructEdgeStats(rows, range) : null,
+      edge: reconstructEdgeStats(rows, window),
       edgeConfigured: true,
-      edgeCovered:
-        coverageStart !== null && coverageStart.getTime() <= gte.getTime(),
+      edgeCovered: covered,
+      edgeError: captureState?.lastError ?? null,
+      edgeLastSuccessAt: captureState?.lastSuccessAt?.toISOString() ?? null,
       edgeRefreshing: refreshing,
+      edgeStatus,
     }
-  } catch {
+  } catch (error) {
     return {
       edge: null,
       edgeConfigured: true,
       edgeCovered: false,
+      edgeError:
+        error instanceof Error ? error.message : 'Cloudflare analytics failed',
+      edgeLastSuccessAt: null,
       edgeRefreshing: false,
+      edgeStatus: 'failed',
     }
   }
 }

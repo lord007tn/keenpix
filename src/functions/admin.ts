@@ -70,7 +70,7 @@ export const getPlatformAnalyticsFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
-    return getPlatformAnalytics(data.range)
+    return getPlatformAnalytics(data)
   })
 
 export const updateComplimentaryPlanFn = createServerFn({ method: 'POST' })

@@ -53,6 +53,12 @@ function SignupPage() {
   const verifyCallback = redirectTo
     ? `/verify-email?redirect=${encodeURIComponent(redirectTo)}`
     : '/verify-email'
+  const googleCallback = redirectTo ?? '/app/dashboard?range=30d'
+  const googleNewUserCallback =
+    redirectTo ?? '/app/dashboard?range=30d&new_user=google'
+  const googleErrorCallback = redirectTo
+    ? `/signup?redirect=${encodeURIComponent(redirectTo)}`
+    : '/signup'
   const form = useForm({
     defaultValues: { name: '', email: '', password: '' },
     validators: { onChange: signupSchema, onSubmit: signupSchema },
@@ -120,10 +126,9 @@ function SignupPage() {
               onClick={() =>
                 authClient.signIn.social({
                   provider: 'google',
-                  callbackURL: '/app/dashboard?range=30d',
-                  newUserCallbackURL:
-                    '/app/dashboard?range=30d&new_user=google',
-                  errorCallbackURL: '/signup',
+                  callbackURL: googleCallback,
+                  newUserCallbackURL: googleNewUserCallback,
+                  errorCallbackURL: googleErrorCallback,
                 })
               }
               type="button"

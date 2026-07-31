@@ -1,5 +1,6 @@
 import cuid from 'cuid'
 import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import type { Prisma } from '@/generated/prisma/client'
 import {
   LATENCY_BUCKETS,
@@ -10,6 +11,8 @@ import type { NewRequestLog } from './request-logs'
 
 const DAY = 86_400_000
 const HOUR = 3_600_000
+
+dayjs.extend(utc)
 
 export interface RollupBucketing {
   gte: Date
@@ -65,8 +68,9 @@ export function historicalRollupBucketing(
     range: HistoricalAnalyticsRange
     to?: string
   },
-  now = dayjs(),
+  current = dayjs.utc(),
 ): RollupBucketing {
+  const now = current.utc()
   let gte: dayjs.Dayjs
   let lt: dayjs.Dayjs
   if (input.range === 'custom') {
@@ -78,22 +82,22 @@ export function historicalRollupBucketing(
     gte = input.coverageStart
       ? dayjs(input.coverageStart).startOf('hour')
       : now.startOf('hour')
-    lt = now.add(1, 'millisecond')
+    lt = now
   } else if (input.range === '365d') {
     gte = now.startOf('day').subtract(364, 'day')
-    lt = now.add(1, 'millisecond')
+    lt = now
   } else if (input.range === '90d') {
     gte = now.startOf('day').subtract(89, 'day')
-    lt = now.add(1, 'millisecond')
+    lt = now
   } else if (input.range === '30d') {
     gte = now.startOf('day').subtract(29, 'day')
-    lt = now.add(1, 'millisecond')
+    lt = now
   } else if (input.range === '7d') {
     gte = now.startOf('day').subtract(6, 'day')
-    lt = now.add(1, 'millisecond')
+    lt = now
   } else {
-    gte = now.startOf('hour').subtract(23, 'hour')
-    lt = now.add(1, 'millisecond')
+    gte = now.subtract(24, 'hour')
+    lt = now
   }
 
   const span = Math.max(HOUR, lt.diff(gte))

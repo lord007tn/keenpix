@@ -31,11 +31,22 @@ function AcceptInvitePage() {
       return
     }
     setBusy(true)
-    const { error } = await authClient.organization.acceptInvitation({
+    const { data, error } = await authClient.organization.acceptInvitation({
       invitationId: id,
     })
     if (error) {
       toast.error(error.message ?? 'Could not accept the invitation')
+      setBusy(false)
+      return
+    }
+    const { error: activationError } = await authClient.organization.setActive({
+      organizationId: data.invitation.organizationId,
+    })
+    if (activationError) {
+      toast.error(
+        activationError.message ??
+          'Invitation accepted, but the organization could not be activated',
+      )
       setBusy(false)
       return
     }

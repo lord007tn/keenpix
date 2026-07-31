@@ -37,7 +37,7 @@ describe('getCustomerUsageSeries', () => {
 
     expect(aggregateRollupSummary).toHaveBeenCalledWith({
       gte: new Date('2026-04-17T00:00:00.000Z'),
-      lt: new Date('2026-07-15T12:00:00.001Z'),
+      lt: new Date('2026-07-15T12:00:00.000Z'),
       orgId: 'org_1',
     })
     expect(result.window.from).toBe('2026-04-17')

@@ -1,4 +1,5 @@
 import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import type { HistoricalAnalyticsRange } from '@/shared/types'
 
 export interface HistorySearch {
@@ -7,14 +8,17 @@ export interface HistorySearch {
   to?: string
 }
 
+dayjs.extend(utc)
+
 // Apply a cloud plan's rolling history ceiling without trusting the browser.
 // "All available" becomes the full retained plan window; self-host callers omit
 // maxDays and retain their unbounded all-time behavior.
 export function limitHistorySearch(
   input: HistorySearch,
   maxDays?: number,
-  now = dayjs(),
+  current = dayjs.utc(),
 ): HistorySearch {
+  const now = current.utc()
   if (!maxDays) {
     return input
   }
@@ -70,14 +74,18 @@ export function limitHistorySearch(
   return { range: 'custom', from, to }
 }
 
-export function getHistoryWindowDates(input: HistorySearch, now = dayjs()) {
+export function getHistoryWindowDates(
+  input: HistorySearch,
+  current = dayjs.utc(),
+) {
+  const now = current.utc()
   if (input.range === 'all') {
     return { gte: undefined, lt: now.add(1, 'millisecond').toDate() }
   }
   if (input.range === 'custom') {
     return {
-      gte: dayjs(`${input.from}T00:00:00.000Z`).toDate(),
-      lt: dayjs(`${input.to}T00:00:00.000Z`).add(1, 'day').toDate(),
+      gte: dayjs.utc(input.from).startOf('day').toDate(),
+      lt: dayjs.utc(input.to).startOf('day').add(1, 'day').toDate(),
     }
   }
   if (input.range === '24h') {

@@ -20,14 +20,22 @@ export const analyticsInputSchema = z
   })
   .superRefine(validateHistoricalWindow)
 
-export const dashboardInputSchema = z.object({
-  project: optionalNonEmptyParamSchema,
-  range: analyticsRangeSchema.catch('24h'),
-})
+export const dashboardInputSchema = z
+  .object({
+    from: z.iso.date().optional(),
+    project: optionalNonEmptyParamSchema,
+    range: historicalAnalyticsRangeSchema.catch('24h'),
+    to: z.iso.date().optional(),
+  })
+  .superRefine(validateHistoricalWindow)
 
-export const edgeCacheStatsSchema = z.object({
-  range: analyticsRangeSchema.catch('24h'),
-})
+export const edgeCacheStatsSchema = z
+  .object({
+    from: z.iso.date().optional(),
+    range: historicalAnalyticsRangeSchema.catch('24h'),
+    to: z.iso.date().optional(),
+  })
+  .superRefine(validateHistoricalWindow)
 
 export const allowedHostStatsSchema = z.object({
   projectId: nonEmptyStringSchema(),

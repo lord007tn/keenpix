@@ -39,7 +39,7 @@ function buildQuery(opts: { byHour: boolean; withHost: boolean }) {
       zones(filter: { zoneTag: $zoneTag }) {
         httpRequestsAdaptiveGroups(
           limit: 2000
-          ${orderBy}filter: { datetime_geq: $since, datetime_leq: $until, clientRequestPath_like: $path${hostFilter} }
+          ${orderBy}filter: { datetime_geq: $since, datetime_leq: $until, requestSource: "eyeball", clientRequestPath_like: $path${hostFilter} }
         ) {
           count
           sum { edgeResponseBytes }
@@ -96,9 +96,9 @@ export interface EdgeAdaptiveGroup {
 }
 
 // Raw hourly /img/* adaptive groups for the last 24h, one per
-// (cacheStatus, hour), for persisting into EdgeRollupHourly. Hit/miss
-// classification is deferred to read time so it always reflects the current
-// CACHED_STATUSES set.
+// (cacheStatus, hour), for persisting into EdgeRollupHourly. Cache
+// classification is deferred to read time so historical rows always reflect
+// the current Cloudflare semantics.
 export async function fetchEdgeAdaptiveHourly(
   settings: EffectiveCloudflareSettings,
 ): Promise<EdgeAdaptiveGroup[]> {
@@ -131,9 +131,10 @@ export async function fetchEdgeAdaptiveHourly(
 export async function verifyCloudflareAccess(
   settings: EffectiveCloudflareSettings,
 ) {
-  await queryAdaptiveGroups(settings, {
+  const groups = await queryAdaptiveGroups(settings, {
     byHour: false,
     since: dayjs().subtract(1, 'hour').toISOString(),
     until: dayjs().toISOString(),
   })
+  return groups.length
 }
