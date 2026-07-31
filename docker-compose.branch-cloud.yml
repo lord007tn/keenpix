@@ -172,9 +172,7 @@ services:
             sleep 10;
           done;
           echo "usage report started: $$(date -u +%Y-%m-%dT%H:%M:%SZ)";
-          curl -fsS --retry 3 --retry-all-errors --retry-delay 5
-          -X POST -H "Authorization: Bearer ${CRON_SECRET}"
-          http://app:3000/api/internal/billing/report-usage || true;
+          curl -fsS --retry 3 --retry-all-errors --retry-delay 5 -X POST -H "Authorization: Bearer ${CRON_SECRET}" http://app:3000/api/internal/billing/report-usage || true;
           printf '\n';
           sleep 3600;
         done
