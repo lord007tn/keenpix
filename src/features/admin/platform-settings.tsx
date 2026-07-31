@@ -104,6 +104,13 @@ export function PlatformSettings() {
         Connected
       </Badge>
     )
+  } else if (cloudflare.connectionStatus === 'connected_no_data') {
+    cloudflareStatus = (
+      <Badge variant="info">
+        <CheckCircle2Icon data-icon="inline-start" />
+        Connected; no recent matching traffic
+      </Badge>
+    )
   } else if (cloudflare.connectionStatus === 'failed') {
     cloudflareStatus = (
       <Badge variant="destructive">

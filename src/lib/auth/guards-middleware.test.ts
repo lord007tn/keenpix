@@ -1,15 +1,30 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getMemberRole, getSession, isCloud } = vi.hoisted(() => ({
+const {
+  ensurePersonalOrganizationMembership,
+  getLatestMembership,
+  getMemberRole,
+  getSession,
+  isCloud,
+  setSessionActiveOrganization,
+} = vi.hoisted(() => ({
+  ensurePersonalOrganizationMembership: vi.fn(),
+  getLatestMembership: vi.fn(),
   getMemberRole: vi.fn(),
   getSession: vi.fn(),
   isCloud: vi.fn(),
+  setSessionActiveOrganization: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-start/server', () => ({
   getRequestHeaders: () => new Headers(),
 }))
-vi.mock('@/data-access/members', () => ({ getMemberRole }))
+vi.mock('@/data-access/members', () => ({
+  ensurePersonalOrganizationMembership,
+  getLatestMembership,
+  getMemberRole,
+  setSessionActiveOrganization,
+}))
 vi.mock('@/lib/auth/server', () => ({ auth: { api: { getSession } } }))
 vi.mock('@/server/deployment', () => ({ isCloud }))
 
@@ -19,8 +34,10 @@ if (!runAuthMiddleware) {
   throw new Error('auth middleware server handler is unavailable')
 }
 
-afterEach(() => {
+beforeEach(() => {
   vi.clearAllMocks()
+  getLatestMembership.mockResolvedValue(null)
+  ensurePersonalOrganizationMembership.mockResolvedValue(null)
 })
 
 describe('auth middleware organization membership', () => {
@@ -64,6 +81,38 @@ describe('auth middleware organization membership', () => {
         orgId: 'org_a',
         orgRole: 'member',
       },
+    })
+  })
+
+  it('repairs a stale active organization from another valid membership', async () => {
+    isCloud.mockReturnValue(true)
+    getSession.mockResolvedValue({
+      session: { id: 'session_a', activeOrganizationId: 'org_removed' },
+      user: {
+        id: 'user_a',
+        email: 'member@example.com',
+        emailVerified: true,
+        name: 'Member',
+        role: 'user',
+      },
+    })
+    getMemberRole.mockResolvedValue(null)
+    getLatestMembership.mockResolvedValue({
+      organizationId: 'org_valid',
+      role: 'admin',
+    })
+    const next = vi.fn().mockResolvedValue('ok')
+
+    await expect(runAuthMiddleware({ next } as never)).resolves.toBe('ok')
+    expect(setSessionActiveOrganization).toHaveBeenCalledWith(
+      'session_a',
+      'org_valid',
+    )
+    expect(next).toHaveBeenCalledWith({
+      context: expect.objectContaining({
+        orgId: 'org_valid',
+        orgRole: 'admin',
+      }),
     })
   })
 })

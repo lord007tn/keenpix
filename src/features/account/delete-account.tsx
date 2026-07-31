@@ -1,4 +1,3 @@
-import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -16,21 +15,15 @@ import { Label } from '@/components/ui/label'
 import { getErrorMessage } from '@/errors/common'
 import { authClient } from '@/lib/auth/client'
 
-// Permanent account deletion. Password re-auth (better-auth verifies it) plus a
-// typed-email confirmation guard against accidental/one-click deletion. The
-// server's beforeDelete hook blocks deletion while the user owns a billed or
-// multi-member org and surfaces that as an inline error here.
+// Permanent account deletion uses a typed-email guard followed by a verification
+// link sent to the account address. This works for password and OAuth-only users.
 export function DeleteAccount({ email }: { email: string }) {
-  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [confirmEmail, setConfirmEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [pending, setPending] = useState(false)
 
   const canSubmit =
-    confirmEmail.trim().toLowerCase() === email.toLowerCase() &&
-    password.length > 0 &&
-    !pending
+    confirmEmail.trim().toLowerCase() === email.toLowerCase() && !pending
 
   async function remove() {
     if (!canSubmit) {
@@ -38,13 +31,13 @@ export function DeleteAccount({ email }: { email: string }) {
     }
     setPending(true)
     try {
-      const { error } = await authClient.deleteUser({ password })
+      const { error } = await authClient.deleteUser({ callbackURL: '/login' })
       if (error) {
         toast.error(getErrorMessage(error, 'Could not delete your account'))
         return
       }
-      toast.success('Your account has been deleted')
-      navigate({ to: '/login' })
+      toast.success('Check your email to confirm account deletion')
+      setOpen(false)
     } catch (e) {
       toast.error(getErrorMessage(e, 'Could not delete your account'))
     } finally {
@@ -83,16 +76,6 @@ export function DeleteAccount({ email }: { email: string }) {
               value={confirmEmail}
             />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="delete-password">Your password</Label>
-            <Input
-              autoComplete="current-password"
-              id="delete-password"
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              value={password}
-            />
-          </div>
           <DialogFooter>
             <Button
               onClick={() => setOpen(false)}
@@ -102,7 +85,7 @@ export function DeleteAccount({ email }: { email: string }) {
               Cancel
             </Button>
             <Button disabled={!canSubmit} type="submit" variant="destructive">
-              Permanently delete
+              Send confirmation email
             </Button>
           </DialogFooter>
         </form>

@@ -1,9 +1,12 @@
 import { Link } from '@tanstack/react-router'
+import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
+import { HistoryRangePicker } from '@/components/app/history-range-picker'
 import { RefreshingIndicator } from '@/components/app/refreshing-indicator'
 import { StatCard } from '@/components/app/stat-card'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -12,22 +15,14 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { getErrorMessage } from '@/errors/common'
 import { getPlatformAnalyticsFn } from '@/functions/admin'
 import { getEdgeCacheStatsFn } from '@/functions/analytics'
+import type { HistorySearch } from '@/helpers/history/window'
 import { compactNumber, humanBytes } from '@/shared/format'
-import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
 
 type PlatformAnalytics = Awaited<ReturnType<typeof getPlatformAnalyticsFn>>
 type EdgeResult = Awaited<ReturnType<typeof getEdgeCacheStatsFn>>
-
-const RANGES: { value: AnalyticsRange; label: string }[] = [
-  { value: '90d', label: '90 days' },
-  { value: '30d', label: '30 days' },
-  { value: '7d', label: '7 days' },
-  { value: '24h', label: '24 hours' },
-]
 
 const PLAN_LABEL: Record<string, string> = {
   free: 'Free',
@@ -37,21 +32,24 @@ const PLAN_LABEL: Record<string, string> = {
 }
 
 export function PlatformAnalyticsView() {
-  const [range, setRange] = useState<AnalyticsRange>('30d')
+  const [search, setSearch] = useState<HistorySearch>({ range: '30d' })
   const [data, setData] = useState<PlatformAnalytics | null>(null)
   const [edge, setEdge] = useState<EdgeResult | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [loadError, setLoadError] = useState(false)
 
-  const load = useCallback(async (next: AnalyticsRange) => {
+  const load = useCallback(async (next: HistorySearch) => {
     setRefreshing(true)
+    setLoadError(false)
     try {
       const [analytics, edgeResult] = await Promise.all([
-        getPlatformAnalyticsFn({ data: { range: next } }),
-        getEdgeCacheStatsFn({ data: { range: next } }).catch(() => null),
+        getPlatformAnalyticsFn({ data: next }),
+        getEdgeCacheStatsFn({ data: next }).catch(() => null),
       ])
       setData(analytics)
       setEdge(edgeResult)
     } catch (error) {
+      setLoadError(true)
       toast.error(getErrorMessage(error, 'Could not load platform analytics'))
     } finally {
       setRefreshing(false)
@@ -59,29 +57,20 @@ export function PlatformAnalyticsView() {
   }, [])
 
   useEffect(() => {
-    load(range)
-  }, [load, range])
+    load(search)
+  }, [load, search])
 
   const controls = (
     <div className="flex items-center justify-end gap-2">
       <RefreshingIndicator active={refreshing} />
-      <ToggleGroup
-        onValueChange={(value: string[]) => {
-          const next = value[0]
-          if (isAnalyticsRange(next)) {
-            setRange(next)
-          }
-        }}
-        size="sm"
-        value={[range]}
-        variant="outline"
-      >
-        {RANGES.map((option) => (
-          <ToggleGroupItem key={option.value} value={option.value}>
-            {option.label}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
+      <HistoryRangePicker
+        from={search.from}
+        label="Platform analytics"
+        maxDays={3650}
+        onChange={setSearch}
+        range={search.range}
+        to={search.to}
+      />
     </div>
   )
 
@@ -89,21 +78,46 @@ export function PlatformAnalyticsView() {
     return (
       <div className="flex flex-col gap-6">
         {controls}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {['requests', 'bandwidth', 'cache', 'edge'].map((key) => (
-            <Skeleton className="h-24" key={key} />
-          ))}
-        </div>
+        {loadError ? (
+          <div className="flex flex-col items-start gap-3">
+            <p className="text-destructive text-sm">
+              Couldn’t load platform analytics.
+            </p>
+            <Button onClick={() => load(search)} size="sm" variant="outline">
+              Try again
+            </Button>
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {['requests', 'bandwidth', 'cache', 'edge'].map((key) => (
+              <Skeleton className="h-24" key={key} />
+            ))}
+          </div>
+        )}
       </div>
     )
   }
 
   const { summary, series, topCustomers, planDistribution } = data
-  const edgeStats = edge?.edge
-  const edgeHitRate =
-    edgeStats && edgeStats.requests > 0
-      ? (edgeStats.cachedRequests / edgeStats.requests) * 100
-      : null
+  const edgeStats = edge?.edgeCovered ? edge.edge : null
+  const edgeHitRate = edgeStats?.hitRate ?? null
+  let edgeValue = 'Not configured'
+  let edgeSub = 'Configure CLOUDFLARE_* in the platform environment'
+  if (edge?.edgeStatus === 'failed') {
+    edgeValue = 'Capture failed'
+    edgeSub = edge.edgeError ?? 'Check the token, zone, and capture logs'
+  } else if (edge?.edgeStatus === 'partial') {
+    edgeValue = 'Partial history'
+    edgeSub = edge.edgeLastSuccessAt
+      ? `Last capture ${dayjs(edge.edgeLastSuccessAt).format('MMM D, HH:mm')}`
+      : 'The selected window is still accumulating'
+  } else if (edge?.edgeStatus === 'ok_empty') {
+    edgeValue = '0%'
+    edgeSub = 'Connected; no matching edge traffic in this window'
+  } else if (edgeHitRate !== null) {
+    edgeValue = `${edgeHitRate.toFixed(1)}%`
+    edgeSub = `${compactNumber(edgeStats?.requests ?? 0)} edge requests`
+  }
   const maxCustomerRequests = Math.max(
     ...topCustomers.map((customer) => customer.requests),
     1,
@@ -130,19 +144,7 @@ export function PlatformAnalyticsView() {
           sub={`${summary.savingsPct.toFixed(0)}% bytes saved`}
           value={`${summary.hitRate.toFixed(1)}%`}
         />
-        {edgeHitRate === null ? (
-          <StatCard
-            label="Avg latency"
-            sub={`p95 ${summary.p95}ms`}
-            value={`${summary.avg}ms`}
-          />
-        ) : (
-          <StatCard
-            label="Edge cache hit"
-            sub={`${compactNumber(edgeStats?.requests ?? 0)} edge requests`}
-            value={`${edgeHitRate.toFixed(1)}%`}
-          />
-        )}
+        <StatCard label="Cloudflare edge" sub={edgeSub} value={edgeValue} />
       </div>
 
       <ChartAreaInteractive data={series} />

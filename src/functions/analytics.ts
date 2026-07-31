@@ -38,7 +38,7 @@ export const getEdgeCacheStatsFn = createServerFn({ method: 'GET' })
   .inputValidator(edgeCacheStatsSchema)
   .middleware([authMiddleware])
   .handler(({ data, context }) =>
-    getEdgeCacheStats(data.range, context.role === 'super_admin'),
+    getEdgeCacheStats(data, context.role === 'super_admin'),
   )
 
 export const getAllowedHostStatsFn = createServerFn({ method: 'GET' })

@@ -1,15 +1,17 @@
+import type { z } from 'zod'
 import { listCustomerAccounts } from '@/data-access/admin/customers'
 import {
   aggregatePlatformSummary,
   groupPlatformByBucket,
   groupPlatformByOrg,
+  platformAnalyticsCoverageStart,
 } from '@/data-access/admin/platform-analytics'
-import { rollupSinceFor } from '@/data-access/analytics-rollups'
+import { historicalRollupBucketing } from '@/data-access/analytics-rollups'
 import {
   summarizeAgg,
   timeSeriesFromBuckets,
 } from '@/helpers/analytics/rollup-shapers'
-import type { AnalyticsRange } from '@/shared/types'
+import type { platformAnalyticsSchema } from '@/schemas/admin'
 
 type PlanBucket = 'free' | 'basic' | 'pro' | 'business'
 const PLAN_ORDER: PlanBucket[] = ['business', 'pro', 'basic', 'free']
@@ -17,13 +19,17 @@ const PLAN_ORDER: PlanBucket[] = ['business', 'pro', 'basic', 'free']
 // Platform-wide analytics for the operator Overview + Analytics dashboards:
 // cross-org totals and timeseries plus customer-level distribution derived from
 // the same accounts query the Customers list uses.
-export async function getPlatformAnalytics(range: AnalyticsRange) {
-  const gte = rollupSinceFor(range)
+export async function getPlatformAnalytics(
+  input: z.output<typeof platformAnalyticsSchema>,
+) {
+  const coverageStart =
+    input.range === 'all' ? await platformAnalyticsCoverageStart() : null
+  const window = historicalRollupBucketing({ ...input, coverageStart })
   const [accounts, summaryAgg, buckets, orgRows] = await Promise.all([
     listCustomerAccounts(),
-    aggregatePlatformSummary(gte),
-    groupPlatformByBucket(gte),
-    groupPlatformByOrg(gte),
+    aggregatePlatformSummary(window.gte, window.lt),
+    groupPlatformByBucket(window.gte, window.lt),
+    groupPlatformByOrg(window.gte, window.lt),
   ])
   const nameById = new Map(
     accounts.map((account) => [account.id, account.name]),
@@ -47,9 +53,13 @@ export async function getPlatformAnalytics(range: AnalyticsRange) {
   )
 
   return {
-    range,
+    range: input.range,
+    window: {
+      from: window.gte.toISOString(),
+      to: window.lt.toISOString(),
+    },
     summary: summarizeAgg(summaryAgg),
-    series: timeSeriesFromBuckets(buckets, range),
+    series: timeSeriesFromBuckets(buckets, window),
     topCustomers: orgRows.map((row) => ({
       id: row.orgId,
       name: nameById.get(row.orgId) ?? row.orgId,

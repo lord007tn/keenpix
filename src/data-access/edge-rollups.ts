@@ -17,6 +17,10 @@ function rollupId(
     .digest('hex')
 }
 
+function captureStateId(zoneId: string, host: string) {
+  return createHash('md5').update(`${zoneId}|${host}`).digest('hex')
+}
+
 // Persist the captured adaptive groups; the latest capture overwrites count/bytes
 // for any hour already stored.
 export async function upsertEdgeRollups(
@@ -69,4 +73,86 @@ export async function edgeCoverageStart(
     _min: { bucketStart: true },
   })
   return _min.bucketStart
+}
+
+export function getEdgeCaptureState(zoneId: string, host: string) {
+  return prisma.edgeCaptureState.findUnique({
+    where: { zoneId_host: { zoneId, host } },
+  })
+}
+
+export async function recordEdgeCaptureSuccess(input: {
+  coveredFrom: Date
+  coveredUntil: Date
+  groups: number
+  host: string
+  zoneId: string
+}) {
+  const previous = await getEdgeCaptureState(input.zoneId, input.host)
+  const overlaps =
+    previous?.coveredUntil &&
+    previous.coveredUntil.getTime() >= input.coveredFrom.getTime()
+  const coveredFrom =
+    overlaps && previous.coveredFrom
+      ? new Date(
+          Math.min(previous.coveredFrom.getTime(), input.coveredFrom.getTime()),
+        )
+      : input.coveredFrom
+  const coveredUntil =
+    overlaps && previous.coveredUntil
+      ? new Date(
+          Math.max(
+            previous.coveredUntil.getTime(),
+            input.coveredUntil.getTime(),
+          ),
+        )
+      : input.coveredUntil
+  return prisma.edgeCaptureState.upsert({
+    where: { zoneId_host: { zoneId: input.zoneId, host: input.host } },
+    create: {
+      id: captureStateId(input.zoneId, input.host),
+      zoneId: input.zoneId,
+      host: input.host,
+      status: input.groups === 0 ? 'ok_empty' : 'ready',
+      groups: input.groups,
+      coveredFrom,
+      coveredUntil,
+      lastAttemptAt: input.coveredUntil,
+      lastSuccessAt: input.coveredUntil,
+    },
+    update: {
+      status: input.groups === 0 ? 'ok_empty' : 'ready',
+      groups: input.groups,
+      coveredFrom,
+      coveredUntil,
+      lastAttemptAt: input.coveredUntil,
+      lastSuccessAt: input.coveredUntil,
+      lastError: null,
+    },
+  })
+}
+
+export function recordEdgeCaptureFailure(input: {
+  attemptedAt: Date
+  error: string
+  host: string
+  zoneId: string
+}) {
+  return prisma.edgeCaptureState.upsert({
+    where: { zoneId_host: { zoneId: input.zoneId, host: input.host } },
+    create: {
+      id: captureStateId(input.zoneId, input.host),
+      zoneId: input.zoneId,
+      host: input.host,
+      status: 'failed',
+      groups: 0,
+      lastAttemptAt: input.attemptedAt,
+      lastError: input.error,
+    },
+    update: {
+      status: 'failed',
+      lastAttemptAt: input.attemptedAt,
+      lastError: input.error,
+    },
+  })
 }

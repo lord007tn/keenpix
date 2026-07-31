@@ -30,10 +30,11 @@ function latencyCountsFrom(
 
 export async function aggregatePlatformSummary(
   gte: Date,
+  lt?: Date,
 ): Promise<RollupSummaryAgg> {
   const rows = await prisma.analyticsRollupHourly.groupBy({
     by: ['status'],
-    where: { bucketStart: { gte } },
+    where: { bucketStart: lt ? { gte, lt } : { gte } },
     _sum: {
       requests: true,
       cachedRequests: true,
@@ -87,10 +88,13 @@ export async function aggregatePlatformSummary(
   }
 }
 
-export async function groupPlatformByBucket(gte: Date): Promise<BucketAgg[]> {
+export async function groupPlatformByBucket(
+  gte: Date,
+  lt?: Date,
+): Promise<BucketAgg[]> {
   const rows = await prisma.analyticsRollupHourly.groupBy({
     by: ['bucketStart'],
-    where: { bucketStart: { gte } },
+    where: { bucketStart: lt ? { gte, lt } : { gte } },
     _sum: {
       requests: true,
       cachedRequests: true,
@@ -114,10 +118,10 @@ export async function groupPlatformByBucket(gte: Date): Promise<BucketAgg[]> {
 }
 
 // Top orgs by request volume in the window — feeds the "top customers" list.
-export async function groupPlatformByOrg(gte: Date, take = 8) {
+export async function groupPlatformByOrg(gte: Date, lt?: Date, take = 8) {
   const rows = await prisma.analyticsRollupHourly.groupBy({
     by: ['orgId'],
-    where: { bucketStart: { gte } },
+    where: { bucketStart: lt ? { gte, lt } : { gte } },
     _sum: { requests: true, cachedRequests: true, bytesOut: true },
     orderBy: [{ _sum: { requests: 'desc' } }],
     take,
@@ -128,4 +132,11 @@ export async function groupPlatformByOrg(gte: Date, take = 8) {
     cachedRequests: r._sum.cachedRequests ?? 0,
     bytesOut: Number(r._sum.bytesOut ?? 0n),
   }))
+}
+
+export async function platformAnalyticsCoverageStart() {
+  const result = await prisma.analyticsRollupHourly.aggregate({
+    _min: { bucketStart: true },
+  })
+  return result._min.bucketStart
 }

@@ -6,10 +6,12 @@ export interface SessionUser {
   createdAt: string | null
   email: string
   emailVerified: boolean
+  hasPassword: boolean
   id: string
   image: string | null
   impersonatedBy: string | null
   name: string | null
+  providers: string[]
   role: string
 }
 

@@ -419,6 +419,26 @@ model EdgeRollupHourly {
   @@index([zoneId, host, bucketStart])
 }
 
+// Durable health and coverage for the zone-wide Cloudflare capture. A successful
+// empty response still advances coverage, while failures retain their timestamp
+// and operator-safe message instead of masquerading as "no data".
+model EdgeCaptureState {
+  id            String   @id
+  zoneId        String
+  host          String   @default("")
+  status        String
+  groups        Int      @default(0)
+  coveredFrom   DateTime?
+  coveredUntil  DateTime?
+  lastAttemptAt DateTime
+  lastSuccessAt DateTime?
+  lastError     String?
+  updatedAt     DateTime @updatedAt
+
+  @@unique([zoneId, host])
+  @@index([lastSuccessAt])
+}
+
 // Hourly container resource rollups (CPU + memory) sampled in-process, persisted
 // one row per hour as avg + peak so capacity trends survive restarts without
 // storing the raw per-sample stream. One row per hour (bucketStart is the upsert

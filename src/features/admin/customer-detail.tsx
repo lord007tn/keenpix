@@ -89,6 +89,7 @@ function Fact({ label, value }: { label: string; value: React.ReactNode }) {
 export function CustomerDetail({ orgId }: { orgId: string }) {
   const [customer, setCustomer] = useState<CustomerAccount | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [impersonating, setImpersonating] = useState(false)
   const [confirmSuspend, setConfirmSuspend] = useState(false)
   const [suspendReason, setSuspendReason] = useState('')
@@ -110,9 +111,11 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError(false)
     try {
       setCustomer(await getCustomerAccountFn({ data: { orgId } }))
     } catch (error) {
+      setLoadError(true)
       toast.error(getErrorMessage(error, 'Could not load customer'))
     } finally {
       setLoading(false)
@@ -224,7 +227,20 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
           <ArrowLeftIcon className="size-4" />
           Back to customers
         </Link>
-        <p className="text-muted-foreground text-sm">Customer not found.</p>
+        <p
+          className={
+            loadError
+              ? 'text-destructive text-sm'
+              : 'text-muted-foreground text-sm'
+          }
+        >
+          {loadError ? 'Couldn’t load this customer.' : 'Customer not found.'}
+        </p>
+        {loadError ? (
+          <Button className="w-fit" onClick={load} size="sm" variant="outline">
+            Try again
+          </Button>
+        ) : null}
       </div>
     )
   }

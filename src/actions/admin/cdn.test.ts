@@ -55,10 +55,18 @@ describe('getPlatformConfig Cloudflare status', () => {
   })
 
   it('reports connected only after a live analytics check', async () => {
-    verifyCloudflareAccess.mockResolvedValue(undefined)
+    verifyCloudflareAccess.mockResolvedValue(1)
 
     await expect(getPlatformConfig()).resolves.toMatchObject({
       cloudflare: { connectionStatus: 'connected' },
+    })
+  })
+
+  it('distinguishes valid access from a host with no recent traffic', async () => {
+    verifyCloudflareAccess.mockResolvedValue(0)
+
+    await expect(getPlatformConfig()).resolves.toMatchObject({
+      cloudflare: { connectionStatus: 'connected_no_data' },
     })
   })
 

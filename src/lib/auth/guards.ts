@@ -1,6 +1,11 @@
 import { createMiddleware } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
-import { getMemberRole } from '@/data-access/members'
+import {
+  ensurePersonalOrganizationMembership,
+  getLatestMembership,
+  getMemberRole,
+  setSessionActiveOrganization,
+} from '@/data-access/members'
 import { resolveActiveOrgId } from '@/lib/auth/active-org'
 import { auth } from '@/lib/auth/server'
 import { isCloud } from '@/server/deployment'
@@ -23,18 +28,37 @@ export const authMiddleware = createMiddleware({ type: 'function' }).server(
     const activeOrganizationId = (
       session.session as { activeOrganizationId?: string | null }
     ).activeOrganizationId
-    const orgId = resolveActiveOrgId(activeOrganizationId)
+    let orgId = resolveActiveOrgId(activeOrganizationId)
     // Org-level role for per-org authz (owner/admin/member), resolved once here so
     // the guards stay pure/synchronous. Only needed in cloud — self-host is
     // single-tenant, so skip the query entirely there.
-    const orgRole =
+    let orgRole =
       isCloud() && orgId ? await getMemberRole(session.user.id, orgId) : null
     // An organization member can be removed while one of their existing
     // sessions still points at that organization. Better Auth only clears the
     // acting session on self-removal, so fail closed here before any custom
     // server function can trust a stale activeOrganizationId.
-    if (isCloud() && orgId && !orgRole) {
-      throw new Error('You are not a member of the active organization.')
+    if (isCloud() && !orgRole) {
+      const membership =
+        (await getLatestMembership(session.user.id)) ??
+        (session.user.emailVerified
+          ? await ensurePersonalOrganizationMembership({
+              userId: session.user.id,
+              email: session.user.email,
+              name: session.user.name,
+            })
+          : null)
+      if (membership) {
+        orgId = membership.organizationId
+        orgRole = membership.role
+        await setSessionActiveOrganization(
+          session.session.id,
+          membership.organizationId,
+        )
+      }
+      if (!orgRole) {
+        throw new Error('You are not a member of the active organization.')
+      }
     }
     return next({
       context: {

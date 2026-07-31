@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import { hashPassword } from 'better-auth/crypto'
 import dayjs from 'dayjs'
 import { prisma } from '@/db'
+import { Prisma } from '@/generated/prisma/client'
 import { getAppUrl } from '@/server/deployment'
 import {
   ADMIN_ROLE,
@@ -9,6 +10,8 @@ import {
   type StaffRole,
   TOKEN_BYTES,
 } from './constants'
+
+const EXISTING_USER_MESSAGE = 'A user with this email already exists'
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase()
@@ -51,14 +54,24 @@ export async function createStaffInvitation(input: {
 }) {
   const token = randomBytes(TOKEN_BYTES).toString('hex')
   const expiresDays = Math.min(30, Math.max(1, input.expiresDays ?? 7))
-  const created = await prisma.staffInvitation.create({
-    data: {
-      email: normalizeEmail(input.email),
-      role: input.role,
-      tokenHash: tokenHash(token),
-      invitedById: input.invitedById,
-      expiresAt: dayjs().add(expiresDays, 'day').toDate(),
-    },
+  const email = normalizeEmail(input.email)
+  const created = await prisma.$transaction(async (tx) => {
+    const existingUser = await tx.user.findUnique({
+      where: { email },
+      select: { id: true },
+    })
+    if (existingUser) {
+      throw new Error(EXISTING_USER_MESSAGE)
+    }
+    return tx.staffInvitation.create({
+      data: {
+        email,
+        role: input.role,
+        tokenHash: tokenHash(token),
+        invitedById: input.invitedById,
+        expiresAt: dayjs().add(expiresDays, 'day').toDate(),
+      },
+    })
   })
   const role = created.role === ADMIN_ROLE ? ADMIN_ROLE : STAFF_ROLE
   return {
@@ -138,43 +151,42 @@ export async function acceptInvitation(input: {
       throw new Error('Invitation has expired')
     }
 
-    const user = await tx.user.upsert({
+    const existingUser = await tx.user.findUnique({
       where: { email: invitation.email },
-      update: {
-        emailVerified: true,
-        name: input.name?.trim() || undefined,
-        role: invitation.role,
-        banned: false,
-        banReason: null,
-        banExpires: null,
-      },
-      create: {
-        email: invitation.email,
-        emailVerified: true,
-        name: input.name?.trim() || null,
-        role: invitation.role,
-        banned: false,
-      },
+      select: { id: true },
     })
+    if (existingUser) {
+      throw new Error(EXISTING_USER_MESSAGE)
+    }
 
-    const account = await tx.account.findFirst({
-      where: { userId: user.id, providerId: 'credential' },
-    })
-    if (account) {
-      await tx.account.update({
-        where: { id: account.id },
-        data: { accountId: user.id, password },
-      })
-    } else {
-      await tx.account.create({
+    const user = await tx.user
+      .create({
         data: {
-          userId: user.id,
-          accountId: user.id,
-          providerId: 'credential',
-          password,
+          email: invitation.email,
+          emailVerified: true,
+          name: input.name?.trim() || null,
+          role: invitation.role,
+          banned: false,
         },
       })
-    }
+      .catch((error) => {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          throw new Error(EXISTING_USER_MESSAGE)
+        }
+        throw error
+      })
+
+    await tx.account.create({
+      data: {
+        userId: user.id,
+        accountId: user.id,
+        providerId: 'credential',
+        password,
+      },
+    })
 
     await tx.staffInvitation.update({
       where: { id: invitation.id },

@@ -64,7 +64,6 @@ import { compactNumber, humanBytes } from '@/shared/format'
 import { appPageHead } from '@/shared/seo'
 import {
   type HistoricalAnalyticsRange,
-  isAnalyticsRange,
   isHistoricalAnalyticsRange,
 } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
@@ -239,10 +238,9 @@ function AnalyticsPage() {
   const navigate = useNavigate({ from: Route.fullPath })
   const { cloud, user } = useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
-  // The edge/CDN dataset is whole-zone (aggregate across tenants). In cloud only
-  // the platform operator may see it; everyone sees it self-host. When it's not
-  // visible, no edge cards, lenses, notes, or connect prompt appear at all.
-  const canSeeEdge = !cloud || isSuperAdmin
+  // Cloud edge data is platform-wide and belongs in /admin, never beside one
+  // organization's origin totals. Self-host remains a single-instance view.
+  const canSeeEdge = !cloud
   const { currentProject, isAll, setProject } = useProject()
   const { data: billing } = useQuery({
     enabled: cloud,
@@ -270,9 +268,6 @@ function AnalyticsPage() {
     ...boundedWindow,
   })
   const isRefreshing = isFetching && !isPending
-  const edgeRange = isAnalyticsRange(boundedWindow.range)
-    ? boundedWindow.range
-    : undefined
   // Cloudflare edge stats load off the critical path; the edge cards/lenses
   // fill in afterward. Range-aware now that we persist edge history.
   const {
@@ -282,7 +277,7 @@ function AnalyticsPage() {
     edgeRefreshing,
     edgePending,
     edgeError,
-  } = useEdgeStats(edgeRange)
+  } = useEdgeStats(canSeeEdge ? boundedWindow : undefined)
   const [view, setView] = useState<AreaView>('requests')
   const [lens, setLens] = useState<ChartLens>('funnel')
   const [topMetric, setTopMetric] = useState<'requests' | 'bytes'>('requests')
@@ -449,17 +444,12 @@ function AnalyticsPage() {
   // Only the operator can wire Cloudflare, so only the super-admin ever sees the
   // connect CTA. Regular tenants get origin-only cards with no dead-end prompt.
   const edgeNotConfigured =
-    Boolean(edgeRange) &&
-    isSuperAdmin &&
-    !(edgePending || edgeError || edgeConfigured)
+    canSeeEdge && isSuperAdmin && !(edgePending || edgeError || edgeConfigured)
   // A background capture is in flight and the reconciled split isn't on screen
   // yet — show the "preparing" indicator (and hold the note) until it lands.
   const edgePreparing = edgeRefreshing && !edgeGated
   let edgeNote: string | undefined
-  if (canSeeEdge && !edgeRange) {
-    edgeNote =
-      'This longer window shows authoritative keenpix-origin history. Zone-wide edge comparison is available for 24h, 7d, 30d, and 90d.'
-  } else if (
+  if (
     canSeeEdge &&
     !(edgePending || edgePreparing || edgeGated || edgeNotConfigured)
   ) {

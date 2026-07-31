@@ -9,9 +9,9 @@ describe('historicalRollupBucketing', () => {
   it('aligns the 24-hour window to persisted hourly buckets', () => {
     const window = historicalRollupBucketing({ range: '24h' }, now)
 
-    expect(window.gte.toISOString()).toBe('2026-07-14T13:00:00.000Z')
+    expect(window.gte.toISOString()).toBe('2026-07-14T12:00:00.000Z')
     expect(window.n).toBe(24)
-    expect(window.startFor(0)).toBe('2026-07-14T13:00:00.000Z')
+    expect(window.startFor(0)).toBe('2026-07-14T12:00:00.000Z')
   })
 
   it('uses inclusive calendar dates for a custom window', () => {
@@ -36,9 +36,7 @@ describe('historicalRollupBucketing', () => {
     )
 
     expect(window.gte.toISOString()).toBe('2024-01-10T00:00:00.000Z')
-    expect(window.lt.toISOString()).toBe(
-      now.add(1, 'millisecond').toISOString(),
-    )
+    expect(window.lt.toISOString()).toBe(now.toISOString())
     expect(window.n).toBeLessThanOrEqual(120)
   })
 })

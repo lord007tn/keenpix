@@ -11,6 +11,8 @@ import { createAccessControl } from 'better-auth/plugins/access'
 import { adminAc, userAc } from 'better-auth/plugins/admin/access'
 import { defaultStatements } from 'better-auth/plugins/organization/access'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
+import dayjs from 'dayjs'
+import { ensurePersonalOrganizationMembership } from '@/data-access/members'
 import { prisma } from '@/db'
 import { env } from '@/env/server'
 import { buildPolarPlugin } from '@/lib/billing/polar-plugin'
@@ -118,18 +120,6 @@ const authUrl = getAppUrl()
 // and in any cloud deploy without a Polar token, so it stays a no-op there.
 const polarPlugin = buildPolarPlugin()
 
-// A unique, URL-safe slug for a new cloud signup's personal org.
-function personalOrgSlug(email: string): string {
-  const base =
-    email
-      .split('@')[0]
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 24) || 'org'
-  return `${base}-${crypto.randomUUID().slice(0, 8)}`
-}
-
 export const auth = betterAuth({
   baseURL: authUrl,
   trustedOrigins: [new URL(authUrl).origin],
@@ -211,10 +201,17 @@ export const auth = betterAuth({
     },
     // Self-serve account deletion is cloud-only: self-host operators manage users
     // from the admin surface / database, and deleting the lone operator (owner of
-    // the shared org_default) would tear down the whole instance. Password re-auth
-    // (no email round-trip) so the guard below can give immediate feedback.
+    // the shared org_default) would tear down the whole instance. A verification
+    // link supports both password and OAuth-only accounts before deletion.
     deleteUser: {
       enabled: isCloud(),
+      sendDeleteAccountVerification: ({ user, url }) =>
+        sendAuthEmail({
+          to: user.email,
+          subject: 'Confirm your Keenpix account deletion',
+          text: `Confirm permanent deletion of your Keenpix account:\n\n${url}\n\nIf you didn't request this, ignore this email.`,
+          html: `<p>Confirm permanent deletion of your Keenpix account:</p><p><a href="${escapeEmailHtml(url)}">Delete account</a></p><p>If you didn't request this, ignore this email.</p>`,
+        }),
       // An org owner can't just vanish: a live subscription would keep billing an
       // orphaned org, and other members would lose their owner. Block those, and
       // otherwise tear down the solely-owned org so nothing is left dangling.
@@ -257,25 +254,32 @@ export const auth = betterAuth({
       },
     },
   },
-  // Cloud self-signup provisions a personal org (the user owns it) and pins it
-  // as the session's active org, so a new cloud user always has an org to act
-  // in. Self-host users already have org_default membership from the seed/
-  // migration, so both hooks no-op there (gated on isCloud()).
+  // Cloud provisions a personal org only once the identity is verified. Google
+  // users arrive verified; email users are provisioned by the update hook after
+  // verification. Self-host users already belong to org_default.
   databaseHooks: {
     user: {
       create: {
         after: async (user) => {
-          if (!isCloud()) {
+          if (!(isCloud() && user.emailVerified)) {
             return
           }
-          const org = await prisma.organization.create({
-            data: {
-              name: user.name?.trim() || user.email.split('@')[0],
-              slug: personalOrgSlug(user.email),
-            },
+          await ensurePersonalOrganizationMembership({
+            userId: user.id,
+            email: user.email,
+            name: user.name,
           })
-          await prisma.member.create({
-            data: { organizationId: org.id, userId: user.id, role: 'owner' },
+        },
+      },
+      update: {
+        after: async (user) => {
+          if (!(isCloud() && user.emailVerified)) {
+            return
+          }
+          await ensurePersonalOrganizationMembership({
+            userId: user.id,
+            email: user.email,
+            name: user.name,
           })
         },
       },
@@ -288,7 +292,7 @@ export const auth = betterAuth({
           }
           const member = await prisma.member.findFirst({
             where: { userId: session.userId },
-            orderBy: { createdAt: 'asc' },
+            orderBy: { createdAt: 'desc' },
             select: { organizationId: true },
           })
           if (!member) {
@@ -393,6 +397,35 @@ export const auth = betterAuth({
       organizationHooks: {
         beforeCreateInvitation: ({ organization }) =>
           assertCanAddSeat(organization.id),
+        afterAcceptInvitation: async ({ organization, user }) => {
+          // Invite-driven signups may briefly receive a personal workspace when
+          // their identity is verified. Remove only that just-created, empty,
+          // single-owner workspace; never touch an established user workspace.
+          const candidates = await prisma.organization.findMany({
+            where: {
+              id: { not: organization.id },
+              createdAt: {
+                gte: dayjs(user.createdAt).subtract(1, 'minute').toDate(),
+                lte: dayjs(user.createdAt).add(10, 'minute').toDate(),
+              },
+              projects: { none: {} },
+              billingCustomer: null,
+              subscription: null,
+              members: { every: { userId: user.id } },
+            },
+            include: { members: { select: { userId: true, role: true } } },
+          })
+          const disposable = candidates.filter(
+            (candidate) =>
+              candidate.members.length === 1 &&
+              candidate.members[0]?.role === 'owner',
+          )
+          if (disposable.length > 0) {
+            await prisma.organization.deleteMany({
+              where: { id: { in: disposable.map((item) => item.id) } },
+            })
+          }
+        },
       },
       sendInvitationEmail: (data) => {
         const url = `${getAppUrl()}/accept-invite?id=${data.id}`

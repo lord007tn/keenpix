@@ -1,6 +1,6 @@
-import dayjs from 'dayjs'
 import type { z } from 'zod'
-import { rollupRangeMeta } from '@/data-access/analytics-rollups'
+import { analyticsCoverageStart } from '@/data-access/analytics-aggregates'
+import { historicalRollupBucketing } from '@/data-access/analytics-rollups'
 import { listProjects } from '@/data-access/projects'
 import {
   latencyBinsFromAgg,
@@ -33,13 +33,25 @@ export async function getDashboard(
   // One aggregate of the current window powers KPIs, the chart series, latency,
   // and (all-projects) the per-project table; a second aggregate of the disjoint
   // previous window gives the KPI trend deltas. A single `now` pins both windows.
-  const { n, ms } = rollupRangeMeta(input.range)
-  const windowMs = n * ms
-  const now = dayjs()
-  const curGte = now.subtract(windowMs, 'millisecond').toDate()
-  const prevGte = now.subtract(2 * windowMs, 'millisecond').toDate()
-  const cur = { gte: curGte, orgId, projectId: project }
-  const prev = { gte: prevGte, lt: curGte, orgId, projectId: project }
+  const coverageStart =
+    input.range === 'all'
+      ? await analyticsCoverageStart({ orgId, projectId: project })
+      : null
+  const window = historicalRollupBucketing({ ...input, coverageStart })
+  const windowMs = window.lt.getTime() - window.gte.getTime()
+  const prevGte = new Date(window.gte.getTime() - windowMs)
+  const cur = {
+    gte: window.gte,
+    lt: window.lt,
+    orgId,
+    projectId: project,
+  }
+  const prev = {
+    gte: prevGte,
+    lt: window.gte,
+    orgId,
+    projectId: project,
+  }
 
   // recentLogs reads the log store (ClickHouse, Postgres fallback) via readLogs,
   // and runs alongside — not inside — the analytics block so a ClickHouse
@@ -73,10 +85,14 @@ export async function getDashboard(
 
   return {
     range: input.range,
+    window: {
+      from: window.gte.toISOString(),
+      to: window.lt.toISOString(),
+    },
     projects,
     stats: projectGrouped ? projectStats(projectGrouped) : {},
     kpis,
-    series: timeSeriesFromBuckets(curBuckets, input.range),
+    series: timeSeriesFromBuckets(curBuckets, window),
     recentLogs,
     // Same per-request latency the Analytics page shows, so the shared Response
     // latency card reads identically on both.

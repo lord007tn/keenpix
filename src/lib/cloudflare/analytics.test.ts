@@ -24,6 +24,25 @@ afterEach(() => {
 })
 
 describe('verifyCloudflareAccess', () => {
+  it.each([
+    { host: undefined, hostFilter: '' },
+    {
+      host: 'images.example.com',
+      hostFilter: ', clientRequestHTTPHost: $host',
+    },
+  ])('filters $host end-user analytics to eyeball requests', async (testCase) => {
+    json.mockResolvedValue({
+      data: { viewer: { zones: [{ httpRequestsAdaptiveGroups: [] }] } },
+    })
+
+    await verifyCloudflareAccess({ ...settings, host: testCase.host })
+
+    const request = post.mock.calls.at(-1)?.[1]
+    expect(request?.json.query).toContain(
+      `requestSource: "eyeball", clientRequestPath_like: $path${testCase.hostFilter}`,
+    )
+  })
+
   it('rejects a token that cannot see the configured zone', async () => {
     json.mockResolvedValue({ data: { viewer: { zones: [] } } })
 

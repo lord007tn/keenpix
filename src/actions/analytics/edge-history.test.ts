@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const getEffectiveCloudflareSettings = vi.fn()
 const fetchEdgeAdaptiveHourly = vi.fn()
+const recordEdgeCaptureFailure = vi.fn()
+const recordEdgeCaptureSuccess = vi.fn()
 const upsertEdgeRollups = vi.fn()
 
 vi.mock('@/data-access/admin/cloudflare', () => ({
@@ -9,8 +11,8 @@ vi.mock('@/data-access/admin/cloudflare', () => ({
 }))
 vi.mock('@/lib/cloudflare/analytics', () => ({ fetchEdgeAdaptiveHourly }))
 vi.mock('@/data-access/edge-rollups', () => ({
-  edgeCoverageStart: vi.fn(),
-  listEdgeRollups: vi.fn(),
+  recordEdgeCaptureFailure,
+  recordEdgeCaptureSuccess,
   upsertEdgeRollups,
 }))
 
@@ -56,6 +58,31 @@ describe('captureEdgeHistory', () => {
       'zone',
       'keenpix.com',
       groups,
+    )
+    expect(recordEdgeCaptureSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        groups: 1,
+        host: 'keenpix.com',
+        zoneId: 'zone',
+      }),
+    )
+  })
+
+  it('records provider failures before rethrowing them', async () => {
+    getEffectiveCloudflareSettings.mockResolvedValue({
+      apiToken: 'secret',
+      host: '',
+      zoneId: 'zone',
+    })
+    fetchEdgeAdaptiveHourly.mockRejectedValue(new Error('token rejected'))
+
+    await expect(captureEdgeHistory()).rejects.toThrow('token rejected')
+    expect(recordEdgeCaptureFailure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: 'token rejected',
+        host: '',
+        zoneId: 'zone',
+      }),
     )
   })
 })

@@ -1,4 +1,5 @@
 import { createFileRoute, useRouteContext } from '@tanstack/react-router'
+import dayjs from 'dayjs'
 import {
   CreditCardIcon,
   KeyRoundIcon,
@@ -26,6 +27,7 @@ import { EmailEditor } from '@/features/account/email-editor'
 import { NameEditor } from '@/features/account/name-editor'
 import { PasswordEditor } from '@/features/account/password-editor'
 import { SessionsList } from '@/features/account/sessions-list'
+import { SetPasswordEditor } from '@/features/account/set-password-editor'
 import { ThemeControl } from '@/features/account/theme-control'
 import { BillingPanel } from '@/features/billing/billing-panel'
 import { cn } from '@/lib/cn/utils'
@@ -73,19 +75,15 @@ function initials(base: string): string {
   return (first + second).toUpperCase()
 }
 
-function formatJoined(iso: string | null): string | null {
+function joinedLabel(iso: string | null): string | null {
   if (!iso) {
     return null
   }
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) {
+  const date = dayjs(iso)
+  if (!date.isValid()) {
     return null
   }
-  return d.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+  return date.format('MMMM D, YYYY')
 }
 
 function SubNavItem({
@@ -136,7 +134,15 @@ function AccountPage() {
   const { section } = Route.useSearch()
   const navigate = Route.useNavigate()
   const display = user.name?.trim() || user.email
-  const joined = formatJoined(user.createdAt)
+  const joined = joinedLabel(user.createdAt)
+  const signInMethods = [
+    ...(user.hasPassword ? ['Password'] : []),
+    ...user.providers.map((provider) =>
+      provider === 'google'
+        ? 'Google'
+        : provider.charAt(0).toUpperCase() + provider.slice(1),
+    ),
+  ]
 
   // Billing + account deletion are cloud-only surfaces (self-host is unlimited
   // and its accounts are operator-managed).
@@ -245,7 +251,7 @@ function AccountPage() {
                   >
                     <Badge variant="outline">
                       <KeyRoundIcon data-icon="inline-start" />
-                      Email &amp; password
+                      {signInMethods.join(' + ') || 'Email'}
                     </Badge>
                   </SettingRow>
                   {joined ? (
@@ -289,13 +295,21 @@ function AccountPage() {
             <>
               <Card>
                 <CardHeader>
-                  <CardTitle>Password</CardTitle>
+                  <CardTitle>
+                    {user.hasPassword ? 'Password' : 'Add a password'}
+                  </CardTitle>
                   <CardDescription>
-                    Change your password. You’ll need your current one.
+                    {user.hasPassword
+                      ? 'Change your password. You’ll need your current one.'
+                      : 'Add password sign-in alongside your linked provider.'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <PasswordEditor />
+                  {user.hasPassword ? (
+                    <PasswordEditor />
+                  ) : (
+                    <SetPasswordEditor />
+                  )}
                 </CardContent>
               </Card>
               <Card>

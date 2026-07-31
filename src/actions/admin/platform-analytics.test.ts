@@ -7,9 +7,13 @@ vi.mock('@/data-access/admin/platform-analytics', () => ({
   aggregatePlatformSummary: vi.fn().mockResolvedValue({}),
   groupPlatformByBucket: vi.fn().mockResolvedValue([]),
   groupPlatformByOrg: vi.fn().mockResolvedValue([]),
+  platformAnalyticsCoverageStart: vi.fn().mockResolvedValue(null),
 }))
 vi.mock('@/data-access/analytics-rollups', () => ({
-  rollupSinceFor: vi.fn().mockReturnValue(new Date('2026-07-01T00:00:00Z')),
+  historicalRollupBucketing: vi.fn().mockReturnValue({
+    gte: new Date('2026-07-01T00:00:00Z'),
+    lt: new Date('2026-07-31T00:00:00Z'),
+  }),
 }))
 vi.mock('@/helpers/analytics/rollup-shapers', () => ({
   summarizeAgg: vi.fn().mockReturnValue({}),
@@ -55,7 +59,7 @@ describe('platform revenue reporting', () => {
       },
     ])
 
-    const result = await getPlatformAnalytics('30d')
+    const result = await getPlatformAnalytics({ range: '30d' })
 
     expect(result.paidMrrCents).toBe(1900)
     expect(result.activePaidSubscriptionCount).toBe(1)

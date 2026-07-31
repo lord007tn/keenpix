@@ -42,9 +42,13 @@ export const resourceTrendSchema = z.object({
   range: analyticsRangeSchema.catch('24h'),
 })
 
-export const platformAnalyticsSchema = z.object({
-  range: analyticsRangeSchema.catch('30d'),
-})
+export const platformAnalyticsSchema = z
+  .object({
+    from: z.iso.date().optional(),
+    range: historicalAnalyticsRangeSchema.catch('30d'),
+    to: z.iso.date().optional(),
+  })
+  .superRefine(validateHistoricalWindow)
 
 export const operationsConfigSchema = z.object({
   diskCacheMaxMb: z.coerce

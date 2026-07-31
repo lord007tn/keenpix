@@ -1,4 +1,5 @@
 import { getRequestHeaders } from '@tanstack/react-start/server'
+import { listUserAuthenticationMethods } from '@/data-access/user-accounts'
 import { auth } from '@/lib/auth/server'
 
 export async function getSessionUser() {
@@ -9,6 +10,7 @@ export async function getSessionUser() {
     return null
   }
   const { user } = session
+  const authentication = await listUserAuthenticationMethods(user.id)
   return {
     id: user.id,
     email: user.email,
@@ -16,6 +18,7 @@ export async function getSessionUser() {
     name: user.name ?? null,
     image: user.image ?? null,
     role: user.role ?? 'user',
+    ...authentication,
     // Set by better-auth's admin plugin while an operator is impersonating this
     // user; drives the "stop impersonating" banner. Null in a normal session.
     impersonatedBy: session.session.impersonatedBy ?? null,

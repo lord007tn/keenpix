@@ -19,14 +19,18 @@ export async function getPlatformConfig() {
       env.KEENPIX_CACHE_S3_SECRET_ACCESS_KEY,
   )
   const cloudflare = await getPublicCloudflareSettings()
-  let connectionStatus: 'connected' | 'failed' | 'not_configured' =
-    'not_configured'
+  let connectionStatus:
+    | 'connected'
+    | 'connected_no_data'
+    | 'failed'
+    | 'not_configured' = 'not_configured'
   if (cloudflare.enabled && cloudflare.tokenSet && cloudflare.zoneId) {
     const settings = await getEffectiveCloudflareSettings()
     if (settings) {
       try {
-        await verifyCloudflareAccess(settings)
-        connectionStatus = 'connected'
+        const matchingGroups = await verifyCloudflareAccess(settings)
+        connectionStatus =
+          matchingGroups > 0 ? 'connected' : 'connected_no_data'
       } catch {
         connectionStatus = 'failed'
       }
