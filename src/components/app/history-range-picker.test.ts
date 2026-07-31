@@ -6,13 +6,14 @@ import {
 } from './history-range-picker'
 
 describe('history range presets', () => {
-  it('keeps only 7 and 30 days in the primary strip', () => {
+  it('keeps 24 hours, 7 days, and 30 days in the primary strip', () => {
     expect(
       PRIMARY_HISTORY_RANGES.map(({ buttonLabel, value }) => [
         buttonLabel,
         value,
       ]),
     ).toEqual([
+      ['24 hours', '24h'],
       ['7 days', '7d'],
       ['30 days', '30d'],
     ])

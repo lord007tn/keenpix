@@ -174,6 +174,14 @@ async function queryCount(
   return Number(result.rows[0]?.count ?? 0)
 }
 
+async function tableExists(client: pg.Client, table: string) {
+  const result = await client.query(
+    'select to_regclass($1) is not null as exists',
+    [table],
+  )
+  return result.rows[0]?.exists === true
+}
+
 async function verifySchemaMigration(
   client: pg.Client,
   migration: string,
@@ -588,6 +596,10 @@ async function main() {
         'select count(*) from "ApiKeyActivity" where "apiKeyId" = any($1) and "createdAt" >= $2 and "createdAt" < $3',
         [SOURCE_API_KEY_IDS, since, cutover],
       ),
+      edgeRollups: await queryCount(
+        source,
+        'select count(*) from "EdgeRollupHourly"',
+      ),
       requestLog: await queryCount(
         source,
         'select count(*) from "RequestLog" where "orgId" = $1 and ts >= $2 and ts < $3',
@@ -882,6 +894,75 @@ async function main() {
         target,
         transform: (row) => ({ ...row, orgId: TARGET_ORG_ID }),
       })
+
+      await replayRows({
+        columns: [
+          'id',
+          'zoneId',
+          'host',
+          'bucketStart',
+          'cacheStatus',
+          'count',
+          'bytes',
+          'updatedAt',
+        ],
+        conflict: `on conflict (id) do update set
+          "zoneId" = excluded."zoneId", host = excluded.host,
+          "bucketStart" = excluded."bucketStart",
+          "cacheStatus" = excluded."cacheStatus", count = excluded.count,
+          bytes = excluded.bytes, "updatedAt" = excluded."updatedAt"
+          where ("EdgeRollupHourly"."zoneId", "EdgeRollupHourly".host,
+            "EdgeRollupHourly"."bucketStart", "EdgeRollupHourly"."cacheStatus",
+            "EdgeRollupHourly".count, "EdgeRollupHourly".bytes,
+            "EdgeRollupHourly"."updatedAt")
+          is distinct from (excluded."zoneId", excluded.host,
+            excluded."bucketStart", excluded."cacheStatus", excluded.count,
+            excluded.bytes, excluded."updatedAt")`,
+        keyColumn: 'id',
+        manifest,
+        orderColumn: 'bucketStart',
+        source,
+        sourceParams: [],
+        sourceWhere: 'true',
+        table: 'EdgeRollupHourly',
+        target,
+        transform: (row) => row,
+      })
+
+      if (await tableExists(source, '"EdgeCaptureState"')) {
+        const sourceCaptureStates = await source.query(
+          'select * from "EdgeCaptureState" order by "zoneId", host',
+        )
+        await writeRows({
+          client: target,
+          columns: [
+            'id',
+            'zoneId',
+            'host',
+            'status',
+            'groups',
+            'coveredFrom',
+            'coveredUntil',
+            'lastAttemptAt',
+            'lastSuccessAt',
+            'lastError',
+            'updatedAt',
+          ],
+          conflict: `on conflict ("zoneId", host) do update set
+            status = excluded.status, groups = excluded.groups,
+            "coveredFrom" = excluded."coveredFrom",
+            "coveredUntil" = excluded."coveredUntil",
+            "lastAttemptAt" = excluded."lastAttemptAt",
+            "lastSuccessAt" = excluded."lastSuccessAt",
+            "lastError" = excluded."lastError", "updatedAt" = excluded."updatedAt"`,
+          rows: sourceCaptureStates.rows,
+          table: 'EdgeCaptureState',
+        })
+      } else {
+        console.log(
+          'EdgeCaptureState: source schema predates coverage tracking; raw edge rows remain explicitly partial.',
+        )
+      }
     }
 
     const logColumns = [
@@ -983,8 +1064,18 @@ async function main() {
       targetWhere:
         '"apiKeyId" = any($1) and "createdAt" >= $2 and "createdAt" < $3',
     })
+    const targetOnlyEdgeRollupIds = await listTargetOnlyIds({
+      orderColumn: 'bucketStart',
+      source,
+      sourceParams: [],
+      sourceWhere: 'true',
+      table: 'EdgeRollupHourly',
+      target,
+      targetParams: [],
+      targetWhere: 'true',
+    })
     console.log(
-      `Preserving cloud-only rows: RequestLog=${targetOnlyRequestLogIds.length}, AnalyticsRollupHourly=${targetOnlyRollupIds.length}, ApiKeyActivity=${targetOnlyActivityIds.length}`,
+      `Preserving cloud-only rows: RequestLog=${targetOnlyRequestLogIds.length}, AnalyticsRollupHourly=${targetOnlyRollupIds.length}, EdgeRollupHourly=${targetOnlyEdgeRollupIds.length}, ApiKeyActivity=${targetOnlyActivityIds.length}`,
     )
 
     const checks = [
@@ -1022,6 +1113,17 @@ async function main() {
           '"orgId" = $1 and "projectId" = any($2) and "bucketStart" >= $3 and "bucketStart" < $4 and id <> all($5::text[])',
           [TARGET_ORG_ID, projectIds, since, cutover, targetOnlyRollupIds],
           ['orgId'],
+        ),
+      },
+      {
+        ignored: [],
+        name: 'EdgeRollupHourly',
+        source: await fingerprint(source, 'EdgeRollupHourly', 'true', []),
+        target: await fingerprint(
+          target,
+          'EdgeRollupHourly',
+          'id <> all($1::text[])',
+          [targetOnlyEdgeRollupIds],
         ),
       },
       {

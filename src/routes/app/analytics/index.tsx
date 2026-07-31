@@ -334,7 +334,9 @@ function AnalyticsPage() {
       return
     }
     const url = URL.createObjectURL(
-      new Blob([analyticsSeriesCsv(data.series)], { type: 'text/csv' }),
+      new Blob([analyticsSeriesCsv(data.series, edge?.series)], {
+        type: 'text/csv',
+      }),
     )
     const anchor = document.createElement('a')
     anchor.href = url

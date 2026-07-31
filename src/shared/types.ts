@@ -187,6 +187,8 @@ export interface EdgeCachePoint {
   label: string
   // Requests that missed the edge and reached keenpix.
   miss: number
+  // ISO timestamp at the start of this bucket.
+  start: string
 }
 
 // Cloudflare edge-cache rollup for the last 24h, fetched from the Cloudflare

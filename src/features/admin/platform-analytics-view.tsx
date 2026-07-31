@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import dayjs from 'dayjs'
+import { DownloadIcon } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
@@ -18,8 +19,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { getErrorMessage } from '@/errors/common'
 import { getPlatformAnalyticsFn } from '@/functions/admin'
 import { getEdgeCacheStatsFn } from '@/functions/analytics'
+import { analyticsSeriesCsv } from '@/helpers/analytics/export-csv'
 import type { HistorySearch } from '@/helpers/history/window'
-import { compactNumber, humanBytes } from '@/shared/format'
+import { compactNumber } from '@/shared/format'
 
 type PlatformAnalytics = Awaited<ReturnType<typeof getPlatformAnalyticsFn>>
 type EdgeResult = Awaited<ReturnType<typeof getEdgeCacheStatsFn>>
@@ -37,6 +39,22 @@ export function PlatformAnalyticsView() {
   const [edge, setEdge] = useState<EdgeResult | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [loadError, setLoadError] = useState(false)
+
+  const downloadAnalytics = () => {
+    if (!data) {
+      return
+    }
+    const url = URL.createObjectURL(
+      new Blob([analyticsSeriesCsv(data.series, edge?.edge?.series)], {
+        type: 'text/csv',
+      }),
+    )
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `keenpix-platform-analytics-${data.window.from.slice(0, 10)}-${data.window.to.slice(0, 10)}.csv`
+    anchor.click()
+    window.setTimeout(() => URL.revokeObjectURL(url), 0)
+  }
 
   const load = useCallback(async (next: HistorySearch) => {
     setRefreshing(true)
@@ -71,6 +89,17 @@ export function PlatformAnalyticsView() {
         range={search.range}
         to={search.to}
       />
+      <Button
+        aria-label="Export platform analytics CSV"
+        className="h-11"
+        disabled={!data}
+        onClick={downloadAnalytics}
+        size="sm"
+        variant="outline"
+      >
+        <DownloadIcon aria-hidden="true" />
+        Export CSV
+      </Button>
     </div>
   )
 
@@ -99,25 +128,10 @@ export function PlatformAnalyticsView() {
   }
 
   const { summary, series, topCustomers, planDistribution } = data
-  const edgeStats = edge?.edgeCovered ? edge.edge : null
-  const edgeHitRate = edgeStats?.hitRate ?? null
-  let edgeValue = 'Not configured'
-  let edgeSub = 'Configure CLOUDFLARE_* in the platform environment'
-  if (edge?.edgeStatus === 'failed') {
-    edgeValue = 'Capture failed'
-    edgeSub = edge.edgeError ?? 'Check the token, zone, and capture logs'
-  } else if (edge?.edgeStatus === 'partial') {
-    edgeValue = 'Partial history'
-    edgeSub = edge.edgeLastSuccessAt
-      ? `Last capture ${dayjs(edge.edgeLastSuccessAt).format('MMM D, HH:mm')}`
-      : 'The selected window is still accumulating'
-  } else if (edge?.edgeStatus === 'ok_empty') {
-    edgeValue = '0%'
-    edgeSub = 'Connected; no matching edge traffic in this window'
-  } else if (edgeHitRate !== null) {
-    edgeValue = `${edgeHitRate.toFixed(1)}%`
-    edgeSub = `${compactNumber(edgeStats?.requests ?? 0)} edge requests`
-  }
+  const edgeStats = edge?.edge ?? null
+  const edgeCoverageSub = edge?.edgeCovered
+    ? 'Complete Cloudflare coverage for this window'
+    : 'Partial Cloudflare history for this window'
   const maxCustomerRequests = Math.max(
     ...topCustomers.map((customer) => customer.requests),
     1,
@@ -130,22 +144,41 @@ export function PlatformAnalyticsView() {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Requests"
-          sub={`${summary.hitRate.toFixed(0)}% cached`}
-          value={compactNumber(summary.totalRequests)}
+          label="Client requests observed at Cloudflare"
+          sub={edgeStats ? edgeCoverageSub : 'Cloudflare data unavailable'}
+          value={edgeStats ? compactNumber(edgeStats.requests) : '—'}
         />
         <StatCard
-          label="Bandwidth delivered"
-          sub={`${humanBytes(summary.bandwidthSaved)} saved`}
-          value={humanBytes(summary.bandwidthOut)}
+          label="Served by Cloudflare cache"
+          sub={
+            edgeStats
+              ? `${edgeStats.hitRate.toFixed(1)}% of observed edge requests`
+              : 'Cloudflare data unavailable'
+          }
+          value={edgeStats ? compactNumber(edgeStats.cachedRequests) : '—'}
         />
         <StatCard
-          label="Origin cache hit"
-          sub={`${summary.savingsPct.toFixed(0)}% bytes saved`}
-          value={`${summary.hitRate.toFixed(1)}%`}
+          label="Served from Keenpix cache"
+          sub={`${summary.hitRate.toFixed(1)}% of requests reaching Keenpix`}
+          value={compactNumber(summary.cacheHits)}
         />
-        <StatCard label="Cloudflare edge" sub={edgeSub} value={edgeValue} />
+        <StatCard
+          label="Newly optimized by Keenpix"
+          sub={`${compactNumber(summary.totalRequests)} requests reached Keenpix`}
+          value={compactNumber(summary.liveOptimizations)}
+        />
       </div>
+
+      {!edge?.edgeCovered && edge?.edgeConfigured ? (
+        <p className="text-muted-foreground text-xs">
+          Cloudflare totals include every captured source in this window, but
+          uncovered intervals are not estimated.
+          {edge.edgeError ? ` Latest capture error: ${edge.edgeError}` : ''}
+          {edge.edgeLastSuccessAt
+            ? ` Last successful capture ${dayjs(edge.edgeLastSuccessAt).format('MMM D, YYYY HH:mm')}.`
+            : ''}
+        </p>
+      ) : null}
 
       <ChartAreaInteractive data={series} />
 

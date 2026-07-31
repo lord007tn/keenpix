@@ -63,6 +63,19 @@ export async function listEdgeRollups(
   }))
 }
 
+export async function listPlatformEdgeRollups(gte: Date, lt?: Date) {
+  const rows = await prisma.edgeRollupHourly.findMany({
+    where: { bucketStart: lt ? { gte, lt } : { gte } },
+    select: { bucketStart: true, cacheStatus: true, count: true, bytes: true },
+  })
+  return rows.map((row) => ({
+    bucketStart: row.bucketStart,
+    cacheStatus: row.cacheStatus,
+    count: row.count,
+    bytes: Number(row.bytes),
+  }))
+}
+
 // Earliest captured hour for this zone+host — the start of our edge history.
 export async function edgeCoverageStart(
   zoneId: string,
@@ -75,9 +88,23 @@ export async function edgeCoverageStart(
   return _min.bucketStart
 }
 
+export async function platformEdgeCoverageStart() {
+  const { _min } = await prisma.edgeRollupHourly.aggregate({
+    _min: { bucketStart: true },
+  })
+  return _min.bucketStart
+}
+
 export function getEdgeCaptureState(zoneId: string, host: string) {
   return prisma.edgeCaptureState.findUnique({
     where: { zoneId_host: { zoneId, host } },
+  })
+}
+
+export function listEdgeCaptureStates() {
+  return prisma.edgeCaptureState.findMany({
+    where: { coveredFrom: { not: null }, coveredUntil: { not: null } },
+    orderBy: { coveredFrom: 'asc' },
   })
 }
 

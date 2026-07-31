@@ -14,8 +14,8 @@ hourly rollups are retained as the durable historical record. Deleting a project
 deletes its rollups through the project relationship.
 
 The Analytics and Live logs pages share the same Google-Analytics-style range
-picker. The compact strip exposes 7 days, 30 days, and Custom. Opening Custom
-shows shortcuts for 24 hours, today, yesterday, week/month/year windows, 90 and
+picker. The compact strip exposes 24 hours, 7 days, 30 days, and Custom. Opening
+Custom shows shortcuts for today, yesterday, week/month/year windows, 90 and
 365 days, and all available retained history beside the inclusive calendar.
 Pro and Business can query up to 365 days; Basic can query up to 90 days. Both
 the browser and authenticated server functions clamp custom dates to the plan
@@ -39,8 +39,15 @@ then every hour. Dashboard reads remain a throttled best-effort refresh.
 
 The stored edge data is zone/host-wide. In multi-tenant cloud it is visible only
 to the platform operator and is never combined with a filtered customer or
-project total. Coverage metadata prevents partial edge history from being
-presented as a complete end-to-end total.
+project total. Historical zone/host sources remain queryable after a hostname
+or zone migration. Coverage is calculated across the union of source capture
+intervals; partial history is displayed with that qualification, and uncovered
+intervals are never estimated or presented as a complete end-to-end total.
+
+Operator CSV exports use the same time buckets as the selected chart and carry
+separate columns for requests observed at Cloudflare, responses served by the
+Cloudflare cache, requests forwarded by Cloudflare, requests reaching Keenpix,
+Keenpix cache deliveries, and newly optimized deliveries.
 
 ## Prospective project-attributed edge design
 
@@ -78,3 +85,5 @@ project-scoped origin history and separate operator-only aggregate edge history.
 - Confirm Basic cannot query before its rolling 90-day boundary and Pro or
   Business cannot query before their rolling 365-day boundary.
 - Confirm exported CSV totals match the visible filtered series.
+- Confirm a migrated historical edge source remains visible without widening
+  Cloudflare access or replacing the currently configured capture source.

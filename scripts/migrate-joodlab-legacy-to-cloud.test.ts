@@ -70,6 +70,15 @@ describe('legacy-to-cloud migration contract', () => {
     )
   })
 
+  it('migrates and reconciles the complete edge history', () => {
+    expect(source).toContain("table: 'EdgeRollupHourly'")
+    expect(source).toContain("table: 'EdgeCaptureState'")
+    expect(source).toContain("sourceWhere: 'true'")
+    expect(source).toContain("name: 'EdgeRollupHourly'")
+    expect(source).toContain('targetOnlyEdgeRollupIds')
+    expect(source).toContain('source schema predates coverage tracking')
+  })
+
   it('uses indexed time keysets when comparing source and target IDs', () => {
     expect(source).toContain('orderColumn: string')
     expect(source).toContain("orderColumn: 'ts'")
