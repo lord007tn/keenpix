@@ -35,7 +35,7 @@ export const HISTORY_RANGES: Array<{
 ]
 
 export const PRIMARY_HISTORY_RANGES = HISTORY_RANGES.filter(
-  (item) => item.value === '7d' || item.value === '30d',
+  (item) => item.value === '24h' || item.value === '7d' || item.value === '30d',
 )
 
 export type HistoryShortcutValue =
@@ -231,6 +231,7 @@ export function HistoryRangePicker({
       dayjs(from).isSame(to, 'year') ? 'MMM D' : 'MMM D, YYYY',
     )}`
   } else if (
+    visibleRange !== '24h' &&
     visibleRange !== '7d' &&
     visibleRange !== '30d' &&
     visibleRange !== 'custom'
@@ -286,7 +287,9 @@ export function HistoryRangePicker({
           }}
           size="sm"
           value={[
-            visibleRange === '7d' || visibleRange === '30d'
+            visibleRange === '24h' ||
+            visibleRange === '7d' ||
+            visibleRange === '30d'
               ? visibleRange
               : 'custom',
           ]}
@@ -304,7 +307,9 @@ export function HistoryRangePicker({
             render={
               <ToggleGroupItem
                 aria-label={
-                  visibleRange !== '7d' && visibleRange !== '30d'
+                  visibleRange !== '24h' &&
+                  visibleRange !== '7d' &&
+                  visibleRange !== '30d'
                     ? `${dropdownLabel}, selected. Choose a date range`
                     : 'Choose a custom date range'
                 }

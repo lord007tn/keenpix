@@ -1,6 +1,10 @@
 import dayjs from 'dayjs'
 import { describe, expect, it, vi } from 'vitest'
-import { type EdgeRollupRow, reconstructEdgeStats } from './edge-rollups'
+import {
+  type EdgeRollupRow,
+  hasContinuousEdgeCoverage,
+  reconstructEdgeStats,
+} from './edge-rollups'
 
 const at11 = dayjs('2026-06-13T11:00:00.000Z').toDate()
 
@@ -125,5 +129,51 @@ describe('reconstructEdgeStats', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('hasContinuousEdgeCoverage', () => {
+  const gte = dayjs('2026-07-01T00:00:00.000Z').toDate()
+  const lt = dayjs('2026-07-31T00:00:00.000Z').toDate()
+  const grace = 16 * 60 * 1000
+
+  it('accepts adjacent source intervals that cover the full window', () => {
+    expect(
+      hasContinuousEdgeCoverage(
+        [
+          {
+            coveredFrom: dayjs('2026-06-14T00:00:00.000Z').toDate(),
+            coveredUntil: dayjs('2026-07-17T00:00:00.000Z').toDate(),
+          },
+          {
+            coveredFrom: dayjs('2026-07-17T00:10:00.000Z').toDate(),
+            coveredUntil: dayjs('2026-08-01T00:00:00.000Z').toDate(),
+          },
+        ],
+        gte,
+        lt,
+        grace,
+      ),
+    ).toBe(true)
+  })
+
+  it('rejects a gap between historical and current capture sources', () => {
+    expect(
+      hasContinuousEdgeCoverage(
+        [
+          {
+            coveredFrom: dayjs('2026-06-14T00:00:00.000Z').toDate(),
+            coveredUntil: dayjs('2026-07-27T00:00:00.000Z').toDate(),
+          },
+          {
+            coveredFrom: dayjs('2026-07-31T00:00:00.000Z').toDate(),
+            coveredUntil: dayjs('2026-08-01T00:00:00.000Z').toDate(),
+          },
+        ],
+        gte,
+        lt,
+        grace,
+      ),
+    ).toBe(false)
   })
 })

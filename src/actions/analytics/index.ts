@@ -8,14 +8,19 @@ import {
 } from '@/data-access/analytics-rollups'
 import {
   getEdgeCaptureState,
-  listEdgeRollups,
+  listEdgeCaptureStates,
+  listPlatformEdgeRollups,
+  platformEdgeCoverageStart,
 } from '@/data-access/edge-rollups'
 import {
   getProject,
   listProjects,
   resolveProjectId,
 } from '@/data-access/projects'
-import { reconstructEdgeStats } from '@/helpers/analytics/edge-rollups'
+import {
+  hasContinuousEdgeCoverage,
+  reconstructEdgeStats,
+} from '@/helpers/analytics/edge-rollups'
 import {
   domainBreakdown,
   formatDistribution,
@@ -245,24 +250,21 @@ export async function getEdgeCacheStats(
       await startEdgeCapture(cloudflare)
       captureState = await getEdgeCaptureState(cloudflare.zoneId, host)
     }
-    const coverageStart = captureState?.coveredFrom ?? null
+    const coverageStart = await platformEdgeCoverageStart()
     const window = historicalRollupBucketing({
       ...input,
       coverageStart,
     })
-    const rows = await listEdgeRollups(
-      cloudflare.zoneId,
-      host,
+    const [rows, captureStates] = await Promise.all([
+      listPlatformEdgeRollups(window.gte, window.lt),
+      listEdgeCaptureStates(),
+    ])
+    const coverageGraceMs = CAPTURE_THROTTLE_MS + 60_000
+    const covered = hasContinuousEdgeCoverage(
+      captureStates,
       window.gte,
       window.lt,
-    )
-    const coverageGraceMs = CAPTURE_THROTTLE_MS + 60_000
-    const covered = Boolean(
-      captureState?.coveredFrom &&
-        captureState.coveredUntil &&
-        captureState.coveredFrom.getTime() <= window.gte.getTime() &&
-        captureState.coveredUntil.getTime() + coverageGraceMs >=
-          window.lt.getTime(),
+      coverageGraceMs,
     )
     let edgeStatus: 'ready' | 'ok_empty' | 'partial' | 'failed' = 'partial'
     if (captureState?.status === 'failed') {

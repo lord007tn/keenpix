@@ -36,6 +36,39 @@ export interface EdgeRollupRow {
   count: number
 }
 
+export function hasContinuousEdgeCoverage(
+  states: Array<{ coveredFrom: Date | null; coveredUntil: Date | null }>,
+  gte: Date,
+  lt: Date,
+  graceMs: number,
+) {
+  const intervals = states
+    .filter(
+      (state) =>
+        state.coveredFrom &&
+        state.coveredUntil &&
+        state.coveredUntil.getTime() + graceMs >= gte.getTime() &&
+        state.coveredFrom.getTime() <= lt.getTime(),
+    )
+    .map((state) => ({
+      from: state.coveredFrom?.getTime() ?? 0,
+      until: (state.coveredUntil?.getTime() ?? 0) + graceMs,
+    }))
+    .sort((a, b) => a.from - b.from)
+
+  let coveredUntil = gte.getTime()
+  for (const interval of intervals) {
+    if (interval.from > coveredUntil) {
+      return false
+    }
+    coveredUntil = Math.max(coveredUntil, interval.until)
+    if (coveredUntil >= lt.getTime()) {
+      return true
+    }
+  }
+  return false
+}
+
 // Rebuild EdgeCacheStats from persisted hourly rows, with the time series bucketed
 // to the selected range exactly like the origin series (so the funnel/compare
 // charts merge by label). Mirrors the live aggregation in
@@ -76,6 +109,7 @@ export function reconstructEdgeStats(
     }
   }
   const series: EdgeCachePoint[] = buckets.map((b, i) => ({
+    start: bucketing.startFor(i),
     label: labelFor(i),
     hit: b.hit,
     miss: b.miss,
