@@ -59,6 +59,7 @@ import {
   getCustomerAnalyticsFn,
   setOrgSuspensionFn,
 } from '@/functions/admin'
+import { getEdgeCacheStatsFn } from '@/functions/analytics'
 import { limitHistorySearch } from '@/helpers/history/window'
 import { authClient } from '@/lib/auth/client'
 import { DEFAULT_HISTORY_DAYS } from '@/lib/billing/plans'
@@ -148,6 +149,35 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
     placeholderData: keepPreviousData,
   })
   const analytics = analyticsQuery.data
+  const operatorWorkspace = Boolean(
+    customer?.owners.some((member) => member.platformRole === 'super_admin'),
+  )
+  const edgeQuery = useQuery({
+    queryKey: [
+      'admin-customer-edge-analytics',
+      orgId,
+      visibleSearch.range,
+      visibleSearch.from,
+      visibleSearch.to,
+    ],
+    queryFn: () =>
+      getEdgeCacheStatsFn({
+        data: {
+          from: visibleSearch.from,
+          range: visibleSearch.range,
+          to: visibleSearch.to,
+        },
+      }),
+    enabled: Boolean(customer && operatorWorkspace),
+    placeholderData: keepPreviousData,
+  })
+  const edge = edgeQuery.data
+  let edgeCoverageLabel = 'Cloudflare data unavailable'
+  if (edge?.edge) {
+    edgeCoverageLabel = edge.edgeCovered
+      ? 'Complete Cloudflare coverage'
+      : 'Partial imported Cloudflare history'
+  }
 
   const owner = customer?.owners[0]
 
@@ -388,8 +418,11 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
             </div>
             <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center">
               <RefreshingIndicator
-                active={analyticsQuery.isFetching}
-                error={analyticsQuery.isError && Boolean(analytics)}
+                active={analyticsQuery.isFetching || edgeQuery.isFetching}
+                error={
+                  (analyticsQuery.isError && Boolean(analytics)) ||
+                  (edgeQuery.isError && Boolean(edge))
+                }
               />
               <HistoryRangePicker
                 from={visibleSearch.from}
@@ -427,10 +460,40 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
             </Card>
           ) : null}
 
-          {summary ? (
+          {summary && operatorWorkspace ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard
-                label="Requests"
+                label="Client requests observed at Cloudflare"
+                sub={edgeCoverageLabel}
+                value={edge?.edge ? compactNumber(edge.edge.requests) : '—'}
+              />
+              <StatCard
+                label="Served by Cloudflare cache"
+                sub={
+                  edge?.edge
+                    ? `${edge.edge.hitRate.toFixed(1)}% of observed edge requests`
+                    : 'Cloudflare data unavailable'
+                }
+                value={
+                  edge?.edge ? compactNumber(edge.edge.cachedRequests) : '—'
+                }
+              />
+              <StatCard
+                label="Served from Keenpix cache"
+                sub={`${summary.hitRate.toFixed(1)}% of requests reaching Keenpix`}
+                value={compactNumber(summary.cacheHits)}
+              />
+              <StatCard
+                label="Newly optimized by Keenpix"
+                sub={`${compactNumber(summary.totalRequests)} requests reached Keenpix`}
+                value={compactNumber(summary.liveOptimizations)}
+              />
+            </div>
+          ) : null}
+          {summary && !operatorWorkspace ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                label="Requests reaching Keenpix"
                 sub={`${summary.hitRate.toFixed(0)}% cached`}
                 value={compactNumber(summary.totalRequests)}
               />
@@ -451,6 +514,14 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
               />
             </div>
           ) : null}
+          {operatorWorkspace && edge?.edgeConfigured && !edge.edgeCovered ? (
+            <p className="text-muted-foreground text-xs">
+              Cloudflare totals include every captured platform delivery source
+              in this window. Uncovered legacy intervals are not estimated, and
+              Keenpix origin counters are measured independently.
+              {edge.edgeError ? ` Latest capture error: ${edge.edgeError}` : ''}
+            </p>
+          ) : null}
           {!summary && analyticsQuery.isPending ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {['a', 'b', 'c', 'd'].map((key) => (
@@ -459,7 +530,13 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
             </div>
           ) : null}
 
-          {analytics ? <ChartAreaInteractive data={analytics.series} /> : null}
+          {analytics ? (
+            <ChartAreaInteractive
+              data={analytics.series}
+              edge={operatorWorkspace ? edge?.edge?.series : undefined}
+              funnel={operatorWorkspace && Boolean(edge?.edge)}
+            />
+          ) : null}
           {!analytics && analyticsQuery.isPending ? (
             <Skeleton className="h-72" />
           ) : null}
