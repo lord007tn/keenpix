@@ -27,7 +27,15 @@ function isSvgSource(source: string) {
   return SVG_START_RE.test(source)
 }
 
+// SVGO runs multipass (it re-parses the whole tree each pass), so a large or
+// deeply nested SVG is a CPU-amplification vector. Cap it far below the raster
+// origin limit — a legitimate icon/illustration is well under 2 MB.
+const MAX_SVG_BYTES = 2 * 1024 * 1024
+
 export function optimizeSvgImage(input: Buffer) {
+  if (input.byteLength > MAX_SVG_BYTES) {
+    throw new TransformError('SVG source is too large', 413)
+  }
   const source = input.toString('utf8')
   if (!isSvgSource(source)) {
     throw new TransformError('Origin is not a valid SVG', 502)

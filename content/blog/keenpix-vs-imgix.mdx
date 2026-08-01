@@ -1,0 +1,55 @@
+---
+title: "imgix Credits Explained: Delivery and Storage Pricing"
+description: Learn how imgix credit packages combine managed media and delivery allowances, then compare the meter with Keenpix application-response pricing.
+date: "2026-07-04"
+updated: "2026-07-13"
+author: Raed Bahri
+competitor: imgix
+tags: [comparison, pricing, image-cdn]
+image: /og/blog/keenpix-vs-imgix.png?v=2026-07-11
+imageAlt: Abstract comparison of transformation controls and transparent delivery pricing
+---
+
+imgix publishes a broad rendering API and packages managed media with delivery credits. This guide focuses on those billing mechanics. If you are actively selecting a vendor, use the sourced [Keenpix vs imgix decision guide](/compare/imgix-alternative) for feature fit, migration steps, and cases where imgix is the better choice.
+
+## Two different meters
+
+imgix now sells monthly credit packages. Its published Starter package includes 100 credits, up to 50 GB of managed media, and up to 100 GB of delivery; larger packages raise both allowances. Unused credits do not roll over.
+
+Keenpix meters **optimized response bytes returned by its application** and does not meter the number of origin images. An upstream Cloudflare edge `HIT` never reaches the application and is not included; optional edge analytics reports those requests separately.
+
+| | Keenpix | imgix |
+| --- | --- | --- |
+| Billing unit | Keenpix application response bytes (GB) | Credit package with media and delivery allowances |
+| Transformations | Unlimited, free | Included in rendering |
+| Large image catalog | No origin-image count | Managed-media allowance applies |
+| Overage | One linear published rate | Plan-dependent |
+| Self-host option | Yes (open source, AGPL) | No |
+| Entry price | $9/mo | $25/mo for Starter (100 credits) |
+
+*Verified July 13, 2026 against imgix's [current credit packages and costs](https://www.imgix.com/faq-categories/purchasing-credits-and-costs) and [pricing page](https://www.imgix.com/pricing). Published monthly packages run from $25 Starter (100 credits) through $500 Growth Plus (3,570 credits), with $75 Basic, $150 Midrange, and $300 Growth between them. Annual packages are about 17% lower.*
+
+## Free, unlimited transforms
+
+Both products give you a powerful URL-based transformation API — resize, crop, format conversion, quality, and more. The difference is the billing consequence: with Keenpix, **transformations never cost anything**, so building responsive `srcset` sets or adding modern AVIF/WebP variants has zero pricing impact.
+
+## The self-host escape hatch
+
+The Keenpix cloud release publishes its image engine under **AGPL-3.0**. You can run that version with Docker without a Keenpix license fee, while paying for and operating the infrastructure yourself. imgix is a managed platform; its service is not a self-hosted deployment path.
+
+For teams with compliance requirements, variable budgets, or a preference for owning their stack, that optionality matters. A move can preserve the transform grammar when you control the hostname and migration path, but it still requires infrastructure and routing work.
+
+## When imgix is the better fit
+
+imgix has years of edge-network maturity and a deep rendering feature set. If you are already invested in its API and its credit-package economics fit your media and delivery usage, there may be no reason to switch. Keenpix competes on a published application-byte meter, included transforms, and the self-host option — not on matching every feature of a mature incumbent on day one.
+
+## Related comparisons
+
+- [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) — two different credit and application-byte models.
+- [Keenpix vs ImageKit](/blog/keenpix-vs-imagekit) — two bandwidth-priced CDNs, compared.
+- [How the Keenpix application-byte meter works](/blog/transparent-image-cdn-pricing) — including the upstream-CDN boundary.
+- [Keenpix pricing](/pricing) — current plan limits and application-meter details.
+
+## See your real number
+
+The honest way to compare is on your own traffic. Point Keenpix at your existing origin, keep your URLs, and watch the bandwidth meter — then decide. Or [self-host free](/docs/self-hosting).

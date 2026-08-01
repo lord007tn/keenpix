@@ -1,9 +1,13 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import {
+  ArrowLeftIcon,
   BookOpenIcon,
   ChevronDownIcon,
+  ChevronsUpDownIcon,
+  CreditCardIcon,
   LogOutIcon,
   MoonIcon,
+  ShieldIcon,
   SunIcon,
   TagIcon,
   UserIcon,
@@ -23,6 +27,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import type { SessionUser } from '@/functions/auth'
 import { signOut } from '@/lib/auth/client'
+import { cn } from '@/lib/cn/utils'
 import { RELEASES_URL } from '@/shared/repository'
 import { APP_VERSION } from '@/shared/seo'
 
@@ -36,12 +41,27 @@ function initials(user: SessionUser): string {
   return (first + second).toUpperCase()
 }
 
-export function NavUser({ user }: { user: SessionUser }) {
+// `admin` renders the operator variant: it drops the tenant/product items
+// (Plan & billing, Documentation, Releases) so the /admin surface stays a
+// standalone operator app rather than an app-within-an-app. `variant="sidebar"`
+// is the full-width trigger used in the admin sidebar footer.
+export function NavUser({
+  admin = false,
+  cloud,
+  user,
+  variant = 'topbar',
+}: {
+  admin?: boolean
+  cloud: boolean
+  user: SessionUser
+  variant?: 'topbar' | 'sidebar'
+}) {
   const navigate = useNavigate()
   const { resolvedTheme, setTheme } = useTheme()
   const [pending, setPending] = useState(false)
   const isDark = resolvedTheme === 'dark'
   const display = user.name?.trim() || user.email
+  const isSidebar = variant === 'sidebar'
 
   async function handleSignOut() {
     setPending(true)
@@ -55,17 +75,43 @@ export function NavUser({ user }: { user: SessionUser }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button className="gap-1.5 pr-1.5 pl-1" variant="ghost" />}
+        render={
+          <Button
+            className={cn(
+              isSidebar
+                ? 'h-auto w-full justify-start gap-2 px-2 py-1.5'
+                : 'gap-1.5 pr-1.5 pl-1',
+            )}
+            variant="ghost"
+          />
+        }
       >
-        <Avatar className="size-7">
+        <Avatar className={isSidebar ? 'size-8' : 'size-7'}>
           <AvatarFallback className="text-xs">{initials(user)}</AvatarFallback>
         </Avatar>
-        <span className="hidden max-w-32 truncate font-medium text-sm sm:inline">
-          {display}
-        </span>
-        <ChevronDownIcon className="text-muted-foreground" />
+        {isSidebar ? (
+          <div className="flex min-w-0 flex-1 flex-col text-left leading-none">
+            <span className="truncate font-medium text-sm">{display}</span>
+            <span className="truncate text-muted-foreground text-xs">
+              {user.email}
+            </span>
+          </div>
+        ) : (
+          <span className="hidden max-w-32 truncate font-medium text-sm sm:inline">
+            {display}
+          </span>
+        )}
+        {isSidebar ? (
+          <ChevronsUpDownIcon className="ml-auto text-muted-foreground" />
+        ) : (
+          <ChevronDownIcon className="text-muted-foreground" />
+        )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-56" side="bottom">
+      <DropdownMenuContent
+        align={isSidebar ? 'start' : 'end'}
+        className="min-w-56"
+        side={isSidebar ? 'top' : 'bottom'}
+      >
         <DropdownMenuGroup>
           <DropdownMenuLabel className="p-0 font-normal">
             <div className="flex items-center gap-2 px-1 py-1.5">
@@ -89,27 +135,53 @@ export function NavUser({ user }: { user: SessionUser }) {
             <UserIcon />
             Account
           </DropdownMenuItem>
-          <DropdownMenuItem
-            render={
-              // biome-ignore lint/a11y/useAnchorContent: the icon + "Documentation" label are merged into the anchor by Base UI's render prop
-              <a href="/docs" />
-            }
-          >
-            <BookOpenIcon />
-            Documentation
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            render={
-              // biome-ignore lint/a11y/useAnchorContent: the icon + version label are merged into the anchor by Base UI's render prop
-              <a href={RELEASES_URL} rel="noreferrer" target="_blank" />
-            }
-          >
-            <TagIcon />
-            Version v{APP_VERSION}
-            <span className="ml-auto text-muted-foreground text-xs">
-              Releases
-            </span>
-          </DropdownMenuItem>
+          {cloud && !admin ? (
+            <DropdownMenuItem
+              render={
+                <Link search={{ section: 'billing' }} to="/app/account" />
+              }
+            >
+              <CreditCardIcon />
+              Plan &amp; billing
+            </DropdownMenuItem>
+          ) : null}
+          {user.role === 'super_admin' && !admin ? (
+            <DropdownMenuItem render={<Link to="/admin" />}>
+              <ShieldIcon />
+              Admin console
+            </DropdownMenuItem>
+          ) : null}
+          {user.role === 'super_admin' && admin ? (
+            <DropdownMenuItem render={<Link to="/app" />}>
+              <ArrowLeftIcon />
+              Back to app
+            </DropdownMenuItem>
+          ) : null}
+          {admin ? null : (
+            <DropdownMenuItem
+              render={
+                // biome-ignore lint/a11y/useAnchorContent: the icon + "Documentation" label are merged into the anchor by Base UI's render prop
+                <a href="/docs" />
+              }
+            >
+              <BookOpenIcon />
+              Documentation
+            </DropdownMenuItem>
+          )}
+          {admin ? null : (
+            <DropdownMenuItem
+              render={
+                // biome-ignore lint/a11y/useAnchorContent: the icon + version label are merged into the anchor by Base UI's render prop
+                <a href={RELEASES_URL} rel="noreferrer" target="_blank" />
+              }
+            >
+              <TagIcon />
+              Version v{APP_VERSION}
+              <span className="ml-auto text-muted-foreground text-xs">
+                Releases
+              </span>
+            </DropdownMenuItem>
+          )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem

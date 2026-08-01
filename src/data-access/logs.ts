@@ -6,24 +6,33 @@ export interface LogListFilters {
   cache?: string[]
   domain?: string[]
   format?: string[]
+  gte?: Date
+  lt?: Date
   search?: string
   status?: string[]
 }
 
 export async function listLogs({
+  orgId,
   filters,
   limit = 36,
   projectId,
 }: {
+  orgId: string
   filters?: LogListFilters
   limit?: number
   projectId?: string
-} = {}) {
-  const where: Prisma.RequestLogWhereInput = {}
+}) {
+  // Tenant scope first — every log row is org-scoped, so this bounds the query
+  // to the caller's org before any project/other filter narrows it further.
+  const where: Prisma.RequestLogWhereInput = { orgId }
   const search = filters?.search?.trim()
 
   if (projectId) {
     where.projectId = projectId
+  }
+  if (filters?.gte || filters?.lt) {
+    where.ts = { gte: filters.gte, lt: filters.lt }
   }
   if (filters?.format && filters.format.length > 0) {
     where.format = { in: filters.format.filter(isLogFormat) }

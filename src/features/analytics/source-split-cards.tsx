@@ -18,7 +18,14 @@ import type { AnalyticsSummary, EdgeCacheStats } from '@/shared/types'
 // AnalyticsSummary and the dashboard's KPI payload can satisfy it.
 type CardSummary = Pick<
   AnalyticsSummary,
-  'bandwidthOut' | 'bandwidthSaved' | 'totalRequests' | 'hitRate'
+  | 'bandwidthOut'
+  | 'bandwidthSaved'
+  | 'cacheHits'
+  | 'failedRequests'
+  | 'hitRate'
+  | 'liveOptimizations'
+  | 'successfulDeliveries'
+  | 'totalRequests'
 >
 
 // Optional vs-previous-window trends (Overview only). They only attach to cards
@@ -75,10 +82,10 @@ function savedCard(
       hasEdge
         ? {
             source: 'edge',
-            label: 'Cloudflare edge',
+            label: 'Edge',
             value: `~${humanBytes(edgeSaved, 1)} · est.`,
           }
-        : { source: 'none', label: 'Cloudflare edge', value: '—' },
+        : { source: 'none', label: 'Edge', value: '—' },
       {
         source: 'origin',
         label: 'keenpix origin',
@@ -119,7 +126,7 @@ export function reconciledCards(
       rows: [
         {
           source: 'edge',
-          label: 'Cloudflare edge',
+          label: 'Edge',
           value: `${humanBytes(edge.bytesFromEdge, 1)} · ${Math.round(edgeBytesPct)}%`,
         },
         {
@@ -150,7 +157,7 @@ export function reconciledCards(
         },
         {
           source: 'live',
-          label: 'Optimized live',
+          label: 'Optimized delivery',
           value: `${compactNumber(liveReached)} · ${Math.round(ratio(liveReached, edge.requests))}%`,
         },
       ],
@@ -166,7 +173,7 @@ export function reconciledCards(
       rows: [
         {
           source: 'edge',
-          label: 'At Cloudflare edge',
+          label: 'At edge',
           value: `${edge.hitRate.toFixed(1)}%`,
         },
         {
@@ -184,11 +191,11 @@ function originOnlyCards(
   summary: CardSummary,
   deltas?: CardDeltas,
 ): SourceSplitCardProps[] {
-  const dash = { source: 'none', label: 'Cloudflare edge', value: '—' } as const
+  const dash = { source: 'none', label: 'Edge', value: '—' } as const
   // Of everything that reached keenpix, the split between disk-cache hits and
   // fresh optimizes.
-  const diskHits = Math.round((summary.totalRequests * summary.hitRate) / 100)
-  const liveServed = summary.totalRequests - diskHits
+  const diskHits = summary.cacheHits
+  const liveServed = summary.liveOptimizations
   return [
     {
       label: 'Bandwidth delivered',
@@ -204,9 +211,9 @@ function originOnlyCards(
       ],
     },
     {
-      label: 'Client requests',
+      label: 'Image requests',
       value: compactNumber(summary.totalRequests),
-      sub: 'reached keenpix',
+      sub: `${compactNumber(summary.successfulDeliveries)} delivered`,
       delta: deltas?.requests,
       bar: [
         { source: 'disk', pct: summary.hitRate },
@@ -221,9 +228,18 @@ function originOnlyCards(
         },
         {
           source: 'live',
-          label: 'Optimized live',
+          label: 'Optimized deliveries',
           value: `${compactNumber(liveServed)} · ${Math.round(100 - summary.hitRate)}%`,
         },
+        ...(summary.failedRequests > 0
+          ? [
+              {
+                source: 'none' as const,
+                label: 'Recorded failures',
+                value: compactNumber(summary.failedRequests),
+              },
+            ]
+          : []),
       ],
     },
     {
@@ -281,12 +297,10 @@ export function SourceSplitCards({
           <CloudIcon />
           <AlertTitle>Connect Cloudflare to see edge delivery</AlertTitle>
           <AlertDescription>
-            These cards show only what reached keenpix. Connect Cloudflare to
-            split each metric between the edge and the origin and reveal the
-            true end-to-end cache hit rate.{' '}
-            <Link search={{ section: 'cdn' }} to="/app/settings">
-              Connect in Settings → CDN cache
-            </Link>
+            These cards show only what reached keenpix. Set the CLOUDFLARE_* env
+            vars to split each metric between the edge and the origin and reveal
+            the true end-to-end cache hit rate.{' '}
+            <Link to="/admin/settings">View in Admin → Settings</Link>
           </AlertDescription>
         </Alert>
       ) : null}

@@ -14,11 +14,10 @@ export interface FunnelPoint {
   originBytes: number
 }
 
-// Merge the origin time-series with the Cloudflare edge series by hour label so
+// Merge the origin time-series with the Cloudflare edge series by bucket label so
 // one chart can show the whole funnel: served at the edge, then served from the
 // keenpix disk cache, then optimized live. Edge hits never reach keenpix, so the
-// three bands sum to every client request. Only valid in the 24h whole-zone
-// window where both series cover the same hours (both label hours as "HH:00").
+// three bands describe the captured delivery stages for each aligned bucket.
 export function mergeFunnel(
   origin: TimePoint[],
   edge: EdgeCachePoint[],

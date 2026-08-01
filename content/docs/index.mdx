@@ -1,11 +1,13 @@
 ---
 title: Documentation
-description: Self-hosted, drop-in image optimization. One image endpoint, no SDK, no API key in your image URLs.
+description: Drop-in image optimization — managed cloud or self-hosted. One image endpoint, no SDK, no API key in your image URLs.
 icon: Sparkles
 ---
 
-Keenpix is a self-hosted image-optimization service — an open-source alternative to
-ImageKit, imgix, and Cloudinary. Its public transform API is a single HTTP endpoint that fetches an image from
+Keenpix is an image-optimization service you can use two ways — [managed cloud](https://keenpix.com)
+at keenpix.com or [self-hosted](/docs/self-hosting) on your own infrastructure — and an
+open-source alternative to
+[ImageKit](/blog/keenpix-vs-imagekit), [imgix](/blog/keenpix-vs-imgix), and [Cloudinary](/blog/keenpix-vs-cloudinary). Its public transform API is a single HTTP endpoint that fetches an image from
 your origin, transforms it with [sharp](https://sharp.pixelplumbing.com) (resize,
 crop, filter, and re-encode), optimizes SVG explicitly with `fmt=svg`, caches the
 result on disk, and serves it behind a long-lived, immutable `Cache-Control`.
@@ -22,6 +24,7 @@ There's no SDK to install and no API key in your image URLs — **a request is j
 ## Start here
 
 - [**Quickstart**](/docs/getting-started/quickstart) — your first optimized image in two minutes.
+- [**Cloud quickstart**](/docs/getting-started/cloud-quickstart) — the managed option: signup to optimized image, no server required.
 - [**How it works**](/docs/concepts/how-it-works) — the request lifecycle, caching, and security model.
 - [**Frameworks**](/docs/frameworks) — drop Keenpix into Next.js, Nuxt, TanStack Start, SvelteKit, Astro, and more.
 - [**API reference**](/docs/reference/endpoint) — transform parameters, response headers, and the authenticated SDK API.
@@ -30,6 +33,6 @@ There's no SDK to install and no API key in your image URLs — **a request is j
 ## Why Keenpix
 
 - **Drop-in.** Any framework that renders an `<img>` works — no rewrite required.
-- **Self-hosted.** Runs as a single container on your own infrastructure; put a configured CDN in front of it.
+- **Cloud or self-hosted.** Use the managed cloud at keenpix.com, or run the same engine as a single container on your own infrastructure; put a configured CDN in front of it.
 - **Keyless.** Access is gated by a per-project domain allowlist, not by secrets.
 - **Built-in analytics.** Every origin request is logged, and optional Cloudflare edge analytics show the cache layer in front.

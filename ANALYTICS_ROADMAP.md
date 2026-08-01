@@ -4,8 +4,10 @@ Future analytics should continue on **Postgres rollups first**. ClickHouse is
 an optional high-volume sink, not a prerequisite: raw request logs are kept for
 live/debug views, while dashboard analytics read pre-aggregated hourly rows.
 
-What is **already real** today (all project-scoped via `?project=` +
-time-windowed):
+What is **already real** today: Keenpix origin metrics are organization/project
+scoped via `?project=` and time-windowed. Optional Cloudflare edge metrics are
+zone/host aggregates and are shown only to the platform operator in the
+compatible whole-zone view.
 
 - ✅ Hourly Postgres rollups maintained alongside raw `request_logs`
 - ✅ Requests, bandwidth saved + savings %, cache hit-rate from rollups
@@ -19,6 +21,12 @@ time-windowed):
 - ✅ Edge/origin source-split funnel cards on Overview and Analytics
 - ✅ Real disk and memory cache storage stats in Operations
 - ✅ SSE-backed Live Logs updates without client-side polling
+
+Metric contract: `requests` includes recorded failures; `successfulDeliveries`
+is recorded 2xx responses; cache hits and optimized deliveries include only
+successful responses. An optimized delivery is a successful uncached response,
+not a unique source image or unique transform job. Cloudflare Web Analytics RUM
+measures site experience and is never used for tenant image metrics.
 
 > Removed in the trust pass because they were **fixtures**: L1-memory cache fill,
 > variant count, geographic map, and $ cost.

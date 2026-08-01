@@ -7,8 +7,8 @@ export function PageHeader({
   actions,
 }: {
   eyebrow?: string
-  title: string
-  subtitle?: string
+  title: ReactNode
+  subtitle?: ReactNode
   actions?: ReactNode
 }) {
   return (
@@ -21,7 +21,7 @@ export function PageHeader({
         ) : null}
         <h1 className="font-semibold text-2xl tracking-tight">{title}</h1>
         {subtitle ? (
-          <p className="text-muted-foreground text-sm">{subtitle}</p>
+          <div className="text-muted-foreground text-sm">{subtitle}</div>
         ) : null}
       </div>
       {actions ? (

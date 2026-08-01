@@ -1,0 +1,48 @@
+import { createServerFn } from '@tanstack/react-start'
+import {
+  createBillingPortalSession,
+  createCustomDomainAddonCheckout,
+  getBillingState,
+} from '@/actions/billing'
+import {
+  authMiddleware,
+  requireActiveOrg,
+  requireOrgAdmin,
+} from '@/lib/auth/guards'
+import { getWorkspaceAccess } from '@/lib/billing/quota'
+import { isCloud } from '@/server/deployment'
+
+// The signed-in org's billing snapshot (plan + status + whether the caller may
+// manage billing). Cloud-only in practice — self-host never renders the billing
+// UI — but safe to call anywhere: it resolves the active org and reads the local
+// Subscription mirror.
+export const getBillingStateFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const state = await getBillingState(requireActiveOrg(context))
+    // Only owners/admins may change billing; self-host is single-tenant so always.
+    const canManage =
+      !isCloud() || context.orgRole === 'owner' || context.orgRole === 'admin'
+    return { ...state, canManage }
+  })
+
+export const getWorkspaceAccessFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(({ context }) => getWorkspaceAccess(requireActiveOrg(context)))
+
+// Owner/admin-only organization billing portal. The action resolves the Polar
+// customer linked to the active org so portal access is not tied to whichever
+// individual user happened to complete the first checkout.
+export const createBillingPortalSessionFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .handler(({ context }) =>
+    createBillingPortalSession(requireOrgAdmin(context)),
+  )
+
+export const createCustomDomainAddonCheckoutFn = createServerFn({
+  method: 'POST',
+})
+  .middleware([authMiddleware])
+  .handler(({ context }) =>
+    createCustomDomainAddonCheckout(requireOrgAdmin(context)),
+  )

@@ -28,24 +28,27 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 
 FROM deps AS build
 ARG VITE_KEENPIX_PUBLIC_URL
-ARG VERSION=0.1.0
+ARG VITE_GTM_CONTAINER_ID
+ARG VITE_GA_MEASUREMENT_ID
+ARG VERSION=0.2.0
 ENV VITE_KEENPIX_PUBLIC_URL=$VITE_KEENPIX_PUBLIC_URL
+ENV VITE_GTM_CONTAINER_ID=$VITE_GTM_CONTAINER_ID
+ENV VITE_GA_MEASUREMENT_ID=$VITE_GA_MEASUREMENT_ID
 COPY . .
 RUN pnpm exec prisma generate
 RUN pnpm build
 
 FROM runtime-deps AS runner
-ARG VERSION=0.1.0
+ARG VERSION=0.2.0
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV KEENPIX_SELF_HOST=true
 ENV KEENPIX_CACHE_DIR=/var/cache/keenpix
 # sharp, DNS lookups, and fs share libuv's threadpool. Raise it so concurrent
 # transforms do not starve origin fetches. Must be set before Node starts.
 ENV UV_THREADPOOL_SIZE=8
 LABEL org.opencontainers.image.title="Keenpix" \
   org.opencontainers.image.description="Self-hosted image optimization service" \
-  org.opencontainers.image.licenses="Apache-2.0" \
+  org.opencontainers.image.licenses="AGPL-3.0-only" \
   org.opencontainers.image.source="https://github.com/lord007tn/keenpix" \
   org.opencontainers.image.version=$VERSION
 COPY --from=build /app/.output ./.output
@@ -54,6 +57,7 @@ COPY --from=build /app/src/generated ./src/generated
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/scripts/configure-polar-benefits.mjs ./scripts/configure-polar-benefits.mjs
 COPY --chmod=755 docker-entrypoint.sh ./docker-entrypoint.sh
 # Run as the unprivileged node user. Own the cache directory so a named Docker
 # volume inherits usable permissions the first time it is created.

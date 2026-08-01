@@ -1,5 +1,6 @@
 import { apiKeyClient } from '@better-auth/api-key/client'
-import { adminClient } from 'better-auth/client/plugins'
+import { polarClient } from '@polar-sh/better-auth'
+import { adminClient, organizationClient } from 'better-auth/client/plugins'
 import { createAuthClient } from 'better-auth/react'
 import { clientEnv } from '@/env/client'
 
@@ -11,7 +12,10 @@ const baseURL =
 
 export const authClient = createAuthClient({
   baseURL,
-  plugins: [apiKeyClient(), adminClient()],
+  // polarClient adds checkout/customer-portal actions; the matching server
+  // endpoints only exist in cloud (buildPolarPlugin), so self-host never calls
+  // them — the billing UI that does is cloud-gated.
+  plugins: [apiKeyClient(), adminClient(), organizationClient(), polarClient()],
 })
 
 export const { signOut } = authClient

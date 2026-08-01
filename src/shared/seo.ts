@@ -1,13 +1,26 @@
+import { PLANS } from '@/lib/billing/plans'
 import { getAppUrl, getRepositoryUrl } from '@/server/deployment'
+import {
+  FOUNDER,
+  getAuthor,
+  SOCIAL_X_URL,
+  SUPPORT_EMAIL,
+} from '@/shared/authors'
 
 export const SITE_NAME = 'Keenpix'
-export const SITE_TITLE = 'Keenpix - self-hosted image optimization'
+export const SITE_TITLE = 'Image optimization CDN with honest pricing | Keenpix'
+// Kept ~155 chars so the trailing self-host differentiator survives Google's SERP
+// snippet truncation (~160). Social cards allow ~200, so they still get it whole.
 export const SITE_DESCRIPTION =
-  'Self-hosted image optimization for teams: a fast, secure, open-source image pipeline with sharp transforms, disk caching, analytics, and one drop-in URL.'
+  'Keenpix optimizes and delivers your images as AVIF/WebP from one URL — transparent bandwidth pricing, unlimited transforms, no lock-in. Or self-host free.'
 export const SITE_KEYWORDS =
-  'Keenpix, self-hosted image optimization, open-source image CDN, sharp image transforms, image proxy, WebP, AVIF, Docker image optimizer'
-export const BRAND_IMAGE_PATH = '/brand/keenpix-og.png'
-const BRAND_ICON_PATH = '/logo512.png'
+  'image optimization CDN, image CDN, Cloudinary alternative, imgix alternative, ImageKit alternative, WebP, AVIF, sharp image transforms, self-hosted image optimization, open-source image CDN, bandwidth pricing'
+export const PRICING_DESCRIPTION =
+  'Keenpix pricing starts at $9/month for 100 GB delivered, with unlimited transforms, a 14-day trial, and always-on metered overage. Or self-host free under AGPL.'
+export const BRAND_IMAGE_PATH = '/brand/keenpix-og-card.png'
+const BRAND_ICON_PATH = '/android-chrome-512x512.png'
+// Twitter attribution handle reused across the card meta tags.
+const TWITTER_HANDLE = '@raedbahriworld'
 export const APP_VERSION = import.meta.env.VITE_APP_VERSION
 
 function pageTitle(title: string) {
@@ -22,6 +35,7 @@ export function seo({
   description = SITE_DESCRIPTION,
   keywords,
   image,
+  imageAlt,
   url,
   type = 'website',
 }: {
@@ -29,13 +43,31 @@ export function seo({
   description?: string
   keywords?: string
   image?: string
+  imageAlt?: string
   url?: string
   type?: 'website' | 'article'
 }) {
   const imageUrl = image ?? absoluteUrl(BRAND_IMAGE_PATH)
+  const imagePath = imageUrl.split('?')[0].toLowerCase()
+  let imageType = 'image/png'
+  if (imagePath.endsWith('.jpg') || imagePath.endsWith('.jpeg')) {
+    imageType = 'image/jpeg'
+  } else if (imagePath.endsWith('.webp')) {
+    imageType = 'image/webp'
+  } else if (imagePath.endsWith('.avif')) {
+    imageType = 'image/avif'
+  }
   return [
     { title },
     { name: 'description', content: description },
+    // Enable large image previews + full snippets in Google and AI results. Pages
+    // that must not be indexed append their own robots:noindex after seo(), which
+    // wins via head deduplication (deepest/last descriptor with the same name).
+    {
+      name: 'robots',
+      content:
+        'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1',
+    },
     ...(keywords ? [{ name: 'keywords', content: keywords }] : []),
     { property: 'og:type', content: type },
     { property: 'og:title', content: title },
@@ -44,11 +76,23 @@ export function seo({
     { property: 'og:image', content: imageUrl },
     { property: 'og:image:width', content: '1200' },
     { property: 'og:image:height', content: '630' },
-    { property: 'og:image:alt', content: `${SITE_NAME} modular image mark` },
+    { property: 'og:image:type', content: imageType },
+    {
+      property: 'og:image:alt',
+      content:
+        imageAlt ?? `${SITE_NAME} — optimized images, minus the surprise bill`,
+    },
     { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:site', content: TWITTER_HANDLE },
+    { name: 'twitter:creator', content: TWITTER_HANDLE },
     { name: 'twitter:title', content: title },
     { name: 'twitter:description', content: description },
     { name: 'twitter:image', content: imageUrl },
+    {
+      name: 'twitter:image:alt',
+      content:
+        imageAlt ?? `${SITE_NAME} — optimized images, minus the surprise bill`,
+    },
   ]
 }
 
@@ -90,12 +134,25 @@ export function softwareApplicationJsonLd() {
     applicationCategory: 'DeveloperApplication',
     codeRepository: getRepositoryUrl(),
     description: SITE_DESCRIPTION,
+    featureList: [
+      'AVIF and WebP image optimization from one URL',
+      'Responsive resize, crop, quality, DPR, blur, and format transforms',
+      'Origin allowlists, SSRF hardening, and optional signed URLs',
+      'Memory, disk, and S3-compatible object-storage caching',
+      'Project analytics, request logs, and bandwidth-savings reporting',
+      'Managed cloud with unlimited transforms or free AGPL self-hosting',
+    ],
     image: absoluteUrl(BRAND_IMAGE_PATH),
     license: `${getRepositoryUrl()}/blob/master/LICENSE`,
     name: SITE_NAME,
+    // Free to self-host; the managed-cloud ceiling comes from the plans catalog
+    // so this rich-result range can never drift from checkout. AggregateOffer
+    // lets search engines surface the price range as a rich result.
     offers: {
-      '@type': 'Offer',
-      price: '0',
+      '@type': 'AggregateOffer',
+      highPrice: String(PLANS.business.priceMonthlyUsd),
+      lowPrice: String(PLANS.basic.priceMonthlyUsd),
+      offerCount: Object.keys(PLANS).length,
       priceCurrency: 'USD',
     },
     operatingSystem: 'Linux, macOS, Windows',
@@ -111,9 +168,22 @@ export function organizationJsonLd() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     '@id': ORGANIZATION_ID,
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      email: SUPPORT_EMAIL,
+    },
+    description: SITE_DESCRIPTION,
+    founder: {
+      '@type': 'Person',
+      name: FOUNDER.name,
+      ...(FOUNDER.sameAs ? { sameAs: FOUNDER.sameAs } : {}),
+    },
     logo: absoluteUrl(BRAND_ICON_PATH),
     name: SITE_NAME,
-    sameAs: [getRepositoryUrl()],
+    // Repo + official social profile give the Knowledge Graph corroborating
+    // signals to resolve and cite the Keenpix entity.
+    sameAs: [getRepositoryUrl(), SOCIAL_X_URL],
     url: absoluteUrl('/'),
   }
 }
@@ -125,18 +195,259 @@ export function webSiteJsonLd() {
     '@id': WEBSITE_ID,
     description: SITE_DESCRIPTION,
     image: absoluteUrl(BRAND_IMAGE_PATH),
+    inLanguage: 'en',
     name: SITE_NAME,
     publisher: { '@id': ORGANIZATION_ID },
     url: absoluteUrl('/'),
   }
 }
 
+export function homePageJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    '@id': `${absoluteUrl('/')}#webpage`,
+    about: { '@id': SOFTWARE_ID },
+    description: SITE_DESCRIPTION,
+    inLanguage: 'en',
+    isPartOf: { '@id': WEBSITE_ID },
+    mainEntity: { '@id': SOFTWARE_ID },
+    name: SITE_TITLE,
+    primaryImageOfPage: absoluteUrl(BRAND_IMAGE_PATH),
+    publisher: { '@id': ORGANIZATION_ID },
+    url: absoluteUrl('/'),
+  }
+}
+
+export function authorProfileJsonLd() {
+  const profileUrl = absoluteUrl(FOUNDER.profilePath ?? '/authors/raed-bahri')
+  const personId = `${profileUrl}#person`
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'ProfilePage',
+        '@id': `${profileUrl}#profile`,
+        dateModified: '2026-07-12',
+        description: FOUNDER.bio,
+        inLanguage: 'en',
+        isPartOf: { '@id': WEBSITE_ID },
+        mainEntity: { '@id': personId },
+        name: `${FOUNDER.name} — ${FOUNDER.role}`,
+        url: profileUrl,
+      },
+      {
+        '@type': 'Person',
+        '@id': personId,
+        description: FOUNDER.bio,
+        jobTitle: FOUNDER.role,
+        name: FOUNDER.name,
+        sameAs: FOUNDER.sameAs,
+        url: profileUrl,
+        worksFor: { '@id': ORGANIZATION_ID },
+      },
+    ],
+  }
+}
+
+export function pricingPageJsonLd() {
+  const catalogId = `${absoluteUrl('/pricing')}#offers`
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': ORGANIZATION_ID,
+        logo: absoluteUrl(BRAND_ICON_PATH),
+        name: SITE_NAME,
+        url: absoluteUrl('/'),
+      },
+      {
+        '@type': 'WebSite',
+        '@id': WEBSITE_ID,
+        name: SITE_NAME,
+        publisher: { '@id': ORGANIZATION_ID },
+        url: absoluteUrl('/'),
+      },
+      {
+        '@type': 'WebPage',
+        '@id': `${absoluteUrl('/pricing')}#webpage`,
+        about: { '@id': SOFTWARE_ID },
+        description: PRICING_DESCRIPTION,
+        hasPart: { '@id': catalogId },
+        inLanguage: 'en',
+        isPartOf: { '@id': WEBSITE_ID },
+        mainEntity: { '@id': SOFTWARE_ID },
+        name: `Pricing - ${SITE_NAME}`,
+        publisher: { '@id': ORGANIZATION_ID },
+        url: absoluteUrl('/pricing'),
+      },
+      {
+        '@type': 'SoftwareApplication',
+        '@id': SOFTWARE_ID,
+        applicationCategory: 'DeveloperApplication',
+        name: SITE_NAME,
+        publisher: { '@id': ORGANIZATION_ID },
+        url: absoluteUrl('/'),
+      },
+      {
+        '@type': 'OfferCatalog',
+        '@id': catalogId,
+        itemListElement: Object.values(PLANS).map((plan) => ({
+          '@type': 'Offer',
+          availability: 'https://schema.org/InStock',
+          category: 'monthly subscription',
+          itemOffered: { '@id': SOFTWARE_ID },
+          name: `${plan.name} monthly`,
+          price: String(plan.priceMonthlyUsd),
+          priceCurrency: 'USD',
+          priceSpecification: {
+            '@type': 'UnitPriceSpecification',
+            billingDuration: 'P1M',
+            price: String(plan.priceMonthlyUsd),
+            priceCurrency: 'USD',
+          },
+          url: absoluteUrl('/pricing'),
+        })),
+        name: 'Keenpix managed cloud plans',
+        numberOfItems: Object.keys(PLANS).length,
+        url: absoluteUrl('/pricing'),
+      },
+    ],
+  }
+}
+
+// Blog collection node for /blog so the listing is a first-class entity (a Blog
+// carrying its posts) rather than just a page of links — clearer for crawlers and
+// AI engines mapping the site's content.
+export function blogListingJsonLd(
+  posts: Array<{
+    date: string
+    description: string
+    title: string
+    url: string
+  }>,
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    '@id': `${absoluteUrl('/blog')}#blog`,
+    blogPost: posts.map((post) => ({
+      '@type': 'BlogPosting',
+      datePublished: post.date,
+      description: post.description,
+      headline: post.title,
+      url: post.url,
+    })),
+    description:
+      'Guides on image optimization, transparent bandwidth pricing, and how Keenpix compares to Cloudinary, imgix, and ImageKit.',
+    inLanguage: 'en',
+    name: `${SITE_NAME} Blog`,
+    publisher: { '@id': ORGANIZATION_ID },
+    url: absoluteUrl('/blog'),
+  }
+}
+
+// FAQPage for the marketing home. The Q&As MUST also be visible on the page —
+// Google requires it for FAQ rich results — so this is emitted alongside a visible
+// FAQ section, not on its own.
+export function faqPageJsonLd(
+  items: Array<{ answer: string; question: string }>,
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
+  }
+}
+
+// BlogPosting + breadcrumb graph for a single article. Dated and attributed
+// (unlike docs' TechArticle) so search engines can surface it as blog content.
+export function blogPostingJsonLd({
+  author,
+  datePublished,
+  dateModified,
+  description,
+  image,
+  path,
+  title,
+  url,
+}: {
+  author: string
+  datePublished: string
+  dateModified?: string
+  description: string
+  image: string
+  path: Array<{ name: string; url: string }>
+  title: string
+  url: string
+}) {
+  const person = getAuthor(author)
+  // A known byline (has sameAs) becomes a schema.org Person for author E-E-A-T;
+  // an unknown one stays an Organization so we never invent a fake identity.
+  const authorNode = person.sameAs?.length
+    ? {
+        '@type': 'Person',
+        name: person.name,
+        ...(person.role ? { jobTitle: person.role } : {}),
+        ...(person.bio ? { description: person.bio } : {}),
+        ...(person.profilePath
+          ? {
+              '@id': `${absoluteUrl(person.profilePath)}#person`,
+              url: absoluteUrl(person.profilePath),
+            }
+          : {}),
+        sameAs: person.sameAs,
+      }
+    : { '@type': 'Organization', name: person.name }
+
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      author: authorNode,
+      datePublished,
+      dateModified: dateModified ?? datePublished,
+      description,
+      headline: title,
+      image,
+      inLanguage: 'en',
+      mainEntityOfPage: url,
+      publisher: {
+        '@type': 'Organization',
+        logo: {
+          '@type': 'ImageObject',
+          url: absoluteUrl(BRAND_ICON_PATH),
+        },
+        name: SITE_NAME,
+      },
+      url,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: path.map((item, index) => ({
+        '@type': 'ListItem',
+        item: item.url,
+        name: item.name,
+        position: index + 1,
+      })),
+    },
+  ]
+}
+
 export function docsJsonLd({
+  dateModified,
   description,
   path,
   title,
   url,
 }: {
+  dateModified?: string
   description?: string
   path: Array<{ name: string; url: string }>
   title: string
@@ -151,9 +462,13 @@ export function docsJsonLd({
         '@type': 'Organization',
         name: SITE_NAME,
       },
+      // Only emitted when the doc's frontmatter carries an `updated` date, so we
+      // never stamp a fake freshness signal on undated reference pages.
+      ...(dateModified ? { dateModified } : {}),
       description,
       headline: title,
       image: absoluteUrl(BRAND_IMAGE_PATH),
+      inLanguage: 'en',
       isPartOf: {
         '@type': 'WebSite',
         name: 'Keenpix documentation',

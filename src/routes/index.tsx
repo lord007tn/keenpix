@@ -3,20 +3,19 @@ import { JsonLd } from '@/components/app/json-ld'
 import { MarketingPage } from '@/features/marketing/marketing-page'
 import { SelfHostHome } from '@/features/marketing/self-host-home'
 import { getPublicConfigFn } from '@/functions/config'
-import {
-  absoluteUrl,
-  organizationJsonLd,
-  SITE_DESCRIPTION,
-  SITE_TITLE,
-  seo,
-  softwareApplicationJsonLd,
-  webSiteJsonLd,
-} from '@/shared/seo'
+import { getPlanPricingFn } from '@/functions/pricing'
+import { absoluteUrl, SITE_DESCRIPTION, SITE_TITLE, seo } from '@/shared/seo'
 
 export const Route = createFileRoute('/')({
-  loader: () => getPublicConfigFn(),
+  loader: async () => {
+    const config = await getPublicConfigFn()
+    // Marketing (and its live pricing) is cloud-only; skip the Polar-backed
+    // pricing call entirely in self-host.
+    const pricing = config.cloud ? await getPlanPricingFn() : null
+    return { config, pricing }
+  },
   head: ({ loaderData }) => {
-    if (loaderData?.selfHost) {
+    if (!loaderData?.config.cloud) {
       return {
         meta: [
           { title: 'Self-hosted Keenpix' },
@@ -31,7 +30,18 @@ export const Route = createFileRoute('/')({
     }
 
     return {
-      links: [{ rel: 'canonical', href: absoluteUrl('/') }],
+      links: [
+        { rel: 'canonical', href: absoluteUrl('/') },
+        // Cloud-only discovery links, kept off __root so self-host (where these
+        // routes 404) never advertises them.
+        { rel: 'alternate', type: 'text/plain', href: '/llms.txt' },
+        {
+          rel: 'alternate',
+          type: 'application/rss+xml',
+          href: '/blog/rss.xml',
+          title: 'Keenpix Blog',
+        },
+      ],
       meta: seo({
         title: SITE_TITLE,
         description: SITE_DESCRIPTION,
@@ -43,20 +53,14 @@ export const Route = createFileRoute('/')({
 })
 
 function Home() {
-  const { selfHost } = Route.useLoaderData()
-  if (selfHost) {
+  const { config, pricing } = Route.useLoaderData()
+  if (!config.cloud) {
     return <SelfHostHome />
   }
   return (
     <>
-      <JsonLd
-        data={[
-          softwareApplicationJsonLd(),
-          organizationJsonLd(),
-          webSiteJsonLd(),
-        ]}
-      />
-      <MarketingPage />
+      {config.jsonLd ? <JsonLd data={config.jsonLd} /> : null}
+      <MarketingPage pricing={pricing} />
     </>
   )
 }

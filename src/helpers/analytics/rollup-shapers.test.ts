@@ -26,7 +26,9 @@ function summary(overrides: Partial<RollupSummaryAgg> = {}): RollupSummaryAgg {
     bytesOut: 0,
     bytesSaved: 0,
     latencyMsSum: 0,
+    optimizedRequests: 0,
     latency: emptyLatencyBucketCounts(),
+    successfulRequests: 0,
     ...overrides,
   }
 }
@@ -50,7 +52,9 @@ describe('summarizeAgg', () => {
     const out = summarizeAgg(
       summary({
         requests: 5,
+        successfulRequests: 4,
         cachedRequests: 3,
+        optimizedRequests: 1,
         bytesIn: 1500,
         bytesOut: 500,
         bytesSaved: 1000,
@@ -64,10 +68,14 @@ describe('summarizeAgg', () => {
     )
     expect(out).toMatchObject({
       totalRequests: 5,
+      successfulDeliveries: 4,
+      liveOptimizations: 1,
+      cacheHits: 3,
+      failedRequests: 1,
       bandwidthIn: 1500,
       bandwidthOut: 500,
       bandwidthSaved: 1000,
-      hitRate: 60,
+      hitRate: 75,
       avg: 44,
       p50: 20,
       p95: 80,
@@ -238,6 +246,7 @@ describe('projectStats', () => {
           projectId: 'store',
           requests: 4,
           cachedRequests: 2,
+          optimizedRequests: 2,
           bytesSaved: 0,
           latencyMsSum: 0,
         },
@@ -245,13 +254,14 @@ describe('projectStats', () => {
           projectId: 'blog',
           requests: 5,
           cachedRequests: 1,
+          optimizedRequests: 3,
           bytesSaved: 0,
           latencyMsSum: 0,
         },
       ]),
     ).toEqual({
       store: { requests: 4, hitRate: 50 },
-      blog: { requests: 5, hitRate: 20 },
+      blog: { requests: 5, hitRate: 25 },
     })
   })
 })
@@ -264,6 +274,7 @@ describe('projectBreakdown', () => {
           projectId: 'store',
           requests: 2,
           cachedRequests: 1,
+          optimizedRequests: 1,
           bytesSaved: 100,
           latencyMsSum: 40,
         },
@@ -271,6 +282,7 @@ describe('projectBreakdown', () => {
           projectId: 'blog',
           requests: 9,
           cachedRequests: 3,
+          optimizedRequests: 5,
           bytesSaved: 50,
           latencyMsSum: 90,
         },
@@ -294,6 +306,7 @@ describe('domainBreakdown', () => {
         sourceHost: 'cdn.example.com',
         requests: 5,
         cachedRequests: 2,
+        optimizedRequests: 2,
         bytesSaved: 100,
         latencyMsSum: 100,
         lastSeen: dayjs('2026-06-13T11:00:00.000Z').toDate(),
@@ -302,6 +315,7 @@ describe('domainBreakdown', () => {
         sourceHost: '',
         requests: 99,
         cachedRequests: 0,
+        optimizedRequests: 0,
         bytesSaved: 0,
         latencyMsSum: 0,
         lastSeen: null,
@@ -322,6 +336,7 @@ describe('hostTraffic', () => {
         sourceHost: 'a.example.com',
         requests: 3,
         cachedRequests: 3,
+        optimizedRequests: 0,
         bytesSaved: 0,
         latencyMsSum: 0,
         lastSeen: null,
@@ -330,6 +345,7 @@ describe('hostTraffic', () => {
         sourceHost: '',
         requests: 50,
         cachedRequests: 0,
+        optimizedRequests: 0,
         bytesSaved: 0,
         latencyMsSum: 0,
         lastSeen: null,

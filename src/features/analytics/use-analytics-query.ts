@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { getAnalyticsFn } from '@/functions/analytics'
-import type { AnalyticsRange } from '@/shared/types'
+import type { HistoricalAnalyticsRange } from '@/shared/types'
 
 // Analytics payload, fetched client-side with stale-while-revalidate: a
 // range/project/filter change keeps the previous data on screen (keepPreviousData)
@@ -9,9 +9,11 @@ import type { AnalyticsRange } from '@/shared/types'
 export function useAnalyticsQuery(params: {
   domain?: string[]
   format?: string[]
+  from?: string
   project?: string
-  range: AnalyticsRange
+  range: HistoricalAnalyticsRange
   status?: string[]
+  to?: string
 }) {
   const query = useQuery({
     queryKey: [
@@ -20,7 +22,9 @@ export function useAnalyticsQuery(params: {
       params.project,
       params.domain,
       params.format,
+      params.from,
       params.status,
+      params.to,
     ],
     queryFn: () => getAnalyticsFn({ data: params }),
     placeholderData: keepPreviousData,
@@ -31,5 +35,6 @@ export function useAnalyticsQuery(params: {
     isPending: query.isPending,
     isFetching: query.isFetching,
     isError: query.isError,
+    refetch: query.refetch,
   }
 }

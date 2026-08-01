@@ -1,5 +1,5 @@
 {
   "title": "How it works",
   "icon": "Workflow",
-  "pages": ["how-it-works", "caching", "security", "analytics"]
+  "pages": ["how-it-works", "caching", "security", "signed-urls", "analytics"]
 }

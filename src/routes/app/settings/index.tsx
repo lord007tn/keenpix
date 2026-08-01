@@ -1,19 +1,23 @@
-import { createFileRoute, useRouteContext } from '@tanstack/react-router'
+import { createFileRoute, Link, useRouteContext } from '@tanstack/react-router'
 import {
-  CloudIcon,
+  CreditCardIcon,
+  Globe2Icon,
   ImageIcon,
   InfoIcon,
   KeyRoundIcon,
   type LucideIcon,
-  MailIcon,
-  ServerIcon,
   ShieldIcon,
-  UsersIcon,
+  UsersRoundIcon,
 } from 'lucide-react'
-import { toast } from 'sonner'
 import { PageHeader } from '@/components/app/page-header'
-import { SettingRow } from '@/components/app/setting-row'
-import { Button } from '@/components/ui/button'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
 import {
   Card,
   CardContent,
@@ -21,27 +25,30 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { ApiKeyManagement } from '@/features/admin/api-key-management'
-import { CloudflareSettingsPanel } from '@/features/admin/cloudflare-settings'
-import { OperationsConfig } from '@/features/admin/operations-config'
-import { SmtpSettingsPanel } from '@/features/admin/smtp-settings'
-import { StaffManagement } from '@/features/admin/staff-management'
+import { ApiKeyManagement } from '@/features/api-keys/api-key-management'
+import { BillingPanel } from '@/features/billing/billing-panel'
 import { AllowedHosts } from '@/features/projects/allowed-hosts'
+import { CustomDomains } from '@/features/projects/custom-domains'
 import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { PipelineSettings } from '@/features/projects/pipeline-settings'
+import { ProjectGeneral } from '@/features/projects/project-general'
+import { SignedUrls } from '@/features/projects/signed-urls'
+import { TeamManagement } from '@/features/team/team-management'
 import { cn } from '@/lib/cn/utils'
 import { appPageHead } from '@/shared/seo'
 import { useProject } from '@/stores/project-context'
 
+// Operator config (customers, operations, staff, CDN) lives in the standalone
+// Admin console (/admin), not here — Settings is per-project config plus per-org
+// billing, team, and API keys.
 const SECTIONS = [
   'general',
   'pipeline',
   'security',
-  'config',
-  'cdn',
+  'domains',
+  'billing',
+  'team',
   'api-keys',
-  'staff',
-  'email',
 ] as const
 
 type Section = (typeof SECTIONS)[number]
@@ -54,11 +61,10 @@ const SECTION_META: Record<Section, { label: string; icon: LucideIcon }> = {
   general: { label: 'General', icon: InfoIcon },
   pipeline: { label: 'Pipeline', icon: ImageIcon },
   security: { label: 'Security', icon: ShieldIcon },
-  config: { label: 'Configuration', icon: ServerIcon },
-  cdn: { label: 'CDN cache', icon: CloudIcon },
+  domains: { label: 'Custom domains', icon: Globe2Icon },
+  billing: { label: 'Plan & billing', icon: CreditCardIcon },
+  team: { label: 'Team', icon: UsersRoundIcon },
   'api-keys': { label: 'API keys', icon: KeyRoundIcon },
-  staff: { label: 'Staff', icon: UsersIcon },
-  email: { label: 'Email', icon: MailIcon },
 }
 
 // Settings is a single hub: per-project configuration (only when a project is
@@ -67,7 +73,7 @@ export const Route = createFileRoute('/app/settings/')({
   head: () =>
     appPageHead(
       'Settings',
-      'Configure Keenpix project origins, image pipeline, allowed hosts, plus instance API keys, staff, and email.',
+      'Configure Keenpix project origins, image pipeline, allowed hosts, plus your plan and team.',
     ),
   validateSearch: (
     search: Record<string, unknown>,
@@ -80,28 +86,30 @@ export const Route = createFileRoute('/app/settings/')({
 
 function SubNavItem({
   active,
-  onClick,
   section,
 }: {
   active: boolean
-  onClick: () => void
   section: Section
 }) {
   const { label, icon: Icon } = SECTION_META[section]
   return (
-    <button
+    <Link
+      aria-current={active ? 'page' : undefined}
       className={cn(
-        'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left font-medium text-sm transition-colors',
+        'flex min-h-11 items-center gap-2.5 rounded-md px-2.5 py-2 text-left font-medium text-sm transition-colors',
         active
           ? 'bg-accent text-foreground'
           : 'text-muted-foreground hover:bg-accent hover:text-foreground',
       )}
-      onClick={onClick}
-      type="button"
+      search={(prev) => ({ ...prev, section })}
+      to="/app/settings"
     >
-      <Icon className={cn('size-4', active && 'text-primary')} />
+      <Icon
+        aria-hidden="true"
+        className={cn('size-4', active && 'text-primary')}
+      />
       {label}
-    </button>
+    </Link>
   )
 }
 
@@ -114,30 +122,45 @@ function SubNavGroup({ label }: { label: string }) {
 }
 
 function SettingsPage() {
-  const { currentProject, isAll, projects, setProject } = useProject()
-  const { user } = useRouteContext({ from: '/app' })
+  const { currentProject, projects, setProject } = useProject()
+  const { cloud, orgRole, productAccess } = useRouteContext({ from: '/app' })
   const { section } = Route.useSearch()
-  const navigate = Route.useNavigate()
-  const isSuperAdmin = user.role === 'super_admin'
+  // Owner/admin may edit/delete projects; members get read-only (server enforces).
+  const canManageProject = !cloud || orgRole === 'owner' || orgRole === 'admin'
 
-  const projectSections: Section[] = currentProject
-    ? ['general', 'pipeline', 'security']
-    : []
-  const globalSections: Section[] = isSuperAdmin
-    ? ['config', 'cdn', 'api-keys', 'staff', 'email']
-    : []
-  const available = [...projectSections, ...globalSections]
-  const active = section && available.includes(section) ? section : available[0]
-
-  function goTo(next: Section) {
-    navigate({ search: (prev) => ({ ...prev, section: next }) })
+  const projectSections: Section[] =
+    currentProject && productAccess ? ['general'] : []
+  if (currentProject && productAccess && canManageProject) {
+    projectSections.push('pipeline', 'security', 'api-keys')
+    if (cloud) {
+      projectSections.push('domains')
+    }
   }
+  // Billing + Team are per-org and cloud-only (self-host is single-tenant/free),
+  // shown to every member of the org. API keys are the org's JSON-API credentials
+  // (both modes), managed by owners/admins. Operator-only config (staff, ops, CDN)
+  // lives in the Admin console.
+  const billingSections: Section[] = cloud ? ['billing'] : []
+  const teamSections: Section[] = cloud ? ['team'] : []
+  // Cloud credentials belong to one selected project. Self-host retains the
+  // legacy organization-wide key surface when no project is selected.
+  const apiKeySections: Section[] =
+    !cloud && productAccess && canManageProject && !currentProject
+      ? ['api-keys']
+      : []
+  const available = [
+    ...projectSections,
+    ...billingSections,
+    ...teamSections,
+    ...apiKeySections,
+  ]
+  const active = section && available.includes(section) ? section : available[0]
 
   // No project selected and no instance access: there is nothing to configure
   // until a project is picked or created.
   if (!active) {
     return (
-      <div className="flex max-w-4xl flex-col gap-6 p-6">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-6">
         <PageHeader
           eyebrow="All projects"
           subtitle="Per-project configuration."
@@ -185,47 +208,88 @@ function SettingsPage() {
     )
   }
 
+  const activeMeta = SECTION_META[active]
+  const organizationSection = active === 'billing' || active === 'team'
+  let subtitle = 'Configure this project.'
+  if (active === 'billing') {
+    subtitle = 'Manage this organization’s plan, usage, and billing settings.'
+  } else if (active === 'team') {
+    subtitle = 'Manage organization members, invitations, and roles.'
+  } else if (active === 'api-keys') {
+    subtitle = 'Manage credentials scoped to the selected project.'
+  } else if (active === 'pipeline') {
+    subtitle = 'Set the default image optimization behavior for this project.'
+  } else if (active === 'security') {
+    subtitle = 'Control allowed origins and request signing for this project.'
+  } else if (active === 'domains') {
+    subtitle = 'Serve this project from customer-owned delivery domains.'
+  }
+
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 md:p-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              render={
+                <Link
+                  search={(prev) => ({ ...prev, section: undefined })}
+                  to="/app/settings"
+                />
+              }
+            >
+              Settings
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{activeMeta.label}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <PageHeader
-        eyebrow={isAll ? 'Workspace' : currentProject?.name}
-        subtitle="Project and instance configuration."
-        title="Settings"
+        eyebrow={
+          organizationSection
+            ? 'Organization'
+            : `${currentProject?.name ?? 'Selected'} project`
+        }
+        subtitle={subtitle}
+        title={activeMeta.label}
       />
 
-      <div className="grid gap-6 md:grid-cols-[200px_minmax(0,1fr)]">
+      <div className="grid gap-6 md:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="md:sticky md:top-24 md:self-start">
           <nav className="flex flex-col gap-0.5">
             {projectSections.length > 0 ? (
               <>
                 <SubNavGroup label={currentProject?.name ?? 'Project'} />
                 {projectSections.map((s) => (
-                  <SubNavItem
-                    active={active === s}
-                    key={s}
-                    onClick={() => goTo(s)}
-                    section={s}
-                  />
+                  <SubNavItem active={active === s} key={s} section={s} />
                 ))}
               </>
             ) : null}
-            {globalSections.length > 0 ? (
+            {billingSections.length > 0 ? (
               <>
-                <SubNavGroup label="Global" />
-                {globalSections.map((s) => (
-                  <SubNavItem
-                    active={active === s}
-                    key={s}
-                    onClick={() => goTo(s)}
-                    section={s}
-                  />
+                <SubNavGroup label="Billing" />
+                {billingSections.map((s) => (
+                  <SubNavItem active={active === s} key={s} section={s} />
                 ))}
-                {isAll ? (
-                  <p className="px-2.5 pt-2 text-muted-foreground text-xs">
-                    Select a project (top bar) to edit its origin, pipeline, and
-                    allowlist.
-                  </p>
-                ) : null}
+              </>
+            ) : null}
+            {teamSections.length > 0 ? (
+              <>
+                <SubNavGroup label="Organization" />
+                {teamSections.map((s) => (
+                  <SubNavItem active={active === s} key={s} section={s} />
+                ))}
+              </>
+            ) : null}
+            {apiKeySections.length > 0 ? (
+              <>
+                <SubNavGroup label="Developers" />
+                {apiKeySections.map((s) => (
+                  <SubNavItem active={active === s} key={s} section={s} />
+                ))}
               </>
             ) : null}
           </nav>
@@ -233,55 +297,11 @@ function SettingsPage() {
 
         <div className="min-w-0">
           {active === 'general' && currentProject ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>General</CardTitle>
-                <CardDescription>
-                  Identifiers and origin for this project.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="divide-y">
-                <SettingRow
-                  className="py-4 first:pt-0 last:pb-0 sm:items-start"
-                  description="Use this in your transform URLs: /img/<source-url>?project=<id>"
-                  label="Project ID"
-                >
-                  <div className="flex items-center gap-2">
-                    <code className="rounded bg-muted px-2 py-1 font-mono text-xs">
-                      {currentProject.id}
-                    </code>
-                    <Button
-                      onClick={() => {
-                        navigator.clipboard?.writeText(currentProject.id)
-                        toast.success('Project ID copied')
-                      }}
-                      size="sm"
-                      variant="outline"
-                    >
-                      Copy
-                    </Button>
-                  </div>
-                </SettingRow>
-                <SettingRow
-                  className="py-4 first:pt-0 last:pb-0 sm:items-start"
-                  description="The project's display name."
-                  label="Project name"
-                >
-                  <span className="text-sm sm:text-right">
-                    {currentProject.name}
-                  </span>
-                </SettingRow>
-                <SettingRow
-                  className="py-4 first:pt-0 last:pb-0 sm:items-start"
-                  description="Where keenpix fetches originals from."
-                  label="Origin"
-                >
-                  <code className="break-all font-mono text-muted-foreground text-xs">
-                    {currentProject.origin}
-                  </code>
-                </SettingRow>
-              </CardContent>
-            </Card>
+            <ProjectGeneral
+              canManage={canManageProject}
+              key={currentProject.id}
+              project={currentProject}
+            />
           ) : null}
 
           {active === 'pipeline' && currentProject ? (
@@ -301,18 +321,57 @@ function SettingsPage() {
           ) : null}
 
           {active === 'security' && currentProject ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Allowed hosts</CardTitle>
+                  <CardDescription>
+                    keenpix only fetches from origins on this list — an empty
+                    list blocks every request, and no API key is needed for
+                    transform URLs. Per-host figures cover the last 30 days.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AllowedHosts
+                    initial={currentProject.allowedOrigins ?? []}
+                    key={currentProject.id}
+                    projectId={currentProject.id}
+                  />
+                </CardContent>
+              </Card>
+              {canManageProject ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Signed URLs</CardTitle>
+                    <CardDescription>
+                      Optional hotlink protection on top of the allowlist:
+                      require an HMAC signature on every transform URL so third
+                      parties can’t run up your bandwidth with cache-busting
+                      requests.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <SignedUrls
+                      key={currentProject.id}
+                      projectId={currentProject.id}
+                    />
+                  </CardContent>
+                </Card>
+              ) : null}
+            </>
+          ) : null}
+
+          {active === 'domains' && currentProject ? (
             <Card>
               <CardHeader>
-                <CardTitle>Allowed hosts</CardTitle>
+                <CardTitle>Custom delivery domains</CardTitle>
                 <CardDescription>
-                  keenpix only fetches from origins on this list — an empty list
-                  blocks every request, and no API key is needed for transform
-                  URLs. Per-host figures cover the last 30 days.
+                  Connect a customer-owned hostname. Keenpix provisions TLS and
+                  maps requests on that hostname directly to this project.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <AllowedHosts
-                  initial={currentProject.allowedOrigins ?? []}
+                <CustomDomains
                   key={currentProject.id}
                   projectId={currentProject.id}
                 />
@@ -320,35 +379,18 @@ function SettingsPage() {
             </Card>
           ) : null}
 
-          {active === 'config' ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Operations configuration</CardTitle>
-                <CardDescription>
-                  Instance-wide cache and transform limits. Cache caps apply to
-                  this running instance immediately; concurrency and queue depth
-                  are environment-configured.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <OperationsConfig />
-              </CardContent>
-            </Card>
-          ) : null}
+          {active === 'billing' ? <BillingPanel /> : null}
 
-          {active === 'cdn' ? (
+          {active === 'team' ? (
             <Card>
               <CardHeader>
-                <CardTitle>Cloudflare edge analytics</CardTitle>
+                <CardTitle>Team</CardTitle>
                 <CardDescription>
-                  Wire a Cloudflare API token so keenpix can show real edge
-                  cache hit-rate alongside its origin-shield figures. Edge hits
-                  are served before the origin, so they never reach keenpix on
-                  their own.
+                  Invite teammates to this organization and manage their roles.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <CloudflareSettingsPanel />
+                <TeamManagement />
               </CardContent>
             </Card>
           ) : null}
@@ -356,43 +398,19 @@ function SettingsPage() {
           {active === 'api-keys' ? (
             <Card>
               <CardHeader>
-                <CardTitle>Internal API keys</CardTitle>
+                <CardTitle>API keys</CardTitle>
                 <CardDescription>
-                  Credentials for trusted backend integrations. These are not
-                  used by the public image transform endpoint.
+                  {currentProject
+                    ? `Credentials scoped to ${currentProject.name}.`
+                    : 'Credentials for managing projects, domains, and pipeline over the JSON API.'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ApiKeyManagement />
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {active === 'staff' ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Staff &amp; invitations</CardTitle>
-                <CardDescription>
-                  Invite teammates and review who can access this workspace.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <StaffManagement />
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {active === 'email' ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>SMTP connection</CardTitle>
-                <CardDescription>
-                  Credentials used when staff invitations are emailed. Save your
-                  changes, then send a test to confirm delivery.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <SmtpSettingsPanel />
+                <ApiKeyManagement
+                  key={currentProject?.id ?? 'organization'}
+                  projectId={currentProject?.id}
+                  projectName={currentProject?.name}
+                />
               </CardContent>
             </Card>
           ) : null}

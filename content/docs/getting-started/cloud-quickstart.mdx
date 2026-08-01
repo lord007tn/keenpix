@@ -1,0 +1,63 @@
+---
+title: Cloud quickstart
+description: From signup to your first optimized image on managed cloud — no server required.
+icon: Cloud
+---
+
+Prefer not to run your own instance? The managed cloud at
+[keenpix.com](https://keenpix.com) is the same engine, hosted — this page gets you from
+signup to an optimized image in a few minutes. Self-hosting instead? See the
+[Quickstart](/docs/getting-started/quickstart).
+
+## 1. Sign up and start your trial
+
+Create an account at [keenpix.com](https://keenpix.com). Every plan starts with a
+**14-day free trial** — a card is required, but trial usage is never billed. During the
+trial you get the plan's full features with up to **2 projects** and **20 GB delivered**.
+
+## 2. Create a project
+
+From the dashboard, create a project and enter the hostname your images live on (e.g.
+`cdn.example.com` or your S3/R2 bucket host). That origin hostname is **automatically
+added to the project's allowlist**, so your first transform works right away — no API
+key, no extra security step.
+
+<Callout title="Find your project id">
+  It's under **Settings → General → Project ID**. You pass it as `project=` in every URL.
+</Callout>
+
+## 3. Copy the transform URL
+
+A request is just a URL — prefix your image with the cloud endpoint:
+
+```html
+<img
+  src="https://keenpix.com/img/https://cdn.example.com/hero.jpg?project=YOUR_ID&w=800&fmt=webp"
+  sizes="100vw"
+  loading="lazy"
+  decoding="async"
+  alt="Hero"
+/>
+```
+
+Use `fmt=auto` to negotiate AVIF/WebP/JPEG from each browser's `Accept` header instead
+of pinning a format. The first request is a cache **MISS** (Keenpix fetches + transforms
+the original); every later request for the same parameters is a **HIT**.
+
+## 4. Point your site at it
+
+Swap your image URLs — or your framework's image loader — to the transform endpoint.
+Most codebases build image URLs in one place, so this is typically a single-file change.
+See the [framework guides](/docs/frameworks) for Next.js, Nuxt, TanStack Start,
+SvelteKit, Astro, and more.
+
+## 5. Watch the savings
+
+Open **Analytics** to see bandwidth saved, cache hit rate, format mix, and live request
+logs — included on every plan. Billing counts optimized response bytes returned by the
+Keenpix application; transformations are unlimited. If Cloudflare serves an upstream
+edge `HIT`, it never reaches this meter. Optional Cloudflare analytics can show that edge
+traffic separately, but it is not added to Polar billing.
+
+See the [API reference](/docs/reference/parameters) for the full parameter list, or
+[Projects & access](/docs/getting-started/projects) for how allowlists gate requests.

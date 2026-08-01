@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto'
 import { prisma } from '@/db'
 import { Prisma } from '@/generated/prisma/client'
-import type { EdgeRollupRow } from '@/helpers/analytics/edge-rollups'
 import type { EdgeAdaptiveGroup } from '@/lib/cloudflare/analytics'
 
 // Stable id per (zone, host, hour, cacheStatus) so a re-capture of the same hour
@@ -15,6 +14,10 @@ function rollupId(
   return createHash('md5')
     .update(`${zoneId}|${host}|${bucketStart.toISOString()}|${cacheStatus}`)
     .digest('hex')
+}
+
+function captureStateId(zoneId: string, host: string) {
+  return createHash('md5').update(`${zoneId}|${host}`).digest('hex')
 }
 
 // Persist the captured adaptive groups; the latest capture overwrites count/bytes
@@ -41,32 +44,111 @@ export async function upsertEdgeRollups(
   `)
 }
 
-export async function listEdgeRollups(
-  zoneId: string,
-  host: string,
-  gte: Date,
-  lt?: Date,
-): Promise<EdgeRollupRow[]> {
+export async function listPlatformEdgeRollups(gte: Date, lt?: Date) {
   const rows = await prisma.edgeRollupHourly.findMany({
-    where: { zoneId, host, bucketStart: lt ? { gte, lt } : { gte } },
+    where: { bucketStart: lt ? { gte, lt } : { gte } },
     select: { bucketStart: true, cacheStatus: true, count: true, bytes: true },
   })
-  return rows.map((r) => ({
-    bucketStart: r.bucketStart,
-    cacheStatus: r.cacheStatus,
-    count: r.count,
-    bytes: Number(r.bytes),
+  return rows.map((row) => ({
+    bucketStart: row.bucketStart,
+    cacheStatus: row.cacheStatus,
+    count: row.count,
+    bytes: Number(row.bytes),
   }))
 }
 
-// Earliest captured hour for this zone+host — the start of our edge history.
-export async function edgeCoverageStart(
-  zoneId: string,
-  host: string,
-): Promise<Date | null> {
+export async function platformEdgeCoverageStart() {
   const { _min } = await prisma.edgeRollupHourly.aggregate({
-    where: { zoneId, host },
     _min: { bucketStart: true },
   })
   return _min.bucketStart
+}
+
+export function getEdgeCaptureState(zoneId: string, host: string) {
+  return prisma.edgeCaptureState.findUnique({
+    where: { zoneId_host: { zoneId, host } },
+  })
+}
+
+export function listEdgeCaptureStates() {
+  return prisma.edgeCaptureState.findMany({
+    where: { coveredFrom: { not: null }, coveredUntil: { not: null } },
+    orderBy: { coveredFrom: 'asc' },
+  })
+}
+
+export async function recordEdgeCaptureSuccess(input: {
+  coveredFrom: Date
+  coveredUntil: Date
+  groups: number
+  host: string
+  zoneId: string
+}) {
+  const previous = await getEdgeCaptureState(input.zoneId, input.host)
+  const overlaps =
+    previous?.coveredUntil &&
+    previous.coveredUntil.getTime() >= input.coveredFrom.getTime()
+  const coveredFrom =
+    overlaps && previous.coveredFrom
+      ? new Date(
+          Math.min(previous.coveredFrom.getTime(), input.coveredFrom.getTime()),
+        )
+      : input.coveredFrom
+  const coveredUntil =
+    overlaps && previous.coveredUntil
+      ? new Date(
+          Math.max(
+            previous.coveredUntil.getTime(),
+            input.coveredUntil.getTime(),
+          ),
+        )
+      : input.coveredUntil
+  return prisma.edgeCaptureState.upsert({
+    where: { zoneId_host: { zoneId: input.zoneId, host: input.host } },
+    create: {
+      id: captureStateId(input.zoneId, input.host),
+      zoneId: input.zoneId,
+      host: input.host,
+      status: input.groups === 0 ? 'ok_empty' : 'ready',
+      groups: input.groups,
+      coveredFrom,
+      coveredUntil,
+      lastAttemptAt: input.coveredUntil,
+      lastSuccessAt: input.coveredUntil,
+    },
+    update: {
+      status: input.groups === 0 ? 'ok_empty' : 'ready',
+      groups: input.groups,
+      coveredFrom,
+      coveredUntil,
+      lastAttemptAt: input.coveredUntil,
+      lastSuccessAt: input.coveredUntil,
+      lastError: null,
+    },
+  })
+}
+
+export function recordEdgeCaptureFailure(input: {
+  attemptedAt: Date
+  error: string
+  host: string
+  zoneId: string
+}) {
+  return prisma.edgeCaptureState.upsert({
+    where: { zoneId_host: { zoneId: input.zoneId, host: input.host } },
+    create: {
+      id: captureStateId(input.zoneId, input.host),
+      zoneId: input.zoneId,
+      host: input.host,
+      status: 'failed',
+      groups: 0,
+      lastAttemptAt: input.attemptedAt,
+      lastError: input.error,
+    },
+    update: {
+      status: 'failed',
+      lastAttemptAt: input.attemptedAt,
+      lastError: input.error,
+    },
+  })
 }

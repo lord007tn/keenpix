@@ -20,14 +20,34 @@ export interface Project {
   name: string
   orgId: string
   origin: string
+  // When true, /img requests must carry a valid `s=` HMAC signature. The secret
+  // itself is never on this shape — admins fetch it via getProjectSigningFn.
+  requireSignedUrls: boolean
   // false preserves metadata such as EXIF, GPS, and ICC profiles.
   stripMetadata: boolean
 }
 
 export type AnalyticsRange = '24h' | '7d' | '30d' | '90d'
 
-export function isAnalyticsRange(value: unknown): value is AnalyticsRange {
+export type HistoricalAnalyticsRange =
+  | AnalyticsRange
+  | '365d'
+  | 'all'
+  | 'custom'
+
+function isAnalyticsRange(value: unknown): value is AnalyticsRange {
   return value === '24h' || value === '7d' || value === '30d' || value === '90d'
+}
+
+export function isHistoricalAnalyticsRange(
+  value: unknown,
+): value is HistoricalAnalyticsRange {
+  return (
+    isAnalyticsRange(value) ||
+    value === '365d' ||
+    value === 'all' ||
+    value === 'custom'
+  )
 }
 
 export interface TimePoint {
@@ -38,6 +58,8 @@ export interface TimePoint {
   label: string
   optimized: number
   requests: number
+  start: string
+  successful: number
 }
 
 // One time bucket of requests split by HTTP status class, for the reliability
@@ -128,13 +150,17 @@ export interface AnalyticsSummary {
   bandwidthIn: number
   bandwidthOut: number
   bandwidthSaved: number
+  cacheHits: number
+  failedRequests: number
   hitRate: number
+  liveOptimizations: number
   p50: number
   p75: number
   p90: number
   p95: number
   p99: number
   savingsPct: number
+  successfulDeliveries: number
   totalRequests: number
 }
 
@@ -161,6 +187,8 @@ export interface EdgeCachePoint {
   label: string
   // Requests that missed the edge and reached keenpix.
   miss: number
+  // ISO timestamp at the start of this bucket.
+  start: string
 }
 
 // Cloudflare edge-cache rollup for the last 24h, fetched from the Cloudflare

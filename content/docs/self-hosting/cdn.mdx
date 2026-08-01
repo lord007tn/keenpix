@@ -63,15 +63,14 @@ cards** (Cloudflare edge vs Keenpix origin) and an hourly edge hit/miss chart on
 Overview and `/app/analytics`, next to the origin-shield numbers. The cards cover
 edge hit-rate, edge requests, and bytes served from the edge.
 
-To connect it, go to **Settings → CDN cache** and add a Cloudflare API token scoped
-to **Analytics → Read**, your 32-character hex **Zone ID**, and optionally a
-**hostname**. The token is stored **encrypted at rest** — the key is derived from
-`BETTER_AUTH_SECRET`, so the encrypted value is per-instance and cannot be copied
-between instances; re-enter the token on each instance. Use **Test connection** to
-validate the token and zone before saving. You can also configure these via the
-`CLOUDFLARE_*`
-[environment variables](/docs/self-hosting/configuration#cloudflare-edge-analytics);
-database-managed settings (token + zone + enabled) take precedence over the env vars.
+To connect it, set the `CLOUDFLARE_*`
+[environment variables](/docs/self-hosting/configuration#cloudflare-edge-analytics):
+a Cloudflare API token scoped to **Analytics → Read**, your 32-character hex
+**Zone ID** (`CLOUDFLARE_ZONE_ID`), and optionally a **hostname**
+(`CLOUDFLARE_HOST`). Create a dedicated token at **Cloudflare → My Profile → API
+Tokens → Create Token** with a single permission — **Zone → Analytics → Read**,
+scoped to your zone. The effective status is shown read-only in the operator
+console at **Admin → Settings**.
 
 The optional **hostname** narrows the figures to one subdomain. A Cloudflare zone
 covers the whole domain and the query only filters by path (`/img/*`), so if your

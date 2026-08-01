@@ -9,6 +9,7 @@ const IMAGE_PATH_PATTERN = '/img/%'
 // plans (it rejects anything wider with a quota error), so each capture covers
 // the last 24h; we persist it to build history beyond that.
 const WINDOW_HOURS = 24
+const WINDOW_MARGIN_SECONDS = 1
 
 interface AdaptiveGroup {
   count: number
@@ -38,7 +39,7 @@ function buildQuery(opts: { byHour: boolean; withHost: boolean }) {
       zones(filter: { zoneTag: $zoneTag }) {
         httpRequestsAdaptiveGroups(
           limit: 2000
-          ${orderBy}filter: { datetime_geq: $since, datetime_leq: $until, clientRequestPath_like: $path${hostFilter} }
+          ${orderBy}filter: { datetime_geq: $since, datetime_leq: $until, requestSource: "eyeball", clientRequestPath_like: $path${hostFilter} }
         ) {
           count
           sum { edgeResponseBytes }
@@ -80,7 +81,11 @@ async function queryAdaptiveGroups(
       res.errors[0]?.message || 'Cloudflare analytics query failed.',
     )
   }
-  return res.data?.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups ?? []
+  const zone = res.data?.viewer?.zones?.[0]
+  if (!zone) {
+    throw new Error('The token cannot access the configured Cloudflare zone.')
+  }
+  return zone.httpRequestsAdaptiveGroups ?? []
 }
 
 export interface EdgeAdaptiveGroup {
@@ -91,16 +96,20 @@ export interface EdgeAdaptiveGroup {
 }
 
 // Raw hourly /img/* adaptive groups for the last 24h, one per
-// (cacheStatus, hour), for persisting into EdgeRollupHourly. Hit/miss
-// classification is deferred to read time so it always reflects the current
-// CACHED_STATUSES set.
+// (cacheStatus, hour), for persisting into EdgeRollupHourly. Cache
+// classification is deferred to read time so historical rows always reflect
+// the current Cloudflare semantics.
 export async function fetchEdgeAdaptiveHourly(
   settings: EffectiveCloudflareSettings,
 ): Promise<EdgeAdaptiveGroup[]> {
+  const until = dayjs()
   const groups = await queryAdaptiveGroups(settings, {
     byHour: true,
-    since: dayjs().subtract(WINDOW_HOURS, 'hour').toISOString(),
-    until: dayjs().toISOString(),
+    since: until
+      .subtract(WINDOW_HOURS, 'hour')
+      .add(WINDOW_MARGIN_SECONDS, 'second')
+      .toISOString(),
+    until: until.toISOString(),
   })
   const out: EdgeAdaptiveGroup[] = []
   for (const g of groups) {
@@ -122,9 +131,10 @@ export async function fetchEdgeAdaptiveHourly(
 export async function verifyCloudflareAccess(
   settings: EffectiveCloudflareSettings,
 ) {
-  await queryAdaptiveGroups(settings, {
+  const groups = await queryAdaptiveGroups(settings, {
     byHour: false,
     since: dayjs().subtract(1, 'hour').toISOString(),
     until: dayjs().toISOString(),
   })
+  return groups.length
 }

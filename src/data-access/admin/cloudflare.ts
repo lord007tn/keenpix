@@ -3,6 +3,8 @@ import { env } from '@/env/server'
 import { decryptSecret, encryptSecret } from '@/lib/secrets/crypto'
 import { DEFAULT_CLOUDFLARE_ID } from './constants'
 
+const TRAILING_DOT_RE = /\.$/
+
 export interface CloudflareSettingsInput {
   apiToken?: string | null
   enabled?: boolean
@@ -25,6 +27,21 @@ export interface EffectiveCloudflareSettings {
   zoneId: string
 }
 
+function normalizeCloudflareHost(host?: string | null) {
+  const normalized = host?.trim().toLowerCase().replace(TRAILING_DOT_RE, '')
+  if (!normalized) {
+    return
+  }
+  if (
+    normalized.includes('://') ||
+    normalized.includes('/') ||
+    normalized.includes(':')
+  ) {
+    throw new Error('Cloudflare host must be a bare hostname.')
+  }
+  return normalized
+}
+
 function envCloudflareSettings(): EffectiveCloudflareSettings | undefined {
   if (!(env.CLOUDFLARE_API_TOKEN && env.CLOUDFLARE_ZONE_ID)) {
     return
@@ -33,7 +50,7 @@ function envCloudflareSettings(): EffectiveCloudflareSettings | undefined {
     enabled: true,
     apiToken: env.CLOUDFLARE_API_TOKEN,
     zoneId: env.CLOUDFLARE_ZONE_ID,
-    host: env.CLOUDFLARE_HOST,
+    host: normalizeCloudflareHost(env.CLOUDFLARE_HOST),
   }
 }
 
@@ -41,28 +58,31 @@ export async function getPublicCloudflareSettings(): Promise<PublicCloudflareSet
   const db = await prisma.cloudflareSettings.findUnique({
     where: { id: DEFAULT_CLOUDFLARE_ID },
   })
-  if (db) {
-    let source: PublicCloudflareSettings['source'] = 'none'
-    if (db.enabled && db.apiToken && db.zoneId) {
-      source = 'database'
-    } else if (envCloudflareSettings()) {
-      source = 'environment'
-    }
+  if (db?.enabled && db.apiToken && db.zoneId) {
     return {
-      source,
-      enabled: db.enabled,
+      source: 'database',
+      enabled: true,
       zoneId: db.zoneId ?? '',
-      host: db.host ?? '',
-      tokenSet: Boolean(db.apiToken),
+      host: normalizeCloudflareHost(db.host) ?? '',
+      tokenSet: true,
     }
   }
   const envSettings = envCloudflareSettings()
+  if (envSettings) {
+    return {
+      source: 'environment',
+      enabled: true,
+      zoneId: envSettings.zoneId,
+      host: envSettings.host ?? '',
+      tokenSet: true,
+    }
+  }
   return {
-    source: envSettings ? 'environment' : 'none',
-    enabled: Boolean(envSettings),
-    zoneId: envSettings?.zoneId ?? '',
-    host: envSettings?.host ?? '',
-    tokenSet: Boolean(envSettings?.apiToken),
+    source: 'none',
+    enabled: db?.enabled ?? false,
+    zoneId: db?.zoneId ?? '',
+    host: db?.host ?? '',
+    tokenSet: Boolean(db?.apiToken),
   }
 }
 
@@ -84,7 +104,10 @@ export async function updateCloudflareSettings(
     enabled: input.enabled ?? current?.enabled ?? false,
     apiToken,
     zoneId: input.zoneId === undefined ? current?.zoneId : input.zoneId || null,
-    host: input.host === undefined ? current?.host : input.host || null,
+    host:
+      input.host === undefined
+        ? current?.host
+        : (normalizeCloudflareHost(input.host) ?? null),
   }
   await prisma.cloudflareSettings.upsert({
     where: { id: DEFAULT_CLOUDFLARE_ID },
@@ -103,7 +126,7 @@ export async function getEffectiveCloudflareSettings() {
       enabled: true,
       apiToken: decryptSecret(db.apiToken),
       zoneId: db.zoneId,
-      host: db.host ?? undefined,
+      host: normalizeCloudflareHost(db.host),
     } satisfies EffectiveCloudflareSettings
   }
   return envCloudflareSettings()

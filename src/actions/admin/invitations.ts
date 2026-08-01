@@ -5,8 +5,8 @@ import {
   getInvitationByToken,
   revokeInvitation as revokeInvitationInDb,
 } from '@/data-access/admin/invitations'
-import { getEffectiveSmtpSettings } from '@/data-access/admin/smtp'
-import { sendSmtpMail } from '@/lib/email/smtp'
+import { sendPlatformEmail } from '@/lib/email/send'
+import { escapeEmailHtml } from '@/lib/email/utils/html/escape'
 import type {
   acceptInvitationSchema,
   createInvitationSchema,
@@ -22,15 +22,11 @@ export async function createInvitation(
     invitedById: input.invitedById,
   })
   if (input.sendEmail) {
-    const settings = await getEffectiveSmtpSettings()
-    if (!settings) {
-      throw new Error('SMTP is not configured')
-    }
-    await sendSmtpMail(settings, {
+    await sendPlatformEmail({
       to: invitation.email,
       subject: 'You are invited to Keenpix',
       text: `Use this invitation link to join Keenpix:\n\n${invitation.inviteLink}`,
-      html: `<p>Use this invitation link to join Keenpix:</p><p><a href="${invitation.inviteLink}">${invitation.inviteLink}</a></p>`,
+      html: `<p>Use this invitation link to join Keenpix:</p><p><a href="${escapeEmailHtml(invitation.inviteLink)}">${escapeEmailHtml(invitation.inviteLink)}</a></p>`,
     })
   }
   return invitation

@@ -16,8 +16,10 @@ todos.json
 .source
 .keenpix-cache
 .keenpix-cache-*/
+.seo-cache/
 .agents
 .playwright-mcp
+.playwright-cli
 playwright-report
 test-results
 dogfood-output

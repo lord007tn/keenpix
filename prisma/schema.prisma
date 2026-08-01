@@ -11,16 +11,173 @@ datasource db {
 
 // Keenpix domain models. Org-scoped so single-org self-hosting can grow into
 // multi-org SaaS without reshaping request logs and projects.
-model Org {
-  id        String    @id @default(cuid())
-  name      String
-  createdAt DateTime  @default(now())
-  projects  Project[]
+//
+// Doubles as the better-auth `organization` plugin table (slug/logo/metadata +
+// Member/Invitation). Self-host runs a single org; cloud is multi-tenant.
+model Organization {
+  id                      String                   @id @default(cuid())
+  name                    String
+  slug                    String                   @unique
+  logo                    String?
+  metadata                String?
+  createdAt               DateTime                 @default(now())
+  // Operator kill-switch: when set, the org stops being served (enforced in the
+  // serving gate) and shows as suspended in the operator console. For abuse,
+  // fraud, or non-payment.
+  suspendedAt             DateTime?
+  suspendedReason         String?
+  projects                Project[]
+  members                 Member[]
+  invitations             Invitation[]
+  billingCustomer         BillingCustomer?
+  subscription            Subscription?
+  subscriptionAddons      SubscriptionAddon[]
+  subscriptionGrantAudits SubscriptionGrantAudit[]
+  billingAlerts           BillingAlert[]
+  apiKeyScopes            ApiKeyScope[]
+}
+
+// One-shot billing notification ledger: one row per (org, kind, period). The
+// hourly usage cron and webhook sync insert here BEFORE emailing, so each
+// threshold (80%/100% usage and payment failed) alerts exactly once
+// per billing period even across replicas and retries.
+model BillingAlert {
+  id           String       @id @default(cuid())
+  orgId        String
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  kind         String
+  periodStart  DateTime
+  sentAt       DateTime     @default(now())
+
+  @@unique([orgId, kind, periodStart])
+}
+
+// Links a keenpix org to its Polar customer (cloud billing only). One per org.
+model BillingCustomer {
+  id                String       @id @default(cuid())
+  orgId             String       @unique
+  organization      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  // NOT unique: one Polar customer maps 1:1 to a user, and a user can own several
+  // orgs, so the same polarCustomerId legitimately backs multiple orgs' billing
+  // records. `orgId` is the unique key (one billing customer row per org).
+  polarCustomerId   String
+  // Watermark for usage metering: delivered bytes with bucketStart at/after this
+  // instant have not yet been reported to Polar. The reporter sums the delta,
+  // ingests it, then advances this — so Polar's meter never double-counts.
+  lastUsageReportAt DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([polarCustomerId])
+}
+
+// Local plan entitlement. A non-null polarSubscriptionId means Polar owns the
+// lifecycle; a null id means complimentary access granted locally by an admin.
+// Provider webhooks may replace a complimentary row, while local admin actions
+// must never mutate a provider-managed row.
+model Subscription {
+  id                  String       @id @default(cuid())
+  orgId               String       @unique
+  organization        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  polarSubscriptionId String?      @unique
+  plan                String
+  status              String
+  // Monthly recurring revenue in cents. Complimentary rows are always zero.
+  amountCents         Int          @default(0)
+  currentPeriodStart  DateTime?
+  currentPeriodEnd    DateTime?
+  overageAllowed      Boolean      @default(false)
+  // Mirrors Polar's cancel_at_period_end: the subscription stays `active` and
+  // serving until currentPeriodEnd, but will NOT renew. Drives the billing UI
+  // to say "Ends {date}" instead of "Renews {date}". Set on every webhook sync.
+  cancelAtPeriodEnd   Boolean      @default(false)
+  // Polar's modified_at from the last APPLIED webhook payload. Sync refuses to
+  // apply an event older than this, so a retried/delayed delivery can never
+  // overwrite newer state (e.g. resurrect a revoked subscription).
+  polarModifiedAt     DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([orgId])
+}
+
+// Append-only audit ledger for local complimentary-plan changes. The current
+// entitlement lives in Subscription; this preserves who changed what after a
+// grant is replaced by Polar or revoked.
+model SubscriptionGrantAudit {
+  id           String       @id @default(cuid())
+  orgId        String
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  actorId      String?
+  action       String
+  previousPlan String?
+  plan         String?
+  createdAt    DateTime     @default(now())
+
+  @@index([orgId, createdAt])
+}
+
+// Separately billed organization entitlements that sit on top of a plan.
+// The first launch add-on is one +5 custom-domain pack for Business. Keeping it
+// separate from Subscription prevents an add-on webhook from replacing the
+// org's primary plan snapshot.
+model SubscriptionAddon {
+  id                  String       @id @default(cuid())
+  orgId               String
+  organization        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  polarSubscriptionId String       @unique
+  kind                String
+  units               Int
+  status              String
+  currentPeriodStart  DateTime?
+  currentPeriodEnd    DateTime?
+  cancelAtPeriodEnd   Boolean      @default(false)
+  polarModifiedAt     DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@unique([orgId, kind])
+  @@index([orgId, status])
+}
+
+// better-auth organization membership: which users belong to which org and
+// their org-level role (owner/admin/member). Distinct from the User.role
+// platform role used by the admin() plugin.
+model Member {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+// better-auth organization invitations (cloud org-member invites). Separate
+// from the self-host operator StaffInvitation flow.
+model Invitation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String       @default("pending")
+  teamId         String?
+  inviterId      String
+  inviter        User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([email])
 }
 
 model ApiKey {
-  id                  String    @id
-  configId            String    @default("default")
+  id                  String           @id
+  configId            String           @default("default")
   name                String?
   start               String?
   prefix              String?
@@ -29,24 +186,42 @@ model ApiKey {
   refillInterval      Int?
   refillAmount        Int?
   lastRefillAt        DateTime?
-  enabled             Boolean   @default(true)
-  rateLimitEnabled    Boolean   @default(true)
+  enabled             Boolean          @default(true)
+  rateLimitEnabled    Boolean          @default(true)
   rateLimitTimeWindow Int?
   rateLimitMax        Int?
-  requestCount        Int       @default(0)
+  requestCount        Int              @default(0)
   remaining           Int?
   lastRequest         DateTime?
   expiresAt           DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
   permissions         String?
   metadata            String?
   activities          ApiKeyActivity[]
+  scope               ApiKeyScope?
 
   @@index([configId])
   @@index([key])
   @@index([referenceId])
   @@map("apikey")
+}
+
+// Authoritative tenant boundary for an SDK API key. Better Auth owns the key
+// material while Keenpix owns its organization/project authorization scope.
+// Keeping this relational prevents malformed metadata from widening access and
+// lets Postgres enforce that a project-scoped key belongs to the same org.
+model ApiKeyScope {
+  apiKeyId     String       @id
+  apiKey       ApiKey       @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  orgId        String
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  projectId    String?
+  project      Project?     @relation(fields: [projectId, orgId], references: [id, orgId], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
+
+  @@index([orgId])
+  @@index([projectId, orgId])
 }
 
 model ApiKeyActivity {
@@ -67,42 +242,58 @@ model ApiKeyActivity {
   @@index([createdAt])
 }
 
-model SmtpSettings {
-  id        String   @id
-  enabled   Boolean  @default(false)
-  host      String?
-  port      Int      @default(587)
-  secure    Boolean  @default(false)
-  username  String?
-  password  String?
-  fromEmail String?
-  fromName  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model Project {
-  id             String       @id @default(cuid())
-  orgId          String
-  org            Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  name           String
-  origin         String
-  allowedOrigins String[]
-  color1         String       @default("#FF6B2C")
-  color2         String       @default("#FFA76B")
+  id                String         @id @default(cuid())
+  orgId             String
+  org               Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name              String
+  origin            String
+  allowedOrigins    String[]
+  color1            String         @default("#FF6B2C")
+  color2            String         @default("#FFA76B")
   // Defaults applied when a transform request omits the matching query param.
-  autoFormat     Boolean      @default(true)
-  stripMetadata  Boolean      @default(true)
-  defaultQuality Int          @default(75)
+  autoFormat        Boolean        @default(true)
+  stripMetadata     Boolean        @default(true)
+  defaultQuality    Int            @default(75)
   // Optional per-project pipeline policy. maxWidth caps the requested width
   // (0/null = no cap); defaultFit/defaultDpr apply when the request omits them.
-  maxWidth       Int?
-  defaultFit     String       @default("cover")
-  defaultDpr     Int          @default(1)
-  createdAt      DateTime     @default(now())
-  requestLogs    RequestLog[]
+  maxWidth          Int?
+  defaultFit        String         @default("cover")
+  defaultDpr        Int            @default(1)
+  // Opt-in HMAC URL signing: when required, /img requests must carry a valid
+  // `s=` signature computed with the project's secret. The allowlist stays the
+  // baseline gate; signing adds hotlink/cache-busting protection on top.
+  requireSignedUrls Boolean        @default(false)
+  signingSecret     String?
+  createdAt         DateTime       @default(now())
+  requestLogs       RequestLog[]
+  apiKeyScopes      ApiKeyScope[]
+  customDomains     CustomDomain[]
 
+  @@unique([id, orgId])
   @@index([orgId])
+}
+
+// Customer-owned delivery hostnames provisioned through Cloudflare for SaaS.
+// A verified hostname can resolve its project at the public /img/* boundary, so
+// branded transform URLs do not need to expose a ?project= query parameter.
+model CustomDomain {
+  id                 String    @id @default(cuid())
+  projectId          String
+  project            Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  hostname           String    @unique
+  providerHostnameId String    @unique
+  providerData       Json?
+  dnsStatus          String    @default("pending")
+  sslStatus          String    @default("pending")
+  verifiedAt         DateTime?
+  lastCheckedAt      DateTime?
+  lastError          String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([hostname, dnsStatus, sslStatus])
 }
 
 // Instance-wide operations configuration (one row). Null fields fall back to
@@ -132,25 +323,27 @@ model CloudflareSettings {
 }
 
 model RequestLog {
-  id        String   @id @default(cuid())
-  orgId     String
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  ts        DateTime @default(now())
-  path      String
-  width     Int?
-  quality   Int?
-  format    String
-  status    Int
-  cached    Boolean
-  latencyMs Float
-  bytesIn   Int
-  bytesOut  Int
-  // Bytes the optimizer trimmed off the origin original on this request
-  // (max(0, bytesIn - bytesOut); 0 for cache hits, which never fetch origin).
-  bytesSaved Int     @default(0)
-  region    String?
-  country   String?
+  id         String   @id @default(cuid())
+  orgId      String
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ts         DateTime @default(now())
+  path       String
+  width      Int?
+  quality    Int?
+  format     String
+  status     Int
+  cached     Boolean
+  latencyMs  Float
+  bytesIn    Int
+  bytesOut   Int
+  // Counterfactual delivery savings versus the origin original. Cache hits and
+  // coalesced deliveries retain the known original size while bytesIn stays 0,
+  // so savings are measured per successful delivery without double-counting
+  // origin transfer.
+  bytesSaved Int      @default(0)
+  region     String?
+  country    String?
   sourceHost String?
 
   @@index([ts])
@@ -226,6 +419,26 @@ model EdgeRollupHourly {
   @@index([zoneId, host, bucketStart])
 }
 
+// Durable health and coverage for the zone-wide Cloudflare capture. A successful
+// empty response still advances coverage, while failures retain their timestamp
+// and operator-safe message instead of masquerading as "no data".
+model EdgeCaptureState {
+  id            String   @id
+  zoneId        String
+  host          String   @default("")
+  status        String
+  groups        Int      @default(0)
+  coveredFrom   DateTime?
+  coveredUntil  DateTime?
+  lastAttemptAt DateTime
+  lastSuccessAt DateTime?
+  lastError     String?
+  updatedAt     DateTime @updatedAt
+
+  @@unique([zoneId, host])
+  @@index([lastSuccessAt])
+}
+
 // Hourly container resource rollups (CPU + memory) sampled in-process, persisted
 // one row per hour as avg + peak so capacity trends survive restarts without
 // storing the raw per-sample stream. One row per hour (bucketStart is the upsert
@@ -250,19 +463,21 @@ model ResourceRollupHourly {
 
 // better-auth tables. Keep these names aligned with the auth adapter config.
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  emailVerified Boolean   @default(false)
+  id            String       @id @default(cuid())
+  email         String       @unique
+  emailVerified Boolean      @default(false)
   name          String?
   image         String?
-  role          String    @default("user")
-  banned        Boolean   @default(false)
+  role          String       @default("user")
+  banned        Boolean      @default(false)
   banReason     String?
   banExpires    DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   sessions      Session[]
   accounts      Account[]
+  members       Member[]
+  invitations   Invitation[]
 
   @@index([email])
 }
@@ -285,16 +500,17 @@ model StaffInvitation {
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  ipAddress String?
-  userAgent String?
-  impersonatedBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  token                String   @unique
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt            DateTime
+  ipAddress            String?
+  userAgent            String?
+  impersonatedBy       String?
+  activeOrganizationId String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   @@index([userId])
 }

@@ -1,0 +1,324 @@
+import { useNavigate } from '@tanstack/react-router'
+import {
+  type ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  type SortingState,
+  useReactTable,
+} from '@tanstack/react-table'
+import dayjs from 'dayjs'
+import { ArrowUpDownIcon, RefreshCcwIcon, ShieldCheckIcon } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { getErrorMessage } from '@/errors/common'
+import { getCustomerAccountsFn } from '@/functions/admin'
+import { cn } from '@/lib/cn/utils'
+import { compactNumber, humanBytes } from '@/shared/format'
+
+type CustomerAccount = Awaited<ReturnType<typeof getCustomerAccountsFn>>[number]
+
+function planBadgeVariant(source: string | null | undefined) {
+  if (source === 'admin_grant') {
+    return 'info' as const
+  }
+  if (source === 'polar') {
+    return 'success' as const
+  }
+  return 'outline' as const
+}
+
+function ownerLabel(customer: CustomerAccount) {
+  const owner = customer.owners[0]
+  if (!owner) {
+    return 'No owner'
+  }
+  const base = owner.name || owner.email
+  return customer.owners.length > 1
+    ? `${base} +${customer.owners.length - 1}`
+    : base
+}
+
+function SortHeader({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode
+  onClick: () => void
+}) {
+  return (
+    <Button className="-ml-2 h-8" onClick={onClick} size="sm" variant="ghost">
+      {children}
+      <ArrowUpDownIcon className="ml-1 size-3.5" />
+    </Button>
+  )
+}
+
+const columns: ColumnDef<CustomerAccount>[] = [
+  {
+    accessorKey: 'name',
+    header: 'Customer',
+    cell: ({ row }) => {
+      const customer = row.original
+      return (
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <span className="truncate font-medium">{customer.name}</span>
+            {customer.members.some(
+              (member) => member.platformRole === 'super_admin',
+            ) ? (
+              <ShieldCheckIcon className="size-3.5 shrink-0 text-primary" />
+            ) : null}
+            {customer.suspendedAt ? (
+              <Badge variant="destructive">Suspended</Badge>
+            ) : null}
+          </div>
+          <span className="truncate text-muted-foreground text-xs">
+            {ownerLabel(customer)}
+          </span>
+          <span className="truncate font-mono text-muted-foreground text-xs">
+            {customer.slug}
+          </span>
+        </div>
+      )
+    },
+  },
+  {
+    id: 'plan',
+    accessorFn: (row) => row.effectivePlan?.plan ?? '',
+    header: 'Plan',
+    cell: ({ row }) => {
+      const { effectivePlan } = row.original
+      let sourceLabel = 'Free'
+      if (effectivePlan?.source === 'polar') {
+        sourceLabel = 'Polar'
+      } else if (effectivePlan?.source === 'admin_grant') {
+        sourceLabel = 'Complimentary'
+      }
+      return (
+        <div className="flex flex-col gap-0.5">
+          <Badge variant={planBadgeVariant(effectivePlan?.source)}>
+            {effectivePlan?.planName ?? 'Free'}
+          </Badge>
+          <span className="text-muted-foreground text-xs">{sourceLabel}</span>
+        </div>
+      )
+    },
+  },
+  {
+    id: 'requests',
+    accessorFn: (row) => row.usage30d.requests,
+    header: ({ column }) => (
+      <SortHeader
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Requests 30d
+      </SortHeader>
+    ),
+    cell: ({ row }) => (
+      <span className="tabular-nums">
+        {compactNumber(row.original.usage30d.requests)}
+      </span>
+    ),
+  },
+  {
+    id: 'bandwidth',
+    accessorFn: (row) => row.usage30d.bandwidthBytes,
+    header: ({ column }) => (
+      <SortHeader
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Bandwidth 30d
+      </SortHeader>
+    ),
+    cell: ({ row }) => (
+      <span className="tabular-nums">
+        {humanBytes(row.original.usage30d.bandwidthBytes)}
+      </span>
+    ),
+  },
+  {
+    id: 'seats',
+    accessorFn: (row) => row.seats,
+    header: 'Workspace',
+    cell: ({ row }) => (
+      <div className="flex flex-col text-muted-foreground text-xs">
+        <span>{row.original.projects} projects</span>
+        <span>{row.original.seats} seats</span>
+      </div>
+    ),
+  },
+  {
+    id: 'created',
+    accessorFn: (row) => row.createdAt,
+    header: ({ column }) => (
+      <SortHeader
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Created
+      </SortHeader>
+    ),
+    cell: ({ row }) => (
+      <span className="whitespace-nowrap text-muted-foreground text-xs">
+        {dayjs(row.original.createdAt).format('MMM D, YYYY')}
+      </span>
+    ),
+  },
+]
+
+export function CustomersTable() {
+  const navigate = useNavigate()
+  const [customers, setCustomers] = useState<CustomerAccount[]>([])
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [sorting, setSorting] = useState<SortingState>([])
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setLoadError(false)
+    try {
+      setCustomers(await getCustomerAccountsFn())
+    } catch (error) {
+      setLoadError(true)
+      toast.error(getErrorMessage(error, 'Could not load customers'))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const query = search.trim().toLowerCase()
+  const rows = useMemo(
+    () =>
+      query
+        ? customers.filter((customer) =>
+            [
+              customer.name,
+              customer.slug,
+              ...customer.owners.map((owner) => owner.email),
+            ].some((value) => value.toLowerCase().includes(query)),
+          )
+        : customers,
+    [customers, query],
+  )
+
+  const table = useReactTable({
+    data: rows,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  })
+
+  let emptyMessage = 'No customers yet.'
+  if (loading) {
+    emptyMessage = 'Loading customers…'
+  } else if (loadError) {
+    emptyMessage = 'Couldn’t load customers. Use Refresh to try again.'
+  } else if (query) {
+    emptyMessage = 'No customers match your search.'
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="text-muted-foreground text-sm">
+          {customers.length} customer{customers.length === 1 ? '' : 's'}
+        </span>
+        <div className="flex items-center gap-2">
+          <Input
+            aria-label="Search customers"
+            className="w-56"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search name, slug, or owner…"
+            value={search}
+          />
+          <Button disabled={loading} onClick={load} size="sm" variant="outline">
+            <RefreshCcwIcon data-icon="inline-start" />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      <Card className="overflow-hidden p-0">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((hg) => (
+              <TableRow key={hg.id}>
+                {hg.headers.map((h) => (
+                  <TableHead key={h.id}>
+                    {h.isPlaceholder
+                      ? null
+                      : flexRender(h.column.columnDef.header, h.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.length > 0 ? (
+              table.getRowModel().rows.map((r) => (
+                <TableRow
+                  className={cn(
+                    'cursor-pointer',
+                    r.original.suspendedAt && 'opacity-70',
+                  )}
+                  key={r.id}
+                  onClick={() =>
+                    navigate({
+                      to: '/admin/customers/$orgId',
+                      params: { orgId: r.original.id },
+                    })
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      navigate({
+                        to: '/admin/customers/$orgId',
+                        params: { orgId: r.original.id },
+                      })
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
+                  {r.getVisibleCells().map((c) => (
+                    <TableCell key={c.id}>
+                      {flexRender(c.column.columnDef.cell, c.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  className="h-24 text-center text-muted-foreground"
+                  colSpan={columns.length}
+                >
+                  {emptyMessage}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+    </div>
+  )
+}

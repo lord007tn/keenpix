@@ -1,0 +1,220 @@
+# Branch cloud deployment for Coolify.
+#
+# This stack builds Keenpix from the selected Git branch instead of pulling the
+# published image. Use it for disposable/staging cloud-mode testing under the
+# Raed project in Coolify.
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    mem_limit: ${KEENPIX_PG_MEM_LIMIT:-0}
+    cpus: ${KEENPIX_PG_CPU_LIMIT:-0}
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-keenpix_branch}
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_64_POSTGRES}
+    volumes:
+      - keenpix_branch_pg18:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$SERVICE_USER_POSTGRES\" -d \"${POSTGRES_DB:-keenpix_branch}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    environment:
+      - CLICKHOUSE_DB=${CLICKHOUSE_DATABASE:-keenpix_branch}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+    volumes:
+      - keenpix_branch_clickhouse:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  maxio:
+    image: ghcr.io/coollabsio/maxio:latest
+    command: serve
+    restart: unless-stopped
+    environment:
+      - MAXIO_ACCESS_KEY=${KEENPIX_CACHE_S3_ACCESS_KEY_ID}
+      - MAXIO_SECRET_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY}
+      - MAXIO_REGION=auto
+      - MAXIO_DEFAULT_BUCKETS=${KEENPIX_CACHE_S3_BUCKET:-keenpix-branch-cache}
+    volumes:
+      - keenpix_branch_maxio:/data
+
+  mailpit:
+    image: axllent/mailpit:v1.22
+    restart: unless-stopped
+    environment:
+      - SERVICE_URL_MAILPIT_8025
+    expose:
+      - "1025"
+      - "8025"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_KEENPIX_PUBLIC_URL: ${VITE_KEENPIX_PUBLIC_URL:-http://localhost:3000}
+        VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:-}
+        VERSION: ${SOURCE_COMMIT:-branch-cloud}
+    restart: unless-stopped
+    mem_limit: ${KEENPIX_MEM_LIMIT:-0}
+    cpus: ${KEENPIX_CPU_LIMIT:-0}
+    # Give the graceful shutdown room to run before Docker SIGKILLs: on SIGTERM the
+    # app marks itself un-ready (health → 503) and drains in-flight transforms
+    # (~25s budget + backstop). Must exceed SERVER_SHUTDOWN_TIMEOUT below.
+    stop_grace_period: ${KEENPIX_SHUTDOWN_GRACE:-30s}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      maxio:
+        condition: service_started
+      mailpit:
+        condition: service_started
+    environment:
+      SERVICE_URL_APP_3000: ${KEENPIX_APP_URL:-http://localhost:3000}
+      SERVICE_URL_APP: ${KEENPIX_APP_URL:-http://localhost:3000}
+      NODE_ENV: production
+      PORT: "3000"
+      KEENPIX_MODE: cloud
+      DATABASE_URL: postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_64_POSTGRES}@${KEENPIX_POSTGRES_HOST:-postgres}:5432/${POSTGRES_DB:-keenpix_branch}
+      BETTER_AUTH_SECRET: ${SERVICE_HEX_64_KEENPIX}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      KEENPIX_APP_URL: ${KEENPIX_APP_URL:-http://localhost:3000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      VITE_KEENPIX_PUBLIC_URL: ${VITE_KEENPIX_PUBLIC_URL:-http://localhost:3000}
+      VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:-}
+      KEENPIX_SUPER_ADMIN_EMAIL: ${KEENPIX_SUPER_ADMIN_EMAIL}
+      KEENPIX_SUPER_ADMIN_PASSWORD: ${KEENPIX_SUPER_ADMIN_PASSWORD}
+      KEENPIX_RUN_MIGRATIONS: ${KEENPIX_RUN_MIGRATIONS:-true}
+      KEENPIX_RUN_SEED: ${KEENPIX_RUN_SEED:-false}
+      CLICKHOUSE_URL: http://${KEENPIX_CLICKHOUSE_HOST:-clickhouse}:8123
+      CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE:-keenpix_branch}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      KEENPIX_CACHE_S3_BUCKET: ${KEENPIX_CACHE_S3_BUCKET:-keenpix-branch-cache}
+      KEENPIX_CACHE_S3_ENDPOINT: ${KEENPIX_CACHE_S3_ENDPOINT:-http://maxio:9000}
+      KEENPIX_CACHE_S3_REGION: ${KEENPIX_CACHE_S3_REGION:-auto}
+      KEENPIX_CACHE_S3_ACCESS_KEY_ID: ${KEENPIX_CACHE_S3_ACCESS_KEY_ID}
+      KEENPIX_CACHE_S3_SECRET_ACCESS_KEY: ${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY}
+      KEENPIX_CACHE_DIR: /var/cache/keenpix
+      # Seconds srvx waits for in-flight HTTP requests to finish on SIGTERM before
+      # force-closing. Keep ≤ stop_grace_period so slow transforms can complete.
+      SERVER_SHUTDOWN_TIMEOUT: "${SERVER_SHUTDOWN_TIMEOUT:-25}"
+      POLAR_TOKEN: ${POLAR_TOKEN}
+      POLAR_SERVER: ${POLAR_SERVER:-production}
+      POLAR_WEBHOOK_SECRET: ${POLAR_WEBHOOK_SECRET}
+      POLAR_SANDBOX_WEBHOOK_SECRET: ${POLAR_SANDBOX_WEBHOOK_SECRET:-}
+      POLAR_SUCCESS_URL: ${POLAR_SUCCESS_URL:-/app/dashboard}
+      # Default is the bundled Mailpit sink (staging). PRODUCTION MUST OVERRIDE:
+      # set EMAIL_PROVIDER=postmark (or resend) + its credentials in Coolify so
+      # verification, invite, usage, and dunning emails reach real inboxes.
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-smtp}
+      POSTMARK_API_KEY: ${POSTMARK_API_KEY}
+      POSTMARK_FROM: ${POSTMARK_FROM}
+      POSTMARK_MESSAGE_STREAM: ${POSTMARK_MESSAGE_STREAM:-outbound}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+      CLOUDFLARE_ZONE_ID: ${CLOUDFLARE_ZONE_ID:-}
+      CLOUDFLARE_HOST: ${CLOUDFLARE_HOST:-}
+      CLOUDFLARE_SAAS_API_TOKEN: ${CLOUDFLARE_SAAS_API_TOKEN:-}
+      CLOUDFLARE_SAAS_ZONE_ID: ${CLOUDFLARE_SAAS_ZONE_ID:-}
+      CLOUDFLARE_SAAS_CNAME_TARGET: ${CLOUDFLARE_SAAS_CNAME_TARGET:-}
+      CLOUDFLARE_SAAS_WORKER_SCRIPT: ${CLOUDFLARE_SAAS_WORKER_SCRIPT:-keenpix-custom-domain-edge}
+      CLOUDFLARE_SAAS_EDGE_SECRET: ${CLOUDFLARE_SAAS_EDGE_SECRET:-}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM: ${RESEND_FROM}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-no-reply@branch-cloud.keenpix.test}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Keenpix Branch Cloud}
+      CRON_SECRET: ${CRON_SECRET}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    expose:
+      - "3000"
+    volumes:
+      - keenpix_branch_cache:/var/cache/keenpix
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--output", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+
+  usage-cron:
+    image: curlimages/curl:latest
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        while true; do
+          until curl -fsS http://app:3000/api/health > /dev/null; do
+            sleep 10;
+          done;
+          echo "usage report started: $$(date -u +%Y-%m-%dT%H:%M:%SZ)";
+          curl -fsS --retry 3 --retry-all-errors --retry-delay 5 -X POST -H "Authorization: Bearer ${CRON_SECRET}" http://app:3000/api/internal/billing/report-usage || true;
+          printf '\n';
+          sleep 3600;
+        done
+
+  # Daily compressed pg_dump into its own volume, pruned after
+  # KEENPIX_BACKUP_KEEP_DAYS. Postgres is the money-critical source of truth
+  # (users, subscriptions, billing watermarks) — this protects against container
+  # or data-volume loss. Pair it with host/volume-level offsite backups (or an
+  # R2 sync) for disk-loss coverage; restore steps in DEPLOY-BRANCH-CLOUD.md.
+  pg-backup:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - PGHOST=postgres
+      - PGUSER=${SERVICE_USER_POSTGRES}
+      - PGPASSWORD=${SERVICE_PASSWORD_64_POSTGRES}
+      - PGDATABASE=${POSTGRES_DB:-keenpix_branch}
+      - KEEP_DAYS=${KEENPIX_BACKUP_KEEP_DAYS:-14}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        while true; do
+          ts=$$(date -u +%Y%m%d-%H%M%S);
+          if pg_dump -Fc -f "/backups/keenpix-$$ts.dump.tmp"; then
+            mv "/backups/keenpix-$$ts.dump.tmp" "/backups/keenpix-$$ts.dump";
+            echo "backup written: keenpix-$$ts.dump";
+          else
+            rm -f "/backups/keenpix-$$ts.dump.tmp";
+            echo "BACKUP FAILED at $$ts" >&2;
+          fi;
+          find /backups -name 'keenpix-*.dump' -mtime +$$KEEP_DAYS -delete;
+          sleep 86400;
+        done
+    volumes:
+      - keenpix_branch_pg_backups:/backups
+
+volumes:
+  keenpix_branch_pg18:
+  keenpix_branch_clickhouse:
+  keenpix_branch_maxio:
+  keenpix_branch_cache:
+  keenpix_branch_pg_backups:

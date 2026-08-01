@@ -50,13 +50,14 @@ export function ProjectSwitcher() {
         <DropdownMenuTrigger
           render={
             <Button
-              className="h-9 max-w-56 gap-2 px-2 font-normal"
+              aria-label={`Project scope: ${isAll ? 'All projects' : currentProject?.name}`}
+              className="h-11 max-w-40 gap-2 px-2 font-normal"
               variant="ghost"
             />
           }
         >
           <ScopeGlyph project={currentProject} />
-          <span className="truncate font-medium text-sm">
+          <span className="hidden truncate font-medium text-sm md:inline">
             {isAll ? 'All projects' : currentProject?.name}
           </span>
           <ChevronsUpDownIcon className="text-muted-foreground" />

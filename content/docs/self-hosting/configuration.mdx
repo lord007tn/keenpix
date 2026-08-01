@@ -22,7 +22,7 @@ Set these in `.env` (or your orchestrator's secrets).
 | `KEENPIX_RUN_MIGRATIONS`         | no            | `true` in Docker   | Docker entrypoint switch for running migrations before start                               |
 | `KEENPIX_RUN_SEED`               | no            | `true` in Docker   | Docker entrypoint switch for seeding the default org and super admin before start          |
 | `KEENPIX_CACHE_DIR`              | no            | `./.keenpix-cache` | Where transformed images are cached on disk                                                |
-| `KEENPIX_SELF_HOST`              | no            | `false`            | `true` disables the marketing site — the landing page becomes a minimal self-hosted splash |
+| `KEENPIX_MODE`                   | no            | `selfhost`         | `selfhost` (default) or `cloud`. Self-host disables the marketing site, self-signup, and billing |
 | `LOG_LEVEL`                      | no            | `info`             | Server log level: `fatal`, `error`, `warn`, `info`, `debug`, `trace`, or `silent`          |
 
 ## Browser public URLs
@@ -36,22 +36,47 @@ public app or auth URL.
 | `VITE_KEENPIX_AUTH_URL`     | —       | Backward-compatible auth URL alias           |
 | `VITE_BETTER_AUTH_URL`      | —       | Backward-compatible Better Auth URL alias    |
 
-## SMTP
+## Transactional email
 
-SMTP can be managed from **Settings → Email**. When database-managed SMTP is
-enabled and has both a host and sender email, it takes precedence over the
-environment variables below. Env SMTP is only used as a fallback when Settings
-SMTP is disabled or incomplete.
+Verification, password reset, and teammate invitation emails go through exactly
+**one** provider, selected with `EMAIL_PROVIDER`. Email is configured entirely
+from the environment — there is no in-app email settings screen. Leave
+`EMAIL_PROVIDER` unset to disable email (fine for a single-admin install that
+never invites teammates). When it is set, the selected provider's required
+variables must be present or the app fails to start.
 
-| Variable          | Default | Purpose                                      |
-| ----------------- | ------- | -------------------------------------------- |
-| `SMTP_HOST`       | —       | SMTP server hostname                         |
-| `SMTP_PORT`       | `587`   | SMTP server port                             |
+| Variable         | Default | Purpose                                       |
+| ---------------- | ------- | --------------------------------------------- |
+| `EMAIL_PROVIDER` | —       | `postmark`, `resend`, or `smtp` (unset = off) |
+
+### `EMAIL_PROVIDER=postmark`
+
+| Variable                  | Default    | Purpose                                          |
+| ------------------------- | ---------- | ------------------------------------------------ |
+| `POSTMARK_API_KEY`        | —          | Postmark server token (required)                 |
+| `POSTMARK_FROM`           | —          | Verified sender, e.g. `Keenpix <no-reply@…>` (required) |
+| `POSTMARK_MESSAGE_STREAM` | `outbound` | Message stream to send on                        |
+
+### `EMAIL_PROVIDER=resend`
+
+| Variable         | Default | Purpose                                       |
+| ---------------- | ------- | --------------------------------------------- |
+| `RESEND_API_KEY` | —       | Resend API key (required)                     |
+| `RESEND_FROM`    | —       | Verified sender, e.g. `Keenpix <no-reply@…>` (required) |
+
+### `EMAIL_PROVIDER=smtp`
+
+Point at any SMTP relay (a provider, or a self-hosted Postfix/Mailpit).
+
+| Variable          | Default | Purpose                                       |
+| ----------------- | ------- | --------------------------------------------- |
+| `SMTP_HOST`       | —       | SMTP server hostname (required)               |
+| `SMTP_FROM_EMAIL` | —       | Sender email address (required)               |
+| `SMTP_PORT`       | `587`   | SMTP server port                              |
 | `SMTP_SECURE`     | `false` | `true` for implicit TLS, `false` for STARTTLS |
-| `SMTP_USER`       | —       | SMTP username                                |
-| `SMTP_PASSWORD`   | —       | SMTP password                                |
-| `SMTP_FROM_EMAIL` | —       | Sender email address                         |
-| `SMTP_FROM_NAME`  | —       | Sender display name                          |
+| `SMTP_USER`       | —       | SMTP username                                 |
+| `SMTP_PASSWORD`   | —       | SMTP password                                 |
+| `SMTP_FROM_NAME`  | —       | Sender display name                           |
 
 ## Cloudflare edge analytics
 
@@ -59,12 +84,9 @@ Optional. Wire a Cloudflare API token so keenpix can show real edge cache
 hit-rate alongside its origin-shield figures (see [edge analytics](/docs/self-hosting/cdn#built-in-edge-analytics)).
 keenpix now persists hourly edge rollups, so edge analytics covers any range and
 accumulates history beyond Cloudflare's ~24h adaptive window — coverage grows
-forward as the dashboard is used. Manage it from **Settings → CDN cache**; when
-database-managed settings are enabled with a token and zone, they take precedence
-over the environment variables below. The token only needs the zone-scoped
-**Analytics → Read** permission. It is stored encrypted at rest with a key derived
-from `BETTER_AUTH_SECRET`, so the encrypted value is per-instance and cannot be
-copied between instances — re-enter the token on each instance.
+forward as the dashboard is used. Configure it with the environment variables
+below; the effective status is shown read-only at **Admin → Settings**. The token
+only needs the zone-scoped **Analytics → Read** permission.
 
 | Variable               | Default | Purpose                                                                |
 | ---------------------- | ------- | ---------------------------------------------------------------------- |

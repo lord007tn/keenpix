@@ -1,5 +1,5 @@
 import { useNavigate, useRouterState } from '@tanstack/react-router'
-import { createContext, type ReactNode, use, useMemo } from 'react'
+import { createContext, type ReactNode, use, useEffect, useMemo } from 'react'
 import type { Project } from '@/shared/types'
 
 interface ProjectContextValue {
@@ -30,6 +30,23 @@ export function ProjectProvider({
         : undefined,
   })
 
+  useEffect(() => {
+    if (
+      searchProject &&
+      !projects.some((project) => project.id === searchProject)
+    ) {
+      navigate({
+        replace: true,
+        to: '.',
+        search: (previous: Record<string, unknown>) => ({
+          ...previous,
+          domain: undefined,
+          project: undefined,
+        }),
+      })
+    }
+  }, [navigate, projects, searchProject])
+
   const value = useMemo<ProjectContextValue>(() => {
     const projectId =
       searchProject && projects.some((p) => p.id === searchProject)
@@ -44,7 +61,11 @@ export function ProjectProvider({
       setProject: (id: string | null) => {
         navigate({
           to: '.',
-          search: (prev) => ({ ...prev, project: id ?? undefined }),
+          search: (prev: Record<string, unknown>) => ({
+            ...prev,
+            domain: undefined,
+            project: id ?? undefined,
+          }),
         })
       },
     }

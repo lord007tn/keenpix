@@ -1,35 +1,39 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getAppUrl, isSelfHosted } from '@/server/deployment'
+import { createSitemapXml } from '@/helpers/seo/sitemap/create-sitemap-xml'
+import { SITEMAP_STATIC_PATHS } from '@/helpers/seo/sitemap/sitemap-static-paths'
+import { getAppUrl, isCloud } from '@/server/deployment'
+import { blogSource } from '@/shared/blog-source'
 import { source } from '@/shared/docs-source'
 
 export const Route = createFileRoute('/sitemap.xml')({
   server: {
     handlers: {
       GET: () => {
-        if (isSelfHosted()) {
+        // No public sitemap for a self-host instance (!isCloud()).
+        if (!isCloud()) {
           return new Response('Not found', { status: 404 })
         }
 
-        const urls = [
-          '/',
-          '/llms.txt',
-          '/llms-full.txt',
-          ...source.getPages().map((page) => page.url),
-        ]
+        // Only HTML pages belong here; the llms*.txt endpoints are plain-text and
+        // are advertised via robots/link-alternate, not the XML sitemap. Blog
+        // entries carry a real <lastmod> from their frontmatter date (already a
+        // YYYY-MM-DD W3C datetime, so no timezone-shifting reformatting needed).
         const origin = getAppUrl()
-        const body = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls
-  .map(
-    (url) => `  <url>
-    <loc>${origin}${url}</loc>
-    <changefreq>${url === '/' ? 'weekly' : 'monthly'}</changefreq>
-    <priority>${url === '/' ? '1.0' : '0.7'}</priority>
-  </url>`,
-  )
-  .join('\n')}
-</urlset>
-`
+        const entries = [
+          ...SITEMAP_STATIC_PATHS.map((url) => ({ url: `${origin}${url}` })),
+          ...source.getPages().map((page) => ({
+            url: `${origin}${page.url}`,
+            lastmod: page.data.updated,
+          })),
+          ...blogSource
+            .getPages()
+            .filter((page) => !page.data.draft)
+            .map((page) => ({
+              url: `${origin}${page.url}`,
+              lastmod: page.data.updated ?? page.data.date,
+            })),
+        ]
+        const body = createSitemapXml(entries)
 
         return new Response(body, {
           headers: {

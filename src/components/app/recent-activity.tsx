@@ -29,6 +29,7 @@ export function RecentActivity({ logs }: { logs: LogRow[] }) {
         </div>
         <Link
           className="text-muted-foreground text-xs hover:text-foreground"
+          search={(previous) => ({ ...previous, range: '24h' })}
           to="/app/logs"
         >
           View all logs →

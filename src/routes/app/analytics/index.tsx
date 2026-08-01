@@ -1,6 +1,15 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useNavigate,
+  useRouteContext,
+} from '@tanstack/react-router'
+import dayjs from 'dayjs'
 import {
   CloudIcon,
+  DownloadIcon,
   GitCompareIcon,
   LayersIcon,
   type LucideIcon,
@@ -8,8 +17,13 @@ import {
 import { type ReactNode, useMemo, useState } from 'react'
 import { BarList } from '@/components/app/bar-list'
 import { DataFilters, type FilterField } from '@/components/app/data-filters'
+import {
+  HISTORY_RANGES,
+  HistoryRangePicker,
+} from '@/components/app/history-range-picker'
 import { PageHeader } from '@/components/app/page-header'
 import { RefreshingIndicator } from '@/components/app/refreshing-indicator'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -42,12 +56,17 @@ import { AnalyticsBodySkeleton } from '@/features/analytics/skeletons'
 import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import { useAnalyticsQuery } from '@/features/analytics/use-analytics-query'
 import { useEdgeStats } from '@/features/analytics/use-edge-stats'
+import { getBillingStateFn } from '@/functions/billing'
+import { analyticsSeriesCsv } from '@/helpers/analytics/export-csv'
+import { limitHistorySearch } from '@/helpers/history/window'
+import { DEFAULT_HISTORY_DAYS, getPlan } from '@/lib/billing/plans'
 import { compactNumber, humanBytes } from '@/shared/format'
 import { appPageHead } from '@/shared/seo'
-import { type AnalyticsRange, isAnalyticsRange } from '@/shared/types'
+import {
+  type HistoricalAnalyticsRange,
+  isHistoricalAnalyticsRange,
+} from '@/shared/types'
 import { useProject } from '@/stores/project-context'
-
-const RANGES: AnalyticsRange[] = ['24h', '7d', '30d', '90d']
 
 const EMPTY_AVAILABLE = { formats: [], statuses: [], domains: [] }
 
@@ -61,7 +80,22 @@ function parseStringArray(value: unknown): string[] | undefined {
   return
 }
 
+function getDateParam(value: unknown) {
+  if (typeof value !== 'string') {
+    return
+  }
+  const date = dayjs(value)
+  return date.isValid() && date.format('YYYY-MM-DD') === value
+    ? value
+    : undefined
+}
+
 export const Route = createFileRoute('/app/analytics/')({
+  beforeLoad: ({ context }) => {
+    if (!context.workspaceReady) {
+      throw redirect({ to: '/app/onboarding' })
+    }
+  },
   head: () =>
     appPageHead(
       'Analytics',
@@ -72,16 +106,36 @@ export const Route = createFileRoute('/app/analytics/')({
   ): {
     domain?: string[]
     format?: string[]
-    range: AnalyticsRange
+    from?: string
+    range: HistoricalAnalyticsRange
     project?: string
     status?: string[]
-  } => ({
-    range: isAnalyticsRange(search.range) ? search.range : '24h',
-    project: typeof search.project === 'string' ? search.project : undefined,
-    domain: parseStringArray(search.domain),
-    format: parseStringArray(search.format),
-    status: parseStringArray(search.status),
-  }),
+    to?: string
+  } => {
+    const range = isHistoricalAnalyticsRange(search.range) ? search.range : '7d'
+    let from: string | undefined
+    let to: string | undefined
+    if (range === 'custom') {
+      const today = dayjs().format('YYYY-MM-DD')
+      from =
+        getDateParam(search.from) ??
+        dayjs().subtract(29, 'day').format('YYYY-MM-DD')
+      to = getDateParam(search.to) ?? today
+      if (dayjs(from).isAfter(to) || dayjs(to).isAfter(today)) {
+        from = dayjs().subtract(29, 'day').format('YYYY-MM-DD')
+        to = today
+      }
+    }
+    return {
+      range,
+      project: typeof search.project === 'string' ? search.project : undefined,
+      domain: parseStringArray(search.domain),
+      format: parseStringArray(search.format),
+      from,
+      status: parseStringArray(search.status),
+      to,
+    }
+  },
   component: AnalyticsPage,
 })
 
@@ -180,12 +234,39 @@ function isChartLens(value: unknown): value is ChartLens {
 
 function AnalyticsPage() {
   const search = Route.useSearch()
-  const { range, format, status, domain } = search
+  const { range, format, status, domain, from, to } = search
   const navigate = useNavigate({ from: Route.fullPath })
+  const { cloud, user } = useRouteContext({ from: '/app' })
+  const isSuperAdmin = user.role === 'super_admin'
+  // Cloud edge data is platform-wide and belongs in /admin, never beside one
+  // organization's origin totals. Self-host remains a single-instance view.
+  const canSeeEdge = !cloud
   const { currentProject, isAll, setProject } = useProject()
+  const { data: billing } = useQuery({
+    enabled: cloud,
+    queryFn: () => getBillingStateFn(),
+    queryKey: ['billing-state'],
+    staleTime: 30_000,
+  })
+  const maxHistoryDays = cloud
+    ? (getPlan(billing?.plan)?.historyDays ?? DEFAULT_HISTORY_DAYS)
+    : 3650
+  const boundedWindow = limitHistorySearch(
+    { range, from, to },
+    cloud ? maxHistoryDays : undefined,
+  )
+  const visibleRange = boundedWindow.range
+  const visibleFrom =
+    boundedWindow.range === 'custom' ? boundedWindow.from : from
+  const visibleTo = boundedWindow.range === 'custom' ? boundedWindow.to : to
+  const advancedAnalytics =
+    !cloud || (getPlan(billing?.plan)?.advancedAnalytics ?? false)
   // Stale-while-revalidate: the previous window stays on screen while a new
   // range/filter loads; `isRefreshing` drives the inline indicator.
-  const { data, isPending, isFetching, isError } = useAnalyticsQuery(search)
+  const { data, isPending, isFetching, isError, refetch } = useAnalyticsQuery({
+    ...search,
+    ...boundedWindow,
+  })
   const isRefreshing = isFetching && !isPending
   // Cloudflare edge stats load off the critical path; the edge cards/lenses
   // fill in afterward. Range-aware now that we persist edge history.
@@ -196,10 +277,17 @@ function AnalyticsPage() {
     edgeRefreshing,
     edgePending,
     edgeError,
-  } = useEdgeStats(range)
+  } = useEdgeStats(canSeeEdge ? boundedWindow : undefined)
   const [view, setView] = useState<AreaView>('requests')
   const [lens, setLens] = useState<ChartLens>('funnel')
   const [topMetric, setTopMetric] = useState<'requests' | 'bytes'>('requests')
+  const selectedRangeLabel =
+    HISTORY_RANGES.find((item) => item.value === visibleRange)?.label ??
+    visibleRange
+  const windowDescription =
+    visibleRange === 'custom' && visibleFrom && visibleTo
+      ? `${visibleFrom} to ${visibleTo}`
+      : selectedRangeLabel.toLowerCase()
   // Top images carry both dimensions; rank and format by the selected metric.
   const topImages = useMemo(
     () =>
@@ -241,6 +329,22 @@ function AnalyticsPage() {
     ]
   }, [data?.available, format, status, domain, isAll])
 
+  const downloadAnalytics = () => {
+    if (!data) {
+      return
+    }
+    const url = URL.createObjectURL(
+      new Blob([analyticsSeriesCsv(data.series, edge?.series)], {
+        type: 'text/csv',
+      }),
+    )
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `keenpix-analytics-${data.window.from.slice(0, 10)}-${data.window.to.slice(0, 10)}.csv`
+    anchor.click()
+    window.setTimeout(() => URL.revokeObjectURL(url), 0)
+  }
+
   const header = (
     <PageHeader
       actions={
@@ -273,28 +377,37 @@ function AnalyticsPage() {
               }}
             />
           ) : null}
-          <RefreshingIndicator active={isRefreshing} />
-          <ToggleGroup
-            onValueChange={(v: string[]) => {
-              const next = v[0]
-              if (isAnalyticsRange(next)) {
-                navigate({ search: (p) => ({ ...p, range: next }) })
-              }
-            }}
+          <RefreshingIndicator
+            active={isRefreshing}
+            error={isError && Boolean(data)}
+          />
+          <HistoryRangePicker
+            from={visibleFrom}
+            label="Analytics"
+            maxDays={maxHistoryDays}
+            onChange={(next) =>
+              navigate({
+                search: (previous) => ({ ...previous, ...next }),
+              })
+            }
+            range={visibleRange}
+            to={visibleTo}
+          />
+          <Button
+            aria-label="Export analytics CSV"
+            className="h-11"
+            disabled={!data}
+            onClick={downloadAnalytics}
             size="sm"
-            value={[range]}
             variant="outline"
           >
-            {RANGES.map((r) => (
-              <ToggleGroupItem key={r} value={r}>
-                {r}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+            <DownloadIcon aria-hidden="true" />
+            Export CSV
+          </Button>
         </>
       }
       eyebrow={isAll ? 'All projects' : currentProject?.name}
-      subtitle="Everything keenpix has seen this window. Built in, not bolted on."
+      subtitle="Organization- and project-scoped delivery history measured at the keenpix origin."
       title="Analytics"
     />
   )
@@ -306,9 +419,12 @@ function AnalyticsPage() {
       <div className="flex flex-col gap-6 p-6">
         {header}
         {isError ? (
-          <p className="text-destructive text-sm">
-            Couldn’t load analytics — it will retry shortly.
-          </p>
+          <div className="flex flex-col items-start gap-3">
+            <p className="text-destructive text-sm">Couldn’t load analytics.</p>
+            <Button onClick={() => refetch()} size="sm" variant="outline">
+              Try again
+            </Button>
+          </div>
         ) : (
           <AnalyticsBodySkeleton />
         )}
@@ -327,21 +443,30 @@ function AnalyticsPage() {
   // muted hint. Both wait for the edge query to resolve so neither flashes while
   // it is still pending — and a failed fetch is "couldn't load" (handled by the
   // !edge note below), never a false "not configured".
-  const edgeNotConfigured = !(edgePending || edgeError || edgeConfigured)
+  // Only the operator can wire Cloudflare, so only the super-admin ever sees the
+  // connect CTA. Regular tenants get origin-only cards with no dead-end prompt.
+  const edgeNotConfigured =
+    canSeeEdge && isSuperAdmin && !(edgePending || edgeError || edgeConfigured)
   // A background capture is in flight and the reconciled split isn't on screen
   // yet — show the "preparing" indicator (and hold the note) until it lands.
   const edgePreparing = edgeRefreshing && !edgeGated
   let edgeNote: string | undefined
-  if (!(edgePending || edgePreparing || edgeGated || edgeNotConfigured)) {
+  if (
+    canSeeEdge &&
+    !(edgePending || edgePreparing || edgeGated || edgeNotConfigured)
+  ) {
     if (edgeError || !edge) {
-      edgeNote =
-        "Couldn't load Cloudflare edge data — check the token in Settings → CDN cache."
+      // A missing/broken token is only actionable by the operator, so only they
+      // get the "check the token" hint; other viewers get no edge note at all.
+      edgeNote = isSuperAdmin
+        ? "Couldn't load edge data — check the CLOUDFLARE_* env vars (Admin → Settings)."
+        : undefined
     } else if (edgeScopeOk) {
       edgeNote =
-        'Cloudflare edge history is still accumulating — older data for this range isn’t available yet.'
+        'Edge history is still accumulating — older data for this range isn’t available yet.'
     } else {
       edgeNote =
-        'Cloudflare edge is whole-zone only — switch to All projects with no filters to see the source split.'
+        'Edge is whole-zone only — switch to All projects with no filters to see the source split.'
     }
   }
 
@@ -349,19 +474,19 @@ function AnalyticsPage() {
   // edge to exist. Funnel always works (origin-only when edge is unavailable).
   const lensAvailable: Record<ChartLens, boolean> = {
     funnel: true,
-    compare: edgeGated,
-    edge: edgeConfigured && edge !== null,
+    compare: canSeeEdge && edgeGated,
+    edge: canSeeEdge && edgeConfigured && edge !== null,
   }
   const activeLens: ChartLens = lensAvailable[lens] ? lens : 'funnel'
   let lensDescription: string
   if (activeLens === 'compare') {
-    lensDescription = `Cloudflare edge vs keenpix, overlaid · last ${range}`
+    lensDescription = `Edge vs keenpix, overlaid · ${windowDescription}`
   } else if (activeLens === 'edge') {
-    lensDescription = `Cloudflare edge, zone-wide · last ${range}`
+    lensDescription = `Edge, zone-wide · ${windowDescription}`
   } else if (edgeGated) {
-    lensDescription = `Cloudflare edge → keenpix cache → live · last ${range}`
+    lensDescription = `Edge → keenpix cache → live · ${windowDescription}`
   } else {
-    lensDescription = `keenpix origin · last ${range}`
+    lensDescription = `keenpix origin · ${windowDescription}`
   }
   let chartEl: ReactNode
   if (activeLens === 'compare' && edge) {
@@ -385,6 +510,21 @@ function AnalyticsPage() {
     <div className="flex flex-col gap-6 p-6">
       {header}
 
+      {advancedAnalytics ? null : (
+        <p className="text-muted-foreground text-sm">
+          You’re on core analytics.{' '}
+          <Link
+            className="text-primary hover:underline"
+            search={{ section: 'billing' }}
+            to="/app/settings"
+          >
+            Upgrade to Pro
+          </Link>{' '}
+          for advanced log search and 365-day retained history. Durable
+          aggregate history remains available here.
+        </p>
+      )}
+
       <section className="flex flex-col gap-3">
         <SourceSplitCards
           connect={edgeNotConfigured}
@@ -394,6 +534,12 @@ function AnalyticsPage() {
           preparing={edgePreparing}
           summary={data.summary}
         />
+        <p className="text-muted-foreground text-xs">
+          Customer totals are measured from requests that reached keenpix. A
+          Cloudflare edge hit never reaches the origin, so zone-wide edge
+          delivery is reported separately and is visible only to the platform
+          operator.
+        </p>
       </section>
 
       <Card>
@@ -403,39 +549,41 @@ function AnalyticsPage() {
             <CardDescription>{lensDescription}</CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-xs uppercase tracking-wide">
-                View
-              </span>
-              <Select
-                onValueChange={(v) => {
-                  if (isChartLens(v)) {
-                    setLens(v)
-                  }
-                }}
-                value={activeLens}
-              >
-                <SelectTrigger className="w-[8.5rem]" size="sm">
-                  <SelectValue>
-                    {(v) =>
-                      LENSES.find((l) => l.value === v)?.label ?? String(v)
+            {canSeeEdge ? (
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                  View
+                </span>
+                <Select
+                  onValueChange={(v) => {
+                    if (isChartLens(v)) {
+                      setLens(v)
                     }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {LENSES.map((l) => (
-                    <SelectItem
-                      disabled={!lensAvailable[l.value]}
-                      key={l.value}
-                      value={l.value}
-                    >
-                      <l.icon className="size-3.5" />
-                      {l.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                  }}
+                  value={activeLens}
+                >
+                  <SelectTrigger className="w-[8.5rem]" size="sm">
+                    <SelectValue>
+                      {(v) =>
+                        LENSES.find((l) => l.value === v)?.label ?? String(v)
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LENSES.map((l) => (
+                      <SelectItem
+                        disabled={!lensAvailable[l.value]}
+                        key={l.value}
+                        value={l.value}
+                      >
+                        <l.icon className="size-3.5" />
+                        {l.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-xs uppercase tracking-wide">
                 Metric
@@ -485,8 +633,8 @@ function AnalyticsPage() {
             <CardHeader>
               <CardTitle>Format distribution</CardTitle>
               <CardDescription>
-                {compactNumber(data.summary.totalRequests)} requests · last{' '}
-                {range}
+                {compactNumber(data.summary.totalRequests)} requests ·{' '}
+                {windowDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -501,7 +649,7 @@ function AnalyticsPage() {
           <CardHeader>
             <CardTitle>Latency over time</CardTitle>
             <CardDescription>
-              p50 / p95 / p99 per bucket · last {range}
+              p50 / p95 / p99 per bucket · {windowDescription}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -518,7 +666,7 @@ function AnalyticsPage() {
                   {topMetric === 'bytes'
                     ? 'By delivered bytes'
                     : 'By request count'}{' '}
-                  · last {range}
+                  · {windowDescription}
                 </CardDescription>
               </div>
               <ToggleGroup
@@ -552,7 +700,7 @@ function AnalyticsPage() {
             <CardHeader>
               <CardTitle>Traffic by country</CardTitle>
               <CardDescription>
-                Requests by requester country · last {range}
+                Requests by requester country · {windowDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -584,7 +732,7 @@ function AnalyticsPage() {
             <CardHeader>
               <CardTitle>Bandwidth saved over time</CardTitle>
               <CardDescription>
-                Per bucket and cumulative · last {range}
+                Per bucket and cumulative · {windowDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -596,7 +744,7 @@ function AnalyticsPage() {
             <CardHeader>
               <CardTitle>Requests by status</CardTitle>
               <CardDescription>
-                2xx / 3xx / 4xx / 5xx · last {range}
+                2xx / 3xx / 4xx / 5xx · {windowDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -1,8 +1,14 @@
+import { resolveCustomDomainProject } from '@/actions/custom-domains'
 import { optimizeProjectImage } from '@/actions/transform'
+import { env } from '@/env/server'
 import {
   getPublicTransformErrorMessage,
   getTransformErrorStatus,
 } from '@/errors/transform'
+import {
+  getTrustedCustomDomainHostname,
+  validateCustomDomainCachePartition,
+} from '@/helpers/custom-domains/edge-request'
 import { cacheControl } from '@/lib/cache/cache'
 import { getContentType } from '@/shared/transform'
 
@@ -24,9 +30,29 @@ export async function handleTransformRequest(
     return new Response('Missing source image URL', { status: 400 })
   }
 
-  const projectId = searchParams.get('project')
+  const edgeHostname = getTrustedCustomDomainHostname(
+    request,
+    env.CLOUDFLARE_SAAS_EDGE_SECRET,
+  )
+  if (!validateCustomDomainCachePartition(searchParams, edgeHostname)) {
+    return new Response(
+      edgeHostname
+        ? 'Invalid custom-domain edge request'
+        : 'Reserved query parameter',
+      { status: 400 },
+    )
+  }
+  let projectId = edgeHostname
+    ? await resolveCustomDomainProject(edgeHostname)
+    : searchParams.get('project')
   if (!projectId) {
-    return new Response('Missing ?project', { status: 400 })
+    projectId =
+      (await resolveCustomDomainProject(new URL(request.url).hostname)) ?? null
+  }
+  if (!projectId) {
+    return new Response('Missing ?project or verified custom domain', {
+      status: 400,
+    })
   }
 
   // The edge tells us the requester's country (Cloudflare/Vercel set these);
@@ -47,6 +73,10 @@ export async function handleTransformRequest(
       startedAt,
     })
 
+    // SVG can carry script; even after SVGO optimization it is served with a
+    // locked-down CSP + nosniff so a malicious source SVG can't execute in the
+    // serving origin's context (stored-XSS / account-takeover guard).
+    const isSvg = result.format === 'svg'
     return new Response(new Uint8Array(result.body), {
       status: 200,
       headers: {
@@ -54,6 +84,15 @@ export async function handleTransformRequest(
         'content-length': String(result.body.byteLength),
         'cache-control': cacheControl(),
         vary: 'Accept',
+        'x-content-type-options': 'nosniff',
+        // Origin-shield cache status, for observability behind an outer CDN.
+        'x-keenpix-cache': result.cached ? 'HIT' : 'MISS',
+        ...(isSvg
+          ? {
+              'content-security-policy':
+                "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+            }
+          : {}),
       },
     })
   } catch (error) {

@@ -2,36 +2,57 @@ import { createServerFn } from '@tanstack/react-start'
 import {
   addAllowedHost,
   createProject,
+  deleteProject,
+  getProjectSigning,
   listProjects,
   removeAllowedHost,
+  rotateProjectSigningSecret,
+  updateProject,
   updateProjectSettings,
+  updateProjectSigning,
 } from '@/actions/projects'
-import { authMiddleware } from '@/lib/auth/guards'
+import {
+  authMiddleware,
+  requireActiveOrg,
+  requireOrgAdmin,
+} from '@/lib/auth/guards'
+import {
+  assertCanCreateProject,
+  assertHasProductAccess,
+} from '@/lib/billing/quota'
 import {
   allowedHostSchema,
   createProjectSchema,
+  deleteProjectSchema,
   projectSettingsSchema,
+  projectSigningReadSchema,
+  projectSigningSchema,
+  updateProjectSchema,
 } from '@/schemas/projects'
 
 export const listProjectsFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
-  .handler(() => listProjects())
+  .handler(({ context }) => listProjects(requireActiveOrg(context)))
 
 export const createProjectFn = createServerFn({ method: 'POST' })
   .inputValidator(createProjectSchema)
   .middleware([authMiddleware])
-  .handler(({ data }) =>
-    createProject({
+  .handler(async ({ data, context }) => {
+    const orgId = requireOrgAdmin(context)
+    await assertCanCreateProject(orgId)
+    return createProject(orgId, {
       name: data.name,
       origin: data.origin,
-    }),
-  )
+    })
+  })
 
 export const addAllowedHostFn = createServerFn({ method: 'POST' })
   .inputValidator(allowedHostSchema)
   .middleware([authMiddleware])
-  .handler(async ({ data }) => {
-    const project = await addAllowedHost(data.projectId, data.host)
+  .handler(async ({ data, context }) => {
+    const orgId = requireOrgAdmin(context)
+    await assertHasProductAccess(orgId)
+    const project = await addAllowedHost(orgId, data.projectId, data.host)
     if (!project) {
       throw new Error('Project not found')
     }
@@ -41,19 +62,95 @@ export const addAllowedHostFn = createServerFn({ method: 'POST' })
 export const removeAllowedHostFn = createServerFn({ method: 'POST' })
   .inputValidator(allowedHostSchema)
   .middleware([authMiddleware])
-  .handler(async ({ data }) => {
-    const project = await removeAllowedHost(data.projectId, data.host)
+  .handler(async ({ data, context }) => {
+    const orgId = requireOrgAdmin(context)
+    await assertHasProductAccess(orgId)
+    const project = await removeAllowedHost(orgId, data.projectId, data.host)
     if (!project) {
       throw new Error('Project not found')
     }
     return { allowedOrigins: project.allowedOrigins }
   })
 
+export const updateProjectFn = createServerFn({ method: 'POST' })
+  .inputValidator(updateProjectSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const orgId = requireOrgAdmin(context)
+    await assertHasProductAccess(orgId)
+    const project = await updateProject(orgId, data.projectId, {
+      name: data.name,
+      origin: data.origin,
+    })
+    if (!project) {
+      throw new Error('Project not found')
+    }
+    return { id: project.id, name: project.name, origin: project.origin }
+  })
+
+export const deleteProjectFn = createServerFn({ method: 'POST' })
+  .inputValidator(deleteProjectSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const orgId = requireOrgAdmin(context)
+    await assertHasProductAccess(orgId)
+    const deleted = await deleteProject(orgId, data.projectId)
+    if (!deleted) {
+      throw new Error('Project not found')
+    }
+    return { deleted: true }
+  })
+
+export const getProjectSigningFn = createServerFn({ method: 'GET' })
+  .inputValidator(projectSigningReadSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const orgId = requireOrgAdmin(context)
+    await assertHasProductAccess(orgId)
+    const signing = await getProjectSigning(orgId, data.projectId)
+    if (!signing) {
+      throw new Error('Project not found')
+    }
+    return signing
+  })
+
+export const updateProjectSigningFn = createServerFn({ method: 'POST' })
+  .inputValidator(projectSigningSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const orgId = requireOrgAdmin(context)
+    await assertHasProductAccess(orgId)
+    const signing = await updateProjectSigning(
+      orgId,
+      data.projectId,
+      data.requireSignedUrls,
+    )
+    if (!signing) {
+      throw new Error('Project not found')
+    }
+    return signing
+  })
+
+export const rotateProjectSigningSecretFn = createServerFn({ method: 'POST' })
+  .inputValidator(projectSigningReadSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const orgId = requireOrgAdmin(context)
+    await assertHasProductAccess(orgId)
+    const signing = await rotateProjectSigningSecret(orgId, data.projectId)
+    if (!signing) {
+      throw new Error('Project not found')
+    }
+    return signing
+  })
+
 export const updateProjectSettingsFn = createServerFn({ method: 'POST' })
   .inputValidator(projectSettingsSchema)
   .middleware([authMiddleware])
-  .handler(async ({ data }) => {
-    const project = await updateProjectSettings(data.projectId, {
+  .handler(async ({ data, context }) => {
+    const orgId = requireOrgAdmin(context)
+    await assertHasProductAccess(orgId)
+    const project = await updateProjectSettings(orgId, data.projectId, {
       autoFormat: data.autoFormat,
       stripMetadata: data.stripMetadata,
       defaultQuality: data.defaultQuality,
