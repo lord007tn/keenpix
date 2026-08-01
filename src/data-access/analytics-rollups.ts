@@ -29,7 +29,7 @@ interface RangeMeta {
   n: number
 }
 
-export function rollupRangeMeta(range: AnalyticsRange): RangeMeta {
+function rollupRangeMeta(range: AnalyticsRange): RangeMeta {
   switch (range) {
     case '7d':
       return {

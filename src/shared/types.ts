@@ -35,7 +35,7 @@ export type HistoricalAnalyticsRange =
   | 'all'
   | 'custom'
 
-export function isAnalyticsRange(value: unknown): value is AnalyticsRange {
+function isAnalyticsRange(value: unknown): value is AnalyticsRange {
   return value === '24h' || value === '7d' || value === '30d' || value === '90d'
 }
 
