@@ -130,7 +130,7 @@ export function ChartAreaInteractive({
                   key={k}
                   stackId="a"
                   stroke={`var(--color-${k})`}
-                  type="natural"
+                  type="monotone"
                 />
               ))}
               <ChartLegend content={<ChartLegendContent />} />
