@@ -150,7 +150,7 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
   })
   const analytics = analyticsQuery.data
   const operatorWorkspace = Boolean(
-    customer?.owners.some((member) => member.platformRole === 'super_admin'),
+    customer?.members.some((member) => member.platformRole === 'super_admin'),
   )
   const edgeQuery = useQuery({
     queryKey: [
@@ -348,7 +348,7 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
           subtitle={
             <span className="flex flex-col gap-2">
               <span className="flex flex-wrap items-center gap-2">
-                {customer.owners.some(
+                {customer.members.some(
                   (member) => member.platformRole === 'super_admin',
                 ) ? (
                   <Badge variant="info">

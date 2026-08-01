@@ -76,8 +76,8 @@ const columns: ColumnDef<CustomerAccount>[] = [
         <div className="flex min-w-0 flex-col gap-0.5">
           <div className="flex items-center gap-2">
             <span className="truncate font-medium">{customer.name}</span>
-            {customer.owners.some(
-              (owner) => owner.platformRole === 'super_admin',
+            {customer.members.some(
+              (member) => member.platformRole === 'super_admin',
             ) ? (
               <ShieldCheckIcon className="size-3.5 shrink-0 text-primary" />
             ) : null}
