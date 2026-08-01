@@ -5,8 +5,8 @@ import {
   saveOperationsConfigRow,
 } from '@/data-access/admin/operations-settings'
 import { rollupSinceFor } from '@/data-access/analytics-rollups'
-import { listProjects } from '@/data-access/projects'
-import { getCacheHitStats } from '@/data-access/request-logs'
+import { countAllProjects } from '@/data-access/projects'
+import { getCacheHitStatsAllOrgs } from '@/data-access/request-logs'
 import {
   listResourceRollups,
   pruneResourceRollups,
@@ -26,7 +26,6 @@ import {
 } from '@/lib/system/container-stats'
 import type { cacheMaintenanceSchema } from '@/schemas/admin'
 import type { AnalyticsRange } from '@/shared/types'
-import { DEFAULT_ORG } from './constants'
 
 const MB = 1024 * 1024
 
@@ -89,13 +88,14 @@ export async function getOperationsHealth() {
   const uptimeSeconds = Math.round(process.uptime())
   ensureResourceSampler()
   await reassertCacheOverride()
-  const [cache, projects, cacheHits, resources] = await Promise.all([
+  const since = dayjs().subtract(uptimeSeconds, 'second').toDate()
+  // Operator health reflects the INSTANCE itself — cache/CPU/RAM/queue plus the
+  // instance-wide project count and cache-hit rate across every tenant it serves
+  // (in self-host that is just org_default). It is never tenant-scoped.
+  const [cache, projectCount, cacheHits, resources] = await Promise.all([
     getCacheStorageStats(),
-    listProjects(DEFAULT_ORG),
-    getCacheHitStats(
-      DEFAULT_ORG,
-      dayjs().subtract(uptimeSeconds, 'second').toDate(),
-    ),
+    countAllProjects(),
+    getCacheHitStatsAllOrgs(since),
     getResourceLiveStats(),
   ])
   return {
@@ -110,7 +110,7 @@ export async function getOperationsHealth() {
           : (cacheHits.cachedRequests / cacheHits.totalRequests) * 100,
     },
     generatedAt: dayjs().toISOString(),
-    projectCount: projects.length,
+    projectCount,
     resources,
     transformQueue: getQueueStats(),
     uptimeSeconds,

@@ -36,16 +36,12 @@ async function seedSuperAdminUser() {
     )
   }
 
+  // The entrypoint re-runs this on every boot, so it must be idempotent-on-create:
+  // ensure the super-admin ROLE (safe), but never overwrite a password the
+  // operator later changed in-app, nor silently un-ban or re-verify them.
   const admin = await prisma.user.upsert({
     where: { email: SUPER_ADMIN_EMAIL },
-    update: {
-      emailVerified: true,
-      name: 'Admin',
-      role: 'super_admin',
-      banned: false,
-      banReason: null,
-      banExpires: null,
-    },
+    update: { role: 'super_admin' },
     create: {
       email: SUPER_ADMIN_EMAIL,
       emailVerified: true,
@@ -55,21 +51,18 @@ async function seedSuperAdminUser() {
     },
   })
 
-  if (!SUPER_ADMIN_PASSWORD) {
-    return
-  }
-
-  const password = await hashPassword(SUPER_ADMIN_PASSWORD)
   const credentialAccount = existingAdmin?.accounts.find(
     (account) => account.providerId === 'credential',
   )
 
+  // Credential already exists → this is a re-run; leave the (possibly changed)
+  // password alone. KEENPIX_SUPER_ADMIN_PASSWORD is a one-time bootstrap only.
   if (credentialAccount) {
-    await prisma.account.update({
-      where: { id: credentialAccount.id },
-      data: { accountId: admin.id, password },
-    })
-    return
+    return admin
+  }
+
+  if (!SUPER_ADMIN_PASSWORD) {
+    return admin
   }
 
   await prisma.account.create({
@@ -77,21 +70,78 @@ async function seedSuperAdminUser() {
       userId: admin.id,
       accountId: admin.id,
       providerId: 'credential',
-      password,
+      password: await hashPassword(SUPER_ADMIN_PASSWORD),
     },
   })
+
+  return admin
 }
 
 async function main() {
   console.log('Seeding Keenpix...')
 
-  await prisma.org.upsert({
+  await prisma.organization.upsert({
     where: { id: ORG_ID },
     update: { name: 'Keenpix' },
-    create: { id: ORG_ID, name: 'Keenpix' },
+    create: { id: ORG_ID, name: 'Keenpix', slug: 'default' },
   })
 
-  await seedSuperAdminUser()
+  const admin = await seedSuperAdminUser()
+
+  // The super admin owns the default org (mirrors the migration backfill so a
+  // fresh install and an upgraded install converge on the same membership).
+  await prisma.member.upsert({
+    where: {
+      userId_organizationId: { userId: admin.id, organizationId: ORG_ID },
+    },
+    update: { role: 'owner' },
+    create: { organizationId: ORG_ID, userId: admin.id, role: 'owner' },
+  })
+
+  const subscription = await prisma.subscription.findUnique({
+    where: { orgId: ORG_ID },
+  })
+  if (!subscription) {
+    await prisma.$transaction([
+      prisma.subscription.create({
+        data: {
+          orgId: ORG_ID,
+          plan: 'business',
+          status: 'active',
+          amountCents: 0,
+        },
+      }),
+      prisma.subscriptionGrantAudit.create({
+        data: {
+          orgId: ORG_ID,
+          actorId: admin.id,
+          action: 'seeded',
+          plan: 'business',
+        },
+      }),
+    ])
+  } else if (
+    !subscription.polarSubscriptionId &&
+    subscription.plan !== 'business'
+  ) {
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.subscription.updateMany({
+        where: { orgId: ORG_ID, polarSubscriptionId: null },
+        data: { plan: 'business', status: 'active', amountCents: 0 },
+      })
+      if (updated.count > 0) {
+        await tx.subscriptionGrantAudit.create({
+          data: {
+            orgId: ORG_ID,
+            actorId: admin.id,
+            action: 'seed_updated',
+            previousPlan: subscription.plan,
+            plan: 'business',
+          },
+        })
+      }
+    })
+  }
 
   console.log(`Seeded default org and super admin user ${SUPER_ADMIN_EMAIL}.`)
 }

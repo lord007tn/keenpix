@@ -18,7 +18,8 @@ icon: ListChecks
 | ------ | ------------------------------------------------------------------- |
 | `200`  | Optimized image returned                                            |
 | `400`  | Missing `project` or source URL                                     |
-| `403`  | Source host is not on the allowlist, or resolves to a private/SSRF target |
+| `402`  | Cloud only: the project's workspace has no active plan              |
+| `403`  | Source host is not on the allowlist, resolves to a private/SSRF target, or the project requires [signed URLs](/docs/concepts/signed-urls) and `sig` is missing/invalid |
 | `404`  | Unknown `project`                                                   |
 | `413`  | Origin image exceeds the size cap (`KEENPIX_MAX_ORIGIN_BYTES`)      |
 | `502`  | Origin fetch failed                                                 |
@@ -26,6 +27,7 @@ icon: ListChecks
 | `504`  | Origin request timed out (`KEENPIX_ORIGIN_TIMEOUT_MS`)              |
 
 <Callout type="warn">
-  A `403` almost always means the source host isn't on the project's allowlist. Add it
-  under **Settings → Security → Allowed hosts**.
+  A `403` almost always means the source host isn't on the project's allowlist — add it
+  under **Settings → Security → Allowed hosts**. If the project requires signed URLs, a
+  `403` also fires for a missing or invalid `sig` parameter.
 </Callout>

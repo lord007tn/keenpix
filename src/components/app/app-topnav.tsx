@@ -1,13 +1,14 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
-  ActivityIcon,
   ChartColumnIcon,
   LayoutGridIcon,
   ScrollTextIcon,
   SettingsIcon,
+  SparklesIcon,
 } from 'lucide-react'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { NavUser } from '@/components/app/nav-user'
+import { OrganizationSwitcher } from '@/components/app/organization-switcher'
 import { ProjectSwitcher } from '@/components/app/project-switcher'
 import { ModeToggle } from '@/components/theme/mode-toggle'
 import type { SessionUser } from '@/functions/auth'
@@ -31,19 +32,48 @@ function tabClassName(active: boolean): string {
   )
 }
 
-export function AppTopnav({ user }: { user: SessionUser }) {
+export function AppTopnav({
+  cloud,
+  workspaceReady,
+  user,
+}: {
+  cloud: boolean
+  workspaceReady: boolean
+  user: SessionUser
+}) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const { projectId } = useProject()
-  const isSuperAdmin = user.role === 'super_admin'
 
   return (
     <header className="sticky top-0 z-20 flex flex-col border-b bg-background">
-      <div className="flex h-14 items-center gap-2 px-3 sm:px-4">
-        <KeenpixLogo />
-        <span className="mx-0.5 hidden text-lg text-muted-foreground/40 sm:inline">
-          /
-        </span>
-        <ProjectSwitcher />
+      <div className="flex h-14 items-center gap-1 px-2 sm:gap-2 sm:px-4">
+        <KeenpixLogo showName={false} />
+        {cloud ? (
+          <>
+            <span className="mx-0.5 hidden text-lg text-muted-foreground/40 sm:inline">
+              /
+            </span>
+            <OrganizationSwitcher />
+          </>
+        ) : null}
+        {workspaceReady ? (
+          <>
+            <span className="mx-0.5 hidden text-lg text-muted-foreground/40 md:inline">
+              /
+            </span>
+            <ProjectSwitcher />
+          </>
+        ) : (
+          <>
+            <span className="mx-0.5 hidden text-lg text-muted-foreground/40 sm:inline">
+              /
+            </span>
+            <span className="hidden items-center gap-1.5 text-muted-foreground text-sm sm:flex">
+              <SparklesIcon className="size-4 text-primary" />
+              Workspace setup
+            </span>
+          </>
+        )}
         <div className="flex-1" />
         <a
           className="mr-1 hidden text-muted-foreground text-sm transition-colors hover:text-foreground md:inline"
@@ -52,45 +82,53 @@ export function AppTopnav({ user }: { user: SessionUser }) {
           Docs
         </a>
         <ModeToggle />
-        <NavUser user={user} />
+        <NavUser cloud={cloud} user={user} />
       </div>
 
       <nav className="flex items-center gap-1 overflow-x-auto px-2">
-        {BASE_TABS.map((tab) => {
-          const Icon = tab.icon
-          const active = pathname.startsWith(tab.to)
-          return (
-            <Link
-              className={tabClassName(active)}
-              key={tab.to}
-              search={(prev) => ({ ...prev, project: projectId })}
-              to={tab.to}
-            >
-              <Icon className={cn('size-4', active && 'text-primary')} />
-              {tab.label}
-            </Link>
-          )
-        })}
-
-        {isSuperAdmin ? (
+        {workspaceReady ? (
+          BASE_TABS.map((tab) => {
+            const Icon = tab.icon
+            const active = pathname.startsWith(tab.to)
+            return (
+              <Link
+                className={tabClassName(active)}
+                key={tab.to}
+                search={(prev) => ({
+                  ...prev,
+                  project: projectId,
+                  range: prev.range ?? '24h',
+                })}
+                to={tab.to}
+              >
+                <Icon className={cn('size-4', active && 'text-primary')} />
+                {tab.label}
+              </Link>
+            )
+          })
+        ) : (
           <Link
-            className={tabClassName(pathname.startsWith('/app/operations'))}
+            className={tabClassName(pathname.startsWith('/app/onboarding'))}
             search={(prev) => ({ ...prev, project: projectId })}
-            to="/app/operations"
+            to="/app/onboarding"
           >
-            <ActivityIcon
+            <SparklesIcon
               className={cn(
                 'size-4',
-                pathname.startsWith('/app/operations') && 'text-primary',
+                pathname.startsWith('/app/onboarding') && 'text-primary',
               )}
             />
-            Operations
+            Get started
           </Link>
-        ) : null}
+        )}
 
         <Link
           className={tabClassName(pathname.startsWith('/app/settings'))}
-          search={(prev) => ({ ...prev, project: projectId })}
+          search={(prev) => ({
+            ...prev,
+            project: projectId,
+            section: undefined,
+          })}
           to="/app/settings"
         >
           <SettingsIcon

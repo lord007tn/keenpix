@@ -46,6 +46,14 @@ export const createProjectSchema = z.object({
   origin: originUrlSchema,
 })
 
+export const updateProjectSchema = createProjectSchema.extend({
+  projectId: nonEmptyStringSchema(),
+})
+
+export const deleteProjectSchema = z.object({
+  projectId: nonEmptyStringSchema(),
+})
+
 const projectFitSchema = z.enum([
   'cover',
   'contain',
@@ -90,6 +98,15 @@ export const projectSettingsSchema = z.object({
     .min(1, 'Use a value from 1 to 3.')
     .max(3, 'Use a value from 1 to 3.')
     .optional(),
+})
+
+export const projectSigningSchema = z.object({
+  projectId: nonEmptyStringSchema(),
+  requireSignedUrls: z.boolean(),
+})
+
+export const projectSigningReadSchema = z.object({
+  projectId: nonEmptyStringSchema(),
 })
 
 export const projectQualitySchema = z.object({

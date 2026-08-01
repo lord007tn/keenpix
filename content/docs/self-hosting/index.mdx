@@ -8,6 +8,8 @@ Keenpix runs as a single Node container (sharp needs Node, not an edge runtime).
 CDN in front of `/img/*`, then configure that CDN to cache the endpoint's immutable
 image responses.
 
+Weighing self-host against the hosted option? See [self-hosted vs managed image optimization](/blog/self-host-vs-managed-image-optimization).
+
 ## The 60-second deploy
 
 ```bash
@@ -29,9 +31,11 @@ the dashboard and the transform endpoint as a non-root user.
 1. Sign in as `KEENPIX_SUPER_ADMIN_EMAIL` with `KEENPIX_SUPER_ADMIN_PASSWORD`.
 2. Create a project pointed at your image origin.
 3. Add your source host under **Settings → Security → Allowed hosts**.
-4. Invite any staff from **Settings → Staff**. Copy the invitation link, or send
-   it by email after SMTP is configured in **Settings → Email**. Env SMTP values
-   are only used as a fallback when Settings SMTP is disabled or incomplete.
+4. Invite operators from the **Admin console → Staff** (`/admin/staff`) and copy
+   the invitation link. Transactional email is configured entirely through the
+   environment (`EMAIL_PROVIDER` + its provider vars) — there is no in-app email
+   screen, and those env values are the only source. With email configured, the
+   invite is also sent automatically.
 5. Request `/img/https://your-origin.example/photo.jpg?project=ID&w=1200&fmt=webp` — no API key required for transform URLs.
 
 ## Architecture

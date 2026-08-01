@@ -1,10 +1,54 @@
 import dayjs from 'dayjs'
 import { describe, expect, it, vi } from 'vitest'
-import { type EdgeRollupRow, reconstructEdgeStats } from './edge-rollups'
+import {
+  type EdgeRollupRow,
+  hasContinuousEdgeCoverage,
+  reconstructEdgeStats,
+} from './edge-rollups'
 
 const at11 = dayjs('2026-06-13T11:00:00.000Z').toDate()
 
 describe('reconstructEdgeStats', () => {
+  it.each([
+    { cacheStatus: 'hit', cachedRequests: 1, bytesFromEdge: 100 },
+    { cacheStatus: 'stale', cachedRequests: 1, bytesFromEdge: 100 },
+    { cacheStatus: 'updating', cachedRequests: 1, bytesFromEdge: 100 },
+    { cacheStatus: 'ignored', cachedRequests: 1, bytesFromEdge: 100 },
+    { cacheStatus: 'revalidated', cachedRequests: 0, bytesFromEdge: 100 },
+    { cacheStatus: 'miss', cachedRequests: 0, bytesFromEdge: 0 },
+    { cacheStatus: 'expired', cachedRequests: 0, bytesFromEdge: 0 },
+    { cacheStatus: 'bypass', cachedRequests: 0, bytesFromEdge: 0 },
+    { cacheStatus: 'dynamic', cachedRequests: 0, bytesFromEdge: 0 },
+    { cacheStatus: 'none', cachedRequests: 0, bytesFromEdge: 0 },
+  ])('classifies $cacheStatus request offload and cached response bytes', ({
+    cacheStatus,
+    cachedRequests,
+    bytesFromEdge,
+  }) => {
+    vi.useFakeTimers()
+    vi.setSystemTime(dayjs('2026-06-13T12:30:00.000Z').toDate())
+    try {
+      const stats = reconstructEdgeStats(
+        [{ bucketStart: at11, cacheStatus, count: 1, bytes: 100 }],
+        '24h',
+      )
+
+      expect(stats.cachedRequests).toBe(cachedRequests)
+      expect(stats.bytesFromEdge).toBe(bytesFromEdge)
+      expect(stats.series.reduce((sum, point) => sum + point.hit, 0)).toBe(
+        cachedRequests,
+      )
+      expect(stats.series.reduce((sum, point) => sum + point.miss, 0)).toBe(
+        1 - cachedRequests,
+      )
+      expect(stats.series.reduce((sum, point) => sum + point.bytes, 0)).toBe(
+        bytesFromEdge,
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('classifies hit/miss, totals, byStatus, and a range-bucketed series', () => {
     vi.useFakeTimers()
     vi.setSystemTime(dayjs('2026-06-13T12:30:00.000Z').toDate())
@@ -85,5 +129,51 @@ describe('reconstructEdgeStats', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('hasContinuousEdgeCoverage', () => {
+  const gte = dayjs('2026-07-01T00:00:00.000Z').toDate()
+  const lt = dayjs('2026-07-31T00:00:00.000Z').toDate()
+  const grace = 16 * 60 * 1000
+
+  it('accepts adjacent source intervals that cover the full window', () => {
+    expect(
+      hasContinuousEdgeCoverage(
+        [
+          {
+            coveredFrom: dayjs('2026-06-14T00:00:00.000Z').toDate(),
+            coveredUntil: dayjs('2026-07-17T00:00:00.000Z').toDate(),
+          },
+          {
+            coveredFrom: dayjs('2026-07-17T00:10:00.000Z').toDate(),
+            coveredUntil: dayjs('2026-08-01T00:00:00.000Z').toDate(),
+          },
+        ],
+        gte,
+        lt,
+        grace,
+      ),
+    ).toBe(true)
+  })
+
+  it('rejects a gap between historical and current capture sources', () => {
+    expect(
+      hasContinuousEdgeCoverage(
+        [
+          {
+            coveredFrom: dayjs('2026-06-14T00:00:00.000Z').toDate(),
+            coveredUntil: dayjs('2026-07-27T00:00:00.000Z').toDate(),
+          },
+          {
+            coveredFrom: dayjs('2026-07-31T00:00:00.000Z').toDate(),
+            coveredUntil: dayjs('2026-08-01T00:00:00.000Z').toDate(),
+          },
+        ],
+        gte,
+        lt,
+        grace,
+      ),
+    ).toBe(false)
   })
 })

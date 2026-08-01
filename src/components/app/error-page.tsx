@@ -3,11 +3,12 @@ import {
   Link,
   useRouter,
 } from '@tanstack/react-router'
-import { ArrowRightIcon, RotateCwIcon } from 'lucide-react'
+import { ArrowRightIcon, LogOutIcon, RotateCwIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { ModeToggle } from '@/components/theme/mode-toggle'
 import { Button, buttonVariants } from '@/components/ui/button'
+import { signOut } from '@/lib/auth/client'
 
 // Full-chrome shell for standalone (public) error pages: brand mark, theme
 // toggle, and centered messaging. App-shell error states render chrome-less
@@ -82,9 +83,12 @@ export function ServerErrorPage({ error }: ErrorComponentProps) {
     <ErrorPageShell>
       <ErrorMessage
         code="500"
+        // Never surface a raw server/DB error message to users in production
+        // (infra strings leak internals); keep it in dev for debugging.
         description={
-          error?.message ||
-          'An unexpected error occurred while loading this page.'
+          import.meta.env.DEV && error?.message
+            ? error.message
+            : 'An unexpected error occurred while loading this page.'
         }
         title="Something went wrong"
       />
@@ -128,17 +132,36 @@ export function AppNotFound() {
 // failures inside the shell show a retry affordance instead of a blank page.
 export function RouteError({ error }: ErrorComponentProps) {
   const router = useRouter()
+
+  async function signOutAndRecover() {
+    try {
+      await signOut()
+    } finally {
+      window.location.assign('/login')
+    }
+  }
+
   return (
     <div className="flex min-h-[60svh] flex-col items-center justify-center gap-5 p-6 text-center">
       <ErrorMessage
         code="500"
-        description={error?.message || 'An unexpected error occurred.'}
+        description={
+          import.meta.env.DEV && error?.message
+            ? error.message
+            : 'An unexpected error occurred. Try again, or head back to your dashboard.'
+        }
         title="Something went wrong"
       />
-      <Button onClick={() => router.invalidate()}>
-        <RotateCwIcon data-icon="inline-start" />
-        Try again
-      </Button>
+      <div className="flex flex-wrap justify-center gap-3">
+        <Button onClick={() => router.invalidate()}>
+          <RotateCwIcon data-icon="inline-start" />
+          Try again
+        </Button>
+        <Button onClick={signOutAndRecover} variant="outline">
+          <LogOutIcon data-icon="inline-start" />
+          Sign out and choose workspace
+        </Button>
+      </div>
     </div>
   )
 }

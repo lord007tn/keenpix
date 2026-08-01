@@ -1,7 +1,11 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { AppTopnav } from '@/components/app/app-topnav'
 import { AppNotFound, RouteError } from '@/components/app/error-page'
-import { getSessionFn } from '@/functions/auth'
+import { ImpersonationBanner } from '@/components/app/impersonation-banner'
+import { ServingBanner } from '@/components/app/serving-banner'
+import { getActiveOrgRoleFn, getSessionFn } from '@/functions/auth'
+import { getWorkspaceAccessFn } from '@/functions/billing'
+import { getPublicConfigFn } from '@/functions/config'
 import { listProjectsFn } from '@/functions/projects'
 import { appPageHead } from '@/shared/seo'
 import { ProjectProvider } from '@/stores/project-context'
@@ -15,12 +19,34 @@ export const Route = createFileRoute('/app')({
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
     project: typeof search.project === 'string' ? search.project : undefined,
   }),
-  beforeLoad: async () => {
-    const user = await getSessionFn()
+  beforeLoad: async ({ location }) => {
+    const [user, config] = await Promise.all([
+      getSessionFn(),
+      getPublicConfigFn(),
+    ])
     if (!user) {
-      throw redirect({ to: '/login' })
+      // Preserve where the user was headed so login can send them back there
+      // instead of dropping every deep link at the dashboard.
+      throw redirect({ to: '/login', search: { redirect: location.href } })
     }
-    return { user }
+    // `cloud` lets the app shell hide self-host-only surfaces (instance SMTP/
+    // Cloudflare/operations config) for cloud tenants — defense-in-depth on top
+    // of the requireSelfHost server guard. `orgRole` (cloud only) drives client-
+    // side gating of org-scoped mutations so members aren't shown controls they
+    // can't use; the server guards still enforce it.
+    const [orgRole, workspaceAccess] = await Promise.all([
+      config.cloud ? getActiveOrgRoleFn() : Promise.resolve(null),
+      config.cloud
+        ? getWorkspaceAccessFn()
+        : Promise.resolve({ entitled: true, ready: true }),
+    ])
+    return {
+      user,
+      cloud: config.cloud,
+      orgRole,
+      productAccess: workspaceAccess.entitled,
+      workspaceReady: workspaceAccess.ready,
+    }
   },
   loader: () => listProjectsFn(),
   head: () => ({
@@ -37,11 +63,13 @@ export const Route = createFileRoute('/app')({
 
 function AppLayout() {
   const projects = Route.useLoaderData()
-  const { user } = Route.useRouteContext()
+  const { user, cloud, workspaceReady } = Route.useRouteContext()
   return (
     <ProjectProvider projects={projects}>
       <div className="flex min-h-svh flex-col bg-background">
-        <AppTopnav user={user} />
+        <AppTopnav cloud={cloud} user={user} workspaceReady={workspaceReady} />
+        <ImpersonationBanner user={user} />
+        <ServingBanner cloud={cloud} />
         <main className="flex flex-1 flex-col overflow-auto" id="main-content">
           <Outlet />
         </main>

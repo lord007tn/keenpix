@@ -1,0 +1,43 @@
+---
+title: Self-Hosted vs Managed Image Optimization | Keenpix
+description: Choose self-hosted or managed image optimization with a practical framework for cost, control, compliance, maintenance, and scaling your image stack.
+date: "2026-06-24"
+updated: "2026-07-11"
+author: Raed Bahri
+tags: [self-hosting, architecture, image-cdn]
+image: /og/blog/self-host-vs-managed-image-optimization.png?v=2026-07-11
+imageAlt: One image pipeline branching into self-hosted and managed cloud paths
+---
+
+One of the nice things about Keenpix is that you do not have to choose between self-hosted and managed permanently — it is the same engine either way. But you do have to start somewhere, so here is a practical framework for deciding.
+
+## Choose self-host when…
+
+- **You want zero per-GB cost.** The open-source engine is free under AGPL. You pay only for the infrastructure you already run.
+- **You have compliance or data-residency requirements.** Keeping the image pipeline inside your own VPC or region is straightforward when you own the deployment.
+- **You already operate infrastructure.** If you run Docker or a platform like Coolify, adding Keenpix (app + Postgres + cache) is a small lift.
+- **You want full control.** Put any edge cache in front of `/img/*`, tune limits, and own the whole path.
+
+The trade-off is operational: you run the database, the cache, and the upgrades.
+
+## Choose managed cloud when…
+
+- **You want it working in minutes.** Point Keenpix at your origin, keep your URLs, done.
+- **You would rather not run Postgres and a cache tier.** We handle scaling, the shared edge cache, and maintenance.
+- **You want built-in analytics and logs** without standing up another vendor.
+- **Predictable, transparent pricing beats zero-but-operational.** Plans start at $9/mo for 100 GB delivered, transforms are free, and paid overage uses one published linear rate without interrupting delivery.
+
+## You can move between them
+
+Because the managed cloud and the self-host build share one engine and one URL scheme, you are never locked in. Start on managed cloud to move fast, and migrate to self-host later for cost or compliance — without rewriting your image URLs. Or start self-hosted and hand the operational load to us when you would rather focus elsewhere.
+
+## The short version
+
+If cost-at-zero and control matter most and you are comfortable operating a small stack, **self-host**. If speed-to-value and predictable pricing matter most, **managed cloud**. Either way you get the same fast, secure, modern-format image pipeline — and the freedom to change your mind.
+
+Ready? [Get started on managed cloud](/login) or [read the self-hosting guide](/docs/self-hosting).
+
+## Keep reading
+
+- [How the Keenpix application-byte meter works](/blog/transparent-image-cdn-pricing) — including the upstream-CDN boundary.
+- [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary), [imgix](/blog/keenpix-vs-imgix), and [ImageKit](/blog/keenpix-vs-imagekit) — how the managed option compares.

@@ -1,0 +1,55 @@
+---
+title: "ImageKit Bandwidth Pricing Explained: Limits and Overage"
+description: Learn how ImageKit bandwidth allowances and overage work, then compare their boundary with Keenpix application-response pricing.
+date: "2026-07-02"
+updated: "2026-07-12"
+author: Raed Bahri
+competitor: ImageKit
+tags: [comparison, pricing, image-cdn]
+image: /og/blog/keenpix-vs-imagekit.png?v=2026-07-11
+imageAlt: Abstract comparison of bandwidth plans and self-hosting paths
+---
+
+ImageKit publishes bandwidth-oriented plans rather than a pooled transformation-credit model. This guide explains its allowances, overage, and enforcement boundary. If you are choosing between products, use the sourced [Keenpix vs ImageKit decision guide](/compare/imagekit-alternative) for feature fit, migration steps, and cases where ImageKit is the better choice.
+
+## Same meter, lower rate
+
+Both products publish bandwidth-oriented plans, but the measurement boundaries and plan details differ. Keenpix counts optimized bytes returned by its application; upstream CDN edge `HIT`s are visible only when optional edge analytics is connected and are not added to billing.
+
+| | Keenpix | ImageKit |
+| --- | --- | --- |
+| Billing unit | Keenpix application response bytes (GB) | Bandwidth delivered (GB) |
+| Transformations | Unlimited, free | Included |
+| Overage rate | $0.05–0.08/GB | Higher per-GB |
+| Entry price | $9/mo | Comparable-to-higher |
+| Self-host option | Yes (open source, AGPL) | No |
+| Paid overage behavior | Always on, billed at period end | Confirm current account terms |
+
+*ImageKit pricing referenced as of July 2026; check [ImageKit's current plans](https://imagekit.io/plans) for the latest rates.*
+
+Keenpix publishes overage rates of $0.05–0.08/GB depending on tier. Paid delivery continues and accumulated usage is billed at the end of the period. Compare the full workload and contract rather than treating one overage number as a universal lowest-price claim.
+
+## Free transforms, honestly unlimited
+
+Keenpix never charges for transformations. Resize, crop, format conversion (AVIF, WebP, JPEG, PNG, GIF, HEIF, TIFF, SVG), and quality controls are all free on every plan, so aggressive optimization never costs you anything.
+
+## Open source is the real differentiator
+
+ImageKit is a closed, managed platform. **The Keenpix cloud release publishes its image engine under AGPL-3.0.** You can run that version with Docker and pay no Keenpix license fee, while owning the infrastructure, updates, monitoring, and routing. The transform grammar can remain consistent during a move when you control the hostname and migration plan.
+
+That is the guarantee no proprietary vendor can offer: if the managed product ever stops making sense, you are not trapped.
+
+## When ImageKit makes sense
+
+ImageKit ships a media library and DAM-style features, and a mature global edge network. If you want an all-in-one managed media library with a UI for non-developers today, it is a strong choice. Keenpix is deliberately focused: **optimize and deliver images fast, price it transparently, and let you self-host.**
+
+## Related comparisons
+
+- [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) — credits vs bandwidth pricing.
+- [Keenpix vs imgix](/blog/keenpix-vs-imgix) — current credit packages vs application-byte billing.
+- [How the Keenpix application-byte meter works](/blog/transparent-image-cdn-pricing) — including the upstream-CDN boundary.
+- [Keenpix pricing](/pricing) — current plans and meter boundary.
+
+## Compare on your own traffic
+
+Point Keenpix at your existing origin, keep your URLs, and check the bandwidth meter against your current ImageKit bill. Or [self-host free](/docs/self-hosting) and pay nothing at all.

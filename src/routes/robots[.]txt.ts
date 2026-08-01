@@ -1,21 +1,25 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getAppUrl, isSelfHosted } from '@/server/deployment'
+import { getAppUrl, isCloud } from '@/server/deployment'
 
 export const Route = createFileRoute('/robots.txt')({
   server: {
     handlers: {
       GET: () => {
-        const body = isSelfHosted()
-          ? ['User-agent: *', 'Disallow: /', ''].join('\n')
-          : [
+        // Only the cloud marketing site should be crawlable; a self-host instance
+        // (!isCloud()) disallows everything.
+        const body = isCloud()
+          ? [
               'User-agent: *',
               'Allow: /',
               'Disallow: /api/',
               'Disallow: /app/',
-              'Disallow: /login',
+              // Auth pages (/login, /signup, …) are left crawlable so Googlebot can
+              // fetch them and honor their noindex meta, rather than surfacing a
+              // bare, snippet-less URL that a robots Disallow would leave indexable.
               `Sitemap: ${getAppUrl()}/sitemap.xml`,
               '',
             ].join('\n')
+          : ['User-agent: *', 'Disallow: /', ''].join('\n')
 
         return new Response(body, {
           headers: {

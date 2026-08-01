@@ -1,0 +1,21 @@
+import { COMPARISONS } from '@/features/compare/comparison-data'
+
+export const SITEMAP_STATIC_PATHS = [
+  '/',
+  '/about',
+  '/pricing',
+  '/blog',
+  '/authors/raed-bahri',
+  '/compare',
+  ...Object.keys(COMPARISONS).map((slug) => `/compare/${slug}`),
+  '/self-hosted-image-cdn',
+  '/methodology/comparisons',
+  '/security',
+  '/status',
+  '/support',
+  '/changelog',
+  '/legal/terms',
+  '/legal/privacy',
+  '/legal/dpa',
+  '/legal/license',
+]

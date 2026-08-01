@@ -148,8 +148,9 @@ export function StaffManagement() {
   return (
     <div className="flex flex-col gap-5">
       <CardDescription>
-        Super admins can invite staff with a copyable link. Email delivery is
-        optional and uses the staff SMTP settings in the Email tab.
+        Super admins can invite staff with a copyable link. If transactional
+        email is configured via the environment (EMAIL_PROVIDER), the invite is
+        also emailed automatically.
       </CardDescription>
 
       <form

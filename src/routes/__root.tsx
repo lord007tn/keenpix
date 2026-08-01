@@ -1,3 +1,4 @@
+import interLatin from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url'
 import type { QueryClient } from '@tanstack/react-query'
 import {
   createRootRouteWithContext,
@@ -6,6 +7,7 @@ import {
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
+import { AnalyticsConsent } from '@/components/app/analytics-consent'
 import { NotFoundPage } from '@/components/app/error-page'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
@@ -31,8 +33,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { name: 'application-name', content: SITE_NAME },
-      { name: 'theme-color', content: '#07111f' },
+      { name: 'msapplication-TileColor', content: '#07111f' },
+      { name: 'msapplication-TileImage', content: '/mstile-150x150.png' },
       { property: 'og:site_name', content: SITE_NAME },
+      { property: 'og:locale', content: 'en_US' },
       ...seo({
         title: SITE_TITLE,
         description: SITE_DESCRIPTION,
@@ -41,28 +45,46 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       }),
     ],
     links: [
+      {
+        rel: 'preload',
+        href: interLatin,
+        as: 'font',
+        type: 'font/woff2',
+        crossOrigin: 'anonymous',
+      },
       { rel: 'stylesheet', href: appCss },
-      { rel: 'shortcut icon', href: '/favicon.ico' },
-      { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
       {
         rel: 'icon',
-        href: '/favicon.ico',
-        sizes: '64x64 32x32 24x24 16x16',
+        href: '/brand/keenpix-favicon.svg',
+        type: 'image/svg+xml',
+      },
+      {
+        rel: 'icon',
+        href: '/keenpix-favicon.ico',
+        sizes: '48x48',
         type: 'image/x-icon',
       },
       {
         rel: 'icon',
-        href: '/logo192.png',
+        href: '/favicon-32x32.png',
         type: 'image/png',
-        sizes: '192x192',
+        sizes: '32x32',
+      },
+      {
+        rel: 'icon',
+        href: '/favicon-16x16.png',
+        type: 'image/png',
+        sizes: '16x16',
       },
       {
         rel: 'apple-touch-icon',
-        href: '/logo192.png',
-        sizes: '192x192',
+        href: '/apple-touch-icon.png',
+        sizes: '180x180',
       },
-      { rel: 'manifest', href: '/manifest.json' },
-      { rel: 'alternate', type: 'text/plain', href: '/llms.txt' },
+      { rel: 'manifest', href: '/site.webmanifest' },
+      // NOTE: no /llms.txt alternate here — the llms routes are cloud-only, so
+      // the link is emitted by the (cloud-gated) home route instead of 404ing
+      // on every self-host page.
     ],
   }),
   notFoundComponent: NotFoundPage,
@@ -73,6 +95,18 @@ function RootDocument({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Static theme-color pair — kept out of route meta because HeadContent
+            dedupes meta by name and would otherwise collapse the two variants. */}
+        <meta
+          content="#f8fbff"
+          media="(prefers-color-scheme: light)"
+          name="theme-color"
+        />
+        <meta
+          content="#07111f"
+          media="(prefers-color-scheme: dark)"
+          name="theme-color"
+        />
         <HeadContent />
       </head>
       <body>
@@ -86,6 +120,7 @@ function RootDocument({ children }: { children: ReactNode }) {
           <TooltipProvider>{children}</TooltipProvider>
           <Toaster richColors />
         </ThemeProvider>
+        <AnalyticsConsent />
         {import.meta.env.DEV ? <Devtools /> : null}
         <Scripts />
       </body>

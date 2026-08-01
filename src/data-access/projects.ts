@@ -2,8 +2,6 @@ import dayjs from 'dayjs'
 import { prisma } from '@/db'
 import type { Project, ProjectFit } from '@/shared/types'
 
-const DEFAULT_ORG = 'org_default'
-
 // Single source of truth for shaping a Prisma project row into the domain
 // Project. Writes validate defaultFit, so the cast holds at the boundary.
 function toProject(
@@ -23,17 +21,15 @@ function toProject(
     maxWidth: p.maxWidth,
     defaultFit: p.defaultFit as ProjectFit,
     defaultDpr: p.defaultDpr,
+    requireSignedUrls: p.requireSignedUrls,
     createdAt: dayjs(p.createdAt).format('MMM DD, YYYY'),
   }
 }
 
-// Returns the id only when it belongs to a real project in the org, so an
-// unknown/stale ?project= id consistently collapses to "all projects" for both
-// the data scope and the rendered scope.
-export async function resolveProjectId(
-  id: string | undefined,
-  orgId = DEFAULT_ORG,
-) {
+// Returns the id only when it belongs to a real project in the org. Callers must
+// keep an explicitly requested but missing id scoped to no data; they must not
+// widen it to the organization's all-projects view.
+export async function resolveProjectId(id: string | undefined, orgId: string) {
   if (!id) {
     return
   }
@@ -44,7 +40,7 @@ export async function resolveProjectId(
   return found?.id
 }
 
-export async function listProjects(orgId = DEFAULT_ORG) {
+export async function listProjects(orgId: string) {
   const rows = await prisma.project.findMany({
     where: { orgId },
     orderBy: { createdAt: 'asc' },
@@ -52,9 +48,49 @@ export async function listProjects(orgId = DEFAULT_ORG) {
   return rows.map(toProject)
 }
 
-export async function getProject(id: string, orgId = DEFAULT_ORG) {
+// Operator-only cross-tenant count for the platform admin health view. Deliberately
+// NOT org-scoped — never use this for a tenant-facing read.
+export function countAllProjects() {
+  return prisma.project.count()
+}
+
+export async function getProject(id: string, orgId: string) {
   const p = await prisma.project.findFirst({ where: { id, orgId } })
   return p ? toProject(p) : undefined
+}
+
+// Org-agnostic lookup for the PUBLIC transform data plane (`/img/*`): a request
+// carries only a project id and is gated by the project's own allowlist, never a
+// session org. Never use this for UI/dashboard reads — those must be org-scoped
+// via getProject(id, orgId). Carries the signing secret (verification happens on
+// this path), which the shared Project shape deliberately omits.
+export async function getProjectById(id: string) {
+  const p = await prisma.project.findFirst({ where: { id } })
+  return p ? { ...toProject(p), signingSecret: p.signingSecret } : undefined
+}
+
+// The signing config an org admin manages: the toggle plus the secret itself.
+export async function getProjectSigning(projectId: string, orgId: string) {
+  const p = await prisma.project.findFirst({
+    where: { id: projectId, orgId },
+    select: { requireSignedUrls: true, signingSecret: true },
+  })
+  return p ?? undefined
+}
+
+export async function updateProjectSigning(
+  projectId: string,
+  orgId: string,
+  patch: { requireSignedUrls?: boolean; signingSecret?: string },
+) {
+  const result = await prisma.project.updateMany({
+    where: { id: projectId, orgId },
+    data: patch,
+  })
+  if (result.count === 0) {
+    return
+  }
+  return getProjectSigning(projectId, orgId)
 }
 
 const COLOR_PRESETS = [
@@ -101,7 +137,7 @@ function deriveAllowedOriginsFromUrl(originUrl: string): string[] {
 export async function addAllowedOrigin(
   projectId: string,
   host: string,
-  orgId = DEFAULT_ORG,
+  orgId: string,
 ) {
   const p = await prisma.project.findFirst({ where: { id: projectId, orgId } })
   if (!p) {
@@ -120,7 +156,7 @@ export async function addAllowedOrigin(
 export async function removeAllowedOrigin(
   projectId: string,
   host: string,
-  orgId = DEFAULT_ORG,
+  orgId: string,
 ) {
   // Read-modify-write inside a transaction so a concurrent add/remove isn't lost
   // (Prisma has no atomic array-remove the way `push` is atomic for the add).
@@ -141,6 +177,47 @@ export async function removeAllowedOrigin(
   return updated ? toProject(updated) : undefined
 }
 
+// Rename / re-point a project's origin. Org-scoped so a tenant can only edit its
+// own. The allowlist is left untouched — re-pointing the origin doesn't imply the
+// new host is allowed, so the user manages hosts explicitly under Security.
+export async function updateProject(
+  projectId: string,
+  orgId: string,
+  patch: { name?: string; origin?: string },
+) {
+  const p = await prisma.project.findFirst({ where: { id: projectId, orgId } })
+  if (!p) {
+    return
+  }
+  const updated = await prisma.project.update({
+    where: { id: projectId },
+    data: { name: patch.name ?? p.name, origin: patch.origin ?? p.origin },
+  })
+  return toProject(updated)
+}
+
+// Delete a project (org-scoped). Request logs cascade via their FK; the hourly
+// rollups (keyed by orgId, no FK) are retained so billing usage stays accurate.
+// Returns whether a row was actually deleted.
+export function deleteProject(projectId: string, orgId: string) {
+  return prisma.$transaction(async (tx) => {
+    const project = await tx.project.findFirst({
+      where: { id: projectId, orgId },
+      select: { id: true },
+    })
+    if (!project) {
+      return false
+    }
+    // Project-scoped keys cannot outlive their authorization target. Delete the
+    // Better Auth key rows first; activities and scopes cascade with them.
+    await tx.apiKey.deleteMany({
+      where: { scope: { is: { orgId, projectId } } },
+    })
+    await tx.project.delete({ where: { id: projectId } })
+    return true
+  })
+}
+
 export interface ProjectSettingsPatch {
   autoFormat?: boolean
   defaultDpr?: number
@@ -153,7 +230,7 @@ export interface ProjectSettingsPatch {
 export async function updateProjectSettings(
   projectId: string,
   patch: ProjectSettingsPatch,
-  orgId = DEFAULT_ORG,
+  orgId: string,
 ) {
   const p = await prisma.project.findFirst({ where: { id: projectId, orgId } })
   if (!p) {

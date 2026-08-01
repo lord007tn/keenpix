@@ -1,7 +1,8 @@
-import { getProject } from '@/data-access/projects'
-import { createRequestLog } from '@/data-access/request-logs'
+import { getProjectById } from '@/data-access/projects'
 import { getTransformErrorStatus, TransformError } from '@/errors/transform'
 import { parseTransformParams } from '@/helpers/transform/params'
+import { enqueueRequestLog } from '@/lib/analytics-buffer/buffer'
+import { orgEntitledForServing } from '@/lib/billing/service-gate'
 import { buildCacheKey, readCacheEntry, writeCache } from '@/lib/cache/cache'
 import { errorContext, logger } from '@/lib/logger/logger'
 import { fetchOriginImage } from '@/lib/origin/fetch-image'
@@ -9,6 +10,7 @@ import { assertAllowedOrigin, assertSafeOrigin } from '@/lib/origin/safe-origin'
 import { runQueuedJob } from '@/lib/queue/transform-queue'
 import { transformImage } from '@/lib/sharp/transform'
 import { optimizeSvgImage } from '@/lib/svg/optimize'
+import { verifyTransformSignature } from '@/lib/transform-signing/signing'
 import type { OutputFormat, TransformOptions } from '@/shared/transform'
 
 export interface OptimizeProjectImageInput {
@@ -19,6 +21,9 @@ export interface OptimizeProjectImageInput {
   searchParams: URLSearchParams
   src: string
   startedAt?: number
+  // True for authenticated internal callers (SDK prewarm) that never carry a
+  // URL signature; the public /img route always leaves this false.
+  trusted?: boolean
 }
 
 export interface PrewarmProjectImagesInput {
@@ -39,7 +44,10 @@ interface CachedTransformInput {
   transformOptions: TransformOptions
 }
 
-const inflightTransforms = new Map<string, Promise<Buffer>>()
+const inflightTransforms = new Map<
+  string,
+  Promise<{ bytesIn: number; out: Buffer }>
+>()
 
 function logPath(src: string) {
   try {
@@ -92,7 +100,13 @@ async function readOrCreateTransform({
 
   const existing = inflightTransforms.get(cacheKey)
   if (existing) {
-    return { out: await existing, cached: false, bytesIn: 0, originalBytes: 0 }
+    const result = await existing
+    return {
+      out: result.out,
+      cached: false,
+      bytesIn: 0,
+      originalBytes: result.bytesIn,
+    }
   }
 
   const work = startTransformRefresh({
@@ -142,10 +156,7 @@ function startTransformRefresh(input: CachedTransformInput) {
     return { bytesIn, out: output }
   })
 
-  inflightTransforms.set(
-    input.cacheKey,
-    work.then((result) => result.out),
-  )
+  inflightTransforms.set(input.cacheKey, work)
   work.then(
     () => inflightTransforms.delete(input.cacheKey),
     () => inflightTransforms.delete(input.cacheKey),
@@ -163,10 +174,31 @@ export async function optimizeProjectImage({
   searchParams,
   src,
   startedAt = performance.now(),
+  trusted = false,
 }: OptimizeProjectImageInput) {
-  const project = await getProject(projectId)
+  // Public data plane: a transform request carries only a project id and is
+  // gated by the project's own allowlist, not a session org — so the lookup is
+  // org-agnostic (a project's images must serve regardless of the caller's org).
+  const project = await getProjectById(projectId)
   if (!project) {
     throw new TransformError('Unknown project', 404)
+  }
+  // Cloud only: an org with no active subscription can't serve traffic (no free
+  // tier). TTL-cached so the hot path stays fast; a no-op in self-host.
+  if (!(await orgEntitledForServing(project.orgId))) {
+    throw new TransformError(
+      'This project is not on an active plan. Ask the workspace owner to subscribe.',
+      402,
+    )
+  }
+  // Opt-in URL signing on top of the allowlist: blocks third parties from
+  // burning a project's metered bandwidth with cache-busting query strings.
+  // Trusted internal callers (SDK prewarm) are already authenticated.
+  if (project.requireSignedUrls && !trusted) {
+    const secret = project.signingSecret
+    if (!(secret && verifyTransformSignature(secret, src, searchParams))) {
+      throw new TransformError('Missing or invalid URL signature', 403)
+    }
   }
 
   const transformOptions = parseTransformParams(searchParams, accept, {
@@ -214,6 +246,7 @@ export async function optimizeProjectImage({
     return {
       body: result.out,
       format,
+      cached,
     }
   } catch (error) {
     status = getTransformErrorStatus(error)
@@ -226,7 +259,9 @@ export async function optimizeProjectImage({
     throw error
   } finally {
     if (recordLog) {
-      createRequestLog({
+      // Telemetry, not part of the response path: enqueues in memory and the
+      // analytics buffer batch-writes Postgres + ClickHouse off the hot path.
+      enqueueRequestLog({
         orgId: project.orgId,
         projectId: project.id,
         path: logPath(src),
@@ -244,8 +279,6 @@ export async function optimizeProjectImage({
         // original — persisted with the cache entry, so a hit knows it without
         // refetching — minus the optimized bytes served.
         bytesSaved: Math.max(0, originalBytes - bytesOut),
-      }).catch(() => {
-        // Request logging is telemetry, not part of the transform response path.
       })
     }
   }
@@ -283,6 +316,9 @@ export function prewarmProjectImages({
           recordLog: false,
           searchParams,
           src,
+          // Prewarm arrives via the authenticated SDK API, not the public
+          // route, so it doesn't carry (or need) a URL signature.
+          trusted: true,
         })
       }),
     ),

@@ -10,27 +10,63 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as Char123llmFileChar125DottxtRouteImport } from './routes/{$llmFile}[.]txt'
+import { Route as SupportRouteImport } from './routes/support'
+import { Route as StatusRouteImport } from './routes/status'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SelfHostedImageCdnRouteImport } from './routes/self-hosted-image-cdn'
+import { Route as SecurityRouteImport } from './routes/security'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as ChangelogRouteImport } from './routes/changelog'
+import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as AppRouteRouteImport } from './routes/app/route'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CompareIndexRouteImport } from './routes/compare/index'
+import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as MethodologyComparisonsRouteImport } from './routes/methodology/comparisons'
+import { Route as LegalTermsRouteImport } from './routes/legal/terms'
+import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
+import { Route as LegalLicenseRouteImport } from './routes/legal/license'
+import { Route as LegalDpaRouteImport } from './routes/legal/dpa'
 import { Route as InviteTokenRouteImport } from './routes/invite/$token'
 import { Route as ImgSplatRouteImport } from './routes/img/$'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
+import { Route as CompareSlugRouteImport } from './routes/compare/$slug'
+import { Route as BlogRssDotxmlRouteImport } from './routes/blog/rss[.]xml'
+import { Route as BlogSplatRouteImport } from './routes/blog/$'
+import { Route as AuthorsRaedBahriRouteImport } from './routes/authors/raed-bahri'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as DotwellKnownSecurityDottxtRouteImport } from './routes/[.]well-known/security[.]txt'
+import { Route as authVerifyEmailRouteImport } from './routes/(auth)/verify-email'
+import { Route as authSignupRouteImport } from './routes/(auth)/signup'
+import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
+import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as AppSettingsIndexRouteImport } from './routes/app/settings/index'
 import { Route as AppOperationsIndexRouteImport } from './routes/app/operations/index'
+import { Route as AppOnboardingIndexRouteImport } from './routes/app/onboarding/index'
 import { Route as AppLogsIndexRouteImport } from './routes/app/logs/index'
 import { Route as AppDashboardIndexRouteImport } from './routes/app/dashboard/index'
 import { Route as AppAnalyticsIndexRouteImport } from './routes/app/analytics/index'
 import { Route as AppAccountIndexRouteImport } from './routes/app/account/index'
+import { Route as AdminStaffIndexRouteImport } from './routes/admin/staff/index'
+import { Route as AdminSettingsIndexRouteImport } from './routes/admin/settings/index'
+import { Route as AdminOperationsIndexRouteImport } from './routes/admin/operations/index'
+import { Route as AdminCustomersIndexRouteImport } from './routes/admin/customers/index'
+import { Route as AdminAnalyticsIndexRouteImport } from './routes/admin/analytics/index'
 import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
+import { Route as OgBlogSplatRouteImport } from './routes/og/blog/$'
 import { Route as ApiSdkSplatRouteImport } from './routes/api/sdk/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AdminCustomersOrgIdIndexRouteImport } from './routes/admin/customers/$orgId/index'
 import { Route as ApiInternalLogsStreamRouteImport } from './routes/api/internal/logs/stream'
+import { Route as ApiInternalBillingReportUsageRouteImport } from './routes/api/internal/billing/report-usage'
+import { Route as ApiAuthPolarSandboxWebhooksRouteImport } from './routes/api/auth/polar/sandbox-webhooks'
 
 const Char123llmFileChar125DottxtRoute =
   Char123llmFileChar125DottxtRouteImport.update({
@@ -38,9 +74,29 @@ const Char123llmFileChar125DottxtRoute =
     path: '/{$llmFile}.txt',
     getParentRoute: () => rootRouteImport,
   } as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatusRoute = StatusRouteImport.update({
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SelfHostedImageCdnRoute = SelfHostedImageCdnRouteImport.update({
+  id: '/self-hosted-image-cdn',
+  path: '/self-hosted-image-cdn',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -48,9 +104,34 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
   path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangelogRoute = ChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AcceptInviteRoute = AcceptInviteRouteImport.update({
+  id: '/accept-invite',
+  path: '/accept-invite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRouteRoute = AppRouteRouteImport.update({
   id: '/app',
   path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -58,10 +139,50 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CompareIndexRoute = CompareIndexRouteImport.update({
+  id: '/compare/',
+  path: '/compare/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRouteRoute,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const MethodologyComparisonsRoute = MethodologyComparisonsRouteImport.update({
+  id: '/methodology/comparisons',
+  path: '/methodology/comparisons',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalTermsRoute = LegalTermsRouteImport.update({
+  id: '/legal/terms',
+  path: '/legal/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
+  id: '/legal/privacy',
+  path: '/legal/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalLicenseRoute = LegalLicenseRouteImport.update({
+  id: '/legal/license',
+  path: '/legal/license',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalDpaRoute = LegalDpaRouteImport.update({
+  id: '/legal/dpa',
+  path: '/legal/dpa',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
@@ -78,6 +199,26 @@ const DocsSplatRoute = DocsSplatRouteImport.update({
   path: '/docs/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CompareSlugRoute = CompareSlugRouteImport.update({
+  id: '/compare/$slug',
+  path: '/compare/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogRssDotxmlRoute = BlogRssDotxmlRouteImport.update({
+  id: '/blog/rss.xml',
+  path: '/blog/rss.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSplatRoute = BlogSplatRouteImport.update({
+  id: '/blog/$',
+  path: '/blog/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthorsRaedBahriRoute = AuthorsRaedBahriRouteImport.update({
+  id: '/authors/raed-bahri',
+  path: '/authors/raed-bahri',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
   id: '/api/search',
   path: '/api/search',
@@ -88,9 +229,35 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DotwellKnownSecurityDottxtRoute =
+  DotwellKnownSecurityDottxtRouteImport.update({
+    id: '/.well-known/security.txt',
+    path: '/.well-known/security.txt',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const authVerifyEmailRoute = authVerifyEmailRouteImport.update({
+  id: '/(auth)/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authSignupRoute = authSignupRouteImport.update({
+  id: '/(auth)/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authResetPasswordRoute = authResetPasswordRouteImport.update({
+  id: '/(auth)/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const authLoginRoute = authLoginRouteImport.update({
   id: '/(auth)/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
+  id: '/(auth)/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
@@ -101,6 +268,11 @@ const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
 const AppOperationsIndexRoute = AppOperationsIndexRouteImport.update({
   id: '/operations/',
   path: '/operations/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppOnboardingIndexRoute = AppOnboardingIndexRouteImport.update({
+  id: '/onboarding/',
+  path: '/onboarding/',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppLogsIndexRoute = AppLogsIndexRouteImport.update({
@@ -123,9 +295,39 @@ const AppAccountIndexRoute = AppAccountIndexRouteImport.update({
   path: '/account/',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AdminStaffIndexRoute = AdminStaffIndexRouteImport.update({
+  id: '/staff/',
+  path: '/staff/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminSettingsIndexRoute = AdminSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminOperationsIndexRoute = AdminOperationsIndexRouteImport.update({
+  id: '/operations/',
+  path: '/operations/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminCustomersIndexRoute = AdminCustomersIndexRouteImport.update({
+  id: '/customers/',
+  path: '/customers/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAnalyticsIndexRoute = AdminAnalyticsIndexRouteImport.update({
+  id: '/analytics/',
+  path: '/analytics/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const OgDocsSplatRoute = OgDocsSplatRouteImport.update({
   id: '/og/docs/$',
   path: '/og/docs/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OgBlogSplatRoute = OgBlogSplatRouteImport.update({
+  id: '/og/blog/$',
+  path: '/og/blog/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSdkSplatRoute = ApiSdkSplatRouteImport.update({
@@ -138,173 +340,433 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminCustomersOrgIdIndexRoute =
+  AdminCustomersOrgIdIndexRouteImport.update({
+    id: '/customers/$orgId/',
+    path: '/customers/$orgId/',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
 const ApiInternalLogsStreamRoute = ApiInternalLogsStreamRouteImport.update({
   id: '/api/internal/logs/stream',
   path: '/api/internal/logs/stream',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalBillingReportUsageRoute =
+  ApiInternalBillingReportUsageRouteImport.update({
+    id: '/api/internal/billing/report-usage',
+    path: '/api/internal/billing/report-usage',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAuthPolarSandboxWebhooksRoute =
+  ApiAuthPolarSandboxWebhooksRouteImport.update({
+    id: '/api/auth/polar/sandbox-webhooks',
+    path: '/api/auth/polar/sandbox-webhooks',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/app': typeof AppRouteRouteWithChildren
+  '/about': typeof AboutRoute
+  '/accept-invite': typeof AcceptInviteRoute
+  '/changelog': typeof ChangelogRoute
+  '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/security': typeof SecurityRoute
+  '/self-hosted-image-cdn': typeof SelfHostedImageCdnRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/status': typeof StatusRoute
+  '/support': typeof SupportRoute
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
+  '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
+  '/reset-password': typeof authResetPasswordRoute
+  '/signup': typeof authSignupRoute
+  '/verify-email': typeof authVerifyEmailRoute
+  '/.well-known/security.txt': typeof DotwellKnownSecurityDottxtRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/authors/raed-bahri': typeof AuthorsRaedBahriRoute
+  '/blog/$': typeof BlogSplatRoute
+  '/blog/rss.xml': typeof BlogRssDotxmlRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/docs/$': typeof DocsSplatRoute
   '/img/$': typeof ImgSplatRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/legal/dpa': typeof LegalDpaRoute
+  '/legal/license': typeof LegalLicenseRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/methodology/comparisons': typeof MethodologyComparisonsRoute
+  '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
+  '/blog/': typeof BlogIndexRoute
+  '/compare/': typeof CompareIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
+  '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
+  '/admin/analytics/': typeof AdminAnalyticsIndexRoute
+  '/admin/customers/': typeof AdminCustomersIndexRoute
+  '/admin/operations/': typeof AdminOperationsIndexRoute
+  '/admin/settings/': typeof AdminSettingsIndexRoute
+  '/admin/staff/': typeof AdminStaffIndexRoute
   '/app/account/': typeof AppAccountIndexRoute
   '/app/analytics/': typeof AppAnalyticsIndexRoute
   '/app/dashboard/': typeof AppDashboardIndexRoute
   '/app/logs/': typeof AppLogsIndexRoute
+  '/app/onboarding/': typeof AppOnboardingIndexRoute
   '/app/operations/': typeof AppOperationsIndexRoute
   '/app/settings/': typeof AppSettingsIndexRoute
+  '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
+  '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
+  '/admin/customers/$orgId/': typeof AdminCustomersOrgIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/accept-invite': typeof AcceptInviteRoute
+  '/changelog': typeof ChangelogRoute
+  '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/security': typeof SecurityRoute
+  '/self-hosted-image-cdn': typeof SelfHostedImageCdnRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/status': typeof StatusRoute
+  '/support': typeof SupportRoute
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
+  '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
+  '/reset-password': typeof authResetPasswordRoute
+  '/signup': typeof authSignupRoute
+  '/verify-email': typeof authVerifyEmailRoute
+  '/.well-known/security.txt': typeof DotwellKnownSecurityDottxtRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/authors/raed-bahri': typeof AuthorsRaedBahriRoute
+  '/blog/$': typeof BlogSplatRoute
+  '/blog/rss.xml': typeof BlogRssDotxmlRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/docs/$': typeof DocsSplatRoute
   '/img/$': typeof ImgSplatRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/legal/dpa': typeof LegalDpaRoute
+  '/legal/license': typeof LegalLicenseRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/methodology/comparisons': typeof MethodologyComparisonsRoute
+  '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
+  '/blog': typeof BlogIndexRoute
+  '/compare': typeof CompareIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
+  '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
+  '/admin/analytics': typeof AdminAnalyticsIndexRoute
+  '/admin/customers': typeof AdminCustomersIndexRoute
+  '/admin/operations': typeof AdminOperationsIndexRoute
+  '/admin/settings': typeof AdminSettingsIndexRoute
+  '/admin/staff': typeof AdminStaffIndexRoute
   '/app/account': typeof AppAccountIndexRoute
   '/app/analytics': typeof AppAnalyticsIndexRoute
   '/app/dashboard': typeof AppDashboardIndexRoute
   '/app/logs': typeof AppLogsIndexRoute
+  '/app/onboarding': typeof AppOnboardingIndexRoute
   '/app/operations': typeof AppOperationsIndexRoute
   '/app/settings': typeof AppSettingsIndexRoute
+  '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
+  '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
+  '/admin/customers/$orgId': typeof AdminCustomersOrgIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/app': typeof AppRouteRouteWithChildren
+  '/about': typeof AboutRoute
+  '/accept-invite': typeof AcceptInviteRoute
+  '/changelog': typeof ChangelogRoute
+  '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/security': typeof SecurityRoute
+  '/self-hosted-image-cdn': typeof SelfHostedImageCdnRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/status': typeof StatusRoute
+  '/support': typeof SupportRoute
   '/{$llmFile}.txt': typeof Char123llmFileChar125DottxtRoute
+  '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/login': typeof authLoginRoute
+  '/(auth)/reset-password': typeof authResetPasswordRoute
+  '/(auth)/signup': typeof authSignupRoute
+  '/(auth)/verify-email': typeof authVerifyEmailRoute
+  '/.well-known/security.txt': typeof DotwellKnownSecurityDottxtRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/authors/raed-bahri': typeof AuthorsRaedBahriRoute
+  '/blog/$': typeof BlogSplatRoute
+  '/blog/rss.xml': typeof BlogRssDotxmlRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/docs/$': typeof DocsSplatRoute
   '/img/$': typeof ImgSplatRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/legal/dpa': typeof LegalDpaRoute
+  '/legal/license': typeof LegalLicenseRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/methodology/comparisons': typeof MethodologyComparisonsRoute
+  '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
+  '/blog/': typeof BlogIndexRoute
+  '/compare/': typeof CompareIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
+  '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
+  '/admin/analytics/': typeof AdminAnalyticsIndexRoute
+  '/admin/customers/': typeof AdminCustomersIndexRoute
+  '/admin/operations/': typeof AdminOperationsIndexRoute
+  '/admin/settings/': typeof AdminSettingsIndexRoute
+  '/admin/staff/': typeof AdminStaffIndexRoute
   '/app/account/': typeof AppAccountIndexRoute
   '/app/analytics/': typeof AppAnalyticsIndexRoute
   '/app/dashboard/': typeof AppDashboardIndexRoute
   '/app/logs/': typeof AppLogsIndexRoute
+  '/app/onboarding/': typeof AppOnboardingIndexRoute
   '/app/operations/': typeof AppOperationsIndexRoute
   '/app/settings/': typeof AppSettingsIndexRoute
+  '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
+  '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
+  '/admin/customers/$orgId/': typeof AdminCustomersOrgIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/app'
+    | '/about'
+    | '/accept-invite'
+    | '/changelog'
+    | '/pricing'
     | '/robots.txt'
+    | '/security'
+    | '/self-hosted-image-cdn'
     | '/sitemap.xml'
+    | '/status'
+    | '/support'
     | '/{$llmFile}.txt'
+    | '/forgot-password'
     | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/verify-email'
+    | '/.well-known/security.txt'
     | '/api/health'
     | '/api/search'
+    | '/authors/raed-bahri'
+    | '/blog/$'
+    | '/blog/rss.xml'
+    | '/compare/$slug'
     | '/docs/$'
     | '/img/$'
     | '/invite/$token'
+    | '/legal/dpa'
+    | '/legal/license'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/methodology/comparisons'
+    | '/admin/'
     | '/app/'
+    | '/blog/'
+    | '/compare/'
     | '/api/auth/$'
     | '/api/sdk/$'
+    | '/og/blog/$'
     | '/og/docs/$'
+    | '/admin/analytics/'
+    | '/admin/customers/'
+    | '/admin/operations/'
+    | '/admin/settings/'
+    | '/admin/staff/'
     | '/app/account/'
     | '/app/analytics/'
     | '/app/dashboard/'
     | '/app/logs/'
+    | '/app/onboarding/'
     | '/app/operations/'
     | '/app/settings/'
+    | '/api/auth/polar/sandbox-webhooks'
+    | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
+    | '/admin/customers/$orgId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
+    | '/accept-invite'
+    | '/changelog'
+    | '/pricing'
     | '/robots.txt'
+    | '/security'
+    | '/self-hosted-image-cdn'
     | '/sitemap.xml'
+    | '/status'
+    | '/support'
     | '/{$llmFile}.txt'
+    | '/forgot-password'
     | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/verify-email'
+    | '/.well-known/security.txt'
     | '/api/health'
     | '/api/search'
+    | '/authors/raed-bahri'
+    | '/blog/$'
+    | '/blog/rss.xml'
+    | '/compare/$slug'
     | '/docs/$'
     | '/img/$'
     | '/invite/$token'
+    | '/legal/dpa'
+    | '/legal/license'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/methodology/comparisons'
+    | '/admin'
     | '/app'
+    | '/blog'
+    | '/compare'
     | '/api/auth/$'
     | '/api/sdk/$'
+    | '/og/blog/$'
     | '/og/docs/$'
+    | '/admin/analytics'
+    | '/admin/customers'
+    | '/admin/operations'
+    | '/admin/settings'
+    | '/admin/staff'
     | '/app/account'
     | '/app/analytics'
     | '/app/dashboard'
     | '/app/logs'
+    | '/app/onboarding'
     | '/app/operations'
     | '/app/settings'
+    | '/api/auth/polar/sandbox-webhooks'
+    | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
+    | '/admin/customers/$orgId'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/app'
+    | '/about'
+    | '/accept-invite'
+    | '/changelog'
+    | '/pricing'
     | '/robots.txt'
+    | '/security'
+    | '/self-hosted-image-cdn'
     | '/sitemap.xml'
+    | '/status'
+    | '/support'
     | '/{$llmFile}.txt'
+    | '/(auth)/forgot-password'
     | '/(auth)/login'
+    | '/(auth)/reset-password'
+    | '/(auth)/signup'
+    | '/(auth)/verify-email'
+    | '/.well-known/security.txt'
     | '/api/health'
     | '/api/search'
+    | '/authors/raed-bahri'
+    | '/blog/$'
+    | '/blog/rss.xml'
+    | '/compare/$slug'
     | '/docs/$'
     | '/img/$'
     | '/invite/$token'
+    | '/legal/dpa'
+    | '/legal/license'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/methodology/comparisons'
+    | '/admin/'
     | '/app/'
+    | '/blog/'
+    | '/compare/'
     | '/api/auth/$'
     | '/api/sdk/$'
+    | '/og/blog/$'
     | '/og/docs/$'
+    | '/admin/analytics/'
+    | '/admin/customers/'
+    | '/admin/operations/'
+    | '/admin/settings/'
+    | '/admin/staff/'
     | '/app/account/'
     | '/app/analytics/'
     | '/app/dashboard/'
     | '/app/logs/'
+    | '/app/onboarding/'
     | '/app/operations/'
     | '/app/settings/'
+    | '/api/auth/polar/sandbox-webhooks'
+    | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
+    | '/admin/customers/$orgId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   AppRouteRoute: typeof AppRouteRouteWithChildren
+  AboutRoute: typeof AboutRoute
+  AcceptInviteRoute: typeof AcceptInviteRoute
+  ChangelogRoute: typeof ChangelogRoute
+  PricingRoute: typeof PricingRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SecurityRoute: typeof SecurityRoute
+  SelfHostedImageCdnRoute: typeof SelfHostedImageCdnRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StatusRoute: typeof StatusRoute
+  SupportRoute: typeof SupportRoute
   Char123llmFileChar125DottxtRoute: typeof Char123llmFileChar125DottxtRoute
+  authForgotPasswordRoute: typeof authForgotPasswordRoute
   authLoginRoute: typeof authLoginRoute
+  authResetPasswordRoute: typeof authResetPasswordRoute
+  authSignupRoute: typeof authSignupRoute
+  authVerifyEmailRoute: typeof authVerifyEmailRoute
+  DotwellKnownSecurityDottxtRoute: typeof DotwellKnownSecurityDottxtRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSearchRoute: typeof ApiSearchRoute
+  AuthorsRaedBahriRoute: typeof AuthorsRaedBahriRoute
+  BlogSplatRoute: typeof BlogSplatRoute
+  BlogRssDotxmlRoute: typeof BlogRssDotxmlRoute
+  CompareSlugRoute: typeof CompareSlugRoute
   DocsSplatRoute: typeof DocsSplatRoute
   ImgSplatRoute: typeof ImgSplatRoute
   InviteTokenRoute: typeof InviteTokenRoute
+  LegalDpaRoute: typeof LegalDpaRoute
+  LegalLicenseRoute: typeof LegalLicenseRoute
+  LegalPrivacyRoute: typeof LegalPrivacyRoute
+  LegalTermsRoute: typeof LegalTermsRoute
+  MethodologyComparisonsRoute: typeof MethodologyComparisonsRoute
+  BlogIndexRoute: typeof BlogIndexRoute
+  CompareIndexRoute: typeof CompareIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiSdkSplatRoute: typeof ApiSdkSplatRoute
+  OgBlogSplatRoute: typeof OgBlogSplatRoute
   OgDocsSplatRoute: typeof OgDocsSplatRoute
+  ApiAuthPolarSandboxWebhooksRoute: typeof ApiAuthPolarSandboxWebhooksRoute
+  ApiInternalBillingReportUsageRoute: typeof ApiInternalBillingReportUsageRoute
   ApiInternalLogsStreamRoute: typeof ApiInternalLogsStreamRoute
 }
 
@@ -317,11 +779,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char123llmFileChar125DottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/status': {
+      id: '/status'
+      path: '/status'
+      fullPath: '/status'
+      preLoaderRoute: typeof StatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/self-hosted-image-cdn': {
+      id: '/self-hosted-image-cdn'
+      path: '/self-hosted-image-cdn'
+      fullPath: '/self-hosted-image-cdn'
+      preLoaderRoute: typeof SelfHostedImageCdnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -331,11 +821,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/changelog': {
+      id: '/changelog'
+      path: '/changelog'
+      fullPath: '/changelog'
+      preLoaderRoute: typeof ChangelogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accept-invite': {
+      id: '/accept-invite'
+      path: '/accept-invite'
+      fullPath: '/accept-invite'
+      preLoaderRoute: typeof AcceptInviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app': {
       id: '/app'
       path: '/app'
       fullPath: '/app'
       preLoaderRoute: typeof AppRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -345,12 +870,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/compare/': {
+      id: '/compare/'
+      path: '/compare'
+      fullPath: '/compare/'
+      preLoaderRoute: typeof CompareIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/': {
       id: '/app/'
       path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/methodology/comparisons': {
+      id: '/methodology/comparisons'
+      path: '/methodology/comparisons'
+      fullPath: '/methodology/comparisons'
+      preLoaderRoute: typeof MethodologyComparisonsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/terms': {
+      id: '/legal/terms'
+      path: '/legal/terms'
+      fullPath: '/legal/terms'
+      preLoaderRoute: typeof LegalTermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/privacy': {
+      id: '/legal/privacy'
+      path: '/legal/privacy'
+      fullPath: '/legal/privacy'
+      preLoaderRoute: typeof LegalPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/license': {
+      id: '/legal/license'
+      path: '/legal/license'
+      fullPath: '/legal/license'
+      preLoaderRoute: typeof LegalLicenseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/dpa': {
+      id: '/legal/dpa'
+      path: '/legal/dpa'
+      fullPath: '/legal/dpa'
+      preLoaderRoute: typeof LegalDpaRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/invite/$token': {
       id: '/invite/$token'
@@ -373,6 +954,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/compare/$slug': {
+      id: '/compare/$slug'
+      path: '/compare/$slug'
+      fullPath: '/compare/$slug'
+      preLoaderRoute: typeof CompareSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/rss.xml': {
+      id: '/blog/rss.xml'
+      path: '/blog/rss.xml'
+      fullPath: '/blog/rss.xml'
+      preLoaderRoute: typeof BlogRssDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/$': {
+      id: '/blog/$'
+      path: '/blog/$'
+      fullPath: '/blog/$'
+      preLoaderRoute: typeof BlogSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/authors/raed-bahri': {
+      id: '/authors/raed-bahri'
+      path: '/authors/raed-bahri'
+      fullPath: '/authors/raed-bahri'
+      preLoaderRoute: typeof AuthorsRaedBahriRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/search': {
       id: '/api/search'
       path: '/api/search'
@@ -387,11 +996,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/security.txt': {
+      id: '/.well-known/security.txt'
+      path: '/.well-known/security.txt'
+      fullPath: '/.well-known/security.txt'
+      preLoaderRoute: typeof DotwellKnownSecurityDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/verify-email': {
+      id: '/(auth)/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof authVerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/signup': {
+      id: '/(auth)/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof authSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/reset-password': {
+      id: '/(auth)/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof authResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(auth)/login': {
       id: '/(auth)/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof authLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/forgot-password': {
+      id: '/(auth)/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof authForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/settings/': {
@@ -406,6 +1050,13 @@ declare module '@tanstack/react-router' {
       path: '/operations'
       fullPath: '/app/operations/'
       preLoaderRoute: typeof AppOperationsIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/onboarding/': {
+      id: '/app/onboarding/'
+      path: '/onboarding'
+      fullPath: '/app/onboarding/'
+      preLoaderRoute: typeof AppOnboardingIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/app/logs/': {
@@ -436,11 +1087,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAccountIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/admin/staff/': {
+      id: '/admin/staff/'
+      path: '/staff'
+      fullPath: '/admin/staff/'
+      preLoaderRoute: typeof AdminStaffIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/settings/': {
+      id: '/admin/settings/'
+      path: '/settings'
+      fullPath: '/admin/settings/'
+      preLoaderRoute: typeof AdminSettingsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/operations/': {
+      id: '/admin/operations/'
+      path: '/operations'
+      fullPath: '/admin/operations/'
+      preLoaderRoute: typeof AdminOperationsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/customers/': {
+      id: '/admin/customers/'
+      path: '/customers'
+      fullPath: '/admin/customers/'
+      preLoaderRoute: typeof AdminCustomersIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/analytics/': {
+      id: '/admin/analytics/'
+      path: '/analytics'
+      fullPath: '/admin/analytics/'
+      preLoaderRoute: typeof AdminAnalyticsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/og/docs/$': {
       id: '/og/docs/$'
       path: '/og/docs/$'
       fullPath: '/og/docs/$'
       preLoaderRoute: typeof OgDocsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/og/blog/$': {
+      id: '/og/blog/$'
+      path: '/og/blog/$'
+      fullPath: '/og/blog/$'
+      preLoaderRoute: typeof OgBlogSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/sdk/$': {
@@ -457,6 +1150,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/customers/$orgId/': {
+      id: '/admin/customers/$orgId/'
+      path: '/customers/$orgId'
+      fullPath: '/admin/customers/$orgId/'
+      preLoaderRoute: typeof AdminCustomersOrgIdIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/api/internal/logs/stream': {
       id: '/api/internal/logs/stream'
       path: '/api/internal/logs/stream'
@@ -464,8 +1164,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalLogsStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/billing/report-usage': {
+      id: '/api/internal/billing/report-usage'
+      path: '/api/internal/billing/report-usage'
+      fullPath: '/api/internal/billing/report-usage'
+      preLoaderRoute: typeof ApiInternalBillingReportUsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/polar/sandbox-webhooks': {
+      id: '/api/auth/polar/sandbox-webhooks'
+      path: '/api/auth/polar/sandbox-webhooks'
+      fullPath: '/api/auth/polar/sandbox-webhooks'
+      preLoaderRoute: typeof ApiAuthPolarSandboxWebhooksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
+
+interface AdminRouteRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+  AdminAnalyticsIndexRoute: typeof AdminAnalyticsIndexRoute
+  AdminCustomersIndexRoute: typeof AdminCustomersIndexRoute
+  AdminOperationsIndexRoute: typeof AdminOperationsIndexRoute
+  AdminSettingsIndexRoute: typeof AdminSettingsIndexRoute
+  AdminStaffIndexRoute: typeof AdminStaffIndexRoute
+  AdminCustomersOrgIdIndexRoute: typeof AdminCustomersOrgIdIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+  AdminAnalyticsIndexRoute: AdminAnalyticsIndexRoute,
+  AdminCustomersIndexRoute: AdminCustomersIndexRoute,
+  AdminOperationsIndexRoute: AdminOperationsIndexRoute,
+  AdminSettingsIndexRoute: AdminSettingsIndexRoute,
+  AdminStaffIndexRoute: AdminStaffIndexRoute,
+  AdminCustomersOrgIdIndexRoute: AdminCustomersOrgIdIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
 
 interface AppRouteRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
@@ -473,6 +1211,7 @@ interface AppRouteRouteChildren {
   AppAnalyticsIndexRoute: typeof AppAnalyticsIndexRoute
   AppDashboardIndexRoute: typeof AppDashboardIndexRoute
   AppLogsIndexRoute: typeof AppLogsIndexRoute
+  AppOnboardingIndexRoute: typeof AppOnboardingIndexRoute
   AppOperationsIndexRoute: typeof AppOperationsIndexRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
@@ -483,6 +1222,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppAnalyticsIndexRoute: AppAnalyticsIndexRoute,
   AppDashboardIndexRoute: AppDashboardIndexRoute,
   AppLogsIndexRoute: AppLogsIndexRoute,
+  AppOnboardingIndexRoute: AppOnboardingIndexRoute,
   AppOperationsIndexRoute: AppOperationsIndexRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
@@ -493,19 +1233,47 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   AppRouteRoute: AppRouteRouteWithChildren,
+  AboutRoute: AboutRoute,
+  AcceptInviteRoute: AcceptInviteRoute,
+  ChangelogRoute: ChangelogRoute,
+  PricingRoute: PricingRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
+  SecurityRoute: SecurityRoute,
+  SelfHostedImageCdnRoute: SelfHostedImageCdnRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StatusRoute: StatusRoute,
+  SupportRoute: SupportRoute,
   Char123llmFileChar125DottxtRoute: Char123llmFileChar125DottxtRoute,
+  authForgotPasswordRoute: authForgotPasswordRoute,
   authLoginRoute: authLoginRoute,
+  authResetPasswordRoute: authResetPasswordRoute,
+  authSignupRoute: authSignupRoute,
+  authVerifyEmailRoute: authVerifyEmailRoute,
+  DotwellKnownSecurityDottxtRoute: DotwellKnownSecurityDottxtRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSearchRoute: ApiSearchRoute,
+  AuthorsRaedBahriRoute: AuthorsRaedBahriRoute,
+  BlogSplatRoute: BlogSplatRoute,
+  BlogRssDotxmlRoute: BlogRssDotxmlRoute,
+  CompareSlugRoute: CompareSlugRoute,
   DocsSplatRoute: DocsSplatRoute,
   ImgSplatRoute: ImgSplatRoute,
   InviteTokenRoute: InviteTokenRoute,
+  LegalDpaRoute: LegalDpaRoute,
+  LegalLicenseRoute: LegalLicenseRoute,
+  LegalPrivacyRoute: LegalPrivacyRoute,
+  LegalTermsRoute: LegalTermsRoute,
+  MethodologyComparisonsRoute: MethodologyComparisonsRoute,
+  BlogIndexRoute: BlogIndexRoute,
+  CompareIndexRoute: CompareIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiSdkSplatRoute: ApiSdkSplatRoute,
+  OgBlogSplatRoute: OgBlogSplatRoute,
   OgDocsSplatRoute: OgDocsSplatRoute,
+  ApiAuthPolarSandboxWebhooksRoute: ApiAuthPolarSandboxWebhooksRoute,
+  ApiInternalBillingReportUsageRoute: ApiInternalBillingReportUsageRoute,
   ApiInternalLogsStreamRoute: ApiInternalLogsStreamRoute,
 }
 export const routeTree = rootRouteImport

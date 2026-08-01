@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import {
+  type RollupBucketing,
   rollupBucketing,
-  rollupRangeMeta,
 } from '@/data-access/analytics-rollups'
 import type {
   AnalyticsRange,
@@ -9,10 +9,25 @@ import type {
   EdgeCacheStats,
 } from '@/shared/types'
 
-// Cloudflare cache statuses served from the edge without contacting the origin.
-// Classified at read time so historical rows always reflect the current set.
-const CACHED_STATUSES = new Set(['hit', 'stale', 'revalidated', 'updating'])
+// Cloudflare counts revalidated requests as reaching origin, but counts their
+// response bytes as cached because the body is still served from the edge.
+const REQUEST_OFFLOAD_STATUSES = new Set([
+  'hit',
+  'ignored',
+  'stale',
+  'updating',
+])
+const CACHED_RESPONSE_STATUSES = new Set([
+  ...REQUEST_OFFLOAD_STATUSES,
+  'revalidated',
+])
 const HOUR = 3_600_000
+const PRESET_WINDOW_HOURS: Record<AnalyticsRange, number> = {
+  '24h': 24,
+  '7d': 7 * 24,
+  '30d': 30 * 24,
+  '90d': 90 * 24,
+}
 
 export interface EdgeRollupRow {
   bucketStart: Date
@@ -21,43 +36,80 @@ export interface EdgeRollupRow {
   count: number
 }
 
+export function hasContinuousEdgeCoverage(
+  states: Array<{ coveredFrom: Date | null; coveredUntil: Date | null }>,
+  gte: Date,
+  lt: Date,
+  graceMs: number,
+) {
+  const intervals = states
+    .filter(
+      (state) =>
+        state.coveredFrom &&
+        state.coveredUntil &&
+        state.coveredUntil.getTime() + graceMs >= gte.getTime() &&
+        state.coveredFrom.getTime() <= lt.getTime(),
+    )
+    .map((state) => ({
+      from: state.coveredFrom?.getTime() ?? 0,
+      until: (state.coveredUntil?.getTime() ?? 0) + graceMs,
+    }))
+    .sort((a, b) => a.from - b.from)
+
+  let coveredUntil = gte.getTime()
+  for (const interval of intervals) {
+    if (interval.from > coveredUntil) {
+      return false
+    }
+    coveredUntil = Math.max(coveredUntil, interval.until)
+    if (coveredUntil >= lt.getTime()) {
+      return true
+    }
+  }
+  return false
+}
+
 // Rebuild EdgeCacheStats from persisted hourly rows, with the time series bucketed
 // to the selected range exactly like the origin series (so the funnel/compare
 // charts merge by label). Mirrors the live aggregation in
 // lib/cloudflare/analytics.ts, just sourced from our own table.
 export function reconstructEdgeStats(
   rows: EdgeRollupRow[],
-  range: AnalyticsRange,
+  range: AnalyticsRange | RollupBucketing,
 ): EdgeCacheStats {
   let requests = 0
   let cachedRequests = 0
   let bytesFromEdge = 0
   const statusCounts = new Map<string, number>()
-  const { n, labelFor, indexFor } = rollupBucketing(range)
+  const bucketing = typeof range === 'string' ? rollupBucketing(range) : range
+  const { n, labelFor, indexFor } = bucketing
   const buckets = Array.from({ length: n }, () => ({
     hit: 0,
     miss: 0,
     bytes: 0,
   }))
   for (const r of rows) {
-    const isHit = CACHED_STATUSES.has(r.cacheStatus)
+    const isOffloaded = REQUEST_OFFLOAD_STATUSES.has(r.cacheStatus)
+    const isCachedResponse = CACHED_RESPONSE_STATUSES.has(r.cacheStatus)
     requests += r.count
     statusCounts.set(
       r.cacheStatus,
       (statusCounts.get(r.cacheStatus) ?? 0) + r.count,
     )
     const bucket = buckets[indexFor(r.bucketStart)]
-    if (isHit) {
+    if (isOffloaded) {
       cachedRequests += r.count
-      bytesFromEdge += r.bytes
       bucket.hit += r.count
-      // EdgeCachePoint.bytes is the bytes served from the edge (hit bytes).
-      bucket.bytes += r.bytes
     } else {
       bucket.miss += r.count
     }
+    if (isCachedResponse) {
+      bytesFromEdge += r.bytes
+      bucket.bytes += r.bytes
+    }
   }
   const series: EdgeCachePoint[] = buckets.map((b, i) => ({
+    start: bucketing.startFor(i),
     label: labelFor(i),
     hit: b.hit,
     miss: b.miss,
@@ -66,7 +118,13 @@ export function reconstructEdgeStats(
   const byStatus = [...statusCounts.entries()]
     .map(([status, count]) => ({ status, requests: count }))
     .sort((a, b) => b.requests - a.requests || a.status.localeCompare(b.status))
-  const { n: bucketCount, ms } = rollupRangeMeta(range)
+  const windowHours =
+    typeof range === 'string'
+      ? PRESET_WINDOW_HOURS[range]
+      : Math.max(
+          1,
+          Math.round((range.lt.getTime() - range.gte.getTime()) / HOUR),
+        )
   return {
     hitRate: requests === 0 ? 0 : (cachedRequests / requests) * 100,
     requests,
@@ -74,7 +132,7 @@ export function reconstructEdgeStats(
     bytesFromEdge,
     byStatus,
     series,
-    windowHours: Math.round((bucketCount * ms) / HOUR),
+    windowHours,
     fetchedAt: dayjs().toISOString(),
   }
 }

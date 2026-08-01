@@ -23,13 +23,21 @@ const originConfig = {
   optimized: { label: 'Optimized', color: 'var(--chart-1)' },
 } satisfies ChartConfig
 
-// The full funnel: served at the Cloudflare edge, then from the keenpix disk
-// cache, then optimized live. Only shown when edge + origin cover the same 24h
-// whole-zone window (see `funnel` at the call site).
+// The delivery stages captured independently at Cloudflare and keenpix. The
+// caller is responsible for showing any partial-coverage warning.
 const funnelConfig = {
-  edgeServed: { label: 'Cloudflare edge', color: 'var(--chart-1)' },
-  diskServed: { label: 'keenpix cache', color: 'var(--chart-2)' },
-  liveProcessed: { label: 'Optimized live', color: 'var(--muted-foreground)' },
+  edgeServed: {
+    label: 'Served by Cloudflare cache',
+    color: 'var(--chart-1)',
+  },
+  diskServed: {
+    label: 'Served from Keenpix cache',
+    color: 'var(--chart-2)',
+  },
+  liveProcessed: {
+    label: 'Newly optimized by Keenpix',
+    color: 'var(--muted-foreground)',
+  },
 } satisfies ChartConfig
 
 export function ChartAreaInteractive({
@@ -58,7 +66,7 @@ export function ChartAreaInteractive({
         <CardTitle>Requests over time</CardTitle>
         <CardDescription>
           {showFunnel
-            ? 'Across Cloudflare edge and keenpix · last 24h'
+            ? 'Cloudflare edge and Keenpix delivery stages, this window'
             : 'Cache hits vs live-optimized, this window'}
         </CardDescription>
       </CardHeader>
@@ -122,7 +130,7 @@ export function ChartAreaInteractive({
                   key={k}
                   stackId="a"
                   stroke={`var(--color-${k})`}
-                  type="natural"
+                  type="monotone"
                 />
               ))}
               <ChartLegend content={<ChartLegendContent />} />

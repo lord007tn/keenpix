@@ -1,29 +1,26 @@
 import type { z } from 'zod'
 import type { EffectiveCloudflareSettings } from '@/data-access/admin/cloudflare'
 import { getEffectiveCloudflareSettings } from '@/data-access/admin/cloudflare'
+import { analyticsCoverageStart } from '@/data-access/analytics-aggregates'
 import {
-  aggregateRollupSummary,
-  groupRollupsByBucket,
-  groupRollupsByBucketStatus,
-  groupRollupsByCountry,
-  groupRollupsByFormat,
-  groupRollupsByHost,
-  groupRollupsByPath,
-  groupRollupsByProject,
-  listAvailableFilters,
-} from '@/data-access/analytics-aggregates'
-import { rollupSinceFor } from '@/data-access/analytics-rollups'
+  historicalRollupBucketing,
+  rollupSinceFor,
+} from '@/data-access/analytics-rollups'
 import {
-  edgeCoverageStart,
-  listEdgeRollups,
-  upsertEdgeRollups,
+  getEdgeCaptureState,
+  listEdgeCaptureStates,
+  listPlatformEdgeRollups,
+  platformEdgeCoverageStart,
 } from '@/data-access/edge-rollups'
 import {
   getProject,
   listProjects,
   resolveProjectId,
 } from '@/data-access/projects'
-import { reconstructEdgeStats } from '@/helpers/analytics/edge-rollups'
+import {
+  hasContinuousEdgeCoverage,
+  reconstructEdgeStats,
+} from '@/helpers/analytics/edge-rollups'
 import {
   domainBreakdown,
   formatDistribution,
@@ -36,80 +33,118 @@ import {
   summarizeAgg,
   timeSeriesFromBuckets,
 } from '@/helpers/analytics/rollup-shapers'
-import { fetchEdgeAdaptiveHourly } from '@/lib/cloudflare/analytics'
-import type { analyticsInputSchema } from '@/schemas/analytics'
+import type {
+  analyticsInputSchema,
+  edgeCacheStatsSchema,
+} from '@/schemas/analytics'
+import { isCloud } from '@/server/deployment'
 import type {
   AllowedHostStat,
   AnalyticsRange,
   EdgeCacheStats,
 } from '@/shared/types'
+import { withAnalyticsSource } from './analytics-source'
+import { captureConfiguredEdgeHistory } from './edge-history'
 
-// Every metric is a Postgres GROUP BY / aggregate, so the database returns a few
-// pre-summed rows instead of the full per-(hour × project × host × country ×
-// path × format × status) fan-out. Pure shapers in analytics-aggregates turn the
-// summed rows into the page's series/distributions/breakdowns.
+// Every metric is a GROUP BY / aggregate, so the store returns a few pre-summed
+// rows instead of the full per-(hour × project × host × country × path × format
+// × status) fan-out. Pure shapers in analytics-aggregates turn the summed rows
+// into the page's series/distributions/breakdowns.
 export async function getAnalytics(
+  orgId: string,
   input: z.output<typeof analyticsInputSchema>,
 ) {
-  // Validate the requested project so an unknown/stale id collapses to "all
-  // projects" for the data exactly as the UI's project switcher does.
-  const project = await resolveProjectId(input.project)
+  // Validate the requested project within the caller's org. An unknown, stale,
+  // or foreign id is scoped to an impossible project instead of widening to the
+  // organization's all-projects view.
+  const resolvedProject = await resolveProjectId(input.project, orgId)
+  const project = input.project
+    ? (resolvedProject ?? '__invalid_project_scope__')
+    : undefined
   const filters = {
     // Domain filtering is only meaningful within a single project's allowlist.
     domain: project ? (input.domain ?? []) : [],
     format: input.format ?? [],
     status: input.status ?? [],
   }
-  const gte = rollupSinceFor(input.range)
+  const coverageStart =
+    input.range === 'all'
+      ? await analyticsCoverageStart({ orgId, projectId: project })
+      : null
+  const window = historicalRollupBucketing({
+    coverageStart,
+    from: input.from,
+    range: input.range,
+    to: input.to,
+  })
   // The filtered window powers every metric card; the unfiltered window feeds
   // the filter menus (which must offer every value present) and the breakdown.
-  const filtered = { gte, projectId: project, filters }
-  const unfiltered = { gte, projectId: project }
-  const [
-    summaryAgg,
-    buckets,
-    statusBuckets,
-    formats,
-    topImages,
-    geoRows,
-    available,
-    projects,
-    projectGrouped,
-    hostGrouped,
-  ] = await Promise.all([
-    aggregateRollupSummary(filtered),
-    groupRollupsByBucket(filtered),
-    groupRollupsByBucketStatus(filtered),
-    groupRollupsByFormat(filtered),
-    groupRollupsByPath(filtered),
-    groupRollupsByCountry(filtered),
-    listAvailableFilters(unfiltered),
-    project ? Promise.resolve([]) : listProjects(),
-    project ? Promise.resolve(null) : groupRollupsByProject(unfiltered),
-    project ? groupRollupsByHost(unfiltered) : Promise.resolve(null),
-  ])
-
-  return {
-    range: input.range,
-    summary: summarizeAgg(summaryAgg),
-    series: timeSeriesFromBuckets(buckets, input.range),
-    formats: formatDistribution(formats),
-    topImages,
-    latency: latencyBinsFromAgg(summaryAgg),
-    latencyTrend: latencyTrendFromBuckets(buckets, input.range),
-    statusSeries: statusSeriesFromBuckets(statusBuckets, input.range),
-    geo: geoDistribution(geoRows),
-    // Per-project domain rollup vs. org-wide project rollup: one or the other,
-    // matching which scope the page is showing.
-    breakdown: projectGrouped
-      ? projectBreakdown(
-          projectGrouped,
-          new Map(projects.map((p) => [p.id, p.name])),
-        )
-      : [],
-    domainBreakdown: hostGrouped ? domainBreakdown(hostGrouped) : null,
-    available,
+  const filtered = {
+    gte: window.gte,
+    lt: window.lt,
+    orgId,
+    projectId: project,
+    filters,
   }
+  const unfiltered = {
+    gte: window.gte,
+    lt: window.lt,
+    orgId,
+    projectId: project,
+  }
+  return withAnalyticsSource(orgId, async (source) => {
+    const [
+      summaryAgg,
+      buckets,
+      statusBuckets,
+      formats,
+      topImages,
+      geoRows,
+      available,
+      projects,
+      projectGrouped,
+      hostGrouped,
+    ] = await Promise.all([
+      source.aggregateRollupSummary(filtered),
+      source.groupRollupsByBucket(filtered),
+      source.groupRollupsByBucketStatus(filtered),
+      source.groupRollupsByFormat(filtered),
+      source.groupRollupsByPath(filtered),
+      source.groupRollupsByCountry(filtered),
+      source.listAvailableFilters(unfiltered),
+      project ? Promise.resolve([]) : listProjects(orgId),
+      project
+        ? Promise.resolve(null)
+        : source.groupRollupsByProject(unfiltered),
+      project ? source.groupRollupsByHost(unfiltered) : Promise.resolve(null),
+    ])
+
+    return {
+      range: input.range,
+      summary: summarizeAgg(summaryAgg),
+      window: {
+        from: window.gte.toISOString(),
+        to: window.lt.toISOString(),
+      },
+      series: timeSeriesFromBuckets(buckets, window),
+      formats: formatDistribution(formats),
+      topImages,
+      latency: latencyBinsFromAgg(summaryAgg),
+      latencyTrend: latencyTrendFromBuckets(buckets, window),
+      statusSeries: statusSeriesFromBuckets(statusBuckets, window),
+      geo: geoDistribution(geoRows),
+      // Per-project domain rollup vs. org-wide project rollup: one or the other,
+      // matching which scope the page is showing.
+      breakdown: projectGrouped
+        ? projectBreakdown(
+            projectGrouped,
+            new Map(projects.map((p) => [p.id, p.name])),
+          )
+        : [],
+      domainBreakdown: hostGrouped ? domainBreakdown(hostGrouped) : null,
+      available,
+    }
+  })
 }
 
 // Cloudflare's adaptive dataset is capped at ~24h, so we capture its hourly
@@ -140,12 +175,11 @@ function startEdgeCapture(
     return null
   }
   lastCaptureAt.set(key, Date.now())
-  const run = (async () => {
-    const groups = await fetchEdgeAdaptiveHourly(settings)
-    await upsertEdgeRollups(settings.zoneId, host, groups)
-  })().finally(() => {
-    captureInFlight.delete(key)
-  })
+  const run = captureConfiguredEdgeHistory(settings)
+    .then(() => undefined)
+    .finally(() => {
+      captureInFlight.delete(key)
+    })
   captureInFlight.set(key, run)
   return run
 }
@@ -155,26 +189,52 @@ function startEdgeCapture(
 // never blocks the render — the client fetches it separately. `edgeCovered` is
 // false when the window reaches before our captured history (so the UI can show
 // the edge data without reconciling misleading totals).
-export async function getEdgeCacheStats(range: AnalyticsRange): Promise<{
+export async function getEdgeCacheStats(
+  input: z.output<typeof edgeCacheStatsSchema>,
+  viewerIsAdmin: boolean,
+): Promise<{
   edge: EdgeCacheStats | null
   edgeConfigured: boolean
   edgeCovered: boolean
+  edgeError: string | null
+  edgeLastSuccessAt: string | null
   edgeRefreshing: boolean
+  edgeStatus: 'unconfigured' | 'ready' | 'ok_empty' | 'partial' | 'failed'
 }> {
+  // The edge/CDN dataset is whole-zone — aggregate across every tenant, not
+  // per-tenant. In cloud that makes it an operator-only view: the platform owns
+  // the zone, so a regular tenant must never see zone-wide figures (it would leak
+  // cross-tenant traffic) nor be prompted to connect Cloudflare. The platform
+  // super-admin still sees it as the aggregated instance view. Self-host stays
+  // open — the single operator owns the whole instance and zone alike.
+  if (isCloud() && !viewerIsAdmin) {
+    return {
+      edge: null,
+      edgeConfigured: false,
+      edgeCovered: false,
+      edgeError: null,
+      edgeLastSuccessAt: null,
+      edgeRefreshing: false,
+      edgeStatus: 'unconfigured',
+    }
+  }
   const cloudflare = await getEffectiveCloudflareSettings()
   if (!cloudflare) {
     return {
       edge: null,
       edgeConfigured: false,
       edgeCovered: false,
+      edgeError: null,
+      edgeLastSuccessAt: null,
       edgeRefreshing: false,
+      edgeStatus: 'unconfigured',
     }
   }
   const host = cloudflare.host ?? ''
   try {
-    const existing = await edgeCoverageStart(cloudflare.zoneId, host)
+    let captureState = await getEdgeCaptureState(cloudflare.zoneId, host)
     let refreshing = false
-    if (existing) {
+    if (captureState?.lastSuccessAt) {
       // Refresh in the background (throttled); don't block the read. Surface
       // whether a capture is actually in flight so the client polls until it
       // lands instead of waiting for a manual reload.
@@ -188,27 +248,49 @@ export async function getEdgeCacheStats(range: AnalyticsRange): Promise<{
     } else {
       // No history yet — capture once synchronously so there's data to show.
       await startEdgeCapture(cloudflare)
+      captureState = await getEdgeCaptureState(cloudflare.zoneId, host)
     }
-    const gte = rollupSinceFor(range)
-    const [rows, coverageStart] = await Promise.all([
-      listEdgeRollups(cloudflare.zoneId, host, gte),
-      existing
-        ? Promise.resolve(existing)
-        : edgeCoverageStart(cloudflare.zoneId, host),
+    const coverageStart = await platformEdgeCoverageStart()
+    const window = historicalRollupBucketing({
+      ...input,
+      coverageStart,
+    })
+    const [rows, captureStates] = await Promise.all([
+      listPlatformEdgeRollups(window.gte, window.lt),
+      listEdgeCaptureStates(),
     ])
-    return {
-      edge: rows.length > 0 ? reconstructEdgeStats(rows, range) : null,
-      edgeConfigured: true,
-      edgeCovered:
-        coverageStart !== null && coverageStart.getTime() <= gte.getTime(),
-      edgeRefreshing: refreshing,
+    const coverageGraceMs = CAPTURE_THROTTLE_MS + 60_000
+    const covered = hasContinuousEdgeCoverage(
+      captureStates,
+      window.gte,
+      window.lt,
+      coverageGraceMs,
+    )
+    let edgeStatus: 'ready' | 'ok_empty' | 'partial' | 'failed' = 'partial'
+    if (captureState?.status === 'failed') {
+      edgeStatus = 'failed'
+    } else if (covered) {
+      edgeStatus = rows.length === 0 ? 'ok_empty' : 'ready'
     }
-  } catch {
+    return {
+      edge: reconstructEdgeStats(rows, window),
+      edgeConfigured: true,
+      edgeCovered: covered,
+      edgeError: captureState?.lastError ?? null,
+      edgeLastSuccessAt: captureState?.lastSuccessAt?.toISOString() ?? null,
+      edgeRefreshing: refreshing,
+      edgeStatus,
+    }
+  } catch (error) {
     return {
       edge: null,
       edgeConfigured: true,
       edgeCovered: false,
+      edgeError:
+        error instanceof Error ? error.message : 'Cloudflare analytics failed',
+      edgeLastSuccessAt: null,
       edgeRefreshing: false,
+      edgeStatus: 'failed',
     }
   }
 }
@@ -217,12 +299,19 @@ export async function getEdgeCacheStats(range: AnalyticsRange): Promise<{
 // project's allowlist with observed traffic so allowed-but-idle hosts show
 // zeroes and seen-but-unlisted hosts surface for review.
 export async function getAllowedHostStats(
+  orgId: string,
   projectId: string,
   range: AnalyticsRange,
 ): Promise<AllowedHostStat[]> {
   const [project, hostGrouped] = await Promise.all([
-    getProject(projectId),
-    groupRollupsByHost({ gte: rollupSinceFor(range), projectId }),
+    getProject(projectId, orgId),
+    withAnalyticsSource(orgId, (source) =>
+      source.groupRollupsByHost({
+        gte: rollupSinceFor(range),
+        orgId,
+        projectId,
+      }),
+    ),
   ])
   const traffic = hostTraffic(hostGrouped)
   const allowed = project?.allowedOrigins ?? []

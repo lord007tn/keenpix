@@ -1,13 +1,12 @@
 import { createServerFn } from '@tanstack/react-start'
+import { getPlatformConfig } from '@/actions/admin/cdn'
+import { getCustomerUsageSeries } from '@/actions/admin/customer-analytics'
 import {
-  createApiKey,
-  disableApiKey,
-  listApiKeyActivitiesPage,
-} from '@/actions/admin/api-keys'
-import {
-  testCloudflareConnection,
-  updateCloudflareSettings,
-} from '@/actions/admin/cloudflare'
+  getCustomerAccountById,
+  getCustomerAccounts,
+  setOrgSuspension,
+  updateCustomerComplimentaryPlan,
+} from '@/actions/admin/customers'
 import {
   acceptInvitation,
   createInvitation,
@@ -21,23 +20,28 @@ import {
   runCacheMaintenance,
   updateOperationsConfig,
 } from '@/actions/admin/operations'
-import { sendTestEmail, updateSmtpSettings } from '@/actions/admin/smtp'
+import { getPlatformAnalytics } from '@/actions/admin/platform-analytics'
 import { getAdminWorkspace } from '@/actions/admin/workspace'
-import { authMiddleware, requireSuperAdmin } from '@/lib/auth/guards'
+import {
+  authMiddleware,
+  requireSelfHost,
+  requireSuperAdmin,
+} from '@/lib/auth/guards'
+import { bustServingEntitlement } from '@/lib/billing/service-gate'
 import {
   acceptInvitationSchema,
-  apiActivityPageSchema,
   cacheMaintenanceSchema,
-  cloudflareSettingsSchema,
   createInvitationSchema,
+  customerAccountSchema,
+  customerAnalyticsSchema,
   invitationTokenSchema,
   operationsConfigSchema,
+  platformAnalyticsSchema,
   resourceTrendSchema,
   revokeInvitationSchema,
-  sendTestEmailSchema,
-  smtpSettingsSchema,
+  suspendOrgSchema,
+  updateComplimentaryPlanSchema,
 } from '@/schemas/admin'
-import { createApiKeySchema, disableApiKeySchema } from '@/schemas/api-keys'
 
 export const getAdminWorkspaceFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
@@ -46,12 +50,73 @@ export const getAdminWorkspaceFn = createServerFn({ method: 'GET' })
     return getAdminWorkspace()
   })
 
-export const getApiKeyActivitiesFn = createServerFn({ method: 'GET' })
-  .inputValidator(apiActivityPageSchema)
+export const getCustomerAccountsFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(({ context }) => {
+    requireSuperAdmin(context)
+    return getCustomerAccounts()
+  })
+
+export const getCustomerAccountFn = createServerFn({ method: 'GET' })
+  .inputValidator(customerAccountSchema)
   .middleware([authMiddleware])
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
-    return listApiKeyActivitiesPage(data.page)
+    return getCustomerAccountById(data.orgId)
+  })
+
+export const getPlatformAnalyticsFn = createServerFn({ method: 'GET' })
+  .inputValidator(platformAnalyticsSchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return getPlatformAnalytics(data)
+  })
+
+export const updateComplimentaryPlanFn = createServerFn({ method: 'POST' })
+  .inputValidator(updateComplimentaryPlanSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ context, data }) => {
+    requireSuperAdmin(context)
+    const result = await updateCustomerComplimentaryPlan({
+      orgId: data.orgId,
+      plan: data.plan,
+      actorId: context.userId,
+    })
+    // Complimentary access can change whether/what an org is served immediately.
+    // request rather than after the serving gate's TTL.
+    bustServingEntitlement(data.orgId)
+    return result
+  })
+
+export const setOrgSuspensionFn = createServerFn({ method: 'POST' })
+  .inputValidator(suspendOrgSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ context, data }) => {
+    requireSuperAdmin(context)
+    const result = await setOrgSuspension({
+      orgId: data.orgId,
+      suspended: data.suspended,
+      reason: data.reason,
+    })
+    // Kill-switch takes effect on the next request, not after the gate's TTL.
+    bustServingEntitlement(data.orgId)
+    return result
+  })
+
+export const getPlatformConfigFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(({ context }) => {
+    requireSuperAdmin(context)
+    return getPlatformConfig()
+  })
+
+export const getCustomerAnalyticsFn = createServerFn({ method: 'GET' })
+  .inputValidator(customerAnalyticsSchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return getCustomerUsageSeries(data.orgId, data)
   })
 
 export const getOperationsHealthFn = createServerFn({ method: 'GET' })
@@ -66,6 +131,7 @@ export const runCacheMaintenanceFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
+    requireSelfHost()
     return runCacheMaintenance(data)
   })
 
@@ -73,6 +139,7 @@ export const getOperationsConfigFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .handler(({ context }) => {
     requireSuperAdmin(context)
+    requireSelfHost()
     return getOperationsConfig()
   })
 
@@ -89,30 +156,11 @@ export const updateOperationsConfigFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
+    requireSelfHost()
     return updateOperationsConfig({
       diskCacheMaxMb: data.diskCacheMaxMb,
       memoryCacheMaxMb: data.memoryCacheMaxMb,
     })
-  })
-
-export const createApiKeyFn = createServerFn({ method: 'POST' })
-  .inputValidator(createApiKeySchema)
-  .middleware([authMiddleware])
-  .handler(({ context, data }) => {
-    requireSuperAdmin(context)
-    return createApiKey({
-      name: data.name,
-      projectId: data.projectId,
-      userId: context.userId,
-    })
-  })
-
-export const disableApiKeyFn = createServerFn({ method: 'POST' })
-  .inputValidator(disableApiKeySchema)
-  .middleware([authMiddleware])
-  .handler(({ context, data }) => {
-    requireSuperAdmin(context)
-    return disableApiKey(data.id)
   })
 
 export const createInvitationFn = createServerFn({ method: 'POST' })
@@ -120,6 +168,11 @@ export const createInvitationFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
+    // Staff invitations are the SELF-HOST operator flow: they add a user to the
+    // single shared org_default. In cloud this path creates a user with NO org
+    // membership (a permanently broken, org-less account), so it is self-host
+    // only — cloud team management is org-scoped via the organization plugin.
+    requireSelfHost()
     return createInvitation({
       email: data.email,
       role: data.role,
@@ -134,59 +187,20 @@ export const revokeInvitationFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
+    requireSelfHost()
     return revokeInvitation(data.id)
   })
 
 export const getInvitationFn = createServerFn({ method: 'GET' })
   .inputValidator(invitationTokenSchema)
-  .handler(({ data }) => getInvitation(data.token))
+  .handler(({ data }) => {
+    requireSelfHost()
+    return getInvitation(data.token)
+  })
 
 export const acceptInvitationFn = createServerFn({ method: 'POST' })
   .inputValidator(acceptInvitationSchema)
-  .handler(({ data }) => acceptInvitation(data))
-
-export const updateSmtpSettingsFn = createServerFn({ method: 'POST' })
-  .inputValidator(smtpSettingsSchema)
-  .middleware([authMiddleware])
-  .handler(({ context, data }) => {
-    requireSuperAdmin(context)
-    return updateSmtpSettings({
-      enabled: data.enabled,
-      host: data.host,
-      port: data.port,
-      secure: data.secure,
-      username: data.username,
-      password: data.password || undefined,
-      fromEmail: data.fromEmail,
-      fromName: data.fromName,
-    })
-  })
-
-export const sendTestEmailFn = createServerFn({ method: 'POST' })
-  .inputValidator(sendTestEmailSchema)
-  .middleware([authMiddleware])
-  .handler(({ context, data }) => {
-    requireSuperAdmin(context)
-    return sendTestEmail(data.to)
-  })
-
-export const updateCloudflareSettingsFn = createServerFn({ method: 'POST' })
-  .inputValidator(cloudflareSettingsSchema)
-  .middleware([authMiddleware])
-  .handler(({ context, data }) => {
-    requireSuperAdmin(context)
-    return updateCloudflareSettings({
-      enabled: data.enabled,
-      // A blank token means "keep the saved one"; only persist a real change.
-      apiToken: data.apiToken || undefined,
-      zoneId: data.zoneId,
-      host: data.host,
-    })
-  })
-
-export const testCloudflareConnectionFn = createServerFn({ method: 'POST' })
-  .middleware([authMiddleware])
-  .handler(({ context }) => {
-    requireSuperAdmin(context)
-    return testCloudflareConnection()
+  .handler(({ data }) => {
+    requireSelfHost()
+    return acceptInvitation(data)
   })

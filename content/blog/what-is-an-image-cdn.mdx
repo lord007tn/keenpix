@@ -1,0 +1,98 @@
+---
+title: What is an image CDN? How optimization and delivery work
+description: An image CDN fetches, transforms, caches, and delivers image variants close to users. Learn the request lifecycle, tradeoffs, and when you need one.
+date: "2026-07-11"
+author: Raed Bahri
+tags: [image-cdn, fundamentals, performance]
+image: /og/blog/what-is-an-image-cdn.png?v=2026-07-11
+imageAlt: Image request moving through transformation and edge cache stages
+---
+
+An **image CDN is a delivery service that creates the right image variant for each request and caches that result near the visitor**. It combines an image transformation engine with CDN caching. Instead of preparing every width and format during a build, you request a URL that describes the output—such as an 800-pixel-wide WebP—and the service generates and reuses that variant.
+
+That definition matters because a traditional CDN and an image CDN solve related but different problems. A traditional CDN caches the file you give it. An image CDN can resize, crop, compress, and convert the source before caching the result. The two layers are often used together.
+
+## The image CDN request lifecycle
+
+A typical request follows five steps:
+
+1. **The page selects a candidate.** HTML such as `srcset` and `sizes` lets the browser choose an appropriate display width. The browser's `Accept` header can also declare support for formats such as AVIF or WebP.
+2. **The image URL names a transformation.** Width, height, fit, quality, or format appears in the path or query string.
+3. **The service validates the source.** A secure implementation checks the requested origin against an allowlist and prevents requests to private network addresses. Signed URLs may restrict which transformations callers can create.
+4. **A cache miss triggers processing.** The service fetches the source, decodes it, applies the requested operations, and encodes the output.
+5. **The result is cached and delivered.** Later requests for the same normalized transformation can reuse the generated variant. An edge CDN can cache it again closer to users.
+
+The [web.dev image CDN guide](https://web.dev/articles/image-cdns) describes the same basic split: transformation happens according to URL parameters, while a CDN reduces delivery distance and repeat work. Exact behavior varies by provider, so cache keys and invalidation rules belong in any production evaluation.
+
+## What does an image CDN optimize?
+
+The common operations are straightforward:
+
+- resize to the rendered dimensions instead of sending a desktop-sized image to a narrow screen;
+- convert to a supported modern format;
+- tune encoding quality for the content and use case;
+- crop or fit an image into a known aspect ratio;
+- strip metadata that is not needed for delivery;
+- cache each normalized result so processing is not repeated on every request.
+
+These operations can reduce transferred bytes, but no responsible provider can promise one universal percentage. Savings depend on the source format, source quality, requested dimensions, visual content, target format, and browser support. A small, already-optimized source may barely shrink. An oversized photographic PNG may shrink substantially. Publish measurements only with the input files and settings needed to reproduce them.
+
+## Image CDN vs. build-time image optimization
+
+Build-time tools create image variants while an application is built. They are a good fit when the image set is known, small enough to process, and deployed with the site. They keep runtime processing out of the request path.
+
+An image CDN is more useful when images arrive after deployment, live on remote origins, vary by user or catalog entry, or need many responsive widths. It trades build simplicity for a runtime dependency that must be secured, cached, monitored, and budgeted.
+
+Many systems combine both approaches. Static marketing assets can be generated at build time, while user content and large catalogs flow through an image CDN.
+
+## Do you still need responsive HTML?
+
+Yes. An image CDN can create a 480-pixel and a 1280-pixel variant, but the browser still needs enough information to choose between them. The [MDN responsive images guide](https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Responsive_images) explains how `srcset` and `sizes` provide width candidates and layout hints.
+
+```html
+<img
+  src="https://images.example.com/hero.jpg?w=800"
+  srcset="
+    https://images.example.com/hero.jpg?w=480 480w,
+    https://images.example.com/hero.jpg?w=800 800w,
+    https://images.example.com/hero.jpg?w=1280 1280w
+  "
+  sizes="(max-width: 720px) 100vw, 720px"
+  width="1280"
+  height="720"
+  alt="A product dashboard showing image delivery analytics"
+/>
+```
+
+The `width` and `height` attributes reserve layout space. They do not force the browser to download the largest candidate. The alt text describes meaningful editorial content; decorative images should use an empty alt value instead.
+
+## What an image CDN does not fix
+
+An image CDN is not a complete web-performance strategy. It will not repair render-blocking CSS, excessive JavaScript, a slow document response, missing image dimensions, or an incorrect above-the-fold loading priority. It can also add latency on a cold transformation if the source is slow or the cache topology is poorly designed.
+
+Treat the service as one part of a delivery system. Measure browser-visible outcomes, cache behavior, error rates, and bytes—not only transformation speed in isolation.
+
+## Security and operational questions to ask
+
+Before putting a service in the image path, ask:
+
+- Which origin hosts can a project fetch from?
+- Are private and link-local addresses blocked after DNS resolution and redirects?
+- Can transformations be signed or restricted?
+- What becomes part of the cache key?
+- How are source changes invalidated?
+- What happens when usage or spending reaches a limit?
+- Are original URLs, query strings, or request headers retained in logs?
+- Can you move the workload or self-host if the service no longer fits?
+
+The answer should be product documentation, a configuration you can inspect, or a reproducible test—not an unsupported security badge.
+
+## When should you use an image CDN?
+
+An image CDN is usually worth evaluating when you serve a changing image catalog, support multiple screen sizes, pull from origins you already operate, or need one transformation grammar across frameworks. It may be unnecessary for a small static site whose build already emits correct formats and responsive widths.
+
+For the category distinction, continue with [image CDN vs traditional CDN](/blog/image-cdn-vs-traditional-cdn). For implementation, see the [responsive image CDN guide](/blog/responsive-image-cdn-guide). If you are choosing between infrastructure ownership and a service, use the [self-hosted vs managed decision framework](/blog/self-host-vs-managed-image-optimization).
+
+## Sources and verification
+
+This explainer was checked on July 11, 2026 against [web.dev's image CDN guidance](https://web.dev/articles/image-cdns), [MDN's responsive images guide](https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Responsive_images), and the [HTTP `Accept` header reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Accept). Examples are illustrative; they are not benchmark results.

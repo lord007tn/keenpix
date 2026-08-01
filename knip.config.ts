@@ -9,6 +9,9 @@ const config: KnipConfig = {
     'src/routes/**/*.{ts,tsx}',
     'src/functions/**/*.ts',
     'src/actions/**/*.ts',
+    // Nitro server plugins, registered by path in nitro.config.ts (not imported),
+    // so knip can't reach them through the module graph.
+    'src/server/nitro/**/*.ts',
     'content/**/*.mdx',
   ],
   project: [
@@ -23,13 +26,7 @@ const config: KnipConfig = {
     'src/components/mdx.tsx',
     'src/components/ui/**',
   ],
-  ignoreDependencies: [
-    '@fontsource-variable/inter',
-    'shadcn',
-    'tailwindcss',
-    'tw-animate-css',
-    'web-vitals',
-  ],
+  ignoreDependencies: ['shadcn', 'tailwindcss', 'tw-animate-css'],
   vitest: {
     config: ['vitest.config.ts'],
     entry: ['src/**/*.{test,spec}.ts'],

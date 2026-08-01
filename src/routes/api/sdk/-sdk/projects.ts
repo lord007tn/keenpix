@@ -19,12 +19,16 @@ import { verifySdkApiKey } from './auth'
 import { getPublicBaseUrl } from './request-url'
 import { json, jsonError, readJson } from './responses'
 
+// The org the SDK operates in is resolved from the API key itself
+// (verifySdkApiKey → access.orgId), so every request is scoped to the key's own
+// tenant. Self-host keys map to the single default org; cloud keys carry theirs.
+
 export async function listProjectResources(
   request: Request,
   activity: SdkApiActivityContext,
 ) {
   const access = await verifySdkApiKey(request, 'read', undefined, activity)
-  const projects = await listProjects()
+  const projects = await listProjects(access.orgId)
   return json({
     projects: access.projectId
       ? projects.filter((project) => project.id === access.projectId)
@@ -41,7 +45,7 @@ export async function createProjectResource(
     return jsonError('API key cannot create projects', 403)
   }
   const input = internalCreateProjectSchema.parse(await readJson(request))
-  const project = await createProject(input)
+  const project = await createProject(access.orgId, input)
   return json({ project }, { status: 201 })
 }
 
@@ -50,8 +54,8 @@ export async function getProjectResource(
   projectId: string,
   activity: SdkApiActivityContext,
 ) {
-  await verifySdkApiKey(request, 'read', projectId, activity)
-  const project = await getProject(projectId)
+  const access = await verifySdkApiKey(request, 'read', projectId, activity)
+  const project = await getProject(access.orgId, projectId)
   return project ? json({ project }) : jsonError('Project not found', 404)
 }
 
@@ -60,8 +64,8 @@ export async function getProjectConfiguration(
   projectId: string,
   activity: SdkApiActivityContext,
 ) {
-  await verifySdkApiKey(request, 'read', projectId, activity)
-  const project = await getProject(projectId)
+  const access = await verifySdkApiKey(request, 'read', projectId, activity)
+  const project = await getProject(access.orgId, projectId)
   if (!project) {
     return jsonError('Project not found', 404)
   }
@@ -137,11 +141,11 @@ export async function updateProjectSettingsResource(
   projectId: string,
   activity: SdkApiActivityContext,
 ) {
-  await verifySdkApiKey(request, 'write', projectId, activity)
+  const access = await verifySdkApiKey(request, 'write', projectId, activity)
   const patch = internalProjectSettingsPatchSchema.parse(
     await readJson(request),
   )
-  const project = await updateProjectSettings(projectId, patch)
+  const project = await updateProjectSettings(access.orgId, projectId, patch)
   return project ? json({ project }) : jsonError('Project not found', 404)
 }
 
@@ -150,7 +154,12 @@ export async function prewarmProjectImagesResource(
   projectId: string,
   activity: SdkApiActivityContext,
 ) {
-  await verifySdkApiKey(request, 'write', projectId, activity)
+  const access = await verifySdkApiKey(request, 'write', projectId, activity)
+  // Ensure the project belongs to the key's org before warming its cache.
+  const target = await getProject(access.orgId, projectId)
+  if (!target) {
+    return jsonError('Project not found', 404)
+  }
   const input = projectPrewarmSchema.parse(await readJson(request))
   const sources = [...(input.sources ?? []), ...(input.src ? [input.src] : [])]
   const result = prewarmProjectImages({
@@ -179,11 +188,11 @@ export async function addProjectDomain(
   projectId: string,
   activity: SdkApiActivityContext,
 ) {
-  await verifySdkApiKey(request, 'write', projectId, activity)
+  const access = await verifySdkApiKey(request, 'write', projectId, activity)
   const { host } = z
     .object({ host: allowedHostValueSchema })
     .parse(await readJson(request))
-  const project = await addAllowedHost(projectId, host)
+  const project = await addAllowedHost(access.orgId, projectId, host)
   return project ? json({ project }) : jsonError('Project not found', 404)
 }
 
@@ -192,8 +201,9 @@ export async function removeProjectDomain(
   projectId: string,
   activity: SdkApiActivityContext,
 ) {
-  await verifySdkApiKey(request, 'write', projectId, activity)
+  const access = await verifySdkApiKey(request, 'write', projectId, activity)
   const project = await removeAllowedHost(
+    access.orgId,
     projectId,
     await getProjectDomainFromRequest(request),
   )
