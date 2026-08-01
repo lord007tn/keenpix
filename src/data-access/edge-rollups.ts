@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto'
 import { prisma } from '@/db'
 import { Prisma } from '@/generated/prisma/client'
-import type { EdgeRollupRow } from '@/helpers/analytics/edge-rollups'
 import type { EdgeAdaptiveGroup } from '@/lib/cloudflare/analytics'
 
 // Stable id per (zone, host, hour, cacheStatus) so a re-capture of the same hour
@@ -45,24 +44,6 @@ export async function upsertEdgeRollups(
   `)
 }
 
-export async function listEdgeRollups(
-  zoneId: string,
-  host: string,
-  gte: Date,
-  lt?: Date,
-): Promise<EdgeRollupRow[]> {
-  const rows = await prisma.edgeRollupHourly.findMany({
-    where: { zoneId, host, bucketStart: lt ? { gte, lt } : { gte } },
-    select: { bucketStart: true, cacheStatus: true, count: true, bytes: true },
-  })
-  return rows.map((r) => ({
-    bucketStart: r.bucketStart,
-    cacheStatus: r.cacheStatus,
-    count: r.count,
-    bytes: Number(r.bytes),
-  }))
-}
-
 export async function listPlatformEdgeRollups(gte: Date, lt?: Date) {
   const rows = await prisma.edgeRollupHourly.findMany({
     where: { bucketStart: lt ? { gte, lt } : { gte } },
@@ -74,18 +55,6 @@ export async function listPlatformEdgeRollups(gte: Date, lt?: Date) {
     count: row.count,
     bytes: Number(row.bytes),
   }))
-}
-
-// Earliest captured hour for this zone+host — the start of our edge history.
-export async function edgeCoverageStart(
-  zoneId: string,
-  host: string,
-): Promise<Date | null> {
-  const { _min } = await prisma.edgeRollupHourly.aggregate({
-    where: { zoneId, host },
-    _min: { bucketStart: true },
-  })
-  return _min.bucketStart
 }
 
 export async function platformEdgeCoverageStart() {
