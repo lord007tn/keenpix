@@ -302,6 +302,36 @@ export const auth = betterAuth({
             data: { ...session, activeOrganizationId: member.organizationId },
           }
         },
+        after: (session) => {
+          if (typeof session.impersonatedBy !== 'string') {
+            return Promise.resolve()
+          }
+          logger.info(
+            {
+              actorUserId: session.impersonatedBy,
+              impersonationSessionId: session.id,
+              targetUserId: session.userId,
+            },
+            'admin impersonation started',
+          )
+          return Promise.resolve()
+        },
+      },
+      delete: {
+        before: (session) => {
+          if (typeof session.impersonatedBy !== 'string') {
+            return Promise.resolve()
+          }
+          logger.info(
+            {
+              actorUserId: session.impersonatedBy,
+              impersonationSessionId: session.id,
+              targetUserId: session.userId,
+            },
+            'admin impersonation ended',
+          )
+          return Promise.resolve()
+        },
       },
     },
   },

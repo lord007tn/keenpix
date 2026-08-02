@@ -2,6 +2,7 @@ import { useForm } from '@tanstack/react-form'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { GoogleLogo } from '@/components/app/google-logo'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { ModeToggle } from '@/components/theme/mode-toggle'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -127,6 +128,7 @@ function LoginPage() {
               type="button"
               variant="outline"
             >
+              <GoogleLogo data-icon="inline-start" />
               Continue with Google
             </Button>
           ) : null}

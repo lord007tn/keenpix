@@ -2,7 +2,7 @@ import type { EdgeCachePoint, TimePoint } from '@/shared/types'
 
 export interface FunnelPoint {
   diskServed: number
-  // keenpix disk hits as a % of all client requests (cache-view band).
+  // Keenpix cache hits as a % of all client requests (cache-view band).
   diskShare: number
   edgeBytes: number
   edgeServed: number
@@ -16,7 +16,7 @@ export interface FunnelPoint {
 
 // Merge the origin time-series with the Cloudflare edge series by bucket label so
 // one chart can show the whole funnel: served at the edge, then served from the
-// keenpix disk cache, then optimized live. Edge hits never reach keenpix, so the
+// Keenpix cache, then freshly optimized responses. Edge hits never reach keenpix, so the
 // three bands describe the captured delivery stages for each aligned bucket.
 export function mergeFunnel(
   origin: TimePoint[],

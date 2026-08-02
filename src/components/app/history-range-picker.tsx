@@ -379,17 +379,21 @@ export function HistoryRangePicker({
                         earliest,
                         today,
                       )
-                      setDraftRange({
-                        from: dayjs(dates.from).toDate(),
-                        to: dayjs(dates.to).toDate(),
-                      })
-                      setCalendarMonth(
-                        dayjs(dates.to)
-                          .subtract(1, 'month')
-                          .startOf('month')
-                          .toDate(),
-                      )
                       setSelectedShortcut(shortcut.value)
+                      if (isHistoricalPreset(shortcut.value)) {
+                        onChange({
+                          range: shortcut.value,
+                          from: undefined,
+                          to: undefined,
+                        })
+                      } else {
+                        onChange({
+                          range: 'custom',
+                          from: dates.from,
+                          to: dates.to,
+                        })
+                      }
+                      setCustomOpen(false)
                     }}
                     size="sm"
                     type="button"
@@ -492,7 +496,7 @@ export function HistoryRangePicker({
                   Cancel
                 </Button>
                 <Button disabled={!draftIsValid} type="submit">
-                  Apply range
+                  Apply custom dates
                 </Button>
               </div>
             </div>

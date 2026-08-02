@@ -137,6 +137,22 @@ export function PlatformAnalyticsView() {
     1,
   )
   const totalPlanned = planDistribution.reduce((sum, row) => sum + row.count, 0)
+  const money = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+  })
+  const optimizedShare =
+    summary.successfulDeliveries === 0
+      ? 0
+      : (summary.liveOptimizations / summary.successfulDeliveries) * 100
+  let costSub = 'Polar metrics unavailable'
+  if (data.finance.source === 'polar') {
+    costSub =
+      data.finance.costCents === null
+        ? 'Enable Polar Cost Insights'
+        : 'Recorded delivery costs'
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -149,7 +165,7 @@ export function PlatformAnalyticsView() {
           value={edgeStats ? compactNumber(edgeStats.requests) : '—'}
         />
         <StatCard
-          label="Served by Cloudflare cache"
+          label="Edge optimized"
           sub={
             edgeStats
               ? `${edgeStats.hitRate.toFixed(1)}% of observed edge requests`
@@ -158,13 +174,13 @@ export function PlatformAnalyticsView() {
           value={edgeStats ? compactNumber(edgeStats.cachedRequests) : '—'}
         />
         <StatCard
-          label="Served from Keenpix cache"
+          label="Cache optimized"
           sub={`${summary.hitRate.toFixed(1)}% of requests reaching Keenpix`}
           value={compactNumber(summary.cacheHits)}
         />
         <StatCard
-          label="Newly optimized by Keenpix"
-          sub={`${compactNumber(summary.totalRequests)} requests reached Keenpix`}
+          label="Newly optimized"
+          sub={`${optimizedShare.toFixed(1)}% of successful Keenpix requests`}
           value={compactNumber(summary.liveOptimizations)}
         />
       </div>
@@ -180,7 +196,65 @@ export function PlatformAnalyticsView() {
         </p>
       ) : null}
 
-      <ChartAreaInteractive data={series} />
+      <ChartAreaInteractive data={series} edge={edgeStats?.series} funnel />
+
+      <section className="flex flex-col gap-3">
+        <div>
+          <h2 className="font-semibold text-lg">Finances</h2>
+          <p className="text-muted-foreground text-sm">
+            Settled Polar orders for the selected calendar dates. MRR is the
+            current subscription commitment.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label="Actual revenue"
+            sub={
+              data.finance.source === 'polar'
+                ? `${data.finance.orders ?? 0} settled order${data.finance.orders === 1 ? '' : 's'}`
+                : 'Polar metrics unavailable'
+            }
+            value={
+              data.finance.revenueCents === null
+                ? '—'
+                : money.format(data.finance.revenueCents / 100)
+            }
+          />
+          <StatCard
+            label="Actual costs"
+            sub={costSub}
+            value={
+              data.finance.costCents === null
+                ? '—'
+                : money.format(data.finance.costCents / 100)
+            }
+          />
+          <StatCard
+            label="Gross profit"
+            sub={
+              data.finance.profitMarginPct === null
+                ? 'Requires recorded costs'
+                : `${data.finance.profitMarginPct.toFixed(1)}% gross margin`
+            }
+            value={
+              data.finance.profitCents === null
+                ? '—'
+                : money.format(data.finance.profitCents / 100)
+            }
+          />
+          <StatCard
+            label="Current MRR"
+            sub={`${data.activePaidSubscriptionCount} active paid subscription${data.activePaidSubscriptionCount === 1 ? '' : 's'}`}
+            value={money.format(data.paidMrrCents / 100)}
+          />
+        </div>
+        {data.finance.source === 'polar' && data.finance.costCents === null ? (
+          <p className="text-muted-foreground text-xs">
+            Revenue is settled order data. Cost and profit stay blank until
+            delivery-cost events are recorded in Polar Cost Insights.
+          </p>
+        ) : null}
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

@@ -91,7 +91,12 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
   const [customer, setCustomer] = useState<CustomerAccount | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
-  const [impersonating, setImpersonating] = useState(false)
+  const [impersonationTargetId, setImpersonationTargetId] = useState<
+    string | null
+  >(null)
+  const [impersonatingUserId, setImpersonatingUserId] = useState<string | null>(
+    null,
+  )
   const [confirmSuspend, setConfirmSuspend] = useState(false)
   const [suspendReason, setSuspendReason] = useState('')
   const [suspending, setSuspending] = useState(false)
@@ -180,16 +185,22 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
   }
 
   const owner = customer?.owners[0]
+  const impersonationTarget = customer?.members.find(
+    (member) => member.id === impersonationTargetId,
+  )
 
   async function impersonate() {
-    if (!owner) {
+    if (
+      !impersonationTarget ||
+      impersonationTarget.platformRole === 'super_admin'
+    ) {
       return
     }
-    setImpersonating(true)
+    setImpersonatingUserId(impersonationTarget.id)
     try {
       // better-auth's client returns { data, error } and does not throw.
       const impersonation = await authClient.admin.impersonateUser({
-        userId: owner.id,
+        userId: impersonationTarget.id,
       })
       if (impersonation.error) {
         throw new Error(impersonation.error.message ?? 'Could not impersonate')
@@ -210,7 +221,7 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
       window.location.assign('/app')
     } catch (error) {
       toast.error(getErrorMessage(error, 'Could not impersonate'))
-      setImpersonating(false)
+      setImpersonatingUserId(null)
     }
   }
 
@@ -327,13 +338,13 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
                 Refresh
               </Button>
               <Button
-                disabled={!owner || impersonating}
-                onClick={impersonate}
+                disabled={!owner || owner.platformRole === 'super_admin'}
+                onClick={() => setImpersonationTargetId(owner?.id ?? null)}
                 size="sm"
                 variant="outline"
               >
                 <UserCogIcon data-icon="inline-start" />
-                {impersonating ? 'Starting…' : 'Impersonate'}
+                Impersonate owner
               </Button>
               <Button
                 onClick={() => setConfirmSuspend(true)}
@@ -652,12 +663,13 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
                     <TableHead>Org role</TableHead>
                     <TableHead>Platform</TableHead>
                     <TableHead>Joined</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {customer.members.length === 0 ? (
                     <TableRow>
-                      <TableCell className="text-muted-foreground" colSpan={4}>
+                      <TableCell className="text-muted-foreground" colSpan={5}>
                         No members.
                       </TableCell>
                     </TableRow>
@@ -688,6 +700,22 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-muted-foreground text-xs">
                           {dayjs(member.createdAt).format('MMM D, YYYY')}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            disabled={member.platformRole === 'super_admin'}
+                            onClick={() => setImpersonationTargetId(member.id)}
+                            size="sm"
+                            title={
+                              member.platformRole === 'super_admin'
+                                ? 'Operator accounts cannot be impersonated'
+                                : `Impersonate ${member.name || member.email}`
+                            }
+                            variant="outline"
+                          >
+                            <UserCogIcon data-icon="inline-start" />
+                            Impersonate
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -741,6 +769,48 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
               variant={suspended ? 'default' : 'destructive'}
             >
               {suspending ? 'Working…' : suspendActionLabel}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        onOpenChange={(open) => {
+          if (!(open || impersonatingUserId)) {
+            setImpersonationTargetId(null)
+          }
+        }}
+        open={Boolean(impersonationTarget)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Impersonate this user?</DialogTitle>
+            <DialogDescription>
+              You will enter {customer.name} as{' '}
+              {impersonationTarget?.name || impersonationTarget?.email}. Every
+              action will run with their permissions until you stop
+              impersonating or the one-hour session expires.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              disabled={Boolean(impersonatingUserId)}
+              onClick={() => setImpersonationTargetId(null)}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={Boolean(impersonatingUserId)}
+              onClick={impersonate}
+            >
+              {impersonatingUserId ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <UserCogIcon data-icon="inline-start" />
+              )}
+              {impersonatingUserId ? 'Starting…' : 'Start impersonating'}
             </Button>
           </DialogFooter>
         </DialogContent>

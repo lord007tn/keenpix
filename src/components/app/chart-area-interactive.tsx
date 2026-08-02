@@ -27,15 +27,15 @@ const originConfig = {
 // caller is responsible for showing any partial-coverage warning.
 const funnelConfig = {
   edgeServed: {
-    label: 'Served by Cloudflare cache',
+    label: 'Edge optimized',
     color: 'var(--chart-1)',
   },
   diskServed: {
-    label: 'Served from Keenpix cache',
+    label: 'Cache optimized',
     color: 'var(--chart-2)',
   },
   liveProcessed: {
-    label: 'Newly optimized by Keenpix',
+    label: 'Newly optimized',
     color: 'var(--muted-foreground)',
   },
 } satisfies ChartConfig

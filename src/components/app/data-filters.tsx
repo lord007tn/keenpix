@@ -1,12 +1,15 @@
-import { CheckIcon, ListFilterIcon, PlusIcon, XIcon } from 'lucide-react'
-import { useState } from 'react'
+import { ListFilterIcon, XIcon } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
-  DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
@@ -53,55 +56,50 @@ function FilterPill({
   }
 
   return (
-    <div className="flex items-center overflow-hidden rounded-md border bg-background">
+    <div className="flex items-center">
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <button
-              className="flex items-center gap-1.5 px-2 py-1 text-sm outline-none hover:bg-accent"
+            <Button
+              className="h-11 rounded-r-none px-3"
               type="button"
+              variant="outline"
             />
           }
         >
-          <ListFilterIcon className="size-3.5 text-muted-foreground" />
+          <ListFilterIcon data-icon="inline-start" />
           <span className="text-muted-foreground">{field.label}</span>
           <span className="font-medium">{summarize(field, selected)}</span>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-52">
+        <DropdownMenuContent align="start" className="w-64">
           <DropdownMenuGroup>
             <DropdownMenuLabel>{field.label}</DropdownMenuLabel>
             {field.options.map((o) => {
               const checked = selected.includes(o.value)
               return (
-                <DropdownMenuItem
+                <DropdownMenuCheckboxItem
+                  checked={checked}
                   closeOnClick={false}
                   key={o.value}
                   onClick={() => toggle(o.value)}
                 >
-                  <span
-                    className={`flex size-4 items-center justify-center rounded-[4px] border ${
-                      checked
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-input'
-                    }`}
-                  >
-                    {checked ? <CheckIcon className="size-3" /> : null}
-                  </span>
                   <span className="truncate">{o.label}</span>
-                </DropdownMenuItem>
+                </DropdownMenuCheckboxItem>
               )
             })}
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
-      <button
+      <Button
         aria-label={`Remove ${field.label} filter`}
-        className="border-l px-1.5 py-1.5 text-muted-foreground outline-none hover:bg-accent hover:text-foreground"
+        className="h-11 rounded-l-none border-l-0 px-2"
         onClick={onRemove}
+        size="icon"
         type="button"
+        variant="outline"
       >
-        <XIcon className="size-3.5" />
-      </button>
+        <XIcon />
+      </Button>
     </div>
   )
 }
@@ -117,63 +115,93 @@ export function DataFilters({
   onChange: (key: string, next: string[]) => void
   onClear: () => void
 }) {
-  const [added, setAdded] = useState<string[]>([])
-  const isActive = (f: FilterField) =>
-    (values[f.key]?.length ?? 0) > 0 || added.includes(f.key)
-  const active = fields.filter(isActive)
-  const available = fields.filter((f) => !isActive(f))
-
-  function remove(key: string) {
-    setAdded((a) => a.filter((k) => k !== key))
-    onChange(key, [])
-  }
+  const active = fields.filter((field) => (values[field.key]?.length ?? 0) > 0)
+  const selectionCount = active.reduce(
+    (total, field) => total + (values[field.key]?.length ?? 0),
+    0,
+  )
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {active.map((f) => (
-        <FilterPill
-          field={f}
-          key={f.key}
-          onChange={(next) => onChange(f.key, next)}
-          onRemove={() => remove(f.key)}
-          selected={values[f.key] ?? []}
-        />
-      ))}
-
-      {available.length > 0 ? (
+      {fields.length > 0 ? (
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={
-              <Button className="border-dashed" size="sm" variant="outline" />
-            }
+            render={<Button className="h-11" variant="outline" />}
           >
-            <PlusIcon data-icon="inline-start" />
-            {active.length > 0 ? 'Add filter' : 'Filter'}
+            <ListFilterIcon data-icon="inline-start" />
+            Filters
+            {selectionCount > 0 ? (
+              <Badge className="ml-1" variant="secondary">
+                {selectionCount}
+              </Badge>
+            ) : null}
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
+          <DropdownMenuContent align="start" className="w-56">
             <DropdownMenuGroup>
-              <DropdownMenuLabel>Add filter</DropdownMenuLabel>
-              {available.map((f) => (
-                <DropdownMenuItem
-                  key={f.key}
-                  onClick={() => setAdded((a) => [...a, f.key])}
-                >
-                  <ListFilterIcon className="size-3.5 text-muted-foreground" />
-                  {f.label}
-                </DropdownMenuItem>
-              ))}
+              <DropdownMenuLabel>Filter analytics</DropdownMenuLabel>
+              {fields.map((field) => {
+                const selected = values[field.key] ?? []
+                return (
+                  <DropdownMenuSub key={field.key}>
+                    <DropdownMenuSubTrigger>
+                      {field.label}
+                      {selected.length > 0 ? (
+                        <Badge className="ml-auto" variant="secondary">
+                          {selected.length}
+                        </Badge>
+                      ) : null}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-64">
+                      <DropdownMenuGroup>
+                        <DropdownMenuLabel>{field.label}</DropdownMenuLabel>
+                        {field.options.map((option) => {
+                          const checked = selected.includes(option.value)
+                          return (
+                            <DropdownMenuCheckboxItem
+                              checked={checked}
+                              closeOnClick={false}
+                              key={option.value}
+                              onClick={() =>
+                                onChange(
+                                  field.key,
+                                  checked
+                                    ? selected.filter(
+                                        (value) => value !== option.value,
+                                      )
+                                    : [...selected, option.value],
+                                )
+                              }
+                            >
+                              <span className="truncate">{option.label}</span>
+                            </DropdownMenuCheckboxItem>
+                          )
+                        })}
+                      </DropdownMenuGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                )
+              })}
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
 
+      {active.map((f) => (
+        <FilterPill
+          field={f}
+          key={f.key}
+          onChange={(next) => onChange(f.key, next)}
+          onRemove={() => onChange(f.key, [])}
+          selected={values[f.key] ?? []}
+        />
+      ))}
+
       {active.length > 0 ? (
         <Button
+          className="h-11"
           onClick={() => {
-            setAdded([])
             onClear()
           }}
-          size="sm"
           variant="ghost"
         >
           Clear

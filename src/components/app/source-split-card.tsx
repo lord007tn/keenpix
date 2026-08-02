@@ -31,7 +31,7 @@ const SOURCE_COLOR: Record<SplitSource, string> = {
   origin: 'var(--chart-2)',
   disk: 'var(--chart-2)',
   // Optimized-live (origin processed a fresh transform) — matches the funnel
-  // chart's "Optimized live" band.
+  // chart's "Optimized" band.
   live: 'var(--muted-foreground)',
   none: 'var(--border)',
 }

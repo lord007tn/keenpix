@@ -76,11 +76,35 @@ describe('auth middleware organization membership', () => {
       context: {
         userId: 'user_a',
         email: 'member@example.com',
+        impersonatedBy: null,
         name: 'Member',
         role: 'user',
         orgId: 'org_a',
         orgRole: 'member',
       },
+    })
+  })
+
+  it('passes the trusted impersonating operator id to downstream functions', async () => {
+    isCloud.mockReturnValue(true)
+    getSession.mockResolvedValue({
+      session: {
+        activeOrganizationId: 'org_a',
+        impersonatedBy: 'operator_a',
+      },
+      user: {
+        id: 'user_a',
+        email: 'member@example.com',
+        name: 'Member',
+        role: 'user',
+      },
+    })
+    getMemberRole.mockResolvedValue('member')
+    const next = vi.fn().mockResolvedValue('ok')
+
+    await expect(runAuthMiddleware({ next } as never)).resolves.toBe('ok')
+    expect(next).toHaveBeenCalledWith({
+      context: expect.objectContaining({ impersonatedBy: 'operator_a' }),
     })
   })
 

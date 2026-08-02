@@ -10,9 +10,11 @@ import {
 
 export const analyticsInputSchema = z
   .object({
+    country: stringArrayParamSchema,
     domain: stringArrayParamSchema,
     format: stringArrayParamSchema,
     from: z.iso.date().optional(),
+    outcome: stringArrayParamSchema,
     project: optionalNonEmptyParamSchema,
     range: historicalAnalyticsRangeSchema.catch('24h'),
     status: stringArrayParamSchema,
