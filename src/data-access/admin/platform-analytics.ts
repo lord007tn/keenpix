@@ -49,14 +49,14 @@ export async function aggregatePlatformSummary(
   const _sum = rows.reduce(
     (sum, row) => {
       sum.requests += row._sum.requests ?? 0
-      sum.cachedRequests += row._sum.cachedRequests ?? 0
-      sum.optimizedRequests += row._sum.optimizedRequests ?? 0
       sum.bytesIn += row._sum.bytesIn ?? 0n
       sum.bytesOut += row._sum.bytesOut ?? 0n
       sum.bytesSaved += row._sum.bytesSaved ?? 0n
       sum.latencyMsSum += row._sum.latencyMsSum ?? 0
       if (row.status >= 200 && row.status < 300) {
         sum.successfulRequests += row._sum.requests ?? 0
+        sum.cachedRequests += row._sum.cachedRequests ?? 0
+        sum.optimizedRequests += row._sum.optimizedRequests ?? 0
       }
       for (const bucket of LATENCY_BUCKETS) {
         sum[bucket.field] += row._sum[bucket.field] ?? 0
@@ -93,7 +93,7 @@ export async function groupPlatformByBucket(
   lt?: Date,
 ): Promise<BucketAgg[]> {
   const rows = await prisma.analyticsRollupHourly.groupBy({
-    by: ['bucketStart'],
+    by: ['bucketStart', 'status'],
     where: { bucketStart: lt ? { gte, lt } : { gte } },
     _sum: {
       requests: true,
@@ -105,33 +105,71 @@ export async function groupPlatformByBucket(
       ...LATENCY_SUM_SELECT,
     },
   })
-  return rows.map((r) => ({
-    bucketStart: r.bucketStart,
-    requests: r._sum.requests ?? 0,
-    cachedRequests: r._sum.cachedRequests ?? 0,
-    optimizedRequests: r._sum.optimizedRequests ?? 0,
-    bytesIn: Number(r._sum.bytesIn ?? 0n),
-    bytesOut: Number(r._sum.bytesOut ?? 0n),
-    bytesSaved: Number(r._sum.bytesSaved ?? 0n),
-    latency: latencyCountsFrom(r._sum),
-  }))
+  const buckets = new Map<number, BucketAgg>()
+  for (const row of rows) {
+    const key = row.bucketStart.getTime()
+    const bucket = buckets.get(key) ?? {
+      bucketStart: row.bucketStart,
+      requests: 0,
+      cachedRequests: 0,
+      optimizedRequests: 0,
+      bytesIn: 0,
+      bytesOut: 0,
+      bytesSaved: 0,
+      latency: emptyLatencyBucketCounts(),
+    }
+    bucket.requests += row._sum.requests ?? 0
+    if (row.status >= 200 && row.status < 300) {
+      bucket.cachedRequests += row._sum.cachedRequests ?? 0
+      bucket.optimizedRequests += row._sum.optimizedRequests ?? 0
+    }
+    bucket.bytesIn += Number(row._sum.bytesIn ?? 0n)
+    bucket.bytesOut += Number(row._sum.bytesOut ?? 0n)
+    bucket.bytesSaved += Number(row._sum.bytesSaved ?? 0n)
+    for (const latencyBucket of LATENCY_BUCKETS) {
+      bucket.latency[latencyBucket.field] += row._sum[latencyBucket.field] ?? 0
+    }
+    buckets.set(key, bucket)
+  }
+  return [...buckets.values()]
 }
 
 // Top orgs by request volume in the window — feeds the "top customers" list.
 export async function groupPlatformByOrg(gte: Date, lt?: Date, take = 8) {
   const rows = await prisma.analyticsRollupHourly.groupBy({
-    by: ['orgId'],
+    by: ['orgId', 'status'],
     where: { bucketStart: lt ? { gte, lt } : { gte } },
     _sum: { requests: true, cachedRequests: true, bytesOut: true },
-    orderBy: [{ _sum: { requests: 'desc' } }],
-    take,
   })
-  return rows.map((r) => ({
-    orgId: r.orgId,
-    requests: r._sum.requests ?? 0,
-    cachedRequests: r._sum.cachedRequests ?? 0,
-    bytesOut: Number(r._sum.bytesOut ?? 0n),
-  }))
+  const organizations = new Map<
+    string,
+    {
+      bytesOut: number
+      cachedRequests: number
+      orgId: string
+      requests: number
+      successfulRequests: number
+    }
+  >()
+  for (const row of rows) {
+    const organization = organizations.get(row.orgId) ?? {
+      orgId: row.orgId,
+      requests: 0,
+      successfulRequests: 0,
+      cachedRequests: 0,
+      bytesOut: 0,
+    }
+    organization.requests += row._sum.requests ?? 0
+    if (row.status >= 200 && row.status < 300) {
+      organization.successfulRequests += row._sum.requests ?? 0
+      organization.cachedRequests += row._sum.cachedRequests ?? 0
+    }
+    organization.bytesOut += Number(row._sum.bytesOut ?? 0n)
+    organizations.set(row.orgId, organization)
+  }
+  return [...organizations.values()]
+    .sort((a, b) => b.requests - a.requests)
+    .slice(0, take)
 }
 
 export async function platformAnalyticsCoverageStart() {

@@ -30,8 +30,8 @@ describe('analyticsSeriesCsv', () => {
       ),
     ).toBe(
       [
-        'bucket_start,client_requests_observed_at_cloudflare,served_by_cloudflare_cache,forwarded_by_cloudflare,requests_reaching_keenpix,successful_deliveries,served_from_keenpix_cache,newly_optimized_by_keenpix,failed_requests,source_bytes,delivered_bytes,saved_bytes',
-        '2026-07-15T00:00:00.000Z,16,12,4,10,9,6,3,1,5000,2000,3000',
+        'bucket_start,total_image_requests,edge,cache_optimized,optimized,failed,requests_reaching_keenpix,edge_forwarded_by_cloudflare,source_bytes,delivered_bytes,edge_delivered_bytes,saved_bytes',
+        '2026-07-15T00:00:00.000Z,22,12,6,3,1,10,4,5000,2000,900,3000',
       ].join('\n'),
     )
   })
@@ -88,11 +88,11 @@ describe('analyticsSeriesCsv', () => {
       )
 
     expect(rows).toHaveLength(2)
-    expect(total('client_requests_observed_at_cloudflare')).toBe(43)
-    expect(total('served_by_cloudflare_cache')).toBe(32)
-    expect(total('forwarded_by_cloudflare')).toBe(11)
+    expect(total('total_image_requests')).toBe(62)
+    expect(total('edge')).toBe(32)
+    expect(total('edge_forwarded_by_cloudflare')).toBe(11)
     expect(total('requests_reaching_keenpix')).toBe(30)
-    expect(total('served_from_keenpix_cache')).toBe(14)
-    expect(total('newly_optimized_by_keenpix')).toBe(13)
+    expect(total('cache_optimized')).toBe(14)
+    expect(total('optimized')).toBe(13)
   })
 })

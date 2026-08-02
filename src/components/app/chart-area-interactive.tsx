@@ -19,7 +19,7 @@ import { compactNumber } from '@/shared/format'
 import type { EdgeCachePoint, TimePoint } from '@/shared/types'
 
 const originConfig = {
-  cached: { label: 'Cache hits', color: 'var(--chart-2)' },
+  cached: { label: 'Cache optimized', color: 'var(--chart-2)' },
   optimized: { label: 'Optimized', color: 'var(--chart-1)' },
 } satisfies ChartConfig
 
@@ -27,7 +27,7 @@ const originConfig = {
 // caller is responsible for showing any partial-coverage warning.
 const funnelConfig = {
   edgeServed: {
-    label: 'Edge optimized',
+    label: 'Edge',
     color: 'var(--chart-1)',
   },
   diskServed: {
@@ -35,7 +35,7 @@ const funnelConfig = {
     color: 'var(--chart-2)',
   },
   liveProcessed: {
-    label: 'Newly optimized',
+    label: 'Optimized',
     color: 'var(--muted-foreground)',
   },
 } satisfies ChartConfig

@@ -109,14 +109,14 @@ export async function aggregateRollupSummary(
   const _sum = rows.reduce(
     (sum, row) => {
       sum.requests += row._sum.requests ?? 0
-      sum.cachedRequests += row._sum.cachedRequests ?? 0
-      sum.optimizedRequests += row._sum.optimizedRequests ?? 0
       sum.bytesIn += row._sum.bytesIn ?? 0n
       sum.bytesOut += row._sum.bytesOut ?? 0n
       sum.bytesSaved += row._sum.bytesSaved ?? 0n
       sum.latencyMsSum += row._sum.latencyMsSum ?? 0
       if (row.status >= 200 && row.status < 300) {
         sum.successfulRequests += row._sum.requests ?? 0
+        sum.cachedRequests += row._sum.cachedRequests ?? 0
+        sum.optimizedRequests += row._sum.optimizedRequests ?? 0
       }
       for (const bucket of LATENCY_BUCKETS) {
         sum[bucket.field] += row._sum[bucket.field] ?? 0
@@ -153,7 +153,7 @@ export async function groupRollupsByBucket(
   opts: WindowOpts,
 ): Promise<BucketAgg[]> {
   const rows = await prisma.analyticsRollupHourly.groupBy({
-    by: ['bucketStart'],
+    by: ['bucketStart', 'status'],
     where: whereFor(opts),
     _sum: {
       requests: true,
@@ -165,16 +165,33 @@ export async function groupRollupsByBucket(
       ...LATENCY_SUM_SELECT,
     },
   })
-  return rows.map((r) => ({
-    bucketStart: r.bucketStart,
-    requests: r._sum.requests ?? 0,
-    cachedRequests: r._sum.cachedRequests ?? 0,
-    optimizedRequests: r._sum.optimizedRequests ?? 0,
-    bytesIn: Number(r._sum.bytesIn ?? 0n),
-    bytesOut: Number(r._sum.bytesOut ?? 0n),
-    bytesSaved: Number(r._sum.bytesSaved ?? 0n),
-    latency: latencyCountsFrom(r._sum),
-  }))
+  const buckets = new Map<number, BucketAgg>()
+  for (const row of rows) {
+    const key = row.bucketStart.getTime()
+    const bucket = buckets.get(key) ?? {
+      bucketStart: row.bucketStart,
+      requests: 0,
+      cachedRequests: 0,
+      optimizedRequests: 0,
+      bytesIn: 0,
+      bytesOut: 0,
+      bytesSaved: 0,
+      latency: emptyLatencyBucketCounts(),
+    }
+    bucket.requests += row._sum.requests ?? 0
+    if (row.status >= 200 && row.status < 300) {
+      bucket.cachedRequests += row._sum.cachedRequests ?? 0
+      bucket.optimizedRequests += row._sum.optimizedRequests ?? 0
+    }
+    bucket.bytesIn += Number(row._sum.bytesIn ?? 0n)
+    bucket.bytesOut += Number(row._sum.bytesOut ?? 0n)
+    bucket.bytesSaved += Number(row._sum.bytesSaved ?? 0n)
+    for (const latencyBucket of LATENCY_BUCKETS) {
+      bucket.latency[latencyBucket.field] += row._sum[latencyBucket.field] ?? 0
+    }
+    buckets.set(key, bucket)
+  }
+  return [...buckets.values()]
 }
 
 export async function groupRollupsByBucketStatus(
@@ -264,7 +281,7 @@ export async function groupRollupsByProject(
   opts: WindowOpts,
 ): Promise<ProjectAgg[]> {
   const rows = await prisma.analyticsRollupHourly.groupBy({
-    by: ['projectId'],
+    by: ['projectId', 'status'],
     where: whereFor(opts),
     _sum: {
       requests: true,
@@ -274,19 +291,31 @@ export async function groupRollupsByProject(
       latencyMsSum: true,
     },
   })
-  return rows.map((r) => ({
-    projectId: r.projectId,
-    requests: r._sum.requests ?? 0,
-    cachedRequests: r._sum.cachedRequests ?? 0,
-    optimizedRequests: r._sum.optimizedRequests ?? 0,
-    bytesSaved: Number(r._sum.bytesSaved ?? 0n),
-    latencyMsSum: r._sum.latencyMsSum ?? 0,
-  }))
+  const projects = new Map<string, ProjectAgg>()
+  for (const row of rows) {
+    const project = projects.get(row.projectId) ?? {
+      projectId: row.projectId,
+      requests: 0,
+      cachedRequests: 0,
+      optimizedRequests: 0,
+      bytesSaved: 0,
+      latencyMsSum: 0,
+    }
+    project.requests += row._sum.requests ?? 0
+    if (row.status >= 200 && row.status < 300) {
+      project.cachedRequests += row._sum.cachedRequests ?? 0
+      project.optimizedRequests += row._sum.optimizedRequests ?? 0
+    }
+    project.bytesSaved += Number(row._sum.bytesSaved ?? 0n)
+    project.latencyMsSum += row._sum.latencyMsSum ?? 0
+    projects.set(row.projectId, project)
+  }
+  return [...projects.values()]
 }
 
 export async function groupRollupsByHost(opts: WindowOpts): Promise<HostAgg[]> {
   const rows = await prisma.analyticsRollupHourly.groupBy({
-    by: ['sourceHost'],
+    by: ['sourceHost', 'status'],
     where: whereFor(opts),
     _sum: {
       requests: true,
@@ -297,13 +326,31 @@ export async function groupRollupsByHost(opts: WindowOpts): Promise<HostAgg[]> {
     },
     _max: { bucketStart: true },
   })
-  return rows.map((r) => ({
-    sourceHost: r.sourceHost,
-    requests: r._sum.requests ?? 0,
-    cachedRequests: r._sum.cachedRequests ?? 0,
-    optimizedRequests: r._sum.optimizedRequests ?? 0,
-    bytesSaved: Number(r._sum.bytesSaved ?? 0n),
-    latencyMsSum: r._sum.latencyMsSum ?? 0,
-    lastSeen: r._max.bucketStart,
-  }))
+  const hosts = new Map<string, HostAgg>()
+  for (const row of rows) {
+    const host = hosts.get(row.sourceHost) ?? {
+      sourceHost: row.sourceHost,
+      requests: 0,
+      cachedRequests: 0,
+      optimizedRequests: 0,
+      bytesSaved: 0,
+      latencyMsSum: 0,
+      lastSeen: null,
+    }
+    host.requests += row._sum.requests ?? 0
+    if (row.status >= 200 && row.status < 300) {
+      host.cachedRequests += row._sum.cachedRequests ?? 0
+      host.optimizedRequests += row._sum.optimizedRequests ?? 0
+    }
+    host.bytesSaved += Number(row._sum.bytesSaved ?? 0n)
+    host.latencyMsSum += row._sum.latencyMsSum ?? 0
+    if (
+      row._max.bucketStart &&
+      (!host.lastSeen || row._max.bucketStart > host.lastSeen)
+    ) {
+      host.lastSeen = row._max.bucketStart
+    }
+    hosts.set(row.sourceHost, host)
+  }
+  return [...hosts.values()]
 }

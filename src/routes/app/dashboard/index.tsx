@@ -179,7 +179,7 @@ function DashboardPage() {
   // Edge is zone-wide, so it only reconciles at all-projects scope and only over
   // a window our captured history fully covers.
   const edgeGated = edgeConfigured && edge !== null && isAll && edgeCovered
-  const edgeObserved = edgeConfigured && edge !== null && isAll
+  const edgeReady = edgeConfigured && edge !== null && isAll
   // Cloud edge data remains operator-only because it is platform-wide. An
   // impersonation session retains that operator provenance server-side, so an
   // operator validating a customer workspace can still see the edge split.
@@ -206,7 +206,7 @@ function DashboardPage() {
           : undefined
     } else if (isAll) {
       edgeNote =
-        'Edge history is still accumulating — values marked observed cover the captured portion of this range.'
+        'Cloudflare edge history is incomplete for this range; available edge deliveries are included in the totals.'
     } else {
       edgeNote =
         'Edge is whole-zone only — switch to All projects to see the source split.'
@@ -248,10 +248,9 @@ function DashboardPage() {
         connect={edgeNotConfigured}
         deltas={deltas}
         edge={edge}
-        gated={edgeGated}
         note={edgeNote}
-        observed={edgeObserved}
         preparing={edgePreparing}
+        ready={edgeReady}
         summary={cardSummary}
       />
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { EdgeCacheStats } from '@/shared/types'
-import { observedEdgeCards, reconciledCards } from './source-split-cards'
+import { reconciledCards } from './source-split-cards'
 
 function edgeStats(over: Partial<EdgeCacheStats>): EdgeCacheStats {
   return {
@@ -33,7 +33,7 @@ function summary(over: {
 }
 
 describe('reconciledCards — end-to-end cache hit rate', () => {
-  it('stays at or below 100% when keenpix logged far more than reached the edge', () => {
+  it('uses one denominator when Keenpix logged more requests than Cloudflare forwarded', () => {
     // Cloudflare: 100.7k client requests, 78.2k served at the edge -> 22.5k
     // reached the origin. keenpix's own logs show 56.9k requests at a 41.3% disk
     // hit rate — more than twice what Cloudflare says reached it. The old formula
@@ -57,15 +57,11 @@ describe('reconciledCards — end-to-end cache hit rate', () => {
     const pct = Number.parseFloat(card?.value ?? '0')
 
     expect(pct).toBeLessThanOrEqual(100)
-    // edge 77.6% + disk (9.3k of 100.7k ≈ 9.2%) ≈ 86.9%.
-    expect(pct).toBeGreaterThan(80)
-    expect(pct).toBeLessThan(90)
-    // The disk legend is bounded by what actually reached the origin, never the
-    // divergent keenpix total.
-    const diskRow = card?.rows.find((r) => r.label === 'From Keenpix cache')
-    expect(
-      Number.parseFloat(diskRow?.value.replace('+', '') ?? '0'),
-    ).toBeLessThan(15)
+    // 78.2k edge + 23.5k cache optimized over 78.2k + 56.9k total ≈ 75.3%.
+    expect(pct).toBeGreaterThan(75)
+    expect(pct).toBeLessThan(76)
+    const cacheRow = card?.rows.find((r) => r.label === 'Cache optimized')
+    expect(cacheRow?.value).toBe('+17.4%')
   })
 
   it('end-to-end equals edge hit rate when the origin disk never hits', () => {
@@ -136,29 +132,40 @@ describe('reconciledCards — bandwidth saved', () => {
   })
 })
 
-describe('observedEdgeCards — partial coverage', () => {
-  it('shows captured edge values without combining incomplete windows', () => {
+describe('reconciledCards — delivery totals', () => {
+  it('makes the headline equal Edge + Cache optimized + Optimized + Failed', () => {
     const edge = edgeStats({
       bytesFromEdge: 1_000_000,
       cachedRequests: 75,
       hitRate: 75,
       requests: 100,
     })
-    const cards = observedEdgeCards(
-      edge,
-      summary({
+    const cards = reconciledCards(edge, {
+      ...summary({
         bandwidthOut: 2_000_000,
         bandwidthSaved: 4_000_000,
         hitRate: 50,
         totalRequests: 200,
       }),
-    )
+      failedRequests: 20,
+      successfulDeliveries: 180,
+      cacheHits: 90,
+      liveOptimizations: 90,
+    })
 
-    expect(cards[0].value).toBe('1.9 MB')
-    expect(cards[0].rows[0].value).toContain('observed')
-    expect(cards[1].value).toBe('200')
-    expect(cards[1].rows[0].value).toBe('75 · 75.0%')
-    expect(cards[2].rows[0].value).toBe('75.0% · observed')
-    expect(cards[3].rows[0].value).toContain('est.')
+    const requestCard = cards.find((card) => card.label === 'Image requests')
+    expect(requestCard?.value).toBe('275')
+    expect(requestCard?.rows.map((row) => row.label)).toEqual([
+      'Edge',
+      'Cache optimized',
+      'Optimized',
+      'Failed',
+    ])
+    expect(requestCard?.rows.map((row) => row.value.split(' · ')[0])).toEqual([
+      '75',
+      '90',
+      '90',
+      '20',
+    ])
   })
 })
