@@ -12,6 +12,7 @@ import type {
   ProjectAgg,
   RollupSummaryAgg,
 } from '@/helpers/analytics/rollup-shapers'
+import { getAnalyticsStatusCodes } from '@/helpers/analytics/status-filters'
 import { queryRows } from '@/lib/clickhouse/query'
 import { ensureClickhouseSchemaReady } from '@/lib/clickhouse/schema'
 import type { TopImageRow } from '@/shared/types'
@@ -85,12 +86,16 @@ function buildWhere(opts: WindowOpts): {
     conditions.push('source_host IN {domains:Array(String)}')
     params.domains = f.domain
   }
-  if (f?.status && f.status.length > 0) {
-    const codes = f.status.map(Number).filter((n) => !Number.isNaN(n))
-    if (codes.length > 0) {
-      conditions.push('status IN {statuses:Array(UInt16)}')
-      params.statuses = codes
-    }
+  if (f?.country && f.country.length > 0) {
+    conditions.push('country IN {countries:Array(String)}')
+    params.countries = f.country.map((country) =>
+      country === 'Unknown' ? '' : country,
+    )
+  }
+  const statusCodes = getAnalyticsStatusCodes(f)
+  if (statusCodes) {
+    conditions.push('status IN {statuses:Array(UInt16)}')
+    params.statuses = statusCodes
   }
   return { sql: conditions.join(' AND '), params }
 }
@@ -336,19 +341,27 @@ export async function listAvailableFilters(opts: WindowOpts) {
     formats: string[]
     statuses: number[]
     domains: string[]
+    countries: string[]
   }>(
     `SELECT
        groupUniqArray(format) AS formats,
        groupUniqArray(status) AS statuses,
-       groupUniqArray(source_host) AS domains
+       groupUniqArray(source_host) AS domains,
+       groupUniqArray(country) AS countries
      FROM request_events
      WHERE ${sql}`,
     params,
   )
-  const row = rows[0] ?? { formats: [], statuses: [], domains: [] }
+  const row = rows[0] ?? {
+    formats: [],
+    statuses: [],
+    domains: [],
+    countries: [],
+  }
   return {
     formats: [...row.formats].sort(),
     statuses: [...row.statuses].map(Number).sort((a, b) => a - b),
     domains: [...row.domains].filter(Boolean).sort(),
+    countries: [...row.countries].map((country) => country || 'Unknown').sort(),
   }
 }

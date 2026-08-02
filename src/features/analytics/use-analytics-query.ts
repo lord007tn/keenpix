@@ -7,9 +7,11 @@ import type { HistoricalAnalyticsRange } from '@/shared/types'
 // while the new window loads in the background. `isPending` is true only on the
 // very first load with no cached data; `isFetching` covers background refetches.
 export function useAnalyticsQuery(params: {
+  country?: string[]
   domain?: string[]
   format?: string[]
   from?: string
+  outcome?: string[]
   project?: string
   range: HistoricalAnalyticsRange
   status?: string[]
@@ -20,9 +22,11 @@ export function useAnalyticsQuery(params: {
       'analytics',
       params.range,
       params.project,
+      params.country,
       params.domain,
       params.format,
       params.from,
+      params.outcome,
       params.status,
       params.to,
     ],

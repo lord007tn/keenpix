@@ -25,9 +25,11 @@ export const authMiddleware = createMiddleware({ type: 'function' }).server(
     // Active org for tenant scoping. Self-host always resolves to org_default;
     // cloud reads it from the session (organization plugin). Handlers scope
     // reads/writes by this instead of the old hardcoded DEFAULT_ORG.
-    const activeOrganizationId = (
-      session.session as { activeOrganizationId?: string | null }
-    ).activeOrganizationId
+    const authSession = session.session as {
+      activeOrganizationId?: string | null
+      impersonatedBy?: string | null
+    }
+    const activeOrganizationId = authSession.activeOrganizationId
     let orgId = resolveActiveOrgId(activeOrganizationId)
     // Org-level role for per-org authz (owner/admin/member), resolved once here so
     // the guards stay pure/synchronous. Only needed in cloud — self-host is
@@ -64,6 +66,10 @@ export const authMiddleware = createMiddleware({ type: 'function' }).server(
       context: {
         userId: session.user.id,
         email: session.user.email,
+        impersonatedBy:
+          typeof authSession.impersonatedBy === 'string'
+            ? authSession.impersonatedBy
+            : null,
         name: session.user.name ?? null,
         role: session.user.role ?? 'user',
         orgId,

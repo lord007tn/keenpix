@@ -15,6 +15,7 @@ import type {
   ProjectAgg,
   RollupSummaryAgg,
 } from '@/helpers/analytics/rollup-shapers'
+import { getAnalyticsStatusCodes } from '@/helpers/analytics/status-filters'
 import type { TopImageRow } from '@/shared/types'
 import type { AnalyticsFilters } from './analytics'
 
@@ -60,11 +61,14 @@ function whereFor(opts: WindowOpts): Prisma.AnalyticsRollupHourlyWhereInput {
   if (f?.domain && f.domain.length > 0) {
     where.sourceHost = { in: f.domain }
   }
-  if (f?.status && f.status.length > 0) {
-    const codes = f.status.map(Number).filter((n) => !Number.isNaN(n))
-    if (codes.length > 0) {
-      where.status = { in: codes }
+  if (f?.country && f.country.length > 0) {
+    where.country = {
+      in: f.country.map((country) => (country === 'Unknown' ? '' : country)),
     }
+  }
+  const statusCodes = getAnalyticsStatusCodes(f)
+  if (statusCodes) {
+    where.status = { in: statusCodes }
   }
   return where
 }
@@ -239,10 +243,11 @@ export async function groupRollupsByCountry(
 // Distinct filter values present in the (unfiltered) window.
 export async function listAvailableFilters(opts: WindowOpts) {
   const where = whereFor(opts)
-  const [formats, statuses, hosts] = await Promise.all([
+  const [formats, statuses, hosts, countries] = await Promise.all([
     prisma.analyticsRollupHourly.groupBy({ by: ['format'], where }),
     prisma.analyticsRollupHourly.groupBy({ by: ['status'], where }),
     prisma.analyticsRollupHourly.groupBy({ by: ['sourceHost'], where }),
+    prisma.analyticsRollupHourly.groupBy({ by: ['country'], where }),
   ])
   return {
     formats: formats.map((f) => f.format).sort(),
@@ -251,6 +256,7 @@ export async function listAvailableFilters(opts: WindowOpts) {
       .map((h) => h.sourceHost)
       .filter(Boolean)
       .sort(),
+    countries: countries.map((country) => country.country || 'Unknown').sort(),
   }
 }
 

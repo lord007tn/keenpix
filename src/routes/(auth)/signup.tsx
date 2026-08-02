@@ -3,6 +3,7 @@ import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { MailCheckIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { GoogleLogo } from '@/components/app/google-logo'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { ModeToggle } from '@/components/theme/mode-toggle'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -134,6 +135,7 @@ function SignupPage() {
               type="button"
               variant="outline"
             >
+              <GoogleLogo data-icon="inline-start" />
               Continue with Google
             </Button>
           ) : null}

@@ -68,7 +68,12 @@ import {
 } from '@/shared/types'
 import { useProject } from '@/stores/project-context'
 
-const EMPTY_AVAILABLE = { formats: [], statuses: [], domains: [] }
+const EMPTY_AVAILABLE = {
+  countries: [],
+  domains: [],
+  formats: [],
+  statuses: [],
+}
 
 function parseStringArray(value: unknown): string[] | undefined {
   if (Array.isArray(value)) {
@@ -104,9 +109,11 @@ export const Route = createFileRoute('/app/analytics/')({
   validateSearch: (
     search: Record<string, unknown>,
   ): {
+    country?: string[]
     domain?: string[]
     format?: string[]
     from?: string
+    outcome?: string[]
     range: HistoricalAnalyticsRange
     project?: string
     status?: string[]
@@ -127,11 +134,13 @@ export const Route = createFileRoute('/app/analytics/')({
       }
     }
     return {
-      range,
-      project: typeof search.project === 'string' ? search.project : undefined,
+      country: parseStringArray(search.country),
       domain: parseStringArray(search.domain),
       format: parseStringArray(search.format),
       from,
+      outcome: parseStringArray(search.outcome),
+      range,
+      project: typeof search.project === 'string' ? search.project : undefined,
       status: parseStringArray(search.status),
       to,
     }
@@ -164,26 +173,31 @@ const STATUS_LABELS: Record<string, string> = {
   '504': '504 Timeout',
 }
 
+const OUTCOME_OPTIONS = [
+  { value: 'success', label: 'Successful · 2xx' },
+  { value: 'redirect', label: 'Redirected · 3xx' },
+  { value: 'client-error', label: 'Client error · 4xx' },
+  { value: 'server-error', label: 'Server error · 5xx' },
+]
+
+const REGION_NAMES = new Intl.DisplayNames(['en'], { type: 'region' })
+
 // Build the filter fields from the values actually present in the window (plus
 // any currently-selected value, so a stale selection stays removable). A field
 // with no values is omitted rather than opening an empty, broken-looking menu.
 function buildFields(
-  available: { formats: string[]; statuses: number[] },
+  available: { countries: string[]; formats: string[]; statuses: number[] },
+  selectedCountry: string[],
   selectedFormat: string[],
+  selectedOutcome: string[],
   selectedStatus: string[],
 ): FilterField[] {
   const fields: FilterField[] = []
-  const formatValues = [
-    ...new Set([...available.formats, ...selectedFormat]),
-  ].sort()
-  if (formatValues.length > 0) {
+  if (available.statuses.length > 0 || selectedOutcome.length > 0) {
     fields.push({
-      key: 'format',
-      label: 'Format',
-      options: formatValues.map((v) => ({
-        value: v,
-        label: FORMAT_LABELS[v] ?? v.toUpperCase(),
-      })),
+      key: 'outcome',
+      label: 'Outcome',
+      options: OUTCOME_OPTIONS,
     })
   }
   const statusValues = [
@@ -193,9 +207,38 @@ function buildFields(
     fields.push({
       key: 'status',
       label: 'Status',
-      options: statusValues.map((v) => ({
-        value: v,
-        label: STATUS_LABELS[v] ?? v,
+      options: statusValues.map((value) => ({
+        value,
+        label: STATUS_LABELS[value] ?? value,
+      })),
+    })
+  }
+  const formatValues = [
+    ...new Set([...available.formats, ...selectedFormat]),
+  ].sort()
+  if (formatValues.length > 0) {
+    fields.push({
+      key: 'format',
+      label: 'Format',
+      options: formatValues.map((value) => ({
+        value,
+        label: FORMAT_LABELS[value] ?? value.toUpperCase(),
+      })),
+    })
+  }
+  const countryValues = [
+    ...new Set([...available.countries, ...selectedCountry]),
+  ].sort()
+  if (countryValues.length > 0) {
+    fields.push({
+      key: 'country',
+      label: 'Country',
+      options: countryValues.map((value) => ({
+        value,
+        label:
+          value === 'Unknown'
+            ? value
+            : `${REGION_NAMES.of(value) ?? value} · ${value}`,
       })),
     })
   }
@@ -234,13 +277,14 @@ function isChartLens(value: unknown): value is ChartLens {
 
 function AnalyticsPage() {
   const search = Route.useSearch()
-  const { range, format, status, domain, from, to } = search
+  const { country, domain, format, from, outcome, range, status, to } = search
   const navigate = useNavigate({ from: Route.fullPath })
   const { cloud, user } = useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
-  // Cloud edge data is platform-wide and belongs in /admin, never beside one
-  // organization's origin totals. Self-host remains a single-instance view.
-  const canSeeEdge = !cloud
+  // Cloud edge data is platform-wide, so it remains operator-only. A trusted
+  // impersonation session retains the operator provenance needed for customer
+  // workspace validation without exposing the dataset to ordinary tenants.
+  const canSeeEdge = !cloud || isSuperAdmin || Boolean(user.impersonatedBy)
   const { currentProject, isAll, setProject } = useProject()
   const { data: billing } = useQuery({
     enabled: cloud,
@@ -305,7 +349,9 @@ function AnalyticsPage() {
   const fields = useMemo(() => {
     const base = buildFields(
       data?.available ?? EMPTY_AVAILABLE,
+      country ?? [],
       format ?? [],
+      outcome ?? [],
       status ?? [],
     )
     if (isAll) {
@@ -327,7 +373,7 @@ function AnalyticsPage() {
         options: domains.map((d) => ({ value: d, label: d })),
       },
     ]
-  }, [data?.available, format, status, domain, isAll])
+  }, [country, data?.available, domain, format, isAll, outcome, status])
 
   const downloadAnalytics = () => {
     if (!data) {
@@ -364,15 +410,19 @@ function AnalyticsPage() {
                 navigate({
                   search: (p) => ({
                     ...p,
+                    country: undefined,
                     domain: undefined,
                     format: undefined,
+                    outcome: undefined,
                     status: undefined,
                   }),
                 })
               }
               values={{
+                country: country ?? [],
                 domain: domain ?? [],
                 format: format ?? [],
+                outcome: outcome ?? [],
                 status: status ?? [],
               }}
             />
@@ -432,13 +482,20 @@ function AnalyticsPage() {
     )
   }
 
-  const hasDomainFilter = Boolean(domain && domain.length > 0)
+  const hasAnalyticsFilters = Boolean(
+    country?.length ||
+      domain?.length ||
+      format?.length ||
+      outcome?.length ||
+      status?.length,
+  )
   // Edge is zone-wide /img/*, so it only reconciles with origin at all-projects
   // scope with no domain filter — and only over a window our captured history
   // fully covers (edgeCovered).
-  const edgeScopeOk = isAll && !hasDomainFilter
+  const edgeScopeOk = isAll && !hasAnalyticsFilters
   const edgeGated =
     edgeConfigured && edge !== null && edgeScopeOk && edgeCovered
+  const edgeObserved = edgeConfigured && edge !== null && edgeScopeOk
   // Not wired up at all gets a real connect CTA; the other reasons are just a
   // muted hint. Both wait for the edge query to resolve so neither flashes while
   // it is still pending — and a failed fetch is "couldn't load" (handled by the
@@ -446,7 +503,9 @@ function AnalyticsPage() {
   // Only the operator can wire Cloudflare, so only the super-admin ever sees the
   // connect CTA. Regular tenants get origin-only cards with no dead-end prompt.
   const edgeNotConfigured =
-    canSeeEdge && isSuperAdmin && !(edgePending || edgeError || edgeConfigured)
+    canSeeEdge &&
+    (isSuperAdmin || Boolean(user.impersonatedBy)) &&
+    !(edgePending || edgeError || edgeConfigured)
   // A background capture is in flight and the reconciled split isn't on screen
   // yet — show the "preparing" indicator (and hold the note) until it lands.
   const edgePreparing = edgeRefreshing && !edgeGated
@@ -458,12 +517,13 @@ function AnalyticsPage() {
     if (edgeError || !edge) {
       // A missing/broken token is only actionable by the operator, so only they
       // get the "check the token" hint; other viewers get no edge note at all.
-      edgeNote = isSuperAdmin
-        ? "Couldn't load edge data — check the CLOUDFLARE_* env vars (Admin → Settings)."
-        : undefined
+      edgeNote =
+        isSuperAdmin || user.impersonatedBy
+          ? "Couldn't load edge data — check the CLOUDFLARE_* env vars (Admin → Settings)."
+          : undefined
     } else if (edgeScopeOk) {
       edgeNote =
-        'Edge history is still accumulating — older data for this range isn’t available yet.'
+        'Edge history is still accumulating — values marked observed cover the captured portion of this range.'
     } else {
       edgeNote =
         'Edge is whole-zone only — switch to All projects with no filters to see the source split.'
@@ -484,7 +544,7 @@ function AnalyticsPage() {
   } else if (activeLens === 'edge') {
     lensDescription = `Edge, zone-wide · ${windowDescription}`
   } else if (edgeGated) {
-    lensDescription = `Edge → keenpix cache → live · ${windowDescription}`
+    lensDescription = `Edge → Keenpix cache → optimized · ${windowDescription}`
   } else {
     lensDescription = `keenpix origin · ${windowDescription}`
   }
@@ -531,6 +591,7 @@ function AnalyticsPage() {
           edge={edge}
           gated={edgeGated}
           note={edgeNote}
+          observed={edgeObserved}
           preparing={edgePreparing}
           summary={data.summary}
         />

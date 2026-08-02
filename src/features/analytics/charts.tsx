@@ -74,7 +74,7 @@ function buildArea(data: TimePoint[], view: AreaView): AreaBuild {
   return {
     config: {
       cached: { label: 'Cache hit', color: 'var(--chart-2)' },
-      optimized: { label: 'Optimized live', color: 'var(--chart-1)' },
+      optimized: { label: 'Optimized', color: 'var(--chart-1)' },
     } satisfies ChartConfig,
     keys: ['cached', 'optimized'],
     chartData: data,
@@ -101,11 +101,11 @@ function buildFunnelArea(
   }
   if (view === 'cache') {
     // Stack the two cache sources so the chart mirrors the hit-rate card:
-    // Cloudflare edge + keenpix disk, summing to the end-to-end hit rate.
+    // Cloudflare edge + Keenpix cache, summing to the end-to-end hit rate.
     return {
       config: {
         edgeShare: { label: 'Edge', color: 'var(--chart-1)' },
-        diskShare: { label: 'keenpix cache', color: 'var(--chart-2)' },
+        diskShare: { label: 'Keenpix cache', color: 'var(--chart-2)' },
       } satisfies ChartConfig,
       keys: ['edgeShare', 'diskShare'],
       chartData,
@@ -116,9 +116,9 @@ function buildFunnelArea(
   return {
     config: {
       edgeServed: { label: 'Edge', color: 'var(--chart-1)' },
-      diskServed: { label: 'keenpix cache', color: 'var(--chart-2)' },
+      diskServed: { label: 'Keenpix cache', color: 'var(--chart-2)' },
       liveProcessed: {
-        label: 'Optimized live',
+        label: 'Optimized',
         color: 'var(--muted-foreground)',
       },
     } satisfies ChartConfig,
@@ -197,7 +197,7 @@ function buildCompareArea(view: AreaView): {
     return {
       config: {
         cfHitRate: { label: 'Edge', color: 'var(--chart-1)' },
-        kpHitRate: { label: 'keenpix disk', color: 'var(--chart-2)' },
+        kpHitRate: { label: 'Keenpix cache', color: 'var(--chart-2)' },
       },
       keys: ['cfHitRate', 'kpHitRate'],
       yFormat: (v: number) => `${Math.round(v)}%`,
@@ -215,7 +215,7 @@ function buildCompareArea(view: AreaView): {
 }
 
 // Cloudflare and keenpix overlaid (not stacked) so the two sources can be
-// compared directly — most usefully the edge hit rate vs the keenpix disk hit
+// compared directly — most usefully the edge hit rate vs the Keenpix cache hit
 // rate on the same axis. Lives next to the stacked funnel chart; both need the
 // 24h whole-zone window where edge data exists.
 export function SourceCompareChart({

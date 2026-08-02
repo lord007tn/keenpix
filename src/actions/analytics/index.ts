@@ -62,9 +62,11 @@ export async function getAnalytics(
     ? (resolvedProject ?? '__invalid_project_scope__')
     : undefined
   const filters = {
+    country: input.country ?? [],
     // Domain filtering is only meaningful within a single project's allowlist.
     domain: project ? (input.domain ?? []) : [],
     format: input.format ?? [],
+    outcome: input.outcome ?? [],
     status: input.status ?? [],
   }
   const coverageStart =

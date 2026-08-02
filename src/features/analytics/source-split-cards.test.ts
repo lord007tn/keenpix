@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { EdgeCacheStats } from '@/shared/types'
-import { reconciledCards } from './source-split-cards'
+import { observedEdgeCards, reconciledCards } from './source-split-cards'
 
 function edgeStats(over: Partial<EdgeCacheStats>): EdgeCacheStats {
   return {
@@ -62,7 +62,7 @@ describe('reconciledCards — end-to-end cache hit rate', () => {
     expect(pct).toBeLessThan(90)
     // The disk legend is bounded by what actually reached the origin, never the
     // divergent keenpix total.
-    const diskRow = card?.rows.find((r) => r.label === 'From keenpix disk')
+    const diskRow = card?.rows.find((r) => r.label === 'From Keenpix cache')
     expect(
       Number.parseFloat(diskRow?.value.replace('+', '') ?? '0'),
     ).toBeLessThan(15)
@@ -133,5 +133,32 @@ describe('reconciledCards — bandwidth saved', () => {
     )
     const edgeRow = card?.rows.find((r) => r.label === 'Edge')
     expect(edgeRow?.value).toBe('~0 B · est.')
+  })
+})
+
+describe('observedEdgeCards — partial coverage', () => {
+  it('shows captured edge values without combining incomplete windows', () => {
+    const edge = edgeStats({
+      bytesFromEdge: 1_000_000,
+      cachedRequests: 75,
+      hitRate: 75,
+      requests: 100,
+    })
+    const cards = observedEdgeCards(
+      edge,
+      summary({
+        bandwidthOut: 2_000_000,
+        bandwidthSaved: 4_000_000,
+        hitRate: 50,
+        totalRequests: 200,
+      }),
+    )
+
+    expect(cards[0].value).toBe('1.9 MB')
+    expect(cards[0].rows[0].value).toContain('observed')
+    expect(cards[1].value).toBe('200')
+    expect(cards[1].rows[0].value).toBe('75 · 75.0%')
+    expect(cards[2].rows[0].value).toBe('75.0% · observed')
+    expect(cards[3].rows[0].value).toContain('est.')
   })
 })

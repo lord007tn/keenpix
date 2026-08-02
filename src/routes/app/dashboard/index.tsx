@@ -73,6 +73,7 @@ function DashboardPage() {
   const { user, cloud, orgRole, productAccess, workspaceReady } =
     useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
+  const canSeeEdge = !cloud || isSuperAdmin || Boolean(user.impersonatedBy)
   const { data: billing } = useQuery({
     enabled: cloud,
     queryFn: () => getBillingStateFn(),
@@ -109,7 +110,7 @@ function DashboardPage() {
     edgeRefreshing,
     edgePending,
     edgeError,
-  } = useEdgeStats(!cloud && workspaceReady ? boundedWindow : undefined)
+  } = useEdgeStats(canSeeEdge && workspaceReady ? boundedWindow : undefined)
 
   const header = (
     <PageHeader
@@ -178,14 +179,17 @@ function DashboardPage() {
   // Edge is zone-wide, so it only reconciles at all-projects scope and only over
   // a window our captured history fully covers.
   const edgeGated = edgeConfigured && edge !== null && isAll && edgeCovered
-  // Cloud edge data is platform-wide and belongs in /admin, never beside one
-  // organization's origin totals. Self-host remains a single-instance view.
-  const canSeeEdge = !cloud
+  const edgeObserved = edgeConfigured && edge !== null && isAll
+  // Cloud edge data remains operator-only because it is platform-wide. An
+  // impersonation session retains that operator provenance server-side, so an
+  // operator validating a customer workspace can still see the edge split.
   // Only the operator can wire Cloudflare, so only the super-admin ever sees the
   // "connect" prompt. Regular tenants (and cloud users, who never own the zone)
   // just get the origin-only cards with no dead-end call to action.
   const edgeNotConfigured =
-    canSeeEdge && isSuperAdmin && !(edgePending || edgeError || edgeConfigured)
+    canSeeEdge &&
+    (isSuperAdmin || Boolean(user.impersonatedBy)) &&
+    !(edgePending || edgeError || edgeConfigured)
   // A background capture is in flight and the reconciled split isn't on screen
   // yet — show the "preparing" indicator (and hold the note) until it lands.
   const edgePreparing = edgeRefreshing && !edgeGated
@@ -196,12 +200,13 @@ function DashboardPage() {
   ) {
     if (edgeError || !edge) {
       // Only the operator can act on a missing/broken token.
-      edgeNote = isSuperAdmin
-        ? "Couldn't load edge data — check the CLOUDFLARE_* env vars (Admin → Settings)."
-        : undefined
+      edgeNote =
+        isSuperAdmin || user.impersonatedBy
+          ? "Couldn't load edge data — check the CLOUDFLARE_* env vars (Admin → Settings)."
+          : undefined
     } else if (isAll) {
       edgeNote =
-        'Edge history is still accumulating — older data for this range isn’t available yet.'
+        'Edge history is still accumulating — values marked observed cover the captured portion of this range.'
     } else {
       edgeNote =
         'Edge is whole-zone only — switch to All projects to see the source split.'
@@ -245,6 +250,7 @@ function DashboardPage() {
         edge={edge}
         gated={edgeGated}
         note={edgeNote}
+        observed={edgeObserved}
         preparing={edgePreparing}
         summary={cardSummary}
       />
