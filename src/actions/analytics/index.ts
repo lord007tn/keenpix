@@ -298,7 +298,7 @@ export async function getEdgeCacheStats(
 }
 
 // Per-allowed-host stats for the project Settings → Security table. Joins the
-// project's allowlist with observed traffic so allowed-but-idle hosts show
+// project's allowlist with measured traffic so allowed-but-idle hosts show
 // zeroes and seen-but-unlisted hosts surface for review.
 export async function getAllowedHostStats(
   orgId: string,

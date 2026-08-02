@@ -366,7 +366,7 @@ export function OperationsHealth({ cloud }: { cloud: boolean }) {
   const series = resources?.series ?? []
 
   // When no cap is set, turn the abstract "set a limit" advice into a concrete
-  // value: ~2× the observed RAM peak, rounded up to a clean Docker size, so a
+  // value: ~2× the measured RAM peak, rounded up to a clean Docker size, so a
   // transform spike has headroom before the kernel OOM-kills the container.
   const mib = 1024 * 1024
   const suggestedBytes = Math.ceil((memPeak * 2) / (256 * mib)) * 256 * mib

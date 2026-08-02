@@ -32,7 +32,7 @@ export function ComparisonMethodology() {
               </li>
               <li>
                 Reproducible tests recorded with the account tier, date, inputs,
-                and observed output.
+                and measured output.
               </li>
               <li>
                 Third-party reports only when clearly attributed and not used as

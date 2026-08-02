@@ -66,7 +66,10 @@ export async function getPlatformAnalytics(
       id: row.orgId,
       name: nameById.get(row.orgId) ?? row.orgId,
       requests: row.requests,
-      cacheHitRate: row.requests > 0 ? row.cachedRequests / row.requests : 0,
+      cacheHitRate:
+        row.successfulRequests > 0
+          ? row.cachedRequests / row.successfulRequests
+          : 0,
       bandwidthBytes: row.bytesOut,
     })),
     planDistribution: PLAN_ORDER.map((plan) => ({

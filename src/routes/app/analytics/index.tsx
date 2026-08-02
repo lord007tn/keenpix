@@ -57,6 +57,7 @@ import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import { useAnalyticsQuery } from '@/features/analytics/use-analytics-query'
 import { useEdgeStats } from '@/features/analytics/use-edge-stats'
 import { getBillingStateFn } from '@/functions/billing'
+import { getAnalyticsCountryLabel } from '@/helpers/analytics/country-label'
 import { analyticsSeriesCsv } from '@/helpers/analytics/export-csv'
 import { limitHistorySearch } from '@/helpers/history/window'
 import { DEFAULT_HISTORY_DAYS, getPlan } from '@/lib/billing/plans'
@@ -180,8 +181,6 @@ const OUTCOME_OPTIONS = [
   { value: 'server-error', label: 'Server error · 5xx' },
 ]
 
-const REGION_NAMES = new Intl.DisplayNames(['en'], { type: 'region' })
-
 // Build the filter fields from the values actually present in the window (plus
 // any currently-selected value, so a stale selection stays removable). A field
 // with no values is omitted rather than opening an empty, broken-looking menu.
@@ -235,10 +234,7 @@ function buildFields(
       label: 'Country',
       options: countryValues.map((value) => ({
         value,
-        label:
-          value === 'Unknown'
-            ? value
-            : `${REGION_NAMES.of(value) ?? value} · ${value}`,
+        label: getAnalyticsCountryLabel(value),
       })),
     })
   }
@@ -358,7 +354,7 @@ function AnalyticsPage() {
       return base
     }
     // The domain filter is per-project: options are the source hosts actually
-    // observed (subdomains included) plus any already-selected value.
+    // measured (subdomains included) plus any already-selected value.
     const domains = [
       ...new Set([...(data?.available?.domains ?? []), ...(domain ?? [])]),
     ].sort()
@@ -495,7 +491,7 @@ function AnalyticsPage() {
   const edgeScopeOk = isAll && !hasAnalyticsFilters
   const edgeGated =
     edgeConfigured && edge !== null && edgeScopeOk && edgeCovered
-  const edgeObserved = edgeConfigured && edge !== null && edgeScopeOk
+  const edgeReady = edgeConfigured && edge !== null && edgeScopeOk
   // Not wired up at all gets a real connect CTA; the other reasons are just a
   // muted hint. Both wait for the edge query to resolve so neither flashes while
   // it is still pending — and a failed fetch is "couldn't load" (handled by the
@@ -523,7 +519,7 @@ function AnalyticsPage() {
           : undefined
     } else if (edgeScopeOk) {
       edgeNote =
-        'Edge history is still accumulating — values marked observed cover the captured portion of this range.'
+        'Cloudflare edge history is incomplete for this range; available edge deliveries are included in the totals.'
     } else {
       edgeNote =
         'Edge is whole-zone only — switch to All projects with no filters to see the source split.'
@@ -543,7 +539,7 @@ function AnalyticsPage() {
     lensDescription = `Edge vs keenpix, overlaid · ${windowDescription}`
   } else if (activeLens === 'edge') {
     lensDescription = `Edge, zone-wide · ${windowDescription}`
-  } else if (edgeGated) {
+  } else if (edgeReady) {
     lensDescription = `Edge → Keenpix cache → optimized · ${windowDescription}`
   } else {
     lensDescription = `keenpix origin · ${windowDescription}`
@@ -560,7 +556,7 @@ function AnalyticsPage() {
       <AnalyticsAreaChart
         data={data.series}
         edge={edge?.series}
-        funnel={edgeGated}
+        funnel={edgeReady}
         view={view}
       />
     )
@@ -589,10 +585,9 @@ function AnalyticsPage() {
         <SourceSplitCards
           connect={edgeNotConfigured}
           edge={edge}
-          gated={edgeGated}
           note={edgeNote}
-          observed={edgeObserved}
           preparing={edgePreparing}
+          ready={edgeReady}
           summary={data.summary}
         />
         <p className="text-muted-foreground text-xs">

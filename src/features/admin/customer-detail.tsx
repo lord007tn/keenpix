@@ -474,28 +474,26 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
           {summary && operatorWorkspace ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard
-                label="Client requests observed at Cloudflare"
-                sub={edgeCoverageLabel}
-                value={edge?.edge ? compactNumber(edge.edge.requests) : '—'}
+                label="Image requests"
+                sub={`${compactNumber(summary.successfulDeliveries + (edge?.edge?.cachedRequests ?? 0))} delivered`}
+                value={compactNumber(
+                  summary.totalRequests + (edge?.edge?.cachedRequests ?? 0),
+                )}
               />
               <StatCard
-                label="Served by Cloudflare cache"
-                sub={
-                  edge?.edge
-                    ? `${edge.edge.hitRate.toFixed(1)}% of observed edge requests`
-                    : 'Cloudflare data unavailable'
-                }
+                label="Edge"
+                sub={edgeCoverageLabel}
                 value={
                   edge?.edge ? compactNumber(edge.edge.cachedRequests) : '—'
                 }
               />
               <StatCard
-                label="Served from Keenpix cache"
+                label="Cache optimized"
                 sub={`${summary.hitRate.toFixed(1)}% of requests reaching Keenpix`}
                 value={compactNumber(summary.cacheHits)}
               />
               <StatCard
-                label="Newly optimized by Keenpix"
+                label="Optimized"
                 sub={`${compactNumber(summary.totalRequests)} requests reached Keenpix`}
                 value={compactNumber(summary.liveOptimizations)}
               />

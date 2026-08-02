@@ -105,7 +105,7 @@ function buildFunnelArea(
     return {
       config: {
         edgeShare: { label: 'Edge', color: 'var(--chart-1)' },
-        diskShare: { label: 'Keenpix cache', color: 'var(--chart-2)' },
+        diskShare: { label: 'Cache optimized', color: 'var(--chart-2)' },
       } satisfies ChartConfig,
       keys: ['edgeShare', 'diskShare'],
       chartData,
@@ -116,7 +116,7 @@ function buildFunnelArea(
   return {
     config: {
       edgeServed: { label: 'Edge', color: 'var(--chart-1)' },
-      diskServed: { label: 'Keenpix cache', color: 'var(--chart-2)' },
+      diskServed: { label: 'Cache optimized', color: 'var(--chart-2)' },
       liveProcessed: {
         label: 'Optimized',
         color: 'var(--muted-foreground)',
@@ -197,7 +197,7 @@ function buildCompareArea(view: AreaView): {
     return {
       config: {
         cfHitRate: { label: 'Edge', color: 'var(--chart-1)' },
-        kpHitRate: { label: 'Keenpix cache', color: 'var(--chart-2)' },
+        kpHitRate: { label: 'Cache optimized', color: 'var(--chart-2)' },
       },
       keys: ['cfHitRate', 'kpHitRate'],
       yFormat: (v: number) => `${Math.round(v)}%`,

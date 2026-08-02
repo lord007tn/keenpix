@@ -129,9 +129,9 @@ export function PlatformAnalyticsView() {
 
   const { summary, series, topCustomers, planDistribution } = data
   const edgeStats = edge?.edge ?? null
-  const edgeCoverageSub = edge?.edgeCovered
-    ? 'Complete Cloudflare coverage for this window'
-    : 'Partial Cloudflare history for this window'
+  const imageRequests = summary.totalRequests + (edgeStats?.cachedRequests ?? 0)
+  const deliveredImages =
+    summary.successfulDeliveries + (edgeStats?.cachedRequests ?? 0)
   const maxCustomerRequests = Math.max(
     ...topCustomers.map((customer) => customer.requests),
     1,
@@ -160,17 +160,13 @@ export function PlatformAnalyticsView() {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Client requests observed at Cloudflare"
-          sub={edgeStats ? edgeCoverageSub : 'Cloudflare data unavailable'}
-          value={edgeStats ? compactNumber(edgeStats.requests) : '—'}
+          label="Image requests"
+          sub={`${compactNumber(deliveredImages)} delivered`}
+          value={compactNumber(imageRequests)}
         />
         <StatCard
-          label="Edge optimized"
-          sub={
-            edgeStats
-              ? `${edgeStats.hitRate.toFixed(1)}% of observed edge requests`
-              : 'Cloudflare data unavailable'
-          }
+          label="Edge"
+          sub="Cloudflare edge cache"
           value={edgeStats ? compactNumber(edgeStats.cachedRequests) : '—'}
         />
         <StatCard
@@ -179,7 +175,7 @@ export function PlatformAnalyticsView() {
           value={compactNumber(summary.cacheHits)}
         />
         <StatCard
-          label="Newly optimized"
+          label="Optimized"
           sub={`${optimizedShare.toFixed(1)}% of successful Keenpix requests`}
           value={compactNumber(summary.liveOptimizations)}
         />

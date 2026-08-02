@@ -53,7 +53,7 @@ function savedCard(
     totalOriginal > 0 ? (summary.bandwidthSaved / totalOriginal) * 100 : 0
   // keenpix never sees a Cloudflare cache hit, so it can't *measure* the
   // compression saving on edge-served bytes. But the edge serves the same
-  // optimized variants, so we estimate it by applying the origin's observed
+  // optimized variants, so we estimate it by applying the origin's measured
   // savings ratio (bytesSaved / bytesOut) to the edge-delivered bytes. Estimate,
   // not measured — flagged "est." in the row and excluded from the trend.
   const hasEdge = edgeBytesFromEdge != null
@@ -102,19 +102,17 @@ export function reconciledCards(
 ): SourceSplitCardProps[] {
   const deliveredTotal = edge.bytesFromEdge + summary.bandwidthOut
   const edgeBytesPct = ratio(edge.bytesFromEdge, deliveredTotal)
-  const reached = edge.requests - edge.cachedRequests
-  const edgeReqPct = ratio(edge.cachedRequests, edge.requests)
-  // Split what reached keenpix into disk-served vs freshly optimized, using the
-  // origin's own disk hit-rate, so the three sum to every client request.
-  const diskReached = Math.round((reached * summary.hitRate) / 100)
-  const liveReached = reached - diskReached
-  // End-to-end hit rate: served at the edge OR from Keenpix cache, over all client
-  // requests. Disk hits are counted against what actually reached the origin
-  // (reached × origin hit-rate), not keenpix's own request total — the two are
-  // measured by different systems and can diverge enough to push the rate past
-  // 100%. Bounded here because diskReached <= reached = requests - cached.
-  const endToEnd = ratio(edge.cachedRequests + diskReached, edge.requests)
-  const diskContribution = ratio(diskReached, edge.requests)
+  // Cloudflare hits never reach Keenpix. The truthful end-to-end total is the
+  // edge-optimized requests plus every request recorded at the origin. The
+  // visible stage rows then add back to this headline exactly.
+  const clientRequests = edge.cachedRequests + summary.totalRequests
+  const edgeReqPct = ratio(edge.cachedRequests, clientRequests)
+  const cacheContribution = ratio(summary.cacheHits, clientRequests)
+  const optimizedContribution = ratio(summary.liveOptimizations, clientRequests)
+  const endToEnd = ratio(
+    edge.cachedRequests + summary.cacheHits,
+    clientRequests,
+  )
   return [
     {
       label: 'Bandwidth delivered',
@@ -137,29 +135,39 @@ export function reconciledCards(
       ],
     },
     {
-      label: 'Client requests',
-      value: compactNumber(edge.requests),
+      label: 'Image requests',
+      value: compactNumber(clientRequests),
+      sub: `${compactNumber(edge.cachedRequests + summary.successfulDeliveries)} delivered`,
       bar: [
         { source: 'edge', pct: edgeReqPct },
-        { source: 'disk', pct: ratio(diskReached, edge.requests) },
-        { source: 'live', pct: ratio(liveReached, edge.requests) },
+        { source: 'disk', pct: cacheContribution },
+        { source: 'live', pct: optimizedContribution },
       ],
       rows: [
         {
           source: 'edge',
-          label: 'Served at edge',
+          label: 'Edge',
           value: `${compactNumber(edge.cachedRequests)} · ${Math.round(edgeReqPct)}%`,
         },
         {
           source: 'disk',
-          label: 'From Keenpix cache',
-          value: `${compactNumber(diskReached)} · ${Math.round(ratio(diskReached, edge.requests))}%`,
+          label: 'Cache optimized',
+          value: `${compactNumber(summary.cacheHits)} · ${Math.round(cacheContribution)}%`,
         },
         {
           source: 'live',
           label: 'Optimized',
-          value: `${compactNumber(liveReached)} · ${Math.round(ratio(liveReached, edge.requests))}%`,
+          value: `${compactNumber(summary.liveOptimizations)} · ${Math.round(optimizedContribution)}%`,
         },
+        ...(summary.failedRequests > 0
+          ? [
+              {
+                source: 'none' as const,
+                label: 'Failed',
+                value: compactNumber(summary.failedRequests),
+              },
+            ]
+          : []),
       ],
     },
     {
@@ -167,19 +175,19 @@ export function reconciledCards(
       value: `${endToEnd.toFixed(1)}%`,
       sub: 'end-to-end',
       bar: [
-        { source: 'edge', pct: edge.hitRate },
-        { source: 'disk', pct: diskContribution },
+        { source: 'edge', pct: edgeReqPct },
+        { source: 'disk', pct: cacheContribution },
       ],
       rows: [
         {
           source: 'edge',
-          label: 'At edge',
-          value: `${edge.hitRate.toFixed(1)}%`,
+          label: 'Edge',
+          value: `${edgeReqPct.toFixed(1)}%`,
         },
         {
           source: 'disk',
-          label: 'From Keenpix cache',
-          value: `+${diskContribution.toFixed(1)}%`,
+          label: 'Cache optimized',
+          value: `+${cacheContribution.toFixed(1)}%`,
         },
       ],
     },
@@ -223,7 +231,7 @@ function originOnlyCards(
         dash,
         {
           source: 'disk',
-          label: 'From Keenpix cache',
+          label: 'Cache optimized',
           value: `${compactNumber(diskHits)} · ${Math.round(summary.hitRate)}%`,
         },
         {
@@ -252,7 +260,7 @@ function originOnlyCards(
         dash,
         {
           source: 'disk',
-          label: 'Keenpix cache',
+          label: 'Cache optimized',
           value: `${summary.hitRate.toFixed(1)}%`,
         },
       ],
@@ -261,98 +269,28 @@ function originOnlyCards(
   ]
 }
 
-export function observedEdgeCards(
-  edge: EdgeCacheStats,
-  summary: CardSummary,
-  deltas?: CardDeltas,
-) {
-  const edgeSaved =
-    summary.bandwidthOut > 0
-      ? edge.bytesFromEdge * (summary.bandwidthSaved / summary.bandwidthOut)
-      : 0
-
-  return originOnlyCards(summary, deltas).map((card) => {
-    const originRows = card.rows.slice(1)
-    if (card.label === 'Bandwidth delivered') {
-      return {
-        ...card,
-        rows: [
-          {
-            source: 'edge' as const,
-            label: 'Edge',
-            value: `${humanBytes(edge.bytesFromEdge, 1)} · observed`,
-          },
-          ...originRows,
-        ],
-      }
-    }
-    if (card.label === 'Image requests') {
-      return {
-        ...card,
-        rows: [
-          {
-            source: 'edge' as const,
-            label: 'Served at edge',
-            value: `${compactNumber(edge.cachedRequests)} · ${edge.hitRate.toFixed(1)}%`,
-          },
-          ...originRows,
-        ],
-      }
-    }
-    if (card.label === 'Cache hit rate') {
-      return {
-        ...card,
-        rows: [
-          {
-            source: 'edge' as const,
-            label: 'At edge',
-            value: `${edge.hitRate.toFixed(1)}% · observed`,
-          },
-          ...originRows,
-        ],
-      }
-    }
-    return {
-      ...card,
-      rows: [
-        {
-          source: 'edge' as const,
-          label: 'Edge',
-          value: `~${humanBytes(edgeSaved, 1)} · est.`,
-        },
-        ...originRows,
-      ],
-    }
-  })
-}
-
 export function SourceSplitCards({
   connect,
   deltas,
   edge,
-  gated,
   note,
-  observed,
   preparing,
+  ready,
   summary,
 }: {
   connect?: boolean
   deltas?: CardDeltas
   edge: EdgeCacheStats | null
-  gated: boolean
   note?: string
-  observed?: boolean
   preparing?: boolean
+  ready: boolean
   summary: CardSummary
 }) {
   // While the (separate, session-cached) edge query is still loading, the cards
   // show origin-only and upgrade to the reconciled edge+origin split once it
   // lands — no skeleton.
   let cards = originOnlyCards(summary, deltas)
-  if (observed && edge) {
-    cards = observedEdgeCards(edge, summary, deltas)
-  }
-  if (gated && edge) {
+  if (ready && edge) {
     cards = reconciledCards(edge, summary, deltas)
   }
   return (
