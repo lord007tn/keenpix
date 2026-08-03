@@ -21,6 +21,9 @@ describe('history range presets', () => {
 
   it('offers calendar shortcuts in the custom panel', () => {
     expect(HISTORY_SHORTCUTS.map(({ label }) => label)).toEqual([
+      'Current billing period',
+      'Previous billing period',
+      '2 billing periods ago',
       'Last 24 hours',
       'Today',
       'Yesterday',
@@ -63,5 +66,48 @@ describe('history range presets', () => {
       from: '2025-01-01',
       to: '2025-12-31',
     })
+  })
+
+  it('calculates billing periods from the real subscription anchor', () => {
+    const earliest = '2026-03-01'
+    const today = '2026-07-17'
+    const billingPeriodStart = '2026-07-08T00:00:00.000Z'
+
+    expect(
+      getHistoryShortcutDates(
+        'current-billing-period',
+        earliest,
+        today,
+        billingPeriodStart,
+      ),
+    ).toEqual({ from: '2026-07-08', to: today })
+    expect(
+      getHistoryShortcutDates(
+        'previous-billing-period',
+        earliest,
+        today,
+        billingPeriodStart,
+      ),
+    ).toEqual({ from: '2026-06-08', to: '2026-07-07' })
+    expect(
+      getHistoryShortcutDates(
+        'two-billing-periods-ago',
+        earliest,
+        today,
+        billingPeriodStart,
+      ),
+    ).toEqual({ from: '2026-05-08', to: '2026-06-07' })
+  })
+
+  it('falls back to calendar billing periods without a customer anchor', () => {
+    const earliest = '2025-01-01'
+    const today = '2026-01-03'
+
+    expect(
+      getHistoryShortcutDates('current-billing-period', earliest, today),
+    ).toEqual({ from: '2026-01-01', to: today })
+    expect(
+      getHistoryShortcutDates('previous-billing-period', earliest, today),
+    ).toEqual({ from: '2025-12-01', to: '2025-12-31' })
   })
 })

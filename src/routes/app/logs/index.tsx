@@ -371,6 +371,7 @@ function LogsPage() {
         actions={
           <>
             <HistoryRangePicker
+              billingPeriodStart={billing?.usage.periodStart}
               from={visibleFrom}
               label="Logs"
               maxDays={maxHistoryDays}

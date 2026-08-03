@@ -48,6 +48,7 @@ const customerOrgArgs = {
         cancelAtPeriodEnd: true,
         plan: true,
         status: true,
+        currentPeriodStart: true,
         currentPeriodEnd: true,
         overageAllowed: true,
         polarSubscriptionId: true,
@@ -151,6 +152,8 @@ function mapCustomerAccount(org: CustomerOrg, usageRows: UsageRow[]) {
       status: org.subscription?.status ?? null,
       currentPeriodEnd:
         org.subscription?.currentPeriodEnd?.toISOString() ?? null,
+      currentPeriodStart:
+        org.subscription?.currentPeriodStart?.toISOString() ?? null,
       overageAllowed: org.subscription?.overageAllowed ?? false,
       source: subscriptionSource,
       amountCents:
