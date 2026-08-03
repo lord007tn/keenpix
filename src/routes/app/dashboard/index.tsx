@@ -116,6 +116,13 @@ function DashboardPage() {
     edgeError,
   } = useEdgeStats(canSeeEdge && workspaceReady ? boundedWindow : undefined)
 
+  let overviewSubtitle = `${currentProject?.name ?? 'This project'} — trends and recent activity.`
+  if (isAll) {
+    overviewSubtitle = canSeeEdge
+      ? 'A bird’s-eye on every project — edge delivery, trends, activity, and instance health.'
+      : 'A bird’s-eye on every project — Keenpix delivery, trends, and activity.'
+  }
+
   const header = (
     <PageHeader
       actions={
@@ -137,11 +144,7 @@ function DashboardPage() {
         </>
       }
       eyebrow={isAll ? 'All projects' : currentProject?.name}
-      subtitle={
-        isAll
-          ? 'A bird’s-eye on every project — edge delivery, trends, activity, and instance health.'
-          : `${currentProject?.name ?? 'This project'} — trends and recent activity.`
-      }
+      subtitle={overviewSubtitle}
       title="Overview"
     />
   )
