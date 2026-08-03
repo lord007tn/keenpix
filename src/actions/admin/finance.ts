@@ -26,6 +26,8 @@ const EMPTY_SETTINGS: FinanceCostSettings = {
   databaseMonthlyCents: 0,
   observabilityMonthlyCents: 0,
   otherMonthlyCents: 0,
+  paymentFeeBasisPoints: 0,
+  paymentFixedCents: 0,
   originRequestsMicrodollarsPerMillion: 0,
   originBandwidthMicrodollarsPerGb: 0,
   edgeRequestsMicrodollarsPerMillion: 0,
@@ -43,6 +45,8 @@ export async function getFinanceSettings() {
   const settings = await getStoredFinanceSettings()
   return {
     configured: settings.configured,
+    paymentPercent: settings.paymentFeeBasisPoints / 100,
+    paymentFixed: settings.paymentFixedCents / 100,
     serverMonthly: settings.serverMonthlyCents / 100,
     databaseMonthly: settings.databaseMonthlyCents / 100,
     observabilityMonthly: settings.observabilityMonthlyCents / 100,
@@ -60,6 +64,8 @@ export async function updateFinanceSettings(
   input: z.output<typeof financeSettingsSchema>,
 ) {
   await saveFinanceSettingsRow({
+    paymentFeeBasisPoints: Math.round(input.paymentPercent * 100),
+    paymentFixedCents: Math.round(input.paymentFixed * 100),
     serverMonthlyCents: Math.round(input.serverMonthly * 100),
     databaseMonthlyCents: Math.round(input.databaseMonthly * 100),
     observabilityMonthlyCents: Math.round(input.observabilityMonthly * 100),
@@ -91,7 +97,42 @@ export async function addCustomerFinance<
   },
 >(accounts: T[]) {
   const settings = await getStoredFinanceSettings()
-  return accounts.map((account) => {
+  const fixedCostCents = calculateOperatingCost({
+    days: 30,
+    edgeBandwidthBytes: 0,
+    edgeRequests: 0,
+    originBandwidthBytes: 0,
+    originRequests: 0,
+    settings,
+  }).fixedCents
+  const hasBandwidth = accounts.some(
+    (account) => account.usage30d.bandwidthBytes > 0,
+  )
+  const hasAttempts = accounts.some(
+    (account) => account.usage30d.attemptedRequests > 0,
+  )
+  const allocationBasis = accounts.map((account) => {
+    if (hasBandwidth) {
+      return account.usage30d.bandwidthBytes
+    }
+    if (hasAttempts) {
+      return account.usage30d.attemptedRequests
+    }
+    return 1
+  })
+  const totalAllocationBasis = allocationBasis.reduce(
+    (total, value) => total + value,
+    0,
+  )
+  let lastAllocatedIndex = accounts.length - 1
+  for (const [index, value] of allocationBasis.entries()) {
+    if (value > 0) {
+      lastAllocatedIndex = index
+    }
+  }
+  let allocatedFixedCents = 0
+
+  return accounts.map((account, index) => {
     const cost = calculateOperatingCost({
       days: 0,
       edgeBandwidthBytes: 0,
@@ -106,15 +147,32 @@ export async function addCustomerFinance<
         account.billing.status === 'trialing')
         ? account.billing.amountCents
         : 0
-    const directCostCents = cost.originRequestCents + cost.originBandwidthCents
+    const allocationWeight =
+      allocationBasis[index] / Math.max(totalAllocationBasis, 1)
+    const fixedShareCents =
+      index === lastAllocatedIndex
+        ? fixedCostCents - allocatedFixedCents
+        : Math.floor(fixedCostCents * allocationWeight)
+    allocatedFixedCents += fixedShareCents
+    const paymentCostCents =
+      mrrCents > 0
+        ? Math.round(
+            mrrCents * (settings.paymentFeeBasisPoints / 10_000) +
+              settings.paymentFixedCents,
+          )
+        : 0
+    const variableCostCents =
+      cost.originRequestCents + cost.originBandwidthCents
+    const costCents = variableCostCents + fixedShareCents + paymentCostCents
     return {
       ...account,
       finance30d: {
         mrrCents,
-        directCostCents: settings.configured ? directCostCents : null,
-        contributionCents: settings.configured
-          ? mrrCents - directCostCents
-          : null,
+        allocatedFixedCostCents: settings.configured ? fixedShareCents : null,
+        costCents: settings.configured ? costCents : null,
+        paymentCostCents: settings.configured ? paymentCostCents : null,
+        variableCostCents: settings.configured ? variableCostCents : null,
+        contributionCents: settings.configured ? mrrCents - costCents : null,
       },
     }
   })

@@ -1,6 +1,4 @@
-import { Link } from '@tanstack/react-router'
 import dayjs from 'dayjs'
-import { Settings2Icon } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { HistoryRangePicker } from '@/components/app/history-range-picker'
@@ -19,6 +17,7 @@ import { getErrorMessage } from '@/errors/common'
 import { getFinanceDashboardFn } from '@/functions/admin'
 import type { HistorySearch } from '@/helpers/history/window'
 import { compactNumber, humanBytes } from '@/shared/format'
+import { FinanceSettingsDialog } from './finance-settings-dialog'
 
 type FinanceDashboard = Awaited<ReturnType<typeof getFinanceDashboardFn>>
 
@@ -62,15 +61,7 @@ export function PlatformFinances() {
         range={search.range}
         to={search.to}
       />
-      <Button
-        className="h-11"
-        render={<Link to="/admin/settings" />}
-        size="sm"
-        variant="outline"
-      >
-        <Settings2Icon data-icon="inline-start" />
-        Cost settings
-      </Button>
+      <FinanceSettingsDialog onSaved={() => load(search)} />
     </div>
   )
 
@@ -155,7 +146,7 @@ export function PlatformFinances() {
       {data.costModelConfigured ? null : (
         <p className="text-sm text-warning-text">
           Operating cost and profit remain blank until you save the financial
-          cost model in Admin Settings.
+          cost model.
         </p>
       )}
 

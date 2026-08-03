@@ -22,7 +22,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { getErrorMessage } from '@/errors/common'
 import { getPlatformConfigFn } from '@/functions/admin'
 import { humanBytes } from '@/shared/format'
-import { FinanceSettingsCard } from './finance-settings-card'
 
 type PlatformConfig = Awaited<ReturnType<typeof getPlatformConfigFn>>
 
@@ -123,7 +122,6 @@ export function PlatformSettings() {
 
   return (
     <div className="flex flex-col gap-6">
-      <FinanceSettingsCard />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>

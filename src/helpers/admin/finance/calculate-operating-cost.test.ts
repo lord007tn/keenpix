@@ -8,6 +8,8 @@ const settings = {
   otherMonthlyCents: 1000,
   originRequestsMicrodollarsPerMillion: 2_000_000,
   originBandwidthMicrodollarsPerGb: 15_000,
+  paymentFeeBasisPoints: 500,
+  paymentFixedCents: 50,
   edgeRequestsMicrodollarsPerMillion: 500_000,
   edgeBandwidthMicrodollarsPerGb: 10_000,
 }

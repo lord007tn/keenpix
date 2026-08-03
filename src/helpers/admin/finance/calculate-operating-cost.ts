@@ -9,6 +9,8 @@ export interface FinanceCostSettings {
   originBandwidthMicrodollarsPerGb: number
   originRequestsMicrodollarsPerMillion: number
   otherMonthlyCents: number
+  paymentFeeBasisPoints: number
+  paymentFixedCents: number
   serverMonthlyCents: number
 }
 

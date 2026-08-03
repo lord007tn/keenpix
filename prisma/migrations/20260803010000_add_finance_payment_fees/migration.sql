@@ -1,0 +1,3 @@
+ALTER TABLE "FinanceSettings"
+ADD COLUMN "paymentFeeBasisPoints" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN "paymentFixedCents" INTEGER NOT NULL DEFAULT 0;
