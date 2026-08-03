@@ -12,7 +12,7 @@ import type { AnalyticsSummary, EdgeCacheStats } from '@/shared/types'
 // and keenpix origin are two stages of one request funnel, so the only honest
 // place to sum them is the 24h whole-zone window where both layers measure the
 // same traffic — that is what `gated` means at the call site. Outside it, the
-// edge half doesn't exist, so the cards collapse to origin-only with a dash.
+// edge half doesn't exist, so the cards collapse to Keenpix-only rows.
 
 // The fields these cards actually read — narrow enough that both the analytics
 // AnalyticsSummary and the dashboard's KPI payload can satisfy it.
@@ -79,13 +79,15 @@ function savedCard(
         ]
       : undefined,
     rows: [
-      hasEdge
-        ? {
-            source: 'edge',
-            label: 'Edge',
-            value: `~${humanBytes(edgeSaved, 1)} · est.`,
-          }
-        : { source: 'none', label: 'Edge', value: '—' },
+      ...(hasEdge
+        ? [
+            {
+              source: 'edge',
+              label: 'Edge',
+              value: `~${humanBytes(edgeSaved, 1)} · est.`,
+            } as const,
+          ]
+        : []),
       {
         source: 'origin',
         label: 'Keenpix compression',
@@ -159,15 +161,6 @@ export function reconciledCards(
           label: 'Optimized',
           value: `${compactNumber(summary.liveOptimizations)} · ${Math.round(optimizedContribution)}%`,
         },
-        ...(summary.failedRequests > 0
-          ? [
-              {
-                source: 'none' as const,
-                label: 'Failed',
-                value: compactNumber(summary.failedRequests),
-              },
-            ]
-          : []),
       ],
     },
     {

@@ -133,7 +133,7 @@ describe('reconciledCards — bandwidth saved', () => {
 })
 
 describe('reconciledCards — delivery totals', () => {
-  it('makes the headline equal Edge + Cache optimized + Optimized + Failed', () => {
+  it('keeps failures out of the app delivery-stage rows', () => {
     const edge = edgeStats({
       bytesFromEdge: 1_000_000,
       cachedRequests: 75,
@@ -159,13 +159,11 @@ describe('reconciledCards — delivery totals', () => {
       'Edge',
       'Cache optimized',
       'Optimized',
-      'Failed',
     ])
     expect(requestCard?.rows.map((row) => row.value.split(' · ')[0])).toEqual([
       '75',
       '90',
       '90',
-      '20',
     ])
     expect(
       cards
