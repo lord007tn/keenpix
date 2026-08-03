@@ -63,6 +63,23 @@ export const operationsConfigSchema = z.object({
     .max(65_536, 'Use 65536 MB (64 GB) or fewer.'),
 })
 
+const financeAmountSchema = z.coerce
+  .number()
+  .finite('Enter a valid amount.')
+  .min(0, 'Use 0 or more.')
+  .max(10_000_000, 'Amount is too large.')
+
+export const financeSettingsSchema = z.object({
+  serverMonthly: financeAmountSchema,
+  databaseMonthly: financeAmountSchema,
+  observabilityMonthly: financeAmountSchema,
+  otherMonthly: financeAmountSchema,
+  originRequestsPerMillion: financeAmountSchema,
+  originBandwidthPerGb: financeAmountSchema,
+  edgeRequestsPerMillion: financeAmountSchema,
+  edgeBandwidthPerGb: financeAmountSchema,
+})
+
 export const ACTIVITY_PAGE_SIZE = 10
 
 export const customerAccountSchema = z.object({

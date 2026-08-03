@@ -12,6 +12,7 @@ vi.mock('@/data-access/admin/subscriptions', () => ({
   removeComplimentarySubscription,
   setComplimentarySubscription,
 }))
+vi.mock('./finance', () => ({ addCustomerFinance: vi.fn() }))
 
 const { updateCustomerComplimentaryPlan } = await import('./customers')
 

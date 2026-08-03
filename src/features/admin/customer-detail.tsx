@@ -59,11 +59,16 @@ import {
   getCustomerAnalyticsFn,
   setOrgSuspensionFn,
 } from '@/functions/admin'
-import { getEdgeCacheStatsFn } from '@/functions/analytics'
 import { limitHistorySearch } from '@/helpers/history/window'
 import { authClient } from '@/lib/auth/client'
 import { DEFAULT_HISTORY_DAYS } from '@/lib/billing/plans'
 import { compactNumber, humanBytes } from '@/shared/format'
+
+const money = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 2,
+})
 
 type CustomerAccount = NonNullable<
   Awaited<ReturnType<typeof getCustomerAccountFn>>
@@ -154,36 +159,6 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
     placeholderData: keepPreviousData,
   })
   const analytics = analyticsQuery.data
-  const operatorWorkspace = Boolean(
-    customer?.members.some((member) => member.platformRole === 'super_admin'),
-  )
-  const edgeQuery = useQuery({
-    queryKey: [
-      'admin-customer-edge-analytics',
-      orgId,
-      visibleSearch.range,
-      visibleSearch.from,
-      visibleSearch.to,
-    ],
-    queryFn: () =>
-      getEdgeCacheStatsFn({
-        data: {
-          from: visibleSearch.from,
-          range: visibleSearch.range,
-          to: visibleSearch.to,
-        },
-      }),
-    enabled: Boolean(customer && operatorWorkspace),
-    placeholderData: keepPreviousData,
-  })
-  const edge = edgeQuery.data
-  let edgeCoverageLabel = 'Cloudflare data unavailable'
-  if (edge?.edge) {
-    edgeCoverageLabel = edge.edgeCovered
-      ? 'Complete Cloudflare coverage'
-      : 'Partial imported Cloudflare history'
-  }
-
   const owner = customer?.owners[0]
   const impersonationTarget = customer?.members.find(
     (member) => member.id === impersonationTargetId,
@@ -429,11 +404,8 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
             </div>
             <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center">
               <RefreshingIndicator
-                active={analyticsQuery.isFetching || edgeQuery.isFetching}
-                error={
-                  (analyticsQuery.isError && Boolean(analytics)) ||
-                  (edgeQuery.isError && Boolean(edge))
-                }
+                active={analyticsQuery.isFetching}
+                error={analyticsQuery.isError && Boolean(analytics)}
               />
               <HistoryRangePicker
                 from={visibleSearch.from}
@@ -471,40 +443,27 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
             </Card>
           ) : null}
 
-          {summary && operatorWorkspace ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {summary ? (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
               <StatCard
                 label="Image requests"
-                sub={`${compactNumber(summary.successfulDeliveries + (edge?.edge?.cachedRequests ?? 0))} delivered`}
-                value={compactNumber(
-                  summary.totalRequests + (edge?.edge?.cachedRequests ?? 0),
-                )}
-              />
-              <StatCard
-                label="Edge"
-                sub={edgeCoverageLabel}
-                value={
-                  edge?.edge ? compactNumber(edge.edge.cachedRequests) : '—'
-                }
+                sub={`${compactNumber(summary.successfulDeliveries)} delivered`}
+                value={compactNumber(summary.totalRequests)}
               />
               <StatCard
                 label="Cache optimized"
-                sub={`${summary.hitRate.toFixed(1)}% of requests reaching Keenpix`}
+                sub={`${summary.hitRate.toFixed(1)}% of delivered requests`}
                 value={compactNumber(summary.cacheHits)}
               />
               <StatCard
                 label="Optimized"
-                sub={`${compactNumber(summary.totalRequests)} requests reached Keenpix`}
+                sub="Freshly optimized"
                 value={compactNumber(summary.liveOptimizations)}
               />
-            </div>
-          ) : null}
-          {summary && !operatorWorkspace ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard
-                label="Requests reaching Keenpix"
-                sub={`${summary.hitRate.toFixed(0)}% cached`}
-                value={compactNumber(summary.totalRequests)}
+                label="Failed"
+                sub="Non-2xx requests"
+                value={compactNumber(summary.failedRequests)}
               />
               <StatCard
                 label="Bandwidth delivered"
@@ -516,21 +475,37 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
                 sub={`${summary.savingsPct.toFixed(0)}% bytes saved`}
                 value={`${summary.hitRate.toFixed(1)}%`}
               />
-              <StatCard
-                label="Avg latency"
-                sub={`p95 ${summary.p95}ms`}
-                value={`${summary.avg}ms`}
-              />
             </div>
           ) : null}
-          {operatorWorkspace && edge?.edgeConfigured && !edge.edgeCovered ? (
-            <p className="text-muted-foreground text-xs">
-              Cloudflare totals include every captured platform delivery source
-              in this window. Uncovered legacy intervals are not estimated;
-              project details remain based on requests reaching Keenpix.
-              {edge.edgeError ? ` Latest capture error: ${edge.edgeError}` : ''}
-            </p>
-          ) : null}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <StatCard
+              label="Paid MRR"
+              sub="Current monthly commitment"
+              value={money.format(customer.finance30d.mrrCents / 100)}
+            />
+            <StatCard
+              label="Direct cost (30d)"
+              sub="Customer-scoped Keenpix usage"
+              value={
+                customer.finance30d.directCostCents === null
+                  ? '—'
+                  : money.format(customer.finance30d.directCostCents / 100)
+              }
+            />
+            <StatCard
+              label="Contribution (30d)"
+              sub="MRR minus direct cost"
+              value={
+                customer.finance30d.contributionCents === null
+                  ? '—'
+                  : money.format(customer.finance30d.contributionCents / 100)
+              }
+            />
+          </div>
+          <p className="text-muted-foreground text-xs">
+            Customer cost excludes platform Edge and shared fixed costs because
+            Cloudflare’s zone analytics cannot identify this organization.
+          </p>
           {!summary && analyticsQuery.isPending ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {['a', 'b', 'c', 'd'].map((key) => (
@@ -539,13 +514,7 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
             </div>
           ) : null}
 
-          {analytics ? (
-            <ChartAreaInteractive
-              data={analytics.series}
-              edge={operatorWorkspace ? edge?.edge?.series : undefined}
-              funnel={operatorWorkspace && Boolean(edge?.edge)}
-            />
-          ) : null}
+          {analytics ? <ChartAreaInteractive data={analytics.series} /> : null}
           {!analytics && analyticsQuery.isPending ? (
             <Skeleton className="h-72" />
           ) : null}

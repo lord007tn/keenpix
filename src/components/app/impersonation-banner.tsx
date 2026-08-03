@@ -38,8 +38,8 @@ export function ImpersonationBanner({ user }: { user: SessionUser }) {
       <UserCogIcon className="size-4 shrink-0" />
       <span className="min-w-0">
         You are impersonating{' '}
-        <span className="font-medium">{user.name || user.email}</span>. Actions
-        run as this customer.
+        <span className="font-medium">“{user.name || user.email}”</span>.
+        Actions run as this customer.
       </span>
       <Button
         className="ml-auto"

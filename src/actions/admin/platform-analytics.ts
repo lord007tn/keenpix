@@ -12,7 +12,6 @@ import {
   timeSeriesFromBuckets,
 } from '@/helpers/analytics/rollup-shapers'
 import type { platformAnalyticsSchema } from '@/schemas/admin'
-import { getPlatformFinance } from './platform-finance'
 
 type PlanBucket = 'free' | 'basic' | 'pro' | 'business'
 const PLAN_ORDER: PlanBucket[] = ['business', 'pro', 'basic', 'free']
@@ -26,12 +25,11 @@ export async function getPlatformAnalytics(
   const coverageStart =
     input.range === 'all' ? await platformAnalyticsCoverageStart() : null
   const window = historicalRollupBucketing({ ...input, coverageStart })
-  const [accounts, summaryAgg, buckets, orgRows, finance] = await Promise.all([
+  const [accounts, summaryAgg, buckets, orgRows] = await Promise.all([
     listCustomerAccounts(),
     aggregatePlatformSummary(window.gte, window.lt),
     groupPlatformByBucket(window.gte, window.lt),
     groupPlatformByOrg(window.gte, window.lt),
-    getPlatformFinance(window.gte, window.lt),
   ])
   const nameById = new Map(
     accounts.map((account) => [account.id, account.name]),
@@ -82,7 +80,6 @@ export async function getPlatformAnalytics(
       (total, account) => total + account.billing.amountCents,
       0,
     ),
-    finance,
     complimentaryCustomerCount: accounts.filter(
       (account) => account.billing.source === 'admin_grant',
     ).length,

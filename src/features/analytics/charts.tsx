@@ -92,7 +92,7 @@ function buildFunnelArea(
     return {
       config: {
         edgeBytes: { label: 'Edge', color: 'var(--chart-1)' },
-        originBytes: { label: 'Keenpix', color: 'var(--chart-2)' },
+        originBytes: { label: 'Keenpix delivery', color: 'var(--chart-2)' },
       } satisfies ChartConfig,
       keys: ['edgeBytes', 'originBytes'],
       chartData,

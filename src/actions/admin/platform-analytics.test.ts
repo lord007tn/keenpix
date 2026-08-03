@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
 const listCustomerAccounts = vi.hoisted(() => vi.fn())
-const getPlatformFinance = vi.hoisted(() => vi.fn())
 
 vi.mock('@/data-access/admin/customers', () => ({ listCustomerAccounts }))
 vi.mock('@/data-access/admin/platform-analytics', () => ({
@@ -20,13 +19,11 @@ vi.mock('@/helpers/analytics/rollup-shapers', () => ({
   summarizeAgg: vi.fn().mockReturnValue({}),
   timeSeriesFromBuckets: vi.fn().mockReturnValue([]),
 }))
-vi.mock('./platform-finance', () => ({ getPlatformFinance }))
 
 const { getPlatformAnalytics } = await import('./platform-analytics')
 
 describe('platform revenue reporting', () => {
   it('counts MRR only from entitled provider-managed subscriptions', async () => {
-    getPlatformFinance.mockResolvedValue({ source: 'unavailable' })
     listCustomerAccounts.mockResolvedValue([
       {
         id: 'paid',
@@ -67,6 +64,5 @@ describe('platform revenue reporting', () => {
     expect(result.paidMrrCents).toBe(1900)
     expect(result.activePaidSubscriptionCount).toBe(1)
     expect(result.complimentaryCustomerCount).toBe(1)
-    expect(result.finance).toEqual({ source: 'unavailable' })
   })
 })

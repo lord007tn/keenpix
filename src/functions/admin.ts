@@ -8,6 +8,11 @@ import {
   updateCustomerComplimentaryPlan,
 } from '@/actions/admin/customers'
 import {
+  getFinanceDashboard,
+  getFinanceSettings,
+  updateFinanceSettings,
+} from '@/actions/admin/finance'
+import {
   acceptInvitation,
   createInvitation,
   getInvitation,
@@ -34,6 +39,7 @@ import {
   createInvitationSchema,
   customerAccountSchema,
   customerAnalyticsSchema,
+  financeSettingsSchema,
   invitationTokenSchema,
   operationsConfigSchema,
   platformAnalyticsSchema,
@@ -71,6 +77,29 @@ export const getPlatformAnalyticsFn = createServerFn({ method: 'GET' })
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     return getPlatformAnalytics(data)
+  })
+
+export const getFinanceDashboardFn = createServerFn({ method: 'GET' })
+  .inputValidator(platformAnalyticsSchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return getFinanceDashboard(data)
+  })
+
+export const getFinanceSettingsFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(({ context }) => {
+    requireSuperAdmin(context)
+    return getFinanceSettings()
+  })
+
+export const updateFinanceSettingsFn = createServerFn({ method: 'POST' })
+  .inputValidator(financeSettingsSchema)
+  .middleware([authMiddleware])
+  .handler(({ context, data }) => {
+    requireSuperAdmin(context)
+    return updateFinanceSettings(data)
   })
 
 export const updateComplimentaryPlanFn = createServerFn({ method: 'POST' })
