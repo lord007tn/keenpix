@@ -96,6 +96,15 @@ export function PlatformFinances() {
     )
   }
 
+  let profitSubtitle = `${data.profit.marginPct?.toFixed(1)}% margin`
+  if (!data.costModelConfigured) {
+    profitSubtitle = 'Configure cost assumptions first'
+  } else if (data.profit.actualCents === null) {
+    profitSubtitle = 'Polar cost data unavailable'
+  } else if (data.revenue.actualCents === 0) {
+    profitSubtitle = 'No revenue in period'
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {controls}
@@ -120,25 +129,21 @@ export function PlatformFinances() {
           value={money.format(data.revenue.paidMrrCents / 100)}
         />
         <StatCard
-          label="Operating costs"
+          label="Actual costs"
           sub={
             data.costModelConfigured
-              ? `${data.window.days.toFixed(1)} day period`
+              ? 'Payment and operating costs'
               : 'Configure cost assumptions first'
           }
           value={
-            data.costModelConfigured
-              ? money.format(data.cost.totalCents / 100)
+            data.costModelConfigured && data.cost.actualTotalCents !== null
+              ? money.format(data.cost.actualTotalCents / 100)
               : '—'
           }
         />
         <StatCard
           label="Actual profit"
-          sub={
-            data.profit.marginPct === null || !data.costModelConfigured
-              ? 'Requires actual revenue'
-              : `${data.profit.marginPct.toFixed(1)}% margin`
-          }
+          sub={profitSubtitle}
           value={
             data.profit.actualCents === null || !data.costModelConfigured
               ? '—'
@@ -168,6 +173,14 @@ export function PlatformFinances() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
+            <div className="flex items-center justify-between border-b pb-3 text-sm">
+              <span className="text-muted-foreground">Payment processing</span>
+              <span className="font-medium tabular-nums">
+                {data.revenue.paymentCostCents === null
+                  ? '—'
+                  : money.format(data.revenue.paymentCostCents / 100)}
+              </span>
+            </div>
             {[
               ['Fixed operations', data.cost.fixedCents],
               ['Keenpix requests', data.cost.originRequestCents],
@@ -186,9 +199,11 @@ export function PlatformFinances() {
               </div>
             ))}
             <div className="flex items-center justify-between border-t pt-3 font-semibold text-sm">
-              <span>Total operating costs</span>
+              <span>Total actual costs</span>
               <span className="tabular-nums">
-                {money.format(data.cost.totalCents / 100)}
+                {data.cost.actualTotalCents === null
+                  ? '—'
+                  : money.format(data.cost.actualTotalCents / 100)}
               </span>
             </div>
           </CardContent>
@@ -235,11 +250,11 @@ export function PlatformFinances() {
       </div>
 
       <p className="text-muted-foreground text-xs">
-        Actual revenue comes from settled Polar orders. Operating costs come
-        from the saved cost model. Edge coverage for this range is{' '}
-        {data.usage.edgeCovered ? 'complete' : 'partial'}; uncovered Edge usage
-        is not estimated. Customer contribution excludes Edge costs because the
-        Cloudflare zone dataset cannot identify a Keenpix customer.
+        Actual revenue and payment costs come from settled Polar metrics.
+        Operating costs come from the saved cost model. Edge coverage for this
+        range is {data.usage.edgeCovered ? 'complete' : 'partial'}; uncovered
+        Edge usage is not estimated. Customer contribution excludes Edge costs
+        because the Cloudflare zone dataset cannot identify a Keenpix customer.
       </p>
     </div>
   )

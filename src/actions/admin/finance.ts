@@ -83,7 +83,11 @@ export async function updateFinanceSettings(
 export async function addCustomerFinance<
   T extends {
     billing: { amountCents: number; source: string; status: string | null }
-    usage30d: { bandwidthBytes: number; requests: number }
+    usage30d: {
+      attemptedRequests: number
+      bandwidthBytes: number
+      requests: number
+    }
   },
 >(accounts: T[]) {
   const settings = await getStoredFinanceSettings()
@@ -93,7 +97,7 @@ export async function addCustomerFinance<
       edgeBandwidthBytes: 0,
       edgeRequests: 0,
       originBandwidthBytes: account.usage30d.bandwidthBytes,
-      originRequests: account.usage30d.requests,
+      originRequests: account.usage30d.attemptedRequests,
       settings,
     })
     const mrrCents =
@@ -150,10 +154,22 @@ export async function getFinanceDashboard(
     (total, account) => total + account.billing.amountCents,
     0,
   )
+  const paymentCostCents =
+    provider.costCents ??
+    (provider.revenueCents !== null && provider.profitCents !== null
+      ? provider.revenueCents - provider.profitCents
+      : null)
+  const netAfterPaymentCents =
+    provider.profitCents ??
+    (provider.revenueCents !== null && paymentCostCents !== null
+      ? provider.revenueCents - paymentCostCents
+      : null)
   const actualProfitCents =
-    provider.revenueCents === null
+    netAfterPaymentCents === null
       ? null
-      : provider.revenueCents - cost.totalCents
+      : netAfterPaymentCents - cost.totalCents
+  const actualTotalCostCents =
+    paymentCostCents === null ? null : paymentCostCents + cost.totalCents
 
   return {
     window: {
@@ -166,9 +182,11 @@ export async function getFinanceDashboard(
       orders: provider.orders,
       paidMrrCents,
       paidSubscriptions: paid.length,
+      paymentCostCents,
+      netAfterPaymentCents,
       source: provider.source,
     },
-    cost,
+    cost: { ...cost, actualTotalCents: actualTotalCostCents },
     costModelConfigured: settings.configured,
     profit: {
       actualCents: actualProfitCents,

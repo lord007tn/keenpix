@@ -100,6 +100,14 @@ export function PlatformOverview() {
     1,
   )
   const totalPlanned = planDistribution.reduce((sum, row) => sum + row.count, 0)
+  let profitSubtitle = `${finance?.profit.marginPct?.toFixed(1)}% margin`
+  if (!finance?.costModelConfigured) {
+    profitSubtitle = 'Configure in Admin Settings'
+  } else if (finance.profit.actualCents === null) {
+    profitSubtitle = 'Polar cost data unavailable'
+  } else if (finance.revenue.actualCents === 0) {
+    profitSubtitle = 'No revenue in period'
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -110,25 +118,22 @@ export function PlatformOverview() {
           value={`$${(data.paidMrrCents / 100).toFixed(2)}`}
         />
         <StatCard
-          label="Operating costs (30d)"
+          label="Actual costs (30d)"
           sub={
             finance?.costModelConfigured
-              ? 'Configured cost model'
+              ? 'Payment and operating costs'
               : 'Configure in Admin Settings'
           }
           value={
-            finance?.costModelConfigured
-              ? money.format(finance.cost.totalCents / 100)
+            finance?.costModelConfigured &&
+            finance.cost.actualTotalCents !== null
+              ? money.format(finance.cost.actualTotalCents / 100)
               : '—'
           }
         />
         <StatCard
           label="Profit (30d)"
-          sub={
-            finance?.profit.marginPct === null || !finance?.costModelConfigured
-              ? 'Requires actual revenue'
-              : `${finance.profit.marginPct.toFixed(1)}% margin`
-          }
+          sub={profitSubtitle}
           value={
             finance?.profit.actualCents === null ||
             !finance?.costModelConfigured

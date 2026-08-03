@@ -130,7 +130,7 @@ const columns: ColumnDef<CustomerAccount>[] = [
       <SortHeader
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       >
-        Requests 30d
+        Delivered 30d
       </SortHeader>
     ),
     cell: ({ row }) => (
@@ -385,10 +385,10 @@ export function CustomersTable() {
         </Table>
       </Card>
       <p className="text-muted-foreground text-xs">
-        Requests and bandwidth are customer-scoped Keenpix delivery. Cost is
-        direct 30-day Keenpix usage; contribution is current paid MRR minus that
-        direct cost. Platform Edge and shared fixed costs are not attributed to
-        customers.
+        Delivered requests and bandwidth are successful, customer-scoped Keenpix
+        delivery. Cost includes every Keenpix request attempt plus successful
+        delivery bytes; contribution is current paid MRR minus that direct cost.
+        Platform Edge and shared fixed costs are not attributed to customers.
       </p>
     </div>
   )

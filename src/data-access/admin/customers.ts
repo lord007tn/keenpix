@@ -68,6 +68,8 @@ interface UsageRow {
     bytesOut: bigint | null
     bytesSaved: bigint | null
   }
+  orgId: string
+  status: number
 }
 
 function numberFromBigInt(value: bigint | number | null | undefined) {
@@ -76,9 +78,35 @@ function numberFromBigInt(value: bigint | number | null | undefined) {
 
 // Provider linkage is the billing-source discriminator. A null Polar id is a
 // local complimentary entitlement with zero revenue.
-function mapCustomerAccount(org: CustomerOrg, usage: UsageRow | undefined) {
-  const requests = usage?._sum.requests ?? 0
-  const cachedRequests = usage?._sum.cachedRequests ?? 0
+function mapCustomerAccount(org: CustomerOrg, usageRows: UsageRow[]) {
+  const firstTrafficAt = usageRows[0]?._max.bucketStart ?? null
+  const usage = usageRows.reduce(
+    (total, row) => {
+      const requests = row._sum.requests ?? 0
+      total.attemptedRequests += requests
+      if (row.status >= 200 && row.status < 300) {
+        total.requests += requests
+        total.cachedRequests += row._sum.cachedRequests ?? 0
+        total.bandwidthBytes += numberFromBigInt(row._sum.bytesOut)
+        total.bytesSaved += numberFromBigInt(row._sum.bytesSaved)
+      }
+      if (
+        row._max.bucketStart &&
+        (!total.lastTrafficAt || row._max.bucketStart > total.lastTrafficAt)
+      ) {
+        total.lastTrafficAt = row._max.bucketStart
+      }
+      return total
+    },
+    {
+      attemptedRequests: 0,
+      requests: 0,
+      cachedRequests: 0,
+      bandwidthBytes: 0,
+      bytesSaved: 0,
+      lastTrafficAt: firstTrafficAt,
+    },
+  )
   const subscriptionPlan = getPlan(org.subscription?.plan)
   const subscriptionActive = org.subscription
     ? ENTITLED_SUBSCRIPTION_STATUSES.has(org.subscription.status)
@@ -140,12 +168,14 @@ function mapCustomerAccount(org: CustomerOrg, usage: UsageRow | undefined) {
         }
       : null,
     usage30d: {
-      requests,
-      cachedRequests,
-      cacheHitRate: requests > 0 ? cachedRequests / requests : 0,
-      bandwidthBytes: numberFromBigInt(usage?._sum.bytesOut),
-      bytesSaved: numberFromBigInt(usage?._sum.bytesSaved),
-      lastTrafficAt: usage?._max.bucketStart?.toISOString() ?? null,
+      attemptedRequests: usage.attemptedRequests,
+      requests: usage.requests,
+      cachedRequests: usage.cachedRequests,
+      cacheHitRate:
+        usage.requests > 0 ? usage.cachedRequests / usage.requests : 0,
+      bandwidthBytes: usage.bandwidthBytes,
+      bytesSaved: usage.bytesSaved,
+      lastTrafficAt: usage.lastTrafficAt?.toISOString() ?? null,
     },
   }
 }
@@ -160,7 +190,7 @@ export async function listCustomerAccounts() {
       select: customerOrgArgs.select,
     }),
     prisma.analyticsRollupHourly.groupBy({
-      by: ['orgId'],
+      by: ['orgId', 'status'],
       where: { bucketStart: { gte: since } },
       _max: { bucketStart: true },
       _sum: {
@@ -171,8 +201,15 @@ export async function listCustomerAccounts() {
       },
     }),
   ])
-  const usageByOrg = new Map(usageRows.map((row) => [row.orgId, row]))
-  return orgs.map((org) => mapCustomerAccount(org, usageByOrg.get(org.id)))
+  const usageByOrg = new Map<string, UsageRow[]>()
+  for (const row of usageRows) {
+    const rows = usageByOrg.get(row.orgId) ?? []
+    rows.push(row)
+    usageByOrg.set(row.orgId, rows)
+  }
+  return orgs.map((org) =>
+    mapCustomerAccount(org, usageByOrg.get(org.id) ?? []),
+  )
 }
 
 // Single-customer variant for the operator detail dashboard.
@@ -184,7 +221,7 @@ export async function getCustomerAccount(orgId: string) {
       select: customerOrgArgs.select,
     }),
     prisma.analyticsRollupHourly.groupBy({
-      by: ['orgId'],
+      by: ['orgId', 'status'],
       where: { orgId, bucketStart: { gte: since } },
       _max: { bucketStart: true },
       _sum: {
@@ -198,5 +235,5 @@ export async function getCustomerAccount(orgId: string) {
   if (!org) {
     return null
   }
-  return mapCustomerAccount(org, usageRows[0])
+  return mapCustomerAccount(org, usageRows)
 }
