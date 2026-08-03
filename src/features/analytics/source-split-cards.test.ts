@@ -57,10 +57,10 @@ describe('reconciledCards — end-to-end cache hit rate', () => {
     const pct = Number.parseFloat(card?.value ?? '0')
 
     expect(pct).toBeLessThanOrEqual(100)
-    // 78.2k edge + 23.5k cache optimized over 78.2k + 56.9k total ≈ 75.3%.
+    // 78.2k edge + 23.5k cache over 78.2k + 56.9k total ≈ 75.3%.
     expect(pct).toBeGreaterThan(75)
     expect(pct).toBeLessThan(76)
-    const cacheRow = card?.rows.find((r) => r.label === 'Cache optimized')
+    const cacheRow = card?.rows.find((r) => r.label === 'Cache')
     expect(cacheRow?.value).toBe('+17.4%')
   })
 
@@ -103,7 +103,7 @@ describe('reconciledCards — bandwidth saved', () => {
     const card = reconciledCards(edge, origin).find(
       (c) => c.label === 'Bandwidth saved',
     )
-    const edgeRow = card?.rows.find((r) => r.label === 'Edge')
+    const edgeRow = card?.rows.find((r) => r.label === 'Edge compression')
 
     // Edge now carries an estimate instead of the "—" dash.
     expect(edgeRow?.source).toBe('edge')
@@ -127,7 +127,7 @@ describe('reconciledCards — bandwidth saved', () => {
     const card = reconciledCards(edge, origin).find(
       (c) => c.label === 'Bandwidth saved',
     )
-    const edgeRow = card?.rows.find((r) => r.label === 'Edge')
+    const edgeRow = card?.rows.find((r) => r.label === 'Edge compression')
     expect(edgeRow?.value).toBe('~0 B · est.')
   })
 })
@@ -157,7 +157,7 @@ describe('reconciledCards — delivery totals', () => {
     expect(requestCard?.value).toBe('275')
     expect(requestCard?.rows.map((row) => row.label)).toEqual([
       'Edge',
-      'Cache optimized',
+      'Cache',
       'Optimized',
     ])
     expect(requestCard?.rows.map((row) => row.value.split(' · ')[0])).toEqual([
@@ -169,6 +169,11 @@ describe('reconciledCards — delivery totals', () => {
       cards
         .filter((card) => card.label.startsWith('Bandwidth'))
         .flatMap((card) => card.rows.map((row) => row.label)),
-    ).not.toContain('keenpix origin')
+    ).toEqual([
+      'Edge delivery',
+      'Origin delivery',
+      'Edge compression',
+      'Origin compression',
+    ])
   })
 })

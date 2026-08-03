@@ -19,7 +19,7 @@ import { compactNumber } from '@/shared/format'
 import type { EdgeCachePoint, TimePoint } from '@/shared/types'
 
 const originConfig = {
-  cached: { label: 'Cache optimized', color: 'var(--chart-2)' },
+  cached: { label: 'Cache', color: 'var(--chart-2)' },
   optimized: { label: 'Optimized', color: 'var(--chart-1)' },
 } satisfies ChartConfig
 
@@ -31,7 +31,7 @@ const funnelConfig = {
     color: 'var(--chart-1)',
   },
   diskServed: {
-    label: 'Cache optimized',
+    label: 'Cache',
     color: 'var(--chart-2)',
   },
   liveProcessed: {
@@ -66,8 +66,8 @@ export function ChartAreaInteractive({
         <CardTitle>Requests over time</CardTitle>
         <CardDescription>
           {showFunnel
-            ? 'Cloudflare edge and Keenpix delivery stages, this window'
-            : 'Cache hits vs live-optimized, this window'}
+            ? 'Edge, cache, and optimized delivery stages, this window'
+            : 'Cache vs optimized origin delivery, this window'}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">

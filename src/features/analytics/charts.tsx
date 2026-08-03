@@ -92,7 +92,7 @@ function buildFunnelArea(
     return {
       config: {
         edgeBytes: { label: 'Edge', color: 'var(--chart-1)' },
-        originBytes: { label: 'Keenpix delivery', color: 'var(--chart-2)' },
+        originBytes: { label: 'Origin delivery', color: 'var(--chart-2)' },
       } satisfies ChartConfig,
       keys: ['edgeBytes', 'originBytes'],
       chartData,
@@ -101,11 +101,11 @@ function buildFunnelArea(
   }
   if (view === 'cache') {
     // Stack the two cache sources so the chart mirrors the hit-rate card:
-    // Cloudflare edge + Keenpix cache, summing to the end-to-end hit rate.
+    // Cloudflare edge + origin cache, summing to the end-to-end hit rate.
     return {
       config: {
         edgeShare: { label: 'Edge', color: 'var(--chart-1)' },
-        diskShare: { label: 'Cache optimized', color: 'var(--chart-2)' },
+        diskShare: { label: 'Cache', color: 'var(--chart-2)' },
       } satisfies ChartConfig,
       keys: ['edgeShare', 'diskShare'],
       chartData,
@@ -116,7 +116,7 @@ function buildFunnelArea(
   return {
     config: {
       edgeServed: { label: 'Edge', color: 'var(--chart-1)' },
-      diskServed: { label: 'Cache optimized', color: 'var(--chart-2)' },
+      diskServed: { label: 'Cache', color: 'var(--chart-2)' },
       liveProcessed: {
         label: 'Optimized',
         color: 'var(--muted-foreground)',
@@ -187,7 +187,7 @@ function buildCompareArea(view: AreaView): {
     return {
       config: {
         cfBytes: { label: 'Edge', color: 'var(--chart-1)' },
-        kpBytes: { label: 'keenpix', color: 'var(--chart-2)' },
+        kpBytes: { label: 'Origin delivery', color: 'var(--chart-2)' },
       },
       keys: ['cfBytes', 'kpBytes'],
       yFormat: (v: number) => humanBytes(v, 0),
@@ -197,7 +197,7 @@ function buildCompareArea(view: AreaView): {
     return {
       config: {
         cfHitRate: { label: 'Edge', color: 'var(--chart-1)' },
-        kpHitRate: { label: 'Cache optimized', color: 'var(--chart-2)' },
+        kpHitRate: { label: 'Cache', color: 'var(--chart-2)' },
       },
       keys: ['cfHitRate', 'kpHitRate'],
       yFormat: (v: number) => `${Math.round(v)}%`,
@@ -207,7 +207,7 @@ function buildCompareArea(view: AreaView): {
   return {
     config: {
       cfRequests: { label: 'Edge', color: 'var(--chart-1)' },
-      kpRequests: { label: 'keenpix', color: 'var(--chart-2)' },
+      kpRequests: { label: 'Origin', color: 'var(--chart-2)' },
     },
     keys: ['cfRequests', 'kpRequests'],
     yFormat: (v: number) => compactNumber(v, 0),
@@ -215,7 +215,7 @@ function buildCompareArea(view: AreaView): {
 }
 
 // Cloudflare and keenpix overlaid (not stacked) so the two sources can be
-// compared directly — most usefully the edge hit rate vs the Keenpix cache hit
+// compared directly — most usefully the edge hit rate vs the origin cache hit
 // rate on the same axis. Lives next to the stacked funnel chart; both need the
 // 24h whole-zone window where edge data exists.
 export function SourceCompareChart({

@@ -277,10 +277,10 @@ function AnalyticsPage() {
   const navigate = useNavigate({ from: Route.fullPath })
   const { cloud, user } = useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
-  // Zone-wide edge traffic belongs in /admin. It cannot be attributed to the
-  // active cloud organization or project, even when the viewer is an operator
-  // or is impersonating a customer. Self-host remains single-tenant.
-  const canSeeEdge = !cloud
+  // Zone-wide edge traffic stays hidden from ordinary cloud tenants because it
+  // cannot be attributed to one organization. An impersonating operator may
+  // see it for support/reconciliation, with the whole-zone scope called out.
+  const canSeeEdge = !cloud || Boolean(user.impersonatedBy)
   const { currentProject, isAll, setProject } = useProject()
   const { data: billing } = useQuery({
     enabled: cloud,
@@ -456,8 +456,8 @@ function AnalyticsPage() {
       eyebrow={isAll ? 'All projects' : currentProject?.name}
       subtitle={
         canSeeEdge
-          ? 'Organization- and project-scoped delivery history across Edge and Keenpix.'
-          : 'Organization- and project-scoped Keenpix delivery history.'
+          ? 'Organization- and project-scoped delivery history across Edge and origin.'
+          : 'Organization- and project-scoped origin delivery history.'
       }
       title="Analytics"
     />
@@ -541,13 +541,13 @@ function AnalyticsPage() {
   const activeLens: ChartLens = lensAvailable[lens] ? lens : 'funnel'
   let lensDescription: string
   if (activeLens === 'compare') {
-    lensDescription = `Edge vs keenpix, overlaid · ${windowDescription}`
+    lensDescription = `Edge vs origin, overlaid · ${windowDescription}`
   } else if (activeLens === 'edge') {
     lensDescription = `Edge, zone-wide · ${windowDescription}`
   } else if (edgeReady) {
-    lensDescription = `Edge → Keenpix cache → optimized · ${windowDescription}`
+    lensDescription = `Edge → Cache → Optimized · ${windowDescription}`
   } else {
-    lensDescription = `Keenpix delivery · ${windowDescription}`
+    lensDescription = `Origin delivery · ${windowDescription}`
   }
   let chartEl: ReactNode
   if (activeLens === 'compare' && edge) {
@@ -597,9 +597,9 @@ function AnalyticsPage() {
         />
         {canSeeEdge ? (
           <p className="text-muted-foreground text-xs">
-            Edge totals are available here because this is a single-tenant
-            deployment. Project breakdowns and filters use requests that reached
-            Keenpix.
+            {cloud
+              ? 'Edge totals are visible in this impersonated operator view and remain zone-wide. Customer, project, and filter breakdowns use origin requests only.'
+              : 'Edge totals are available because this is a single-tenant deployment. Project breakdowns and filters use origin requests only.'}
           </p>
         ) : null}
       </section>

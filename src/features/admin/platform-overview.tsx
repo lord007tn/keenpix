@@ -18,6 +18,7 @@ import {
   getPlatformAnalyticsFn,
 } from '@/functions/admin'
 import { getEdgeCacheStatsFn } from '@/functions/analytics'
+import { calculateEndToEndCacheHitRate } from '@/helpers/analytics/calculate-end-to-end-cache-hit-rate'
 import { compactNumber, humanBytes } from '@/shared/format'
 
 type PlatformAnalytics = Awaited<ReturnType<typeof getPlatformAnalyticsFn>>
@@ -88,8 +89,11 @@ export function PlatformOverview() {
     summary.successfulDeliveries + (edgeStats?.cachedRequests ?? 0)
   const optimized = summary.liveOptimizations
   const cacheOptimized = summary.cacheHits
-  const totalCached = cacheOptimized + (edgeStats?.cachedRequests ?? 0)
-  const cacheRate = delivered > 0 ? (totalCached / delivered) * 100 : 0
+  const cacheRate = calculateEndToEndCacheHitRate({
+    edgeOffloads: edgeStats?.cachedRequests ?? 0,
+    originCacheHits: cacheOptimized,
+    originRequests: summary.totalRequests,
+  })
   const money = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -155,7 +159,7 @@ export function PlatformOverview() {
           value={compactNumber(totalRequests)}
         />
         <StatCard
-          label="Edge optimized"
+          label="Edge"
           sub={
             edge?.edgeCovered
               ? 'Complete Edge coverage'
@@ -164,8 +168,8 @@ export function PlatformOverview() {
           value={edgeStats ? compactNumber(edgeStats.cachedRequests) : '—'}
         />
         <StatCard
-          label="Cache optimized"
-          sub="Served from Keenpix cache"
+          label="Cache"
+          sub="Served from origin cache"
           value={compactNumber(cacheOptimized)}
         />
         <StatCard
@@ -175,17 +179,17 @@ export function PlatformOverview() {
         />
         <StatCard
           label="Failed"
-          sub="Non-2xx Keenpix requests"
+          sub="Non-2xx origin requests"
           value={compactNumber(summary.failedRequests)}
         />
         <StatCard
           label="Bandwidth delivered (30d)"
-          sub={`${humanBytes(summary.bandwidthSaved)} saved`}
+          sub={`Edge + origin · ${humanBytes(summary.bandwidthSaved)} origin bytes saved`}
           value={humanBytes(totalBandwidth)}
         />
         <StatCard
           label="Cache hit rate"
-          sub={`${summary.savingsPct.toFixed(0)}% bytes saved`}
+          sub="Edge + cache combined"
           value={`${cacheRate.toFixed(1)}%`}
         />
       </div>
@@ -198,7 +202,9 @@ export function PlatformOverview() {
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-col gap-1">
                 <CardTitle>Top customers</CardTitle>
-                <CardDescription>By requests over 30 days.</CardDescription>
+                <CardDescription>
+                  By origin requests over 30 days.
+                </CardDescription>
               </div>
               <Link
                 className="text-muted-foreground text-sm hover:text-foreground"
