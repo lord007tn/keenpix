@@ -9,7 +9,7 @@ vi.mock('@/db', () => ({
 const { groupPlatformByOrg } = await import('./platform-analytics')
 
 describe('platform delivery stages', () => {
-  it('uses successful requests for customer cache rates', async () => {
+  it('uses successful deliveries for customer rankings and cache rates', async () => {
     groupBy.mockResolvedValue([
       {
         orgId: 'org_1',
@@ -28,8 +28,8 @@ describe('platform delivery stages', () => {
     ).resolves.toEqual([
       {
         orgId: 'org_1',
-        requests: 10,
-        successfulRequests: 9,
+        attemptedRequests: 10,
+        requests: 9,
         cachedRequests: 6,
         bytesOut: 900,
       },
