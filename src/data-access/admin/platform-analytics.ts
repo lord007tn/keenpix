@@ -144,27 +144,27 @@ export async function groupPlatformByOrg(gte: Date, lt?: Date, take = 8) {
   const organizations = new Map<
     string,
     {
+      attemptedRequests: number
       bytesOut: number
       cachedRequests: number
       orgId: string
       requests: number
-      successfulRequests: number
     }
   >()
   for (const row of rows) {
     const organization = organizations.get(row.orgId) ?? {
       orgId: row.orgId,
+      attemptedRequests: 0,
       requests: 0,
-      successfulRequests: 0,
       cachedRequests: 0,
       bytesOut: 0,
     }
-    organization.requests += row._sum.requests ?? 0
+    organization.attemptedRequests += row._sum.requests ?? 0
     if (row.status >= 200 && row.status < 300) {
-      organization.successfulRequests += row._sum.requests ?? 0
+      organization.requests += row._sum.requests ?? 0
       organization.cachedRequests += row._sum.cachedRequests ?? 0
+      organization.bytesOut += Number(row._sum.bytesOut ?? 0n)
     }
-    organization.bytesOut += Number(row._sum.bytesOut ?? 0n)
     organizations.set(row.orgId, organization)
   }
   return [...organizations.values()]
