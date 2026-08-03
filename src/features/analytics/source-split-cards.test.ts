@@ -167,5 +167,10 @@ describe('reconciledCards — delivery totals', () => {
       '90',
       '20',
     ])
+    expect(
+      cards
+        .filter((card) => card.label.startsWith('Bandwidth'))
+        .flatMap((card) => card.rows.map((row) => row.label)),
+    ).not.toContain('keenpix origin')
   })
 })

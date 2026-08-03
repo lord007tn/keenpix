@@ -453,7 +453,7 @@ function AnalyticsPage() {
         </>
       }
       eyebrow={isAll ? 'All projects' : currentProject?.name}
-      subtitle="Organization- and project-scoped delivery history measured at the keenpix origin."
+      subtitle="Organization- and project-scoped delivery history across Edge and Keenpix."
       title="Analytics"
     />
   )
@@ -542,7 +542,7 @@ function AnalyticsPage() {
   } else if (edgeReady) {
     lensDescription = `Edge → Keenpix cache → optimized · ${windowDescription}`
   } else {
-    lensDescription = `keenpix origin · ${windowDescription}`
+    lensDescription = `Keenpix delivery · ${windowDescription}`
   }
   let chartEl: ReactNode
   if (activeLens === 'compare' && edge) {
@@ -591,10 +591,9 @@ function AnalyticsPage() {
           summary={data.summary}
         />
         <p className="text-muted-foreground text-xs">
-          Customer totals are measured from requests that reached keenpix. A
-          Cloudflare edge hit never reaches the origin, so zone-wide edge
-          delivery is reported separately and is visible only to the platform
-          operator.
+          Operator totals combine Cloudflare Edge delivery with requests that
+          reached Keenpix. Project breakdowns and filters use Keenpix requests
+          because Edge data is available only at whole-zone scope.
         </p>
       </section>
 

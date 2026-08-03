@@ -526,8 +526,8 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
           {operatorWorkspace && edge?.edgeConfigured && !edge.edgeCovered ? (
             <p className="text-muted-foreground text-xs">
               Cloudflare totals include every captured platform delivery source
-              in this window. Uncovered legacy intervals are not estimated, and
-              Keenpix origin counters are measured independently.
+              in this window. Uncovered legacy intervals are not estimated;
+              project details remain based on requests reaching Keenpix.
               {edge.edgeError ? ` Latest capture error: ${edge.edgeError}` : ''}
             </p>
           ) : null}
