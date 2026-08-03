@@ -454,11 +454,11 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
               <StatCard
                 label="Image requests"
-                sub={`${compactNumber(summary.successfulDeliveries)} delivered`}
+                sub={`${compactNumber(summary.successfulDeliveries)} origin delivered`}
                 value={compactNumber(summary.totalRequests)}
               />
               <StatCard
-                label="Cache optimized"
+                label="Cache"
                 sub={`${summary.hitRate.toFixed(1)}% of delivered requests`}
                 value={compactNumber(summary.cacheHits)}
               />
@@ -469,16 +469,16 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
               />
               <StatCard
                 label="Failed"
-                sub="Non-2xx requests"
+                sub="Non-2xx origin requests"
                 value={compactNumber(summary.failedRequests)}
               />
               <StatCard
-                label="Bandwidth delivered"
+                label="Origin delivery"
                 sub={`${humanBytes(summary.bandwidthSaved)} saved`}
                 value={humanBytes(summary.bandwidthOut)}
               />
               <StatCard
-                label="Cache hit rate"
+                label="Origin cache hit rate"
                 sub={`${summary.savingsPct.toFixed(0)}% bytes saved`}
                 value={`${summary.hitRate.toFixed(1)}%`}
               />

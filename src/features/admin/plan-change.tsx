@@ -178,7 +178,7 @@ export function PlanChange({
               {humanBytes(target.includedBandwidthBytes)}
               {bandwidthPct === null ? '' : ` (${bandwidthPct}%)`}
             </span>
-            <span>Delivered 30d: {compactNumber(usage.requests)}</span>
+            <span>Origin delivered 30d: {compactNumber(usage.requests)}</span>
             <span>
               Projects: {customer.projects}/
               {target.maxProjects === null ? '∞' : target.maxProjects}

@@ -130,7 +130,7 @@ const columns: ColumnDef<CustomerAccount>[] = [
       <SortHeader
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       >
-        Delivered 30d
+        Origin delivered 30d
       </SortHeader>
     ),
     cell: ({ row }) => (
@@ -146,7 +146,7 @@ const columns: ColumnDef<CustomerAccount>[] = [
       <SortHeader
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       >
-        Bandwidth 30d
+        Origin bandwidth 30d
       </SortHeader>
     ),
     cell: ({ row }) => (
@@ -385,10 +385,11 @@ export function CustomersTable() {
         </Table>
       </Card>
       <p className="text-muted-foreground text-xs">
-        Delivered requests and bandwidth are successful, customer-scoped Keenpix
-        delivery. Cost combines Polar fees, modeled delivery cost, and a
+        Origin delivery is successful customer-scoped traffic that reached
+        Keenpix. Cloudflare Edge is zone-wide and is not assigned to individual
+        customers. Cost combines Polar fees, modeled origin delivery cost, and a
         bandwidth-weighted share of fixed operations. Contribution is current
-        paid MRR minus that total cost; platform Edge remains unassigned.
+        paid MRR minus that total cost.
       </p>
     </div>
   )

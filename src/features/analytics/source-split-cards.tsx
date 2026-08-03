@@ -5,11 +5,12 @@ import {
   type SourceSplitCardProps,
 } from '@/components/app/source-split-card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { calculateEndToEndCacheHitRate } from '@/helpers/analytics/calculate-end-to-end-cache-hit-rate'
 import { compactNumber, humanBytes } from '@/shared/format'
 import type { AnalyticsSummary, EdgeCacheStats } from '@/shared/types'
 
 // The origin KPI row, re-expressed as "total, then by source". Cloudflare edge
-// and keenpix origin are two stages of one request funnel, so the only honest
+// and origin delivery are two stages of one request funnel, so the only honest
 // place to sum them is the 24h whole-zone window where both layers measure the
 // same traffic — that is what `gated` means at the call site. Outside it, the
 // edge half doesn't exist, so the cards collapse to Keenpix-only rows.
@@ -83,14 +84,14 @@ function savedCard(
         ? [
             {
               source: 'edge',
-              label: 'Edge',
+              label: 'Edge compression',
               value: `~${humanBytes(edgeSaved, 1)} · est.`,
             } as const,
           ]
         : []),
       {
         source: 'origin',
-        label: 'Keenpix compression',
+        label: 'Origin compression',
         value: humanBytes(summary.bandwidthSaved, 1),
       },
     ],
@@ -111,10 +112,11 @@ export function reconciledCards(
   const edgeReqPct = ratio(edge.cachedRequests, clientRequests)
   const cacheContribution = ratio(summary.cacheHits, clientRequests)
   const optimizedContribution = ratio(summary.liveOptimizations, clientRequests)
-  const endToEnd = ratio(
-    edge.cachedRequests + summary.cacheHits,
-    clientRequests,
-  )
+  const endToEnd = calculateEndToEndCacheHitRate({
+    edgeOffloads: edge.cachedRequests,
+    originCacheHits: summary.cacheHits,
+    originRequests: summary.totalRequests,
+  })
   return [
     {
       label: 'Bandwidth delivered',
@@ -126,12 +128,12 @@ export function reconciledCards(
       rows: [
         {
           source: 'edge',
-          label: 'Edge',
+          label: 'Edge delivery',
           value: `${humanBytes(edge.bytesFromEdge, 1)} · ${Math.round(edgeBytesPct)}%`,
         },
         {
           source: 'origin',
-          label: 'Keenpix delivery',
+          label: 'Origin delivery',
           value: `${humanBytes(summary.bandwidthOut, 1)} · ${Math.round(100 - edgeBytesPct)}%`,
         },
       ],
@@ -153,7 +155,7 @@ export function reconciledCards(
         },
         {
           source: 'disk',
-          label: 'Cache optimized',
+          label: 'Cache',
           value: `${compactNumber(summary.cacheHits)} · ${Math.round(cacheContribution)}%`,
         },
         {
@@ -179,7 +181,7 @@ export function reconciledCards(
         },
         {
           source: 'disk',
-          label: 'Cache optimized',
+          label: 'Cache',
           value: `+${cacheContribution.toFixed(1)}%`,
         },
       ],
@@ -200,11 +202,11 @@ function originOnlyCards(
     {
       label: 'Bandwidth delivered',
       value: humanBytes(summary.bandwidthOut, 1),
-      sub: 'Keenpix delivery',
+      sub: 'Origin delivery',
       rows: [
         {
           source: 'origin',
-          label: 'Keenpix delivery',
+          label: 'Origin delivery',
           value: humanBytes(summary.bandwidthOut, 1),
         },
       ],
@@ -212,7 +214,7 @@ function originOnlyCards(
     {
       label: 'Image requests',
       value: compactNumber(summary.totalRequests),
-      sub: `${compactNumber(summary.successfulDeliveries)} delivered`,
+      sub: `${compactNumber(summary.successfulDeliveries)} origin delivered`,
       delta: deltas?.requests,
       bar: [
         { source: 'disk', pct: summary.hitRate },
@@ -221,7 +223,7 @@ function originOnlyCards(
       rows: [
         {
           source: 'disk',
-          label: 'Cache optimized',
+          label: 'Cache',
           value: `${compactNumber(diskHits)} · ${Math.round(summary.hitRate)}%`,
         },
         {
@@ -234,13 +236,13 @@ function originOnlyCards(
     {
       label: 'Cache hit rate',
       value: `${summary.hitRate.toFixed(1)}%`,
-      sub: 'Keenpix cache',
+      sub: 'Origin cache',
       delta: deltas?.hitRatePp,
       deltaUnit: 'pp',
       rows: [
         {
           source: 'disk',
-          label: 'Cache optimized',
+          label: 'Cache',
           value: `${summary.hitRate.toFixed(1)}%`,
         },
       ],
@@ -285,9 +287,9 @@ export function SourceSplitCards({
           <CloudIcon />
           <AlertTitle>Connect Cloudflare to see edge delivery</AlertTitle>
           <AlertDescription>
-            These cards show only what reached keenpix. Set the CLOUDFLARE_* env
-            vars to split each metric between the edge and the origin and reveal
-            the true end-to-end cache hit rate.{' '}
+            These cards show only origin traffic. Set the CLOUDFLARE_* env vars
+            to split each metric between the edge and origin and reveal the true
+            end-to-end cache hit rate.{' '}
             <Link to="/admin/settings">View in Admin → Settings</Link>
           </AlertDescription>
         </Alert>

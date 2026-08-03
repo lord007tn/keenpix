@@ -210,7 +210,7 @@ export function PlatformFinances() {
           <CardContent className="flex flex-col gap-3">
             {[
               [
-                'Keenpix delivery',
+                'Origin delivery',
                 `${compactNumber(data.usage.originRequests)} requests · ${humanBytes(data.usage.originBandwidthBytes)}`,
               ],
               [

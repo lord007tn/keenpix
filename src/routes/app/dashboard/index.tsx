@@ -73,11 +73,11 @@ function DashboardPage() {
   const { user, cloud, orgRole, productAccess, workspaceReady } =
     useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
-  // Cloudflare edge analytics are zone-wide and cannot be attributed to the
-  // active organization or project. Keep them in the operator console only in
-  // cloud mode so an operator visiting their own tenant workspace never sees
-  // another customer's edge traffic. A self-hosted instance is single-tenant.
-  const canSeeEdge = !cloud
+  // Cloudflare edge analytics are zone-wide and cannot be attributed to one
+  // tenant. Keep them hidden from ordinary cloud customers, but restore them
+  // for an operator actively impersonating a customer so that support can see
+  // the same whole-zone delivery funnel available in Admin.
+  const canSeeEdge = !cloud || Boolean(user.impersonatedBy)
   const { data: billing } = useQuery({
     enabled: cloud,
     queryFn: () => getBillingStateFn(),
@@ -120,7 +120,7 @@ function DashboardPage() {
   if (isAll) {
     overviewSubtitle = canSeeEdge
       ? 'A bird’s-eye on every project — edge delivery, trends, activity, and instance health.'
-      : 'A bird’s-eye on every project — Keenpix delivery, trends, and activity.'
+      : 'A bird’s-eye on every project — origin delivery, trends, and activity.'
   }
 
   const header = (

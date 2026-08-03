@@ -22,6 +22,7 @@ import {
   getPlatformAnalyticsFn,
 } from '@/functions/admin'
 import { getEdgeCacheStatsFn } from '@/functions/analytics'
+import { calculateEndToEndCacheHitRate } from '@/helpers/analytics/calculate-end-to-end-cache-hit-rate'
 import { analyticsSeriesCsv } from '@/helpers/analytics/export-csv'
 import type { HistorySearch } from '@/helpers/history/window'
 import { compactNumber } from '@/shared/format'
@@ -139,6 +140,11 @@ export function PlatformAnalyticsView() {
   const imageRequests = summary.totalRequests + (edgeStats?.cachedRequests ?? 0)
   const deliveredImages =
     summary.successfulDeliveries + (edgeStats?.cachedRequests ?? 0)
+  const combinedCacheRate = calculateEndToEndCacheHitRate({
+    edgeOffloads: edgeStats?.cachedRequests ?? 0,
+    originCacheHits: summary.cacheHits,
+    originRequests: summary.totalRequests,
+  })
   const maxCustomerRequests = Math.max(
     ...topCustomers.map((customer) => customer.requests),
     1,
@@ -165,30 +171,35 @@ export function PlatformAnalyticsView() {
     <div className="flex flex-col gap-6">
       {controls}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <StatCard
           label="Image requests"
           sub={`${compactNumber(deliveredImages)} delivered`}
           value={compactNumber(imageRequests)}
         />
         <StatCard
-          label="Edge optimized"
-          sub="Cloudflare edge cache"
+          label="Edge"
+          sub="Edge delivery · Cloudflare cache"
           value={edgeStats ? compactNumber(edgeStats.cachedRequests) : '—'}
         />
         <StatCard
-          label="Cache optimized"
-          sub={`${summary.hitRate.toFixed(1)}% of requests reaching Keenpix`}
+          label="Cache"
+          sub={`${summary.hitRate.toFixed(1)}% of successful origin requests`}
           value={compactNumber(summary.cacheHits)}
         />
         <StatCard
           label="Optimized"
-          sub={`${optimizedShare.toFixed(1)}% of successful Keenpix requests`}
+          sub={`${optimizedShare.toFixed(1)}% of successful origin requests`}
           value={compactNumber(summary.liveOptimizations)}
         />
         <StatCard
+          label="Cache hit rate"
+          sub="Edge + cache combined"
+          value={`${combinedCacheRate.toFixed(1)}%`}
+        />
+        <StatCard
           label="Failed"
-          sub="Non-2xx Keenpix requests"
+          sub="Non-2xx origin requests"
           value={compactNumber(summary.failedRequests)}
         />
       </div>
@@ -271,7 +282,9 @@ export function PlatformAnalyticsView() {
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-col gap-1">
                 <CardTitle>Top customers</CardTitle>
-                <CardDescription>By requests in this window.</CardDescription>
+                <CardDescription>
+                  By origin requests in this window.
+                </CardDescription>
               </div>
               <Link
                 className="text-muted-foreground text-sm hover:text-foreground"
