@@ -173,7 +173,7 @@ const columns: ColumnDef<CustomerAccount>[] = [
   },
   {
     id: 'cost',
-    accessorFn: (row) => row.finance30d.directCostCents ?? -1,
+    accessorFn: (row) => row.finance30d.costCents ?? -1,
     header: ({ column }) => (
       <SortHeader
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
@@ -183,9 +183,9 @@ const columns: ColumnDef<CustomerAccount>[] = [
     ),
     cell: ({ row }) => (
       <span className="tabular-nums">
-        {row.original.finance30d.directCostCents === null
+        {row.original.finance30d.costCents === null
           ? '—'
-          : money.format(row.original.finance30d.directCostCents / 100)}
+          : money.format(row.original.finance30d.costCents / 100)}
       </span>
     ),
   },
@@ -386,9 +386,9 @@ export function CustomersTable() {
       </Card>
       <p className="text-muted-foreground text-xs">
         Delivered requests and bandwidth are successful, customer-scoped Keenpix
-        delivery. Cost includes every Keenpix request attempt plus successful
-        delivery bytes; contribution is current paid MRR minus that direct cost.
-        Platform Edge and shared fixed costs are not attributed to customers.
+        delivery. Cost combines Polar fees, modeled delivery cost, and a
+        bandwidth-weighted share of fixed operations. Contribution is current
+        paid MRR minus that total cost; platform Edge remains unassigned.
       </p>
     </div>
   )

@@ -313,17 +313,19 @@ model OperationsSettings {
 // amounts are monthly cents; variable rates are microdollars so values such as
 // $0.015/GB retain precision without floating-point storage.
 model FinanceSettings {
-  id                                String   @id @default("default")
-  serverMonthlyCents                Int      @default(0)
-  databaseMonthlyCents              Int      @default(0)
-  observabilityMonthlyCents         Int      @default(0)
-  otherMonthlyCents                 Int      @default(0)
-  originRequestsMicrodollarsPerMillion Int   @default(0)
-  originBandwidthMicrodollarsPerGb  Int      @default(0)
-  edgeRequestsMicrodollarsPerMillion Int     @default(0)
-  edgeBandwidthMicrodollarsPerGb    Int      @default(0)
-  createdAt                         DateTime @default(now())
-  updatedAt                         DateTime @updatedAt
+  id                                   String   @id @default("default")
+  paymentFeeBasisPoints                Int      @default(0)
+  paymentFixedCents                    Int      @default(0)
+  serverMonthlyCents                   Int      @default(0)
+  databaseMonthlyCents                 Int      @default(0)
+  observabilityMonthlyCents            Int      @default(0)
+  otherMonthlyCents                    Int      @default(0)
+  originRequestsMicrodollarsPerMillion Int      @default(0)
+  originBandwidthMicrodollarsPerGb     Int      @default(0)
+  edgeRequestsMicrodollarsPerMillion   Int      @default(0)
+  edgeBandwidthMicrodollarsPerGb       Int      @default(0)
+  createdAt                            DateTime @default(now())
+  updatedAt                            DateTime @updatedAt
 }
 
 // Instance-wide Cloudflare edge-analytics configuration (one row). Null fields
@@ -440,17 +442,17 @@ model EdgeRollupHourly {
 // empty response still advances coverage, while failures retain their timestamp
 // and operator-safe message instead of masquerading as "no data".
 model EdgeCaptureState {
-  id            String   @id
+  id            String    @id
   zoneId        String
-  host          String   @default("")
+  host          String    @default("")
   status        String
-  groups        Int      @default(0)
+  groups        Int       @default(0)
   coveredFrom   DateTime?
   coveredUntil  DateTime?
   lastAttemptAt DateTime
   lastSuccessAt DateTime?
   lastError     String?
-  updatedAt     DateTime @updatedAt
+  updatedAt     DateTime  @updatedAt
 
   @@unique([zoneId, host])
   @@index([lastSuccessAt])

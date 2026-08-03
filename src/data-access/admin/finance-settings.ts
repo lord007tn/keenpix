@@ -16,6 +16,8 @@ export function saveFinanceSettingsRow(input: {
   originBandwidthMicrodollarsPerGb: number
   originRequestsMicrodollarsPerMillion: number
   otherMonthlyCents: number
+  paymentFeeBasisPoints: number
+  paymentFixedCents: number
   serverMonthlyCents: number
 }) {
   return prisma.financeSettings.upsert({

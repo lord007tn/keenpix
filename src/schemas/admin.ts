@@ -70,6 +70,8 @@ const financeAmountSchema = z.coerce
   .max(10_000_000, 'Amount is too large.')
 
 export const financeSettingsSchema = z.object({
+  paymentPercent: financeAmountSchema.max(100, 'Use 100% or less.'),
+  paymentFixed: financeAmountSchema,
   serverMonthly: financeAmountSchema,
   databaseMonthly: financeAmountSchema,
   observabilityMonthly: financeAmountSchema,

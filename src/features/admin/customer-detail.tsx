@@ -484,17 +484,21 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
               value={money.format(customer.finance30d.mrrCents / 100)}
             />
             <StatCard
-              label="Direct cost (30d)"
-              sub="Customer-scoped Keenpix usage"
+              label="Customer cost (30d)"
+              sub={
+                customer.finance30d.costCents === null
+                  ? 'Configure the financial cost model'
+                  : `${money.format((customer.finance30d.paymentCostCents ?? 0) / 100)} Polar · ${money.format((customer.finance30d.variableCostCents ?? 0) / 100)} delivery · ${money.format((customer.finance30d.allocatedFixedCostCents ?? 0) / 100)} operations`
+              }
               value={
-                customer.finance30d.directCostCents === null
+                customer.finance30d.costCents === null
                   ? '—'
-                  : money.format(customer.finance30d.directCostCents / 100)
+                  : money.format(customer.finance30d.costCents / 100)
               }
             />
             <StatCard
               label="Contribution (30d)"
-              sub="MRR minus direct cost"
+              sub="MRR minus attributed customer cost"
               value={
                 customer.finance30d.contributionCents === null
                   ? '—'
@@ -503,8 +507,10 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
             />
           </div>
           <p className="text-muted-foreground text-xs">
-            Customer cost excludes platform Edge and shared fixed costs because
-            Cloudflare’s zone analytics cannot identify this organization.
+            Fixed operations are allocated by successful delivered bandwidth,
+            with request attempts as the fallback when no bytes were delivered.
+            Platform Edge remains unassigned because Cloudflare’s zone analytics
+            cannot identify this organization.
           </p>
           {!summary && analyticsQuery.isPending ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
