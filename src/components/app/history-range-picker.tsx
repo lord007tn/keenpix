@@ -40,6 +40,9 @@ export const PRIMARY_HISTORY_RANGES = HISTORY_RANGES.filter(
 
 export type HistoryShortcutValue =
   | Exclude<HistoricalAnalyticsRange, 'custom'>
+  | 'current-billing-period'
+  | 'previous-billing-period'
+  | 'two-billing-periods-ago'
   | 'today'
   | 'yesterday'
   | 'this-week'
@@ -52,6 +55,9 @@ export const HISTORY_SHORTCUTS: Array<{
   label: string
   value: HistoryShortcutValue
 }> = [
+  { label: 'Current billing period', value: 'current-billing-period' },
+  { label: 'Previous billing period', value: 'previous-billing-period' },
+  { label: '2 billing periods ago', value: 'two-billing-periods-ago' },
   { label: 'Last 24 hours', value: '24h' },
   { label: 'Today', value: 'today' },
   { label: 'Yesterday', value: 'yesterday' },
@@ -97,6 +103,7 @@ export function getHistoryShortcutDates(
   shortcut: HistoryShortcutValue,
   earliest: string,
   today: string,
+  billingPeriodStart?: string,
 ) {
   if (
     shortcut === '24h' ||
@@ -110,6 +117,41 @@ export function getHistoryShortcutDates(
   }
   if (shortcut === 'today') {
     return { from: today, to: today }
+  }
+  if (
+    shortcut === 'current-billing-period' ||
+    shortcut === 'previous-billing-period' ||
+    shortcut === 'two-billing-periods-ago'
+  ) {
+    const suppliedPeriodStart = dayjs(billingPeriodStart)
+    const currentPeriodStart =
+      billingPeriodStart &&
+      suppliedPeriodStart.isValid() &&
+      !suppliedPeriodStart.isAfter(today, 'day')
+        ? suppliedPeriodStart.startOf('day')
+        : dayjs(today).startOf('month')
+    let periodsAgo = 0
+    if (shortcut === 'previous-billing-period') {
+      periodsAgo = 1
+    } else if (shortcut === 'two-billing-periods-ago') {
+      periodsAgo = 2
+    }
+    const periodFrom = currentPeriodStart.subtract(periodsAgo, 'month')
+    const periodTo =
+      periodsAgo === 0
+        ? dayjs(today)
+        : currentPeriodStart
+            .subtract(periodsAgo - 1, 'month')
+            .subtract(1, 'day')
+
+    return {
+      from: periodFrom.isBefore(earliest, 'day')
+        ? earliest
+        : periodFrom.format('YYYY-MM-DD'),
+      to: periodTo.isAfter(today, 'day')
+        ? today
+        : periodTo.format('YYYY-MM-DD'),
+    }
   }
   if (shortcut === 'yesterday') {
     const yesterday = dayjs(today).subtract(1, 'day').format('YYYY-MM-DD')
@@ -158,6 +200,7 @@ function isHistoricalPreset(
 }
 
 export function HistoryRangePicker({
+  billingPeriodStart,
   from,
   label,
   maxDays,
@@ -165,6 +208,7 @@ export function HistoryRangePicker({
   range,
   to,
 }: HistorySearch & {
+  billingPeriodStart?: string
   label: string
   maxDays: number
   onChange: (next: HistorySearch) => void
@@ -214,6 +258,22 @@ export function HistoryRangePicker({
       !dayjs(draftFrom).isAfter(draftTo, 'day') &&
       !dayjs(draftTo).isAfter(today, 'day'),
   )
+  const billingShortcutDateKeys = new Set(
+    HISTORY_SHORTCUTS.filter(
+      (item) =>
+        item.value === 'current-billing-period' ||
+        item.value === 'previous-billing-period' ||
+        item.value === 'two-billing-periods-ago',
+    ).map((item) => {
+      const dates = getHistoryShortcutDates(
+        item.value,
+        earliest,
+        today,
+        billingPeriodStart,
+      )
+      return `${dates.from}:${dates.to}`
+    }),
+  )
   const availableShortcuts = HISTORY_SHORTCUTS.filter((item) => {
     if (item.value === '90d' && maxDays < 90) {
       return false
@@ -221,8 +281,27 @@ export function HistoryRangePicker({
     if (item.value === '365d' && maxDays < 365) {
       return false
     }
-    const dates = getHistoryShortcutDates(item.value, earliest, today)
-    return !dayjs(dates.from).isBefore(earliest, 'day')
+    const dates = getHistoryShortcutDates(
+      item.value,
+      earliest,
+      today,
+      billingPeriodStart,
+    )
+    if (
+      dayjs(dates.from).isBefore(earliest, 'day') ||
+      dayjs(dates.to).isBefore(earliest, 'day') ||
+      dayjs(dates.from).isAfter(dates.to, 'day')
+    ) {
+      return false
+    }
+    const dateKey = `${dates.from}:${dates.to}`
+    if (
+      (item.value === 'this-month' || item.value === 'last-month') &&
+      billingShortcutDateKeys.has(dateKey)
+    ) {
+      return false
+    }
+    return true
   })
 
   let dropdownLabel = 'Custom'
@@ -378,6 +457,7 @@ export function HistoryRangePicker({
                         shortcut.value,
                         earliest,
                         today,
+                        billingPeriodStart,
                       )
                       setSelectedShortcut(shortcut.value)
                       if (isHistoricalPreset(shortcut.value)) {

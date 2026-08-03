@@ -428,6 +428,7 @@ function AnalyticsPage() {
             error={isError && Boolean(data)}
           />
           <HistoryRangePicker
+            billingPeriodStart={billing?.usage.periodStart}
             from={visibleFrom}
             label="Analytics"
             maxDays={maxHistoryDays}

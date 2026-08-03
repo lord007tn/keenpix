@@ -86,4 +86,33 @@ describe('customer usage summaries', () => {
       lastTrafficAt: '2026-08-03T13:00:00.000Z',
     })
   })
+
+  it('returns the real subscription period for admin billing filters', async () => {
+    findMany.mockResolvedValue([
+      {
+        ...organization,
+        subscription: {
+          amountCents: 1900,
+          cancelAtPeriodEnd: false,
+          currentPeriodEnd: new Date('2026-08-08T00:00:00.000Z'),
+          currentPeriodStart: new Date('2026-07-08T00:00:00.000Z'),
+          overageAllowed: true,
+          plan: 'pro',
+          polarSubscriptionId: 'sub_1',
+          status: 'active',
+          updatedAt: new Date('2026-07-08T00:00:00.000Z'),
+        },
+      },
+    ])
+    groupBy.mockResolvedValue([])
+
+    const [customer] = await listCustomerAccounts()
+
+    expect(customer?.billing).toEqual(
+      expect.objectContaining({
+        currentPeriodEnd: '2026-08-08T00:00:00.000Z',
+        currentPeriodStart: '2026-07-08T00:00:00.000Z',
+      }),
+    )
+  })
 })

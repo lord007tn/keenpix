@@ -408,6 +408,13 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
                 error={analyticsQuery.isError && Boolean(analytics)}
               />
               <HistoryRangePicker
+                billingPeriodStart={
+                  customer.billing.source === 'polar' &&
+                  (customer.billing.status === 'active' ||
+                    customer.billing.status === 'trialing')
+                    ? (customer.billing.currentPeriodStart ?? undefined)
+                    : undefined
+                }
                 from={visibleSearch.from}
                 label="Customer usage"
                 maxDays={maxHistoryDays}

@@ -132,6 +132,7 @@ function DashboardPage() {
             error={isError && Boolean(data)}
           />
           <HistoryRangePicker
+            billingPeriodStart={billing?.usage.periodStart}
             from={boundedWindow.from}
             label="Overview"
             maxDays={maxHistoryDays}
