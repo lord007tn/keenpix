@@ -153,6 +153,14 @@ export function PlatformAnalyticsView() {
     summary.successfulDeliveries === 0
       ? 0
       : (summary.liveOptimizations / summary.successfulDeliveries) * 100
+  let profitSubtitle = `${finance?.profit.marginPct?.toFixed(1)}% margin`
+  if (!finance?.costModelConfigured) {
+    profitSubtitle = 'Configure in Admin Settings'
+  } else if (finance.profit.actualCents === null) {
+    profitSubtitle = 'Polar cost data unavailable'
+  } else if (finance.revenue.actualCents === 0) {
+    profitSubtitle = 'No revenue in period'
+  }
   return (
     <div className="flex flex-col gap-6">
       {controls}
@@ -221,26 +229,22 @@ export function PlatformAnalyticsView() {
             }
           />
           <StatCard
-            label="Operating costs"
+            label="Actual costs"
             sub={
               finance?.costModelConfigured
-                ? 'Configured cost model'
+                ? 'Payment and operating costs'
                 : 'Configure in Admin Settings'
             }
             value={
-              finance?.costModelConfigured
-                ? money.format(finance.cost.totalCents / 100)
+              finance?.costModelConfigured &&
+              finance.cost.actualTotalCents !== null
+                ? money.format(finance.cost.actualTotalCents / 100)
                 : '—'
             }
           />
           <StatCard
             label="Actual profit"
-            sub={
-              finance?.profit.marginPct === null ||
-              !finance?.costModelConfigured
-                ? 'Requires actual revenue'
-                : `${finance.profit.marginPct.toFixed(1)}% margin`
-            }
+            sub={profitSubtitle}
             value={
               finance?.profit.actualCents === null ||
               !finance?.costModelConfigured

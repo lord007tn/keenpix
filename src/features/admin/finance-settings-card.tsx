@@ -83,8 +83,9 @@ export function FinanceSettingsCard() {
       <CardHeader>
         <CardTitle>Financial cost model</CardTitle>
         <CardDescription>
-          Actual operating assumptions used by Finances, Overview, and customer
-          contribution calculations. Enter USD amounts before tax.
+          Operating assumptions used by Finances, Overview, and customer
+          contribution calculations. Enter USD amounts before tax and replace
+          reference pricing when an invoice is available.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
@@ -125,7 +126,10 @@ export function FinanceSettingsCard() {
           <p className="max-w-3xl text-muted-foreground text-xs">
             Fixed costs are prorated by days. Edge costs are platform-wide and
             are not assigned to individual customers because Cloudflare’s zone
-            analytics do not expose the Keenpix organization.
+            analytics do not expose the Keenpix organization. The documented
+            launch baseline is $9.99/month for the Hetzner compute reference and
+            $15/month for Postmark; database, observability, included traffic,
+            and Cloudflare Edge run on those existing allocations.
           </p>
           <Button disabled={!settings || saving} onClick={save}>
             <SaveIcon data-icon="inline-start" />
