@@ -57,6 +57,7 @@ import { Route as AppAccountIndexRouteImport } from './routes/app/account/index'
 import { Route as AdminStaffIndexRouteImport } from './routes/admin/staff/index'
 import { Route as AdminSettingsIndexRouteImport } from './routes/admin/settings/index'
 import { Route as AdminOperationsIndexRouteImport } from './routes/admin/operations/index'
+import { Route as AdminFinancesIndexRouteImport } from './routes/admin/finances/index'
 import { Route as AdminCustomersIndexRouteImport } from './routes/admin/customers/index'
 import { Route as AdminAnalyticsIndexRouteImport } from './routes/admin/analytics/index'
 import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
@@ -310,6 +311,11 @@ const AdminOperationsIndexRoute = AdminOperationsIndexRouteImport.update({
   path: '/operations/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminFinancesIndexRoute = AdminFinancesIndexRouteImport.update({
+  id: '/finances/',
+  path: '/finances/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminCustomersIndexRoute = AdminCustomersIndexRouteImport.update({
   id: '/customers/',
   path: '/customers/',
@@ -409,6 +415,7 @@ export interface FileRoutesByFullPath {
   '/og/docs/$': typeof OgDocsSplatRoute
   '/admin/analytics/': typeof AdminAnalyticsIndexRoute
   '/admin/customers/': typeof AdminCustomersIndexRoute
+  '/admin/finances/': typeof AdminFinancesIndexRoute
   '/admin/operations/': typeof AdminOperationsIndexRoute
   '/admin/settings/': typeof AdminSettingsIndexRoute
   '/admin/staff/': typeof AdminStaffIndexRoute
@@ -467,6 +474,7 @@ export interface FileRoutesByTo {
   '/og/docs/$': typeof OgDocsSplatRoute
   '/admin/analytics': typeof AdminAnalyticsIndexRoute
   '/admin/customers': typeof AdminCustomersIndexRoute
+  '/admin/finances': typeof AdminFinancesIndexRoute
   '/admin/operations': typeof AdminOperationsIndexRoute
   '/admin/settings': typeof AdminSettingsIndexRoute
   '/admin/staff': typeof AdminStaffIndexRoute
@@ -528,6 +536,7 @@ export interface FileRoutesById {
   '/og/docs/$': typeof OgDocsSplatRoute
   '/admin/analytics/': typeof AdminAnalyticsIndexRoute
   '/admin/customers/': typeof AdminCustomersIndexRoute
+  '/admin/finances/': typeof AdminFinancesIndexRoute
   '/admin/operations/': typeof AdminOperationsIndexRoute
   '/admin/settings/': typeof AdminSettingsIndexRoute
   '/admin/staff/': typeof AdminStaffIndexRoute
@@ -590,6 +599,7 @@ export interface FileRouteTypes {
     | '/og/docs/$'
     | '/admin/analytics/'
     | '/admin/customers/'
+    | '/admin/finances/'
     | '/admin/operations/'
     | '/admin/settings/'
     | '/admin/staff/'
@@ -648,6 +658,7 @@ export interface FileRouteTypes {
     | '/og/docs/$'
     | '/admin/analytics'
     | '/admin/customers'
+    | '/admin/finances'
     | '/admin/operations'
     | '/admin/settings'
     | '/admin/staff'
@@ -708,6 +719,7 @@ export interface FileRouteTypes {
     | '/og/docs/$'
     | '/admin/analytics/'
     | '/admin/customers/'
+    | '/admin/finances/'
     | '/admin/operations/'
     | '/admin/settings/'
     | '/admin/staff/'
@@ -1108,6 +1120,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOperationsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/finances/': {
+      id: '/admin/finances/'
+      path: '/finances'
+      fullPath: '/admin/finances/'
+      preLoaderRoute: typeof AdminFinancesIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/customers/': {
       id: '/admin/customers/'
       path: '/customers'
@@ -1185,6 +1204,7 @@ interface AdminRouteRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AdminAnalyticsIndexRoute: typeof AdminAnalyticsIndexRoute
   AdminCustomersIndexRoute: typeof AdminCustomersIndexRoute
+  AdminFinancesIndexRoute: typeof AdminFinancesIndexRoute
   AdminOperationsIndexRoute: typeof AdminOperationsIndexRoute
   AdminSettingsIndexRoute: typeof AdminSettingsIndexRoute
   AdminStaffIndexRoute: typeof AdminStaffIndexRoute
@@ -1195,6 +1215,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AdminAnalyticsIndexRoute: AdminAnalyticsIndexRoute,
   AdminCustomersIndexRoute: AdminCustomersIndexRoute,
+  AdminFinancesIndexRoute: AdminFinancesIndexRoute,
   AdminOperationsIndexRoute: AdminOperationsIndexRoute,
   AdminSettingsIndexRoute: AdminSettingsIndexRoute,
   AdminStaffIndexRoute: AdminStaffIndexRoute,

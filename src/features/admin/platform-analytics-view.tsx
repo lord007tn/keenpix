@@ -17,7 +17,10 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getErrorMessage } from '@/errors/common'
-import { getPlatformAnalyticsFn } from '@/functions/admin'
+import {
+  getFinanceDashboardFn,
+  getPlatformAnalyticsFn,
+} from '@/functions/admin'
 import { getEdgeCacheStatsFn } from '@/functions/analytics'
 import { analyticsSeriesCsv } from '@/helpers/analytics/export-csv'
 import type { HistorySearch } from '@/helpers/history/window'
@@ -25,6 +28,7 @@ import { compactNumber } from '@/shared/format'
 
 type PlatformAnalytics = Awaited<ReturnType<typeof getPlatformAnalyticsFn>>
 type EdgeResult = Awaited<ReturnType<typeof getEdgeCacheStatsFn>>
+type FinanceDashboard = Awaited<ReturnType<typeof getFinanceDashboardFn>>
 
 const PLAN_LABEL: Record<string, string> = {
   free: 'Free',
@@ -37,6 +41,7 @@ export function PlatformAnalyticsView() {
   const [search, setSearch] = useState<HistorySearch>({ range: '30d' })
   const [data, setData] = useState<PlatformAnalytics | null>(null)
   const [edge, setEdge] = useState<EdgeResult | null>(null)
+  const [finance, setFinance] = useState<FinanceDashboard | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [loadError, setLoadError] = useState(false)
 
@@ -60,12 +65,14 @@ export function PlatformAnalyticsView() {
     setRefreshing(true)
     setLoadError(false)
     try {
-      const [analytics, edgeResult] = await Promise.all([
+      const [analytics, edgeResult, financeResult] = await Promise.all([
         getPlatformAnalyticsFn({ data: next }),
         getEdgeCacheStatsFn({ data: next }).catch(() => null),
+        getFinanceDashboardFn({ data: next }),
       ])
       setData(analytics)
       setEdge(edgeResult)
+      setFinance(financeResult)
     } catch (error) {
       setLoadError(true)
       toast.error(getErrorMessage(error, 'Could not load platform analytics'))
@@ -146,26 +153,18 @@ export function PlatformAnalyticsView() {
     summary.successfulDeliveries === 0
       ? 0
       : (summary.liveOptimizations / summary.successfulDeliveries) * 100
-  let costSub = 'Polar metrics unavailable'
-  if (data.finance.source === 'polar') {
-    costSub =
-      data.finance.costCents === null
-        ? 'Enable Polar Cost Insights'
-        : 'Recorded delivery costs'
-  }
-
   return (
     <div className="flex flex-col gap-6">
       {controls}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
           label="Image requests"
           sub={`${compactNumber(deliveredImages)} delivered`}
           value={compactNumber(imageRequests)}
         />
         <StatCard
-          label="Edge"
+          label="Edge optimized"
           sub="Cloudflare edge cache"
           value={edgeStats ? compactNumber(edgeStats.cachedRequests) : '—'}
         />
@@ -178,6 +177,11 @@ export function PlatformAnalyticsView() {
           label="Optimized"
           sub={`${optimizedShare.toFixed(1)}% of successful Keenpix requests`}
           value={compactNumber(summary.liveOptimizations)}
+        />
+        <StatCard
+          label="Failed"
+          sub="Non-2xx Keenpix requests"
+          value={compactNumber(summary.failedRequests)}
         />
       </div>
 
@@ -198,44 +202,50 @@ export function PlatformAnalyticsView() {
         <div>
           <h2 className="font-semibold text-lg">Finances</h2>
           <p className="text-muted-foreground text-sm">
-            Settled Polar orders for the selected calendar dates. MRR is the
-            current subscription commitment.
+            Settled Polar revenue reconciled with configured operating costs.
+            MRR is the current subscription commitment.
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             label="Actual revenue"
             sub={
-              data.finance.source === 'polar'
-                ? `${data.finance.orders ?? 0} settled order${data.finance.orders === 1 ? '' : 's'}`
+              finance?.revenue.source === 'polar'
+                ? `${finance.revenue.orders ?? 0} settled order${finance.revenue.orders === 1 ? '' : 's'}`
                 : 'Polar metrics unavailable'
             }
             value={
-              data.finance.revenueCents === null
+              finance?.revenue.actualCents === null || !finance
                 ? '—'
-                : money.format(data.finance.revenueCents / 100)
+                : money.format(finance.revenue.actualCents / 100)
             }
           />
           <StatCard
-            label="Actual costs"
-            sub={costSub}
-            value={
-              data.finance.costCents === null
-                ? '—'
-                : money.format(data.finance.costCents / 100)
-            }
-          />
-          <StatCard
-            label="Gross profit"
+            label="Operating costs"
             sub={
-              data.finance.profitMarginPct === null
-                ? 'Requires recorded costs'
-                : `${data.finance.profitMarginPct.toFixed(1)}% gross margin`
+              finance?.costModelConfigured
+                ? 'Configured cost model'
+                : 'Configure in Admin Settings'
             }
             value={
-              data.finance.profitCents === null
+              finance?.costModelConfigured
+                ? money.format(finance.cost.totalCents / 100)
+                : '—'
+            }
+          />
+          <StatCard
+            label="Actual profit"
+            sub={
+              finance?.profit.marginPct === null ||
+              !finance?.costModelConfigured
+                ? 'Requires actual revenue'
+                : `${finance.profit.marginPct.toFixed(1)}% margin`
+            }
+            value={
+              finance?.profit.actualCents === null ||
+              !finance?.costModelConfigured
                 ? '—'
-                : money.format(data.finance.profitCents / 100)
+                : money.format(finance.profit.actualCents / 100)
             }
           />
           <StatCard
@@ -244,12 +254,11 @@ export function PlatformAnalyticsView() {
             value={money.format(data.paidMrrCents / 100)}
           />
         </div>
-        {data.finance.source === 'polar' && data.finance.costCents === null ? (
-          <p className="text-muted-foreground text-xs">
-            Revenue is settled order data. Cost and profit stay blank until
-            delivery-cost events are recorded in Polar Cost Insights.
-          </p>
-        ) : null}
+        <p className="text-muted-foreground text-xs">
+          Revenue is settled order data. Costs use the editable model in Admin
+          Settings; Edge costs remain platform-wide and are never assigned to a
+          tenant.
+        </p>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">

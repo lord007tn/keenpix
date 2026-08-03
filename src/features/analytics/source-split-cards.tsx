@@ -88,7 +88,7 @@ function savedCard(
         : { source: 'none', label: 'Edge', value: '—' },
       {
         source: 'origin',
-        label: 'Keenpix',
+        label: 'Keenpix compression',
         value: humanBytes(summary.bandwidthSaved, 1),
       },
     ],
@@ -129,7 +129,7 @@ export function reconciledCards(
         },
         {
           source: 'origin',
-          label: 'Keenpix',
+          label: 'Keenpix delivery',
           value: `${humanBytes(summary.bandwidthOut, 1)} · ${Math.round(100 - edgeBytesPct)}%`,
         },
       ],
@@ -199,7 +199,6 @@ function originOnlyCards(
   summary: CardSummary,
   deltas?: CardDeltas,
 ): SourceSplitCardProps[] {
-  const dash = { source: 'none', label: 'Edge', value: '—' } as const
   // Of everything that reached keenpix, the split between disk-cache hits and
   // fresh optimizes.
   const diskHits = summary.cacheHits
@@ -210,10 +209,9 @@ function originOnlyCards(
       value: humanBytes(summary.bandwidthOut, 1),
       sub: 'Keenpix delivery',
       rows: [
-        dash,
         {
           source: 'origin',
-          label: 'Keenpix',
+          label: 'Keenpix delivery',
           value: humanBytes(summary.bandwidthOut, 1),
         },
       ],
@@ -228,7 +226,6 @@ function originOnlyCards(
         { source: 'live', pct: 100 - summary.hitRate },
       ],
       rows: [
-        dash,
         {
           source: 'disk',
           label: 'Cache optimized',
@@ -239,15 +236,6 @@ function originOnlyCards(
           label: 'Optimized',
           value: `${compactNumber(liveServed)} · ${Math.round(100 - summary.hitRate)}%`,
         },
-        ...(summary.failedRequests > 0
-          ? [
-              {
-                source: 'none' as const,
-                label: 'Failed',
-                value: compactNumber(summary.failedRequests),
-              },
-            ]
-          : []),
       ],
     },
     {
@@ -257,7 +245,6 @@ function originOnlyCards(
       delta: deltas?.hitRatePp,
       deltaUnit: 'pp',
       rows: [
-        dash,
         {
           source: 'disk',
           label: 'Cache optimized',

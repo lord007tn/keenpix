@@ -277,10 +277,10 @@ function AnalyticsPage() {
   const navigate = useNavigate({ from: Route.fullPath })
   const { cloud, user } = useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
-  // Cloud edge data is platform-wide, so it remains operator-only. A trusted
-  // impersonation session retains the operator provenance needed for customer
-  // workspace validation without exposing the dataset to ordinary tenants.
-  const canSeeEdge = !cloud || isSuperAdmin || Boolean(user.impersonatedBy)
+  // Zone-wide edge traffic belongs in /admin. It cannot be attributed to the
+  // active cloud organization or project, even when the viewer is an operator
+  // or is impersonating a customer. Self-host remains single-tenant.
+  const canSeeEdge = !cloud
   const { currentProject, isAll, setProject } = useProject()
   const { data: billing } = useQuery({
     enabled: cloud,
@@ -453,7 +453,11 @@ function AnalyticsPage() {
         </>
       }
       eyebrow={isAll ? 'All projects' : currentProject?.name}
-      subtitle="Organization- and project-scoped delivery history across Edge and Keenpix."
+      subtitle={
+        canSeeEdge
+          ? 'Organization- and project-scoped delivery history across Edge and Keenpix.'
+          : 'Organization- and project-scoped Keenpix delivery history.'
+      }
       title="Analytics"
     />
   )
@@ -590,11 +594,13 @@ function AnalyticsPage() {
           ready={edgeReady}
           summary={data.summary}
         />
-        <p className="text-muted-foreground text-xs">
-          Operator totals combine Cloudflare Edge delivery with requests that
-          reached Keenpix. Project breakdowns and filters use Keenpix requests
-          because Edge data is available only at whole-zone scope.
-        </p>
+        {canSeeEdge ? (
+          <p className="text-muted-foreground text-xs">
+            Edge totals are available here because this is a single-tenant
+            deployment. Project breakdowns and filters use requests that reached
+            Keenpix.
+          </p>
+        ) : null}
       </section>
 
       <Card>

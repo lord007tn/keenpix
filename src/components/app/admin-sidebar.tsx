@@ -2,6 +2,7 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import {
   ActivityIcon,
   ChartColumnIcon,
+  LandmarkIcon,
   LayoutGridIcon,
   type LucideIcon,
   ShieldIcon,
@@ -26,6 +27,7 @@ const NAV: NavItem[] = [
   { to: '/admin', label: 'Overview', icon: LayoutGridIcon, exact: true },
   { to: '/admin/customers', label: 'Customers', icon: UsersRoundIcon },
   { to: '/admin/analytics', label: 'Analytics', icon: ChartColumnIcon },
+  { to: '/admin/finances', label: 'Finances', icon: LandmarkIcon },
   { to: '/admin/operations', label: 'Operations', icon: ActivityIcon },
   { to: '/admin/staff', label: 'Staff', icon: UsersIcon, selfHostOnly: true },
   { to: '/admin/settings', label: 'Settings', icon: SlidersHorizontalIcon },

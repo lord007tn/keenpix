@@ -16,7 +16,7 @@ function SettingsAdminPage() {
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
       <PageHeader
-        subtitle="Deployment facts plus the effective cache and CDN configuration. Values are set via environment variables."
+        subtitle="Configure financial assumptions and review the effective deployment, cache, and CDN settings."
         title="Settings"
       />
       <PlatformSettings />

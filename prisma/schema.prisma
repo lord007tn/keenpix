@@ -309,6 +309,23 @@ model OperationsSettings {
   updatedAt            DateTime @updatedAt
 }
 
+// Operator-owned financial assumptions used to model delivery costs. Fixed
+// amounts are monthly cents; variable rates are microdollars so values such as
+// $0.015/GB retain precision without floating-point storage.
+model FinanceSettings {
+  id                                String   @id @default("default")
+  serverMonthlyCents                Int      @default(0)
+  databaseMonthlyCents              Int      @default(0)
+  observabilityMonthlyCents         Int      @default(0)
+  otherMonthlyCents                 Int      @default(0)
+  originRequestsMicrodollarsPerMillion Int   @default(0)
+  originBandwidthMicrodollarsPerGb  Int      @default(0)
+  edgeRequestsMicrodollarsPerMillion Int     @default(0)
+  edgeBandwidthMicrodollarsPerGb    Int      @default(0)
+  createdAt                         DateTime @default(now())
+  updatedAt                         DateTime @updatedAt
+}
+
 // Instance-wide Cloudflare edge-analytics configuration (one row). Null fields
 // fall back to the CLOUDFLARE_* environment defaults. The API token is stored
 // AES-256-GCM encrypted (see src/lib/secrets/crypto.ts). Mirrors SmtpSettings.

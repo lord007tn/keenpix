@@ -7,13 +7,18 @@ import {
   removeComplimentarySubscription,
   setComplimentarySubscription,
 } from '@/data-access/admin/subscriptions'
+import { addCustomerFinance } from './finance'
 
-export function getCustomerAccounts() {
-  return listCustomerAccounts()
+export async function getCustomerAccounts() {
+  return addCustomerFinance(await listCustomerAccounts())
 }
 
-export function getCustomerAccountById(orgId: string) {
-  return getCustomerAccount(orgId)
+export async function getCustomerAccountById(orgId: string) {
+  const account = await getCustomerAccount(orgId)
+  if (!account) {
+    return null
+  }
+  return (await addCustomerFinance([account]))[0]
 }
 
 // Suspend (kill-switch) or reactivate a tenant org. Suspending stamps the time +

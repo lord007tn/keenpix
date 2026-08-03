@@ -30,6 +30,12 @@ import { compactNumber, humanBytes } from '@/shared/format'
 
 type CustomerAccount = Awaited<ReturnType<typeof getCustomerAccountsFn>>[number]
 
+const money = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 2,
+})
+
 function planBadgeVariant(source: string | null | undefined) {
   if (source === 'admin_grant') {
     return 'info' as const
@@ -150,6 +156,65 @@ const columns: ColumnDef<CustomerAccount>[] = [
     ),
   },
   {
+    id: 'mrr',
+    accessorFn: (row) => row.finance30d.mrrCents,
+    header: ({ column }) => (
+      <SortHeader
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        MRR
+      </SortHeader>
+    ),
+    cell: ({ row }) => (
+      <span className="tabular-nums">
+        {money.format(row.original.finance30d.mrrCents / 100)}
+      </span>
+    ),
+  },
+  {
+    id: 'cost',
+    accessorFn: (row) => row.finance30d.directCostCents ?? -1,
+    header: ({ column }) => (
+      <SortHeader
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Cost 30d
+      </SortHeader>
+    ),
+    cell: ({ row }) => (
+      <span className="tabular-nums">
+        {row.original.finance30d.directCostCents === null
+          ? '—'
+          : money.format(row.original.finance30d.directCostCents / 100)}
+      </span>
+    ),
+  },
+  {
+    id: 'contribution',
+    accessorFn: (row) => row.finance30d.contributionCents ?? -1,
+    header: ({ column }) => (
+      <SortHeader
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Contribution
+      </SortHeader>
+    ),
+    cell: ({ row }) => (
+      <span
+        className={cn(
+          'tabular-nums',
+          row.original.finance30d.contributionCents !== null &&
+            row.original.finance30d.contributionCents < 0 &&
+            'text-destructive',
+        )}
+      >
+        {row.original.finance30d.contributionCents === null
+          ? '—'
+          : money.format(row.original.finance30d.contributionCents / 100)}
+      </span>
+    ),
+  },
+  {
     id: 'seats',
     accessorFn: (row) => row.seats,
     header: 'Workspace',
@@ -258,7 +323,7 @@ export function CustomersTable() {
       </div>
 
       <Card className="overflow-hidden p-0">
-        <Table>
+        <Table className="min-w-[1180px]">
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id}>
@@ -319,6 +384,12 @@ export function CustomersTable() {
           </TableBody>
         </Table>
       </Card>
+      <p className="text-muted-foreground text-xs">
+        Requests and bandwidth are customer-scoped Keenpix delivery. Cost is
+        direct 30-day Keenpix usage; contribution is current paid MRR minus that
+        direct cost. Platform Edge and shared fixed costs are not attributed to
+        customers.
+      </p>
     </div>
   )
 }

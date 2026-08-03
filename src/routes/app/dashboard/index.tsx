@@ -73,7 +73,11 @@ function DashboardPage() {
   const { user, cloud, orgRole, productAccess, workspaceReady } =
     useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
-  const canSeeEdge = !cloud || isSuperAdmin || Boolean(user.impersonatedBy)
+  // Cloudflare edge analytics are zone-wide and cannot be attributed to the
+  // active organization or project. Keep them in the operator console only in
+  // cloud mode so an operator visiting their own tenant workspace never sees
+  // another customer's edge traffic. A self-hosted instance is single-tenant.
+  const canSeeEdge = !cloud
   const { data: billing } = useQuery({
     enabled: cloud,
     queryFn: () => getBillingStateFn(),
@@ -180,12 +184,8 @@ function DashboardPage() {
   // a window our captured history fully covers.
   const edgeGated = edgeConfigured && edge !== null && isAll && edgeCovered
   const edgeReady = edgeConfigured && edge !== null && isAll
-  // Cloud edge data remains operator-only because it is platform-wide. An
-  // impersonation session retains that operator provenance server-side, so an
-  // operator validating a customer workspace can still see the edge split.
   // Only the operator can wire Cloudflare, so only the super-admin ever sees the
-  // "connect" prompt. Regular tenants (and cloud users, who never own the zone)
-  // just get the origin-only cards with no dead-end call to action.
+  // "connect" prompt on a single-tenant self-hosted instance.
   const edgeNotConfigured =
     canSeeEdge &&
     (isSuperAdmin || Boolean(user.impersonatedBy)) &&

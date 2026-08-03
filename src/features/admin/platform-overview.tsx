@@ -13,10 +13,16 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getErrorMessage } from '@/errors/common'
-import { getPlatformAnalyticsFn } from '@/functions/admin'
+import {
+  getFinanceDashboardFn,
+  getPlatformAnalyticsFn,
+} from '@/functions/admin'
+import { getEdgeCacheStatsFn } from '@/functions/analytics'
 import { compactNumber, humanBytes } from '@/shared/format'
 
 type PlatformAnalytics = Awaited<ReturnType<typeof getPlatformAnalyticsFn>>
+type EdgeResult = Awaited<ReturnType<typeof getEdgeCacheStatsFn>>
+type FinanceDashboard = Awaited<ReturnType<typeof getFinanceDashboardFn>>
 
 const PLAN_LABEL: Record<string, string> = {
   free: 'Free',
@@ -27,12 +33,21 @@ const PLAN_LABEL: Record<string, string> = {
 
 export function PlatformOverview() {
   const [data, setData] = useState<PlatformAnalytics | null>(null)
+  const [edge, setEdge] = useState<EdgeResult | null>(null)
+  const [finance, setFinance] = useState<FinanceDashboard | null>(null)
   const [loadError, setLoadError] = useState(false)
 
   const load = useCallback(async () => {
     setLoadError(false)
     try {
-      setData(await getPlatformAnalyticsFn({ data: { range: '30d' } }))
+      const [analytics, edgeResult, financeResult] = await Promise.all([
+        getPlatformAnalyticsFn({ data: { range: '30d' } }),
+        getEdgeCacheStatsFn({ data: { range: '30d' } }).catch(() => null),
+        getFinanceDashboardFn({ data: { range: '30d' } }),
+      ])
+      setData(analytics)
+      setEdge(edgeResult)
+      setFinance(financeResult)
     } catch (error) {
       setLoadError(true)
       toast.error(getErrorMessage(error, 'Could not load platform analytics'))
@@ -66,6 +81,20 @@ export function PlatformOverview() {
   }
 
   const { summary, series, topCustomers, planDistribution } = data
+  const edgeStats = edge?.edge
+  const totalRequests = summary.totalRequests + (edgeStats?.cachedRequests ?? 0)
+  const totalBandwidth = summary.bandwidthOut + (edgeStats?.bytesFromEdge ?? 0)
+  const delivered =
+    summary.successfulDeliveries + (edgeStats?.cachedRequests ?? 0)
+  const optimized = summary.liveOptimizations
+  const cacheOptimized = summary.cacheHits
+  const totalCached = cacheOptimized + (edgeStats?.cachedRequests ?? 0)
+  const cacheRate = delivered > 0 ? (totalCached / delivered) * 100 : 0
+  const money = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+  })
   const maxCustomerRequests = Math.max(
     ...topCustomers.map((customer) => customer.requests),
     1,
@@ -74,35 +103,89 @@ export function PlatformOverview() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Paid MRR"
           sub={`${data.activePaidSubscriptionCount} active paid · ${data.complimentaryCustomerCount} complimentary`}
           value={`$${(data.paidMrrCents / 100).toFixed(2)}`}
         />
         <StatCard
+          label="Operating costs (30d)"
+          sub={
+            finance?.costModelConfigured
+              ? 'Configured cost model'
+              : 'Configure in Admin Settings'
+          }
+          value={
+            finance?.costModelConfigured
+              ? money.format(finance.cost.totalCents / 100)
+              : '—'
+          }
+        />
+        <StatCard
+          label="Profit (30d)"
+          sub={
+            finance?.profit.marginPct === null || !finance?.costModelConfigured
+              ? 'Requires actual revenue'
+              : `${finance.profit.marginPct.toFixed(1)}% margin`
+          }
+          value={
+            finance?.profit.actualCents === null ||
+            !finance?.costModelConfigured
+              ? '—'
+              : money.format(finance.profit.actualCents / 100)
+          }
+        />
+        <StatCard
           label="Customers"
           sub={`${data.servedCount} served · ${data.suspendedCount} suspended`}
           value={String(data.customerCount)}
         />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Requests (30d)"
-          sub="across all customers"
-          value={compactNumber(summary.totalRequests)}
+          label="Image requests (30d)"
+          sub={`${compactNumber(delivered)} delivered`}
+          value={compactNumber(totalRequests)}
         />
         <StatCard
-          label="Bandwidth (30d)"
+          label="Edge optimized"
+          sub={
+            edge?.edgeCovered
+              ? 'Complete Edge coverage'
+              : 'Partial Edge coverage'
+          }
+          value={edgeStats ? compactNumber(edgeStats.cachedRequests) : '—'}
+        />
+        <StatCard
+          label="Cache optimized"
+          sub="Served from Keenpix cache"
+          value={compactNumber(cacheOptimized)}
+        />
+        <StatCard
+          label="Optimized"
+          sub="Freshly optimized by Keenpix"
+          value={compactNumber(optimized)}
+        />
+        <StatCard
+          label="Failed"
+          sub="Non-2xx Keenpix requests"
+          value={compactNumber(summary.failedRequests)}
+        />
+        <StatCard
+          label="Bandwidth delivered (30d)"
           sub={`${humanBytes(summary.bandwidthSaved)} saved`}
-          value={humanBytes(summary.bandwidthOut)}
+          value={humanBytes(totalBandwidth)}
         />
         <StatCard
           label="Cache hit rate"
           sub={`${summary.savingsPct.toFixed(0)}% bytes saved`}
-          value={`${summary.hitRate.toFixed(1)}%`}
+          value={`${cacheRate.toFixed(1)}%`}
         />
       </div>
 
-      <ChartAreaInteractive data={series} />
+      <ChartAreaInteractive data={series} edge={edgeStats?.series} funnel />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
