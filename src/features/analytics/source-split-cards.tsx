@@ -88,7 +88,7 @@ function savedCard(
         : { source: 'none', label: 'Edge', value: '—' },
       {
         source: 'origin',
-        label: 'keenpix origin',
+        label: 'Keenpix',
         value: humanBytes(summary.bandwidthSaved, 1),
       },
     ],
@@ -129,7 +129,7 @@ export function reconciledCards(
         },
         {
           source: 'origin',
-          label: 'keenpix origin',
+          label: 'Keenpix',
           value: `${humanBytes(summary.bandwidthOut, 1)} · ${Math.round(100 - edgeBytesPct)}%`,
         },
       ],
@@ -208,12 +208,12 @@ function originOnlyCards(
     {
       label: 'Bandwidth delivered',
       value: humanBytes(summary.bandwidthOut, 1),
-      sub: 'keenpix origin',
+      sub: 'Keenpix delivery',
       rows: [
         dash,
         {
           source: 'origin',
-          label: 'keenpix origin',
+          label: 'Keenpix',
           value: humanBytes(summary.bandwidthOut, 1),
         },
       ],
@@ -243,7 +243,7 @@ function originOnlyCards(
           ? [
               {
                 source: 'none' as const,
-                label: 'Recorded failures',
+                label: 'Failed',
                 value: compactNumber(summary.failedRequests),
               },
             ]

@@ -121,7 +121,7 @@ export const cloudinaryComparison = {
     {
       title: 'One meter you can actually forecast',
       detail:
-        'Cloudinary credits cover transformations, storage, and bandwidth at different rates, so forecasting needs all three dimensions. Keenpix meters optimized response bytes returned by the application. An upstream CDN edge hit does not reach that meter; optional edge analytics is reported separately.',
+        'Cloudinary credits cover transformations, storage, and bandwidth at different rates, so forecasting needs all three dimensions. Keenpix meters optimized response bytes returned by the application, while connected Cloudflare analytics adds Edge delivery to operator totals.',
     },
     {
       title: 'A customer-set ceiling instead of an open-ended estimate',
