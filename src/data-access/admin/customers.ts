@@ -85,6 +85,7 @@ function mapCustomerAccount(org: CustomerOrg, usageRows: UsageRow[]) {
     (total, row) => {
       const requests = row._sum.requests ?? 0
       total.attemptedRequests += requests
+      total.totalBandwidthBytes += numberFromBigInt(row._sum.bytesOut)
       if (row.status >= 200 && row.status < 300) {
         total.requests += requests
         total.cachedRequests += row._sum.cachedRequests ?? 0
@@ -104,6 +105,7 @@ function mapCustomerAccount(org: CustomerOrg, usageRows: UsageRow[]) {
       requests: 0,
       cachedRequests: 0,
       bandwidthBytes: 0,
+      totalBandwidthBytes: 0,
       bytesSaved: 0,
       lastTrafficAt: firstTrafficAt,
     },
@@ -177,6 +179,7 @@ function mapCustomerAccount(org: CustomerOrg, usageRows: UsageRow[]) {
       cacheHitRate:
         usage.requests > 0 ? usage.cachedRequests / usage.requests : 0,
       bandwidthBytes: usage.bandwidthBytes,
+      totalBandwidthBytes: usage.totalBandwidthBytes,
       bytesSaved: usage.bytesSaved,
       lastTrafficAt: usage.lastTrafficAt?.toISOString() ?? null,
     },
