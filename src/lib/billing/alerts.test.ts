@@ -28,6 +28,7 @@ function sub(overrides: Record<string, unknown> = {}) {
     status: 'active',
     currentPeriodStart: new Date('2026-07-01T00:00:00Z'),
     organization: { name: 'Acme' },
+    overagePerGbCents: 8,
     ...overrides,
   }
 }
@@ -61,5 +62,10 @@ describe('usageAlertsFor', () => {
 
   it('returns nothing for an unknown plan', () => {
     expect(usageAlertsFor(sub({ plan: 'mystery' }), 500 * GB)).toEqual([])
+  })
+
+  it('uses the subscribed standard overage rate in customer copy', () => {
+    const [alert] = usageAlertsFor(sub({ overagePerGbCents: 12 }), 120 * GB)
+    expect(alert?.text).toContain('$0.12/GB')
   })
 })

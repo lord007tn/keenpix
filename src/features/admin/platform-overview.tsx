@@ -117,7 +117,7 @@ export function PlatformOverview() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
           label="Paid MRR"
           sub={`${data.activePaidSubscriptionCount} active paid · ${data.complimentaryCustomerCount} complimentary`}
@@ -151,6 +151,15 @@ export function PlatformOverview() {
           label="Customers"
           sub={`${data.servedCount} served · ${data.suspendedCount} suspended`}
           value={String(data.customerCount)}
+        />
+        <StatCard
+          label="Founding slots"
+          sub={`${data.foundingOffer.claimed} verified paid · grants excluded`}
+          value={
+            data.foundingOffer.active
+              ? `${data.foundingOffer.remaining} left`
+              : 'Complete'
+          }
         />
       </div>
 

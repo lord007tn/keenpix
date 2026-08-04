@@ -23,13 +23,11 @@ export async function handleReportUsage(request: Request): Promise<Response> {
   if (auth !== `Bearer ${secret}`) {
     return new Response('Unauthorized', { status: 401 })
   }
-  // Start edge capture independently from Polar. A billing-provider failure
-  // must not create a preventable gap in Cloudflare history.
-  const edgeHistoryPromise = captureEdgeHistory().catch((error) => {
-    logger.error(errorContext(error), 'edge analytics capture failed')
-    return { configured: false, groups: 0 }
-  })
   try {
+    // Edge delivery is part of the billable meter. Capture it before reading the
+    // complete-hour rollups; if capture fails, do not advance billing
+    // watermarks with an incomplete total. The next run safely retries.
+    const edgeHistory = await captureEdgeHistory()
     const result = await reportUsage()
     // Alerting must never fail the metering job: metering is billing-critical,
     // the emails are advisory.
@@ -44,15 +42,13 @@ export async function handleReportUsage(request: Request): Promise<Response> {
           return { orgs: 0, prunedRows: 0 }
         })
       : Promise.resolve({ orgs: 0, prunedRows: 0 })
-    const [alerts, edgeHistory, retention] = await Promise.all([
+    const [alerts, retention] = await Promise.all([
       alertsPromise,
-      edgeHistoryPromise,
       retentionPromise,
     ])
     return Response.json({ ...result, alerts, edgeHistory, retention })
   } catch (error) {
     logger.error(errorContext(error), 'usage report job failed')
-    await edgeHistoryPromise
     return new Response('Usage report failed', { status: 500 })
   }
 }

@@ -13,6 +13,14 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { getErrorMessage } from '@/errors/common'
 import { getFinanceDashboardFn } from '@/functions/admin'
 import type { HistorySearch } from '@/helpers/history/window'
@@ -245,6 +253,61 @@ export function PlatformFinances() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Revenue and cost scale model</CardTitle>
+          <CardDescription>
+            Planning scenario for the final $9 / $29 / $69 catalog. Break-even
+            is approximately {data.scaleProjection.breakEvenCustomers} paying
+            customers under these assumptions.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="overflow-x-auto">
+            <Table className="min-w-[720px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Customers</TableHead>
+                  <TableHead className="text-right">Revenue</TableHead>
+                  <TableHead className="text-right">Total cost</TableHead>
+                  <TableHead className="text-right">Profit</TableHead>
+                  <TableHead className="text-right">Margin</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.scaleProjection.rows.map((row) => (
+                  <TableRow key={row.customers}>
+                    <TableCell className="font-medium tabular-nums">
+                      {row.customers.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {money.format(row.revenueCents / 100)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {money.format(row.totalCostCents / 100)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {money.format(row.profitCents / 100)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {row.grossMarginPct?.toFixed(1)}%
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            Model assumptions: 50% Basic, 35% Pro, 15% Business; 40% average
+            included-delivery utilization; $0.00965 infrastructure cost per
+            delivered GB; Polar Starter at 5% + $0.50; and $250 monthly fixed
+            operations. It excludes overage revenue, support labor, refunds,
+            disputes, tax, and request-density abuse. Actual finance cards above
+            continue to use settled Polar revenue and your saved cost model.
+          </p>
+        </CardContent>
+      </Card>
 
       <p className="text-muted-foreground text-xs">
         Actual revenue and payment costs come from settled Polar metrics.

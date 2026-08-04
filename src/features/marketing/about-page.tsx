@@ -7,7 +7,7 @@ import { REPOSITORY_URL } from '@/shared/repository'
 const BELIEFS = [
   {
     title: 'Bill for value, not implementation details',
-    body: 'You pay for optimized response bytes returned by Keenpix — never per transform or from a pooled credit meter. Upstream CDN edge hits do not reach the app meter; optional edge analytics reports them separately.',
+    body: 'You pay for optimized bytes delivered through managed cloud, counted once from edge to client — never per transform, request, or team member and never through a pooled credit meter.',
   },
   {
     title: 'No lock-in, ever',

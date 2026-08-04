@@ -42,7 +42,7 @@ export const imagekitComparison = {
     {
       feature: 'Entry paid plan',
       competitor: '$9/mo · 40 GB bandwidth',
-      keenpix: '$9/mo · 100 GB returned by Keenpix',
+      keenpix: '$9/mo · 100 GB managed delivery',
     },
     {
       feature: 'Overage rate',
@@ -63,6 +63,11 @@ export const imagekitComparison = {
       feature: 'Transformations',
       competitor: 'Unlimited',
       keenpix: 'Unlimited on every plan',
+    },
+    {
+      feature: 'Team members',
+      competitor: '3 on Lite; paid additions on Pro',
+      keenpix: 'Unlimited on every paid plan',
     },
     {
       feature: 'When you hit the limit',
@@ -108,14 +113,14 @@ export const imagekitComparison = {
     {
       feature: 'Custom delivery domain',
       competitor: 'Yes (Pro and Enterprise; not Lite)',
-      keenpix: 'Not yet',
+      keenpix: 'Pro: 1 · Business: 10',
     },
   ],
   switchReasons: [
     {
       title: '2.5x the bandwidth for the same $9',
       detail:
-        'ImageKit Lite and Keenpix Basic both cost $9/month, but Lite includes 40 GB while Basic includes 100 GB of responses returned by Keenpix. Compare the exact meter boundaries and your cache behavior.',
+        'ImageKit Lite and Keenpix Basic both cost $9/month, but Lite includes 40 GB while Basic includes 100 GB of managed delivery. Both count optimized CDN delivery, including provider-cache hits.',
     },
     {
       title: 'Overage at $0.08/GB, not $0.50/GB',
@@ -130,7 +135,7 @@ export const imagekitComparison = {
     {
       title: 'One meter, no storage bill',
       detail:
-        'Keenpix transforms from origins you already run — S3, R2, or your own server — so there is nothing to upload and no asset-storage line item. Billing meters optimized response bytes returned by Keenpix; upstream CDN edge hits do not reach that meter.',
+        'Keenpix transforms from origins you already run — S3, R2, or your own server — so there is nothing to upload and no asset-storage line item. Billing meters optimized managed delivery once across the edge and application.',
     },
     {
       title: 'Self-hosting is the exit ramp',
@@ -150,7 +155,7 @@ export const imagekitComparison = {
     "If your images exist only inside ImageKit's media library, copy them to an origin you control first. Keenpix delivers from your origins; it does not store files.",
     "Map the URL grammar: ImageKit's path transforms like ik.imagekit.io/<id>/tr:w-400,q-80,f-auto/hero.jpg become https://cdn.keenpix.com/p/<project-id>/img/<origin-url>?w=400&q=80. Format selection (AVIF/WebP) is negotiated automatically — add &fmt= only to force one.",
     'Swap your image helper or component to emit Keenpix URLs behind a flag, and run both services side by side during the 14-day trial. The analytics dashboard shows output sizes, format mix, and cache hit rate to compare against your ImageKit bill.',
-    'Keep (or add) your CDN in front — Keenpix is designed to sit behind Cloudflare or any edge cache, so repeat hits never touch the meter.',
+    'Use the managed Keenpix delivery hostname or custom domain so Cloudflare edge and application delivery are attributed once. A separate customer-owned CDN can still sit in front when you want to operate that cache yourself.',
     'Review projected overage and, if your transforms should not be publicly enumerable, enable HMAC signed URLs.',
     'After a week of clean analytics, remove the ImageKit URLs, or self-host a released Keenpix version if its measured operational cost and responsibilities fit your team.',
   ],

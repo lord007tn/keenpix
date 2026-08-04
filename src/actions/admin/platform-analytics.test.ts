@@ -29,6 +29,7 @@ describe('platform revenue reporting', () => {
         id: 'paid',
         name: 'Paid',
         billing: {
+          becamePayingAt: '2026-07-01T00:00:00.000Z',
           source: 'polar',
           status: 'active',
           amountCents: 1900,
@@ -41,6 +42,7 @@ describe('platform revenue reporting', () => {
         id: 'complimentary',
         name: 'Complimentary',
         billing: {
+          becamePayingAt: null,
           source: 'admin_grant',
           status: 'active',
           amountCents: 0,
@@ -53,6 +55,7 @@ describe('platform revenue reporting', () => {
         id: 'canceled',
         name: 'Canceled',
         billing: {
+          becamePayingAt: '2026-06-01T00:00:00.000Z',
           source: 'polar',
           status: 'canceled',
           amountCents: 3900,
@@ -65,6 +68,7 @@ describe('platform revenue reporting', () => {
         id: 'free',
         name: 'Free',
         billing: {
+          becamePayingAt: null,
           source: 'free',
           status: null,
           amountCents: 0,
@@ -80,5 +84,11 @@ describe('platform revenue reporting', () => {
     expect(result.paidMrrCents).toBe(2400)
     expect(result.activePaidSubscriptionCount).toBe(1)
     expect(result.complimentaryCustomerCount).toBe(1)
+    expect(result.foundingOffer).toEqual({
+      active: true,
+      claimed: 2,
+      limit: 25,
+      remaining: 23,
+    })
   })
 })

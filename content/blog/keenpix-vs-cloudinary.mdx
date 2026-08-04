@@ -1,6 +1,6 @@
 ---
 title: "Cloudinary Credits Explained: Pricing vs Keenpix"
-description: Learn how Cloudinary credits combine transformations, storage, and bandwidth, then compare that meter with Keenpix application-response pricing.
+description: Learn how Cloudinary credits combine transformations, storage, and bandwidth, then compare that meter with Keenpix managed-delivery pricing.
 date: "2026-07-06"
 updated: "2026-07-12"
 author: Raed Bahri
@@ -10,17 +10,17 @@ image: /og/blog/keenpix-vs-cloudinary.png?v=2026-07-11
 imageAlt: Abstract comparison of pooled credits and transparent bandwidth metering
 ---
 
-Cloudinary is an established image and video platform with a broad product surface. This guide focuses narrowly on how its credit meter works and how to model it against Keenpix application-response pricing. If you are choosing a vendor rather than researching the meter, use the sourced [Keenpix vs Cloudinary decision guide](/compare/cloudinary-alternative).
+Cloudinary is an established image and video platform with a broad product surface. This guide focuses narrowly on how its credit meter works and how to model it against Keenpix managed-delivery pricing. If you are choosing a vendor rather than researching the meter, use the sourced [Keenpix vs Cloudinary decision guide](/compare/cloudinary-alternative).
 
 ## The core difference: credits vs. bandwidth
 
 Cloudinary meters usage in **credits**. A single credit bundles together a mix of transformations, managed storage, and delivered bandwidth, and each of those consumes credits at a different rate. The result is a bill that is hard to predict and harder to explain: a viral asset, a bot crawl, or a new responsive-image breakpoint can quietly burn through a month's allotment.
 
-Keenpix meters **optimized response bytes returned by its application**. Transformations are included and Keenpix does not sell asset storage. If an upstream Cloudflare cache answers a request, that edge `HIT` does not reach the app and is not in this meter; optional Cloudflare analytics reports edge traffic separately.
+Keenpix meters **optimized bytes delivered through managed cloud**. Managed Cloudflare edge hits and application responses count once, while transformations and team members are included and Keenpix does not sell asset storage.
 
 | | Keenpix | Cloudinary |
 | --- | --- | --- |
-| Billing unit | Keenpix application response bytes (GB) | Credits (bundled) |
+| Billing unit | Keenpix managed delivery (GB) | Credits (bundled) |
 | Transformations | Unlimited, free | Consume credits |
 | Overage | One linear published rate ($0.05–0.08/GB) | Credit packs / plan upgrades |
 | Paid overage behavior | Always on, billed at period end | Check account terms |
@@ -47,11 +47,11 @@ We would rather earn trust than oversell, so: if you need **video** transcoding 
 
 ## Related comparisons
 
-- [Keenpix vs imgix](/blog/keenpix-vs-imgix) — current credit packages vs application-byte billing.
+- [Keenpix vs imgix](/blog/keenpix-vs-imgix) — current credit packages vs managed-delivery billing.
 - [Keenpix vs ImageKit](/blog/keenpix-vs-imagekit) — the closest bandwidth-priced alternative, compared.
-- [How the Keenpix application-byte meter works](/blog/transparent-image-cdn-pricing) — including the upstream-CDN boundary.
+- [How the Keenpix managed-delivery meter works](/blog/transparent-image-cdn-pricing) — including its cache boundary.
 - [Keenpix pricing](/pricing) — current allowances, overage rates, and spending-cap behavior.
 
 ## Try it
 
-Point Keenpix at your existing S3, R2, or another supported origin and measure application response bytes on your own traffic before you commit. Or [self-host the engine](/docs/self-hosting) on infrastructure you operate.
+Point Keenpix at your existing S3, R2, or another supported origin and measure managed delivery on your own traffic before you commit. Or [self-host the engine](/docs/self-hosting) on infrastructure you operate.

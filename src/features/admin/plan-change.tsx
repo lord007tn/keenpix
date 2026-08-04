@@ -16,7 +16,12 @@ import {
   type getCustomerAccountsFn,
   updateComplimentaryPlanFn,
 } from '@/functions/admin'
-import { getPlan, PLANS, type PlanId } from '@/lib/billing/plans'
+import {
+  getPlan,
+  PLANS,
+  type PlanId,
+  STANDARD_PLAN_PRICES,
+} from '@/lib/billing/plans'
 import { cn } from '@/lib/cn/utils'
 import { compactNumber, humanBytes } from '@/shared/format'
 
@@ -70,7 +75,7 @@ export function PlanChange({
         `${customer.name} has ${customer.projects} projects but ${target.name} allows ${target.maxProjects}. Existing projects keep working; no new ones can be added.`,
       )
     }
-    if (customer.seats > target.maxSeats) {
+    if (target.maxSeats !== null && customer.seats > target.maxSeats) {
       warnings.push(
         `${customer.name} has ${customer.seats} seats but ${target.name} allows ${target.maxSeats}. Existing members keep access; no new ones can be added.`,
       )
@@ -133,13 +138,14 @@ export function PlanChange({
               {plan ? (
                 <div className="flex flex-col gap-0.5 text-muted-foreground text-xs">
                   <span>
-                    $0 complimentary · ${plan.priceMonthlyUsd}/mo list
+                    $0 complimentary · $
+                    {STANDARD_PLAN_PRICES[plan.id].priceMonthlyUsd}/mo list
                   </span>
                   <span>
                     {humanBytes(plan.includedBandwidthBytes)} bandwidth
                   </span>
                   <span>{projectsLabel(plan.maxProjects)}</span>
-                  <span>{plan.maxSeats} seats</span>
+                  <span>Unlimited team members</span>
                   <span>{customDomainsLabel(plan.customDomains)}</span>
                   <span>{plan.historyDays} days analytics history</span>
                   <span>{plan.logRetentionDays} days raw log retention</span>
@@ -183,9 +189,7 @@ export function PlanChange({
               Projects: {customer.projects}/
               {target.maxProjects === null ? '∞' : target.maxProjects}
             </span>
-            <span>
-              Seats: {customer.seats}/{target.maxSeats}
-            </span>
+            <span>Team members: {customer.seats}/∞</span>
             <span>
               Custom domains: {customDomainsLabel(target.customDomains)}
             </span>

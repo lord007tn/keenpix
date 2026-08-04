@@ -104,7 +104,7 @@ async function runReport(): Promise<UsageReportResult> {
 // Postgres advisory lock, so at most one replica reports a window at a time.
 let inFlight: Promise<UsageReportResult> | null = null
 
-// Report each cloud org's delivered-bytes delta (in GB) to Polar's
+// Report each cloud org's total managed-delivery delta (in GB) to Polar's
 // `bandwidth_delivered` meter. Safe to run on a schedule: watermarks advance
 // per-org only after that org's successful ingest, so a failed or skipped run
 // re-reports just the un-advanced windows next time. A no-op in self-host or when

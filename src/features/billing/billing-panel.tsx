@@ -169,7 +169,7 @@ function UsageCard({ data }: { data: BillingData }) {
       <CardContent className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium">Bandwidth delivered</span>
+            <span className="font-medium">Managed delivery</span>
             <span
               className={over ? 'text-destructive' : 'text-muted-foreground'}
             >
@@ -190,7 +190,7 @@ function UsageCard({ data }: { data: BillingData }) {
           ) : null}
           {!over && usage.includedBytes && pct >= 80 ? (
             <p className="text-warning-text text-xs">
-              You’ve used {pct.toFixed(0)}% of your included bandwidth this
+              You’ve used {pct.toFixed(0)}% of your included delivery this
               period.
             </p>
           ) : null}

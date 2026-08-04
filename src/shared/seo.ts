@@ -1,4 +1,9 @@
-import { PLANS } from '@/lib/billing/plans'
+import {
+  catalogPricing,
+  PLANS,
+  type PlanPricing,
+  STANDARD_PLAN_PRICES,
+} from '@/lib/billing/plans'
 import { getAppUrl, getRepositoryUrl } from '@/server/deployment'
 import {
   FOUNDER,
@@ -16,7 +21,7 @@ export const SITE_DESCRIPTION =
 export const SITE_KEYWORDS =
   'image optimization CDN, image CDN, Cloudinary alternative, imgix alternative, ImageKit alternative, WebP, AVIF, sharp image transforms, self-hosted image optimization, open-source image CDN, bandwidth pricing'
 export const PRICING_DESCRIPTION =
-  'Keenpix pricing starts at $9/month for 100 GB delivered, with unlimited transforms, a 14-day trial, and always-on metered overage. Or self-host free under AGPL.'
+  'Keenpix starts at $9/month for 100 GB of managed image delivery, with unlimited transforms and teammates, a 14-day trial, and published overage.'
 export const BRAND_IMAGE_PATH = '/brand/keenpix-og-card.png'
 const BRAND_ICON_PATH = '/android-chrome-512x512.png'
 // Twitter attribution handle reused across the card meta tags.
@@ -150,7 +155,7 @@ export function softwareApplicationJsonLd() {
     // lets search engines surface the price range as a rich result.
     offers: {
       '@type': 'AggregateOffer',
-      highPrice: String(PLANS.business.priceMonthlyUsd),
+      highPrice: String(STANDARD_PLAN_PRICES.business.priceMonthlyUsd),
       lowPrice: String(PLANS.basic.priceMonthlyUsd),
       offerCount: Object.keys(PLANS).length,
       priceCurrency: 'USD',
@@ -250,7 +255,7 @@ export function authorProfileJsonLd() {
   }
 }
 
-export function pricingPageJsonLd() {
+export function pricingPageJsonLd(pricing: PlanPricing = catalogPricing()) {
   const catalogId = `${absoluteUrl('/pricing')}#offers`
   return {
     '@context': 'https://schema.org',
@@ -299,12 +304,12 @@ export function pricingPageJsonLd() {
           category: 'monthly subscription',
           itemOffered: { '@id': SOFTWARE_ID },
           name: `${plan.name} monthly`,
-          price: String(plan.priceMonthlyUsd),
+          price: String(pricing.plans[plan.id].month.amountCents / 100),
           priceCurrency: 'USD',
           priceSpecification: {
             '@type': 'UnitPriceSpecification',
             billingDuration: 'P1M',
-            price: String(plan.priceMonthlyUsd),
+            price: String(pricing.plans[plan.id].month.amountCents / 100),
             priceCurrency: 'USD',
           },
           url: absoluteUrl('/pricing'),

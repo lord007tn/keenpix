@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { CheckIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { FoundingOfferBanner } from '@/components/app/founding-offer-banner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -57,16 +58,16 @@ function formatUsd(dollars: number): string {
   return dollars.toFixed(2).replace(TRAILING_ZEROS, '')
 }
 
-function planFeatures(plan: Plan): string[] {
+function planFeatures(plan: Plan, overagePerGbCents: number): string[] {
   const projects =
     plan.maxProjects === null
       ? 'Unlimited projects'
       : `${plan.maxProjects} projects`
   const features = [
-    `${formatBandwidth(plan.includedBandwidthBytes)} delivered / mo`,
-    `$${(plan.overagePerGbCents / 100).toFixed(2)}/GB overage`,
+    `${formatBandwidth(plan.includedBandwidthBytes)} managed delivery / mo`,
+    `$${(overagePerGbCents / 100).toFixed(2)}/GB overage`,
     projects,
-    `${plan.maxSeats} seats`,
+    'Unlimited team members',
     formatDomains(plan.customDomains),
     `${plan.historyDays} days analytics history`,
     `${plan.logRetentionDays} days raw log retention${plan.advancedLogs ? ' + search' : ' · latest 200 visible'}`,
@@ -145,6 +146,7 @@ export function PlanSelection({
 
   return (
     <div className="flex flex-col gap-6">
+      <FoundingOfferBanner compact offer={pricing.foundingOffer} />
       <div className="grid gap-4 lg:grid-cols-3">
         {PLAN_ORDER.map((planId) => {
           const plan = PLANS[planId]
@@ -174,12 +176,14 @@ export function PlanSelection({
               <CardContent className="flex flex-1 flex-col gap-4">
                 {compact ? null : (
                   <ul className="flex flex-col gap-2 text-sm">
-                    {planFeatures(plan).map((feature) => (
-                      <li className="flex items-start gap-2" key={feature}>
-                        <CheckIcon className="mt-0.5 size-4 shrink-0 text-primary" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
+                    {planFeatures(plan, price.overagePerGbCents).map(
+                      (feature) => (
+                        <li className="flex items-start gap-2" key={feature}>
+                          <CheckIcon className="mt-0.5 size-4 shrink-0 text-primary" />
+                          <span>{feature}</span>
+                        </li>
+                      ),
+                    )}
                   </ul>
                 )}
                 <Button
