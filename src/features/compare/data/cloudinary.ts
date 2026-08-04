@@ -154,7 +154,7 @@ export const cloudinaryComparison = {
   migrationSteps: [
     'Leave your assets where they are. Keenpix has no storage, so originals stay in S3, R2, your own server — or even in Cloudinary storage, used purely as an origin. You are only replacing the transform-and-delivery layer.',
     'Create a Keenpix project and allowlist your origin hosts (e.g. your-bucket.s3.amazonaws.com or res.cloudinary.com). Per-project allowlists replace public API keys entirely.',
-    "Translate URLs: https://res.cloudinary.com/<cloud>/image/upload/w_800,q_75/photo.jpg becomes https://keenpix.com/img/<origin-url>?project=<id>&w=800&q=75. Cloudinary's f_auto needs no parameter — AVIF/WebP negotiation is automatic. c_fill,w_800,h_600 maps to w=800&h=600&fit=cover.",
+    "Translate URLs: https://res.cloudinary.com/<cloud>/image/upload/w_800,q_75/photo.jpg becomes https://cdn.keenpix.com/p/<project-id>/img/<origin-url>?w=800&q=75. Cloudinary's f_auto needs no parameter — AVIF/WebP negotiation is automatic. c_fill,w_800,h_600 maps to w=800&h=600&fit=cover.",
     "Swap URL generation in code with a small helper or your framework's image loader. Common resize, crop, quality, and format parameters have documented Keenpix equivalents; test every modifier your application uses before switching.",
     'Keep your CDN in front. Keenpix is designed to sit behind Cloudflare (or any CDN), so cached edge hits never touch your Keenpix quota.',
     'Optionally enable HMAC signed URLs on hotlink-sensitive routes.',

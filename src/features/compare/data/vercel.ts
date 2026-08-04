@@ -149,7 +149,7 @@ export const vercelComparison = {
   migrationSteps: [
     'Start a Keenpix project (14-day trial, card required) and add your image origin hostnames to the per-project allowlist — there are no public API keys to create or rotate.',
     "Copy the loader snippet from /docs/frameworks/nextjs into image-loader.ts and set images.loaderFile in next.config — next/image keeps working unchanged, and Vercel's optimizer is bypassed automatically.",
-    'For a custom Next.js loader, src becomes /img/<origin-url>, width maps to ?w=, and quality maps to ?q=; add your project id as ?project=. Validate any additional application-specific transforms in a preview deployment.',
+    'For a custom Next.js loader, src becomes https://cdn.keenpix.com/p/<project-id>/img/<origin-url>, width maps to ?w=, and quality maps to ?q=. Validate any additional application-specific transforms in a preview deployment.',
     'Leave format selection automatic — Keenpix negotiates AVIF/WebP from the Accept header — or pin an output with ?fmt= where you need it.',
     'Deploy a preview and confirm traffic in Keenpix live request logs, then route the image path through your existing CDN (e.g. Cloudflare) so edge caching stays free — Keenpix is designed to sit behind it.',
     'Compare the single bandwidth meter and projected overage against your Vercel usage page during the trial.',

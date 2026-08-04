@@ -153,7 +153,7 @@ export const imgixComparison = {
   migrationSteps: [
     'Create a Keenpix project and allowlist your origin host(s). Keenpix pulls from the same S3 bucket or web folder imgix reads from, so no assets move and there are no API keys to manage.',
     'Map your URL parameters. Most carry over unchanged: w→w, h→h, q→q, fit→fit, dpr→dpr, blur→blur. Renames: fm→fmt, rot→rotate, rect/crop→extract. Mirroring: imgix flip=v becomes flip, flip=h becomes flop.',
-    'Rewrite the URL shape: https://yoursub.imgix.net/hero.jpg?w=800&fm=avif becomes /img/https://origin.example.com/hero.jpg?project=yourproject&w=800&fmt=avif. You can usually drop fm entirely — Keenpix negotiates AVIF/WebP automatically from the Accept header.',
+    'Rewrite the URL shape: https://yoursub.imgix.net/hero.jpg?w=800&fm=avif becomes https://cdn.keenpix.com/p/<project-id>/img/https://origin.example.com/hero.jpg?w=800&fmt=avif. You can usually drop fm entirely — Keenpix negotiates AVIF/WebP automatically from the Accept header.',
     'Update your image URL helper or framework <Image> loader. Most codebases build imgix URLs in one function, so this is typically a single-file change.',
     "Put Keenpix behind your existing CDN (Cloudflare or similar — it's designed for that) and run both services side by side on a slice of traffic, diffing output with the live request logs.",
     'Watch projected overage, cache hit rate, and application response bytes in the dashboard for a week.',
