@@ -6,7 +6,8 @@ import {
   getTransformErrorStatus,
 } from '@/errors/transform'
 import {
-  getTrustedCustomDomainHostname,
+  EDGE_PROJECT_HEADER,
+  getTrustedEdgeRequest,
   validateCustomDomainCachePartition,
 } from '@/helpers/custom-domains/edge-request'
 import { cacheControl } from '@/lib/cache/cache'
@@ -30,10 +31,11 @@ export async function handleTransformRequest(
     return new Response('Missing source image URL', { status: 400 })
   }
 
-  const edgeHostname = getTrustedCustomDomainHostname(
+  const edgeRequest = getTrustedEdgeRequest(
     request,
     env.CLOUDFLARE_SAAS_EDGE_SECRET,
   )
+  const edgeHostname = edgeRequest?.hostname
   if (!validateCustomDomainCachePartition(searchParams, edgeHostname)) {
     return new Response(
       edgeHostname
@@ -42,9 +44,11 @@ export async function handleTransformRequest(
       { status: 400 },
     )
   }
-  let projectId = edgeHostname
-    ? await resolveCustomDomainProject(edgeHostname)
-    : searchParams.get('project')
+  let projectId =
+    edgeRequest?.projectId ??
+    (edgeHostname
+      ? await resolveCustomDomainProject(edgeHostname)
+      : searchParams.get('project'))
   if (!projectId) {
     projectId =
       (await resolveCustomDomainProject(new URL(request.url).hostname)) ?? null
@@ -87,6 +91,10 @@ export async function handleTransformRequest(
         'x-content-type-options': 'nosniff',
         // Origin-shield cache status, for observability behind an outer CDN.
         'x-keenpix-cache': result.cached ? 'HIT' : 'MISS',
+        // The trusted edge Worker consumes and strips this marker. Keeping it
+        // on the cached origin response lets later Cloudflare hits retain the
+        // same project attribution without a KV lookup or public API key.
+        ...(edgeRequest ? { [EDGE_PROJECT_HEADER]: projectId } : {}),
         ...(isSvg
           ? {
               'content-security-policy':
@@ -98,6 +106,7 @@ export async function handleTransformRequest(
   } catch (error) {
     return new Response(getPublicTransformErrorMessage(error), {
       status: getTransformErrorStatus(error),
+      headers: edgeRequest ? { [EDGE_PROJECT_HEADER]: projectId } : undefined,
     })
   }
 }

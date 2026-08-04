@@ -9,8 +9,15 @@
   // and fallback.keenpix.com in the zone so the app origin cannot loop.
   "routes": [{ "pattern": "*/*", "zone_name": "keenpix.com" }],
   "vars": {
-    "APP_ORIGIN": "https://keenpix.com"
+    "APP_ORIGIN": "https://keenpix.com",
+    "FIRST_PARTY_HOSTNAME": "cdn.keenpix.com"
   },
+  "analytics_engine_datasets": [
+    {
+      "binding": "EDGE_ANALYTICS",
+      "dataset": "keenpix_edge_requests"
+    }
+  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 0.1

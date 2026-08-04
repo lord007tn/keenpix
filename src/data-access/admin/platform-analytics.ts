@@ -136,11 +136,18 @@ export async function groupPlatformByBucket(
 
 // Top orgs by request volume in the window — feeds the "top customers" list.
 export async function groupPlatformByOrg(gte: Date, lt?: Date, take = 8) {
-  const rows = await prisma.analyticsRollupHourly.groupBy({
-    by: ['orgId', 'status'],
-    where: { bucketStart: lt ? { gte, lt } : { gte } },
-    _sum: { requests: true, cachedRequests: true, bytesOut: true },
-  })
+  const [rows, edgeRows] = await Promise.all([
+    prisma.analyticsRollupHourly.groupBy({
+      by: ['orgId', 'status'],
+      where: { bucketStart: lt ? { gte, lt } : { gte } },
+      _sum: { requests: true, cachedRequests: true, bytesOut: true },
+    }),
+    prisma.projectEdgeRollupHourly.groupBy({
+      by: ['orgId', 'stage'],
+      where: { bucketStart: lt ? { gte, lt } : { gte } },
+      _sum: { requests: true, bytes: true },
+    }),
+  ])
   const organizations = new Map<
     string,
     {
@@ -165,6 +172,24 @@ export async function groupPlatformByOrg(gte: Date, lt?: Date, take = 8) {
       organization.cachedRequests += row._sum.cachedRequests ?? 0
       organization.bytesOut += Number(row._sum.bytesOut ?? 0n)
     }
+    organizations.set(row.orgId, organization)
+  }
+  for (const row of edgeRows) {
+    if (row.stage !== 'edge') {
+      continue
+    }
+    const organization = organizations.get(row.orgId) ?? {
+      orgId: row.orgId,
+      attemptedRequests: 0,
+      requests: 0,
+      cachedRequests: 0,
+      bytesOut: 0,
+    }
+    const requests = row._sum.requests ?? 0
+    organization.attemptedRequests += requests
+    organization.requests += requests
+    organization.cachedRequests += requests
+    organization.bytesOut += Number(row._sum.bytes ?? 0n)
     organizations.set(row.orgId, organization)
   }
   return [...organizations.values()]

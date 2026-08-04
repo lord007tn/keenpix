@@ -46,10 +46,7 @@ export async function getPlatformAnalytics(
     planCounts[plan] += 1
   }
   const paidAccounts = accounts.filter(
-    (account) =>
-      account.billing.source === 'polar' &&
-      (account.billing.status === 'active' ||
-        account.billing.status === 'trialing'),
+    (account) => account.billing.mrrCents > 0,
   )
 
   return {
@@ -74,7 +71,7 @@ export async function getPlatformAnalytics(
     customerCount: accounts.length,
     activePaidSubscriptionCount: paidAccounts.length,
     paidMrrCents: paidAccounts.reduce(
-      (total, account) => total + account.billing.amountCents,
+      (total, account) => total + account.billing.mrrCents,
       0,
     ),
     complimentaryCustomerCount: accounts.filter(

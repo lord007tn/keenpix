@@ -1,5 +1,4 @@
 import {
-  getCustomerAccount,
   listCustomerAccounts,
   setOrgSuspension as setOrgSuspensionDb,
 } from '@/data-access/admin/customers'
@@ -14,11 +13,12 @@ export async function getCustomerAccounts() {
 }
 
 export async function getCustomerAccountById(orgId: string) {
-  const account = await getCustomerAccount(orgId)
+  const accounts = await addCustomerFinance(await listCustomerAccounts())
+  const account = accounts.find((customer) => customer.id === orgId)
   if (!account) {
     return null
   }
-  return (await addCustomerFinance([account]))[0]
+  return account
 }
 
 // Suspend (kill-switch) or reactivate a tenant org. Suspending stamps the time +

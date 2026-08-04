@@ -117,7 +117,7 @@ All via environment variables (see `.env.example`):
 | `POSTMARK_API_KEY` / `POSTMARK_FROM` / `POSTMARK_MESSAGE_STREAM` | – | Postmark credentials (when `EMAIL_PROVIDER=postmark`). |
 | `RESEND_API_KEY` / `RESEND_FROM` | – | Resend credentials (when `EMAIL_PROVIDER=resend`). |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM_EMAIL` / `SMTP_FROM_NAME` | – | SMTP connection (when `EMAIL_PROVIDER=smtp`; `SMTP_HOST` + `SMTP_FROM_EMAIL` required). |
-| `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ZONE_ID` | – | Optional Cloudflare edge analytics fallback when Settings → CDN cache is not enabled. Token needs zone **Analytics → Read**. |
+| `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_ZONE_ID` | – | Optional Cloudflare edge analytics fallback when Settings → CDN cache is not enabled. Token needs zone and account **Analytics → Read** so zone reconciliation and per-project Worker telemetry can both be captured. |
 | `CLOUDFLARE_HOST` | – | Optional hostname filter for Cloudflare edge analytics when one zone serves multiple `/img/*` hosts. |
 | `CLOUDFLARE_SAAS_API_TOKEN` / `CLOUDFLARE_SAAS_ZONE_ID` / `CLOUDFLARE_SAAS_CNAME_TARGET` / `CLOUDFLARE_SAAS_EDGE_SECRET` | – | Managed-cloud custom delivery domains. Configure the fallback origin and edge Worker first. The token needs zone **SSL and Certificates → Edit** and **Workers Routes → Edit**. |
 | `CLOUDFLARE_SAAS_WORKER_SCRIPT` | `keenpix-custom-domain-edge` | Worker that securely forwards exact customer-hostname routes to the canonical Keenpix origin. |

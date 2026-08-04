@@ -88,10 +88,14 @@ export async function updateFinanceSettings(
 
 export async function addCustomerFinance<
   T extends {
-    billing: { amountCents: number; source: string; status: string | null }
+    billing: { mrrCents: number; recurringChargeCount: number }
     usage30d: {
       attemptedRequests: number
       bandwidthBytes: number
+      edgeBandwidthBytes: number
+      edgeRequests: number
+      originAttemptedRequests: number
+      originBandwidthBytes: number
       requests: number
     }
   },
@@ -118,13 +122,13 @@ export async function addCustomerFinance<
     if (hasAttempts) {
       return account.usage30d.attemptedRequests
     }
-    return 1
+    return 0
   })
   const totalAllocationBasis = allocationBasis.reduce(
     (total, value) => total + value,
     0,
   )
-  let lastAllocatedIndex = accounts.length - 1
+  let lastAllocatedIndex = -1
   for (const [index, value] of allocationBasis.entries()) {
     if (value > 0) {
       lastAllocatedIndex = index
@@ -135,34 +139,35 @@ export async function addCustomerFinance<
   return accounts.map((account, index) => {
     const cost = calculateOperatingCost({
       days: 0,
-      edgeBandwidthBytes: 0,
-      edgeRequests: 0,
-      originBandwidthBytes: account.usage30d.bandwidthBytes,
-      originRequests: account.usage30d.attemptedRequests,
+      edgeBandwidthBytes: account.usage30d.edgeBandwidthBytes,
+      edgeRequests: account.usage30d.edgeRequests,
+      originBandwidthBytes: account.usage30d.originBandwidthBytes,
+      originRequests: account.usage30d.originAttemptedRequests,
       settings,
     })
-    const mrrCents =
-      account.billing.source === 'polar' &&
-      (account.billing.status === 'active' ||
-        account.billing.status === 'trialing')
-        ? account.billing.amountCents
-        : 0
-    const allocationWeight =
-      allocationBasis[index] / Math.max(totalAllocationBasis, 1)
-    const fixedShareCents =
-      index === lastAllocatedIndex
-        ? fixedCostCents - allocatedFixedCents
-        : Math.floor(fixedCostCents * allocationWeight)
+    const mrrCents = account.billing.mrrCents
+    let fixedShareCents = 0
+    if (totalAllocationBasis > 0) {
+      fixedShareCents =
+        index === lastAllocatedIndex
+          ? fixedCostCents - allocatedFixedCents
+          : Math.floor(
+              fixedCostCents * (allocationBasis[index] / totalAllocationBasis),
+            )
+    }
     allocatedFixedCents += fixedShareCents
     const paymentCostCents =
       mrrCents > 0
         ? Math.round(
             mrrCents * (settings.paymentFeeBasisPoints / 10_000) +
-              settings.paymentFixedCents,
+              settings.paymentFixedCents * account.billing.recurringChargeCount,
           )
         : 0
     const variableCostCents =
-      cost.originRequestCents + cost.originBandwidthCents
+      cost.originRequestCents +
+      cost.originBandwidthCents +
+      cost.edgeRequestCents +
+      cost.edgeBandwidthCents
     const costCents = variableCostCents + fixedShareCents + paymentCostCents
     return {
       ...account,
@@ -187,7 +192,7 @@ export async function getFinanceDashboard(
   const [originAgg, edgeResult, provider, accounts, settings] =
     await Promise.all([
       aggregatePlatformSummary(window.gte, window.lt),
-      getEdgeCacheStats(input, true),
+      getEdgeCacheStats(undefined, input, true),
       getPlatformFinance(window.gte, window.lt),
       listCustomerAccounts(),
       getStoredFinanceSettings(),
@@ -202,14 +207,9 @@ export async function getFinanceDashboard(
     originRequests: originAgg.requests ?? 0,
     settings,
   })
-  const paid = accounts.filter(
-    (account) =>
-      account.billing.source === 'polar' &&
-      (account.billing.status === 'active' ||
-        account.billing.status === 'trialing'),
-  )
+  const paid = accounts.filter((account) => account.billing.mrrCents > 0)
   const paidMrrCents = paid.reduce(
-    (total, account) => total + account.billing.amountCents,
+    (total, account) => total + account.billing.mrrCents,
     0,
   )
   const paymentCostCents =
@@ -223,11 +223,13 @@ export async function getFinanceDashboard(
       ? provider.revenueCents - paymentCostCents
       : null)
   const actualProfitCents =
-    netAfterPaymentCents === null
+    !settings.configured || netAfterPaymentCents === null
       ? null
       : netAfterPaymentCents - cost.totalCents
   const actualTotalCostCents =
-    paymentCostCents === null ? null : paymentCostCents + cost.totalCents
+    !settings.configured || paymentCostCents === null
+      ? null
+      : paymentCostCents + cost.totalCents
 
   return {
     window: {
@@ -252,7 +254,9 @@ export async function getFinanceDashboard(
         actualProfitCents === null || !provider.revenueCents
           ? null
           : (actualProfitCents / provider.revenueCents) * 100,
-      projectedMonthlyCents: paidMrrCents - cost.fixedMonthlyCents,
+      projectedMonthlyCents: settings.configured
+        ? paidMrrCents - cost.fixedMonthlyCents
+        : null,
     },
     usage: {
       edgeBandwidthBytes: edge?.bytesFromEdge ?? 0,

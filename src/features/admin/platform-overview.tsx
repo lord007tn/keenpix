@@ -43,7 +43,9 @@ export function PlatformOverview() {
     try {
       const [analytics, edgeResult, financeResult] = await Promise.all([
         getPlatformAnalyticsFn({ data: { range: '30d' } }),
-        getEdgeCacheStatsFn({ data: { range: '30d' } }).catch(() => null),
+        getEdgeCacheStatsFn({
+          data: { range: '30d', platform: true },
+        }).catch(() => null),
         getFinanceDashboardFn({ data: { range: '30d' } }),
       ])
       setData(analytics)
@@ -203,7 +205,7 @@ export function PlatformOverview() {
               <div className="flex flex-col gap-1">
                 <CardTitle>Top customers</CardTitle>
                 <CardDescription>
-                  By origin requests over 30 days.
+                  By successful origin deliveries over 30 days.
                 </CardDescription>
               </div>
               <Link
@@ -235,7 +237,7 @@ export function PlatformOverview() {
                     {customer.name}
                   </span>
                   <span className="relative shrink-0 text-muted-foreground text-xs tabular-nums">
-                    {compactNumber(customer.requests)} req ·{' '}
+                    {compactNumber(customer.requests)} delivered ·{' '}
                     {humanBytes(customer.bandwidthBytes)}
                   </span>
                 </Link>

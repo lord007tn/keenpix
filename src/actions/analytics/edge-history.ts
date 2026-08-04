@@ -6,7 +6,13 @@ import {
   recordEdgeCaptureSuccess,
   upsertEdgeRollups,
 } from '@/data-access/edge-rollups'
+import {
+  recordProjectEdgeCaptureFailure,
+  recordProjectEdgeCaptureSuccess,
+  upsertProjectEdgeRollups,
+} from '@/data-access/project-edge-rollups'
 import { fetchEdgeAdaptiveHourly } from '@/lib/cloudflare/analytics'
+import { fetchProjectEdgeHourly } from '@/lib/cloudflare/project-edge-analytics'
 
 export async function captureConfiguredEdgeHistory(
   settings: EffectiveCloudflareSettings,
@@ -37,6 +43,38 @@ export async function captureConfiguredEdgeHistory(
   }
 }
 
+export async function captureConfiguredProjectEdgeHistory(
+  settings: EffectiveCloudflareSettings,
+) {
+  if (!settings.accountId) {
+    return 0
+  }
+  const attemptedAt = dayjs()
+  const coveredFrom = attemptedAt.subtract(24, 'hour').add(1, 'second')
+  try {
+    const groups = await fetchProjectEdgeHourly(settings, {
+      since: coveredFrom.toDate(),
+      until: attemptedAt.toDate(),
+    })
+    const attributedGroups = await upsertProjectEdgeRollups(groups)
+    await recordProjectEdgeCaptureSuccess({
+      groups: attributedGroups,
+      coveredFrom: coveredFrom.toDate(),
+      coveredUntil: attemptedAt.toDate(),
+    })
+    return attributedGroups
+  } catch (error) {
+    await recordProjectEdgeCaptureFailure({
+      attemptedAt: attemptedAt.toDate(),
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Cloudflare project capture failed',
+    })
+    throw error
+  }
+}
+
 // Scheduled capture entrypoint. The billing cron invokes this hourly so edge
 // history keeps accumulating even when nobody opens the analytics dashboard.
 // It returns only operational counts; credentials and provider payloads never
@@ -46,6 +84,9 @@ export async function captureEdgeHistory() {
   if (!settings) {
     return { configured: false, groups: 0 }
   }
-  const groups = await captureConfiguredEdgeHistory(settings)
-  return { configured: true, groups }
+  const [zoneGroups, projectGroups] = await Promise.all([
+    captureConfiguredEdgeHistory(settings),
+    captureConfiguredProjectEdgeHistory(settings),
+  ])
+  return { configured: true, groups: zoneGroups, projectGroups }
 }

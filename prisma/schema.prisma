@@ -269,6 +269,7 @@ model Project {
   requestLogs       RequestLog[]
   apiKeyScopes      ApiKeyScope[]
   customDomains     CustomDomain[]
+  edgeRollups       ProjectEdgeRollupHourly[]
 
   @@unique([id, orgId])
   @@index([orgId])
@@ -335,6 +336,7 @@ model CloudflareSettings {
   id        String   @id @default("default")
   enabled   Boolean  @default(false)
   apiToken  String?
+  accountId String?
   zoneId    String?
   host      String?
   createdAt DateTime @default(now())
@@ -456,6 +458,45 @@ model EdgeCaptureState {
 
   @@unique([zoneId, host])
   @@index([lastSuccessAt])
+}
+
+// Project-attributed edge delivery written by the delivery Worker to
+// Cloudflare Analytics Engine, then captured into Postgres for durable product
+// analytics and billing. These rows deliberately remain separate from the
+// zone-wide reconciliation rollups above: every row has a trusted project and
+// organization owner.
+model ProjectEdgeRollupHourly {
+  id          String   @id
+  bucketStart DateTime
+  orgId       String
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  host        String   @default("")
+  stage       String
+  cacheStatus String
+  status      Int
+  requests    Int      @default(0)
+  bytes       BigInt   @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@index([bucketStart])
+  @@index([orgId, bucketStart])
+  @@index([projectId, bucketStart])
+  @@index([orgId, projectId, bucketStart])
+}
+
+// Global health/coverage of the per-project Analytics Engine capture. Empty
+// successful windows still advance coverage, while failures remain visible.
+model ProjectEdgeCaptureState {
+  id            String    @id @default("default")
+  status        String
+  groups        Int       @default(0)
+  coveredFrom   DateTime?
+  coveredUntil  DateTime?
+  lastAttemptAt DateTime
+  lastSuccessAt DateTime?
+  lastError     String?
+  updatedAt     DateTime  @updatedAt
 }
 
 // Hourly container resource rollups (CPU + memory) sampled in-process, persisted

@@ -68,7 +68,9 @@ export function PlatformAnalyticsView() {
     try {
       const [analytics, edgeResult, financeResult] = await Promise.all([
         getPlatformAnalyticsFn({ data: next }),
-        getEdgeCacheStatsFn({ data: next }).catch(() => null),
+        getEdgeCacheStatsFn({ data: { ...next, platform: true } }).catch(
+          () => null,
+        ),
         getFinanceDashboardFn({ data: next }),
       ])
       setData(analytics)
@@ -271,8 +273,8 @@ export function PlatformAnalyticsView() {
         </div>
         <p className="text-muted-foreground text-xs">
           Revenue is settled order data. Costs use the editable model in Admin
-          Settings; Edge costs remain platform-wide and are never assigned to a
-          tenant.
+          Settings; Edge costs are also assigned per customer from trusted
+          project telemetry.
         </p>
       </section>
 
@@ -283,7 +285,7 @@ export function PlatformAnalyticsView() {
               <div className="flex flex-col gap-1">
                 <CardTitle>Top customers</CardTitle>
                 <CardDescription>
-                  By origin requests in this window.
+                  By successful origin deliveries in this window.
                 </CardDescription>
               </div>
               <Link
@@ -317,7 +319,7 @@ export function PlatformAnalyticsView() {
                     {customer.name}
                   </span>
                   <span className="relative shrink-0 text-muted-foreground text-xs tabular-nums">
-                    {compactNumber(customer.requests)} req ·{' '}
+                    {compactNumber(customer.requests)} delivered ·{' '}
                     {Math.round(customer.cacheHitRate * 100)}% hit
                   </span>
                 </Link>

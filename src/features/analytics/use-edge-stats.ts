@@ -7,9 +7,18 @@ import type { HistorySearch } from '@/helpers/history/window'
 // call never blocks first paint. `edgeCovered` is false when the window reaches
 // before our captured history, so the cards stay origin-only rather than
 // reconciling misleading totals.
-export function useEdgeStats(search?: HistorySearch) {
+export function useEdgeStats(
+  search?: HistorySearch & { platform?: boolean; project?: string },
+) {
   const query = useQuery({
-    queryKey: ['edge-stats', search?.range, search?.from, search?.to],
+    queryKey: [
+      'edge-stats',
+      search?.range,
+      search?.from,
+      search?.to,
+      search?.project,
+      search?.platform,
+    ],
     queryFn: () => getEdgeCacheStatsFn({ data: search ?? { range: '24h' } }),
     enabled: Boolean(search),
     staleTime: 30_000,

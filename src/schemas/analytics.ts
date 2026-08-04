@@ -34,6 +34,8 @@ export const dashboardInputSchema = z
 export const edgeCacheStatsSchema = z
   .object({
     from: z.iso.date().optional(),
+    platform: z.boolean().optional(),
+    project: optionalNonEmptyParamSchema,
     range: historicalAnalyticsRangeSchema.catch('24h'),
     to: z.iso.date().optional(),
   })

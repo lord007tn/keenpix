@@ -37,12 +37,15 @@ export const getAnalyticsFn = createServerFn({ method: 'GET' })
 export const getEdgeCacheStatsFn = createServerFn({ method: 'GET' })
   .inputValidator(edgeCacheStatsSchema)
   .middleware([authMiddleware])
-  .handler(({ data, context }) =>
-    getEdgeCacheStats(
+  .handler(({ data, context }) => {
+    const viewerIsAdmin = context.role === 'super_admin'
+    const platform = Boolean(data.platform && viewerIsAdmin)
+    return getEdgeCacheStats(
+      platform ? undefined : requireActiveOrg(context),
       data,
-      context.role === 'super_admin' || Boolean(context.impersonatedBy),
-    ),
-  )
+      viewerIsAdmin || Boolean(context.impersonatedBy),
+    )
+  })
 
 export const getAllowedHostStatsFn = createServerFn({ method: 'GET' })
   .inputValidator(allowedHostStatsSchema)

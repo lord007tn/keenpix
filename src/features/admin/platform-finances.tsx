@@ -185,7 +185,9 @@ export function PlatformFinances() {
               >
                 <span className="text-muted-foreground">{label}</span>
                 <span className="font-medium tabular-nums">
-                  {money.format(Number(cents) / 100)}
+                  {data.costModelConfigured
+                    ? money.format(Number(cents) / 100)
+                    : '—'}
                 </span>
               </div>
             ))}
@@ -219,11 +221,15 @@ export function PlatformFinances() {
               ],
               [
                 'Monthly fixed costs',
-                money.format(data.cost.fixedMonthlyCents / 100),
+                data.costModelConfigured
+                  ? money.format(data.cost.fixedMonthlyCents / 100)
+                  : '—',
               ],
               [
                 'MRR after fixed costs',
-                money.format(data.profit.projectedMonthlyCents / 100),
+                data.profit.projectedMonthlyCents === null
+                  ? '—'
+                  : money.format(data.profit.projectedMonthlyCents / 100),
               ],
             ].map(([label, value]) => (
               <div
