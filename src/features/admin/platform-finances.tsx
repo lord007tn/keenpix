@@ -250,8 +250,8 @@ export function PlatformFinances() {
         Actual revenue and payment costs come from settled Polar metrics.
         Operating costs come from the saved cost model. Edge coverage for this
         range is {data.usage.edgeCovered ? 'complete' : 'partial'}; uncovered
-        Edge usage is not estimated. Customer contribution excludes Edge costs
-        because the Cloudflare zone dataset cannot identify a Keenpix customer.
+        Edge usage is not estimated. Platform and customer costs use the same
+        project-attributed Worker telemetry.
       </p>
     </div>
   )
