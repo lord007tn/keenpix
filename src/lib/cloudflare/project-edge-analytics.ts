@@ -66,7 +66,7 @@ export async function fetchProjectEdgeHourly(
       {
         body: query,
         headers: {
-          authorization: `Bearer ${settings.apiToken}`,
+          authorization: `Bearer ${settings.accountApiToken ?? settings.apiToken}`,
           'content-type': 'text/plain',
         },
         retry: { limit: 1 },
