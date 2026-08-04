@@ -48,6 +48,7 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "db:backfill-cuid": "tsx prisma/backfill-rollup-cuid.ts",
+    "db:backfill-project-edge": "tsx scripts/backfill-project-edge-from-zone.ts",
     "billing:configure-benefits": "node scripts/configure-polar-benefits.mjs",
     "db:reset": "prisma migrate reset --force"
   },
