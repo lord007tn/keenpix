@@ -11,6 +11,13 @@ export const Route = createFileRoute('/img/$')({
         params: { _splat?: string }
         request: Request
       }) => handleTransformRequest(request, params._splat),
+      HEAD: ({
+        params,
+        request,
+      }: {
+        params: { _splat?: string }
+        request: Request
+      }) => handleTransformRequest(request, params._splat),
     },
   },
 })

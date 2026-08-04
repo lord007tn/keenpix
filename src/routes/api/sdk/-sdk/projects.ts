@@ -72,10 +72,11 @@ export async function getProjectConfiguration(
   }
 
   const publicBaseUrl = getPublicBaseUrl(request)
-  const deliveryBaseUrl = isCloud()
+  const cloud = isCloud()
+  const deliveryBaseUrl = cloud
     ? `https://cdn.keenpix.com/p/${project.id}`
     : publicBaseUrl
-  const projectQuery = isCloud() ? '' : `?project=${project.id}`
+  const projectQuery = cloud ? '' : `?project=${project.id}`
 
   return json({
     configuration: {
@@ -91,7 +92,7 @@ export async function getProjectConfiguration(
         stripMetadata: project.stripMetadata,
       },
       supportedParameters: [
-        'project',
+        ...(cloud ? [] : ['project']),
         'url',
         'w',
         'h',

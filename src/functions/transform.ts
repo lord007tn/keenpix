@@ -11,9 +11,11 @@ import {
   validateCustomDomainCachePartition,
 } from '@/helpers/custom-domains/edge-request'
 import { cacheControl } from '@/lib/cache/cache'
+import { getAppUrl, isCloud } from '@/server/deployment'
 import { getContentType } from '@/shared/transform'
 
 const LEADING_SLASHES_RE = /^\/+/
+const CLOUD_DELIVERY_ORIGIN = 'https://cdn.keenpix.com'
 
 // HTTP boundary for the transform API. Routes handle URL shape here, then the
 // action layer owns project lookup, origin safety, transforms, cache, and logs.
@@ -22,7 +24,8 @@ export async function handleTransformRequest(
   pathSource?: string,
 ) {
   const startedAt = performance.now()
-  const searchParams = new URL(request.url).searchParams
+  const requestUrl = new URL(request.url)
+  const searchParams = requestUrl.searchParams
   const src = pathSource
     ? decodeSourcePath(pathSource)
     : searchParams.get('url')
@@ -44,14 +47,70 @@ export async function handleTransformRequest(
       { status: 400 },
     )
   }
-  let projectId =
-    edgeRequest?.projectId ??
-    (edgeHostname
-      ? await resolveCustomDomainProject(edgeHostname)
-      : searchParams.get('project'))
-  if (!projectId) {
+  let projectId = edgeRequest?.projectId
+  if (edgeRequest) {
+    projectId ??=
+      (await resolveCustomDomainProject(edgeRequest.hostname)) ?? undefined
+    if (!edgeRequest.projectId) {
+      const requestedProjectId = searchParams.get('project')
+      if (projectId && requestedProjectId && requestedProjectId !== projectId) {
+        return new Response('Project does not match verified custom domain', {
+          status: 400,
+          headers: { [EDGE_PROJECT_HEADER]: projectId },
+        })
+      }
+      searchParams.delete('project')
+    }
+  } else if (isCloud()) {
+    const requestHostname = requestUrl.hostname.toLowerCase()
+    const appHostname = new URL(getAppUrl()).hostname.toLowerCase()
+    const firstPartyHostnames = new Set([
+      appHostname,
+      appHostname.startsWith('www.')
+        ? appHostname.slice('www.'.length)
+        : `www.${appHostname}`,
+    ])
+    if (firstPartyHostnames.has(requestHostname)) {
+      projectId = searchParams.get('project') ?? undefined
+      if (!projectId) {
+        return new Response('Missing ?project or verified custom domain', {
+          status: 400,
+        })
+      }
+
+      // Cloud traffic has one canonical, project-attributed edge URL. Keep the
+      // old app-origin route as a permanent redirect only; the trusted Worker
+      // request bypasses this branch and still executes the transform here.
+      // Removing `project` is safe for signed legacy URLs because the Worker
+      // restores the same project value before origin verification.
+      const redirectUrl = new URL(CLOUD_DELIVERY_ORIGIN)
+      redirectUrl.pathname = `/p/${encodeURIComponent(projectId)}${requestUrl.pathname}`
+      redirectUrl.search = requestUrl.search
+      redirectUrl.searchParams.delete('project')
+      return new Response(null, {
+        status: 308,
+        headers: {
+          'cache-control': 'public, max-age=86400',
+          location: redirectUrl.toString(),
+        },
+      })
+    }
+
+    projectId = (await resolveCustomDomainProject(requestHostname)) ?? undefined
+    const requestedProjectId = searchParams.get('project')
+    if (projectId && requestedProjectId && requestedProjectId !== projectId) {
+      return new Response('Project does not match verified custom domain', {
+        status: 400,
+      })
+    }
+    // Custom domains identify their project by hostname. Do not let a legacy
+    // query value affect cache keys, signatures, transforms, or attribution.
+    searchParams.delete('project')
+  } else {
     projectId =
-      (await resolveCustomDomainProject(new URL(request.url).hostname)) ?? null
+      searchParams.get('project') ??
+      (await resolveCustomDomainProject(requestUrl.hostname)) ??
+      undefined
   }
   if (!projectId) {
     return new Response('Missing ?project or verified custom domain', {

@@ -148,7 +148,7 @@ export const imagekitComparison = {
   migrationSteps: [
     'Create a Keenpix project and allowlist your origin hosts (the S3 bucket, R2 bucket, or server your images live on). There are no public API keys to embed or rotate — the allowlist is the security boundary.',
     "If your images exist only inside ImageKit's media library, copy them to an origin you control first. Keenpix delivers from your origins; it does not store files.",
-    "Map the URL grammar: ImageKit's path transforms like ik.imagekit.io/<id>/tr:w-400,q-80,f-auto/hero.jpg become keenpix query params: /img/<origin-url>?project=<id>&w=400&q=80. Format selection (AVIF/WebP) is negotiated automatically — add &fmt= only to force one.",
+    "Map the URL grammar: ImageKit's path transforms like ik.imagekit.io/<id>/tr:w-400,q-80,f-auto/hero.jpg become https://cdn.keenpix.com/p/<project-id>/img/<origin-url>?w=400&q=80. Format selection (AVIF/WebP) is negotiated automatically — add &fmt= only to force one.",
     'Swap your image helper or component to emit Keenpix URLs behind a flag, and run both services side by side during the 14-day trial. The analytics dashboard shows output sizes, format mix, and cache hit rate to compare against your ImageKit bill.',
     'Keep (or add) your CDN in front — Keenpix is designed to sit behind Cloudflare or any edge cache, so repeat hits never touch the meter.',
     'Review projected overage and, if your transforms should not be publicly enumerable, enable HMAC signed URLs.',
