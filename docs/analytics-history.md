@@ -49,30 +49,41 @@ separate columns for requests observed at Cloudflare, responses served by the
 Cloudflare cache, requests forwarded by Cloudflare, requests reaching Keenpix,
 Keenpix cache deliveries, and newly optimized deliveries.
 
-## Prospective project-attributed edge design
+## Project-attributed edge delivery
 
-Exact project attribution at the edge requires a new collection boundary; it
-cannot be recovered from existing aggregate rollups. The safe prospective design
-is a narrowly scoped Cloudflare Worker on `keenpix.com/img/*` that:
+The canonical cloud URL is
+`https://cdn.keenpix.com/p/<project-id>/img/<encoded-source>`. The public Worker
+extracts the project id from that path, forwards the transform to Keenpix's
+existing `/img/*` origin route, and adds a secret-authenticated project header.
+The origin still owns project lookup, entitlement, allowlist, and optional URL
+signature validation. A public `?project=` value remains compatible with the
+origin route, but it is not trusted as an edge-attribution boundary.
 
-1. Reads the existing public `project` query parameter but does not authorize
-   with it; the Keenpix origin remains responsible for project lookup,
-   entitlement, allowlist, and optional signature validation.
-2. Proxies the request unchanged and writes only the opaque project id, hour,
-   cache outcome, status class, and response-byte count to Workers Analytics
-   Engine after the response.
+The Worker:
+
+1. Accepts the project path only on the configured first-party delivery host.
+2. Writes only the opaque project id, hour, cache outcome, status class, and
+   response-byte count to Workers Analytics Engine after the response.
 3. Never stores the source URL, full query string, visitor IP, image content,
    signing value, API key, organization id, or account data.
 4. Uses a dedicated dataset and least-privilege Worker binding. Keenpix pulls
    bounded hourly aggregates into an organization/project-scoped Postgres edge
    rollup after validating that the project belongs to that organization.
-5. Runs first on a cloud-owned test route with parity, failure, sampling, and
-   rollback evidence before any production `/img/*` route is attached.
+5. Classifies every response into one mutually exclusive delivery stage:
+   `edge`, `cache`, `optimized`, or `failed`.
 
-This Worker is intentionally not attached during the v0.2.0 analytics rollout:
-placing new code in the image-delivery request path requires a separate canary
-and rollback window. Until that gate is approved, Keenpix reports exact
-project-scoped origin history and separate operator-only aggregate edge history.
+Existing direct `/img/*?project=<project-id>` URLs continue to work, but cloud
+SDKs and integrations should emit the canonical project path so future edge
+requests remain attributable even when Cloudflare serves them without reaching
+Keenpix.
+
+Zone-wide history created before the project path cannot normally be assigned
+to a tenant. If an operator can prove that a bounded legacy zone/host interval
+belonged exclusively to one project, `pnpm db:backfill-project-edge` provides a
+dry-run-first, cutoff-based promotion. It copies only Cloudflare-offloaded
+statuses that are absent from origin analytics, uses stable IDs, refuses a
+cutoff that overlaps trusted project history, and reconciles rows, requests,
+and bytes after execution.
 
 ## Operational verification
 
