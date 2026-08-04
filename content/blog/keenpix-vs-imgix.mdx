@@ -1,6 +1,6 @@
 ---
 title: "imgix Credits Explained: Delivery and Storage Pricing"
-description: Learn how imgix credit packages combine managed media and delivery allowances, then compare the meter with Keenpix application-response pricing.
+description: Learn how imgix credit packages combine managed media and delivery allowances, then compare the meter with Keenpix managed-delivery pricing.
 date: "2026-07-04"
 updated: "2026-07-13"
 author: Raed Bahri
@@ -16,11 +16,11 @@ imgix publishes a broad rendering API and packages managed media with delivery c
 
 imgix now sells monthly credit packages. Its published Starter package includes 100 credits, up to 50 GB of managed media, and up to 100 GB of delivery; larger packages raise both allowances. Unused credits do not roll over.
 
-Keenpix meters **optimized response bytes returned by its application** and does not meter the number of origin images. An upstream Cloudflare edge `HIT` never reaches the application and is not included; optional edge analytics reports those requests separately.
+Keenpix meters **optimized bytes delivered through managed cloud** and does not meter the number of origin images, transformations, requests, or team members. Managed Cloudflare edge hits and application responses each count once.
 
 | | Keenpix | imgix |
 | --- | --- | --- |
-| Billing unit | Keenpix application response bytes (GB) | Credit package with media and delivery allowances |
+| Billing unit | Keenpix managed delivery (GB) | Credit package with media and delivery allowances |
 | Transformations | Unlimited, free | Included in rendering |
 | Large image catalog | No origin-image count | Managed-media allowance applies |
 | Overage | One linear published rate | Plan-dependent |
@@ -41,13 +41,13 @@ For teams with compliance requirements, variable budgets, or a preference for ow
 
 ## When imgix is the better fit
 
-imgix has years of edge-network maturity and a deep rendering feature set. If you are already invested in its API and its credit-package economics fit your media and delivery usage, there may be no reason to switch. Keenpix competes on a published application-byte meter, included transforms, and the self-host option — not on matching every feature of a mature incumbent on day one.
+imgix has years of edge-network maturity and a deep rendering feature set. If you are already invested in its API and its credit-package economics fit your media and delivery usage, there may be no reason to switch. Keenpix competes on a published managed-delivery meter, included transforms and teammates, and the self-host option — not on matching every feature of a mature incumbent on day one.
 
 ## Related comparisons
 
-- [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) — two different credit and application-byte models.
+- [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) — pooled credits versus managed delivery.
 - [Keenpix vs ImageKit](/blog/keenpix-vs-imagekit) — two bandwidth-priced CDNs, compared.
-- [How the Keenpix application-byte meter works](/blog/transparent-image-cdn-pricing) — including the upstream-CDN boundary.
+- [How the Keenpix managed-delivery meter works](/blog/transparent-image-cdn-pricing) — including its cache boundary.
 - [Keenpix pricing](/pricing) — current plan limits and application-meter details.
 
 ## See your real number

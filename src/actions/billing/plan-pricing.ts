@@ -1,80 +1,112 @@
+import { countFoundingCustomers } from '@/data-access/subscriptions'
 import {
   catalogPricing,
+  FOUNDING_CUSTOMER_LIMIT,
   isPlanId,
   PLANS,
   type PlanId,
   type PlanPricing,
   type PricePoint,
+  type PricingPhase,
 } from '@/lib/billing/plans'
 import { createPolarClient } from '@/lib/billing/polar-client'
 import { errorContext, logger } from '@/lib/logger/logger'
 
-type Collected = Partial<Record<PlanId, PricePoint>>
+type Collected = Partial<
+  Record<PlanId, PricePoint & { overagePerGbCents: number }>
+>
 
-// Bound the live Polar lookup so a slow/hung call can't stall the public
-// marketing SSR — fall back to the catalog instead.
 const POLAR_TIMEOUT_MS = 3000
-// Cache live prices long (they rarely change); cache the catalog fallback briefly
-// so a transient Polar outage self-heals on the next request rather than sticking.
 const POLAR_TTL_MS = 10 * 60 * 1000
 const FALLBACK_TTL_MS = 30 * 1000
 
-let cache: { at: number; value: PlanPricing } | null = null
-let inFlight: Promise<PlanPricing> | null = null
+const cache = new Map<
+  PricingPhase,
+  { at: number; plans: PlanPricing['plans']; source: PlanPricing['source'] }
+>()
+const inFlight = new Map<
+  PricingPhase,
+  Promise<{
+    plans: PlanPricing['plans']
+    source: PlanPricing['source']
+  }>
+>()
 
-// Read the headline (fixed) price + interval off each Polar subscription product,
-// keyed by its `plan` metadata. Only monthly products are launchable: annual
-// products have a year-long Polar usage period, which is incompatible with the
-// published monthly allowance. Returns null when any monthly plan is incomplete.
-async function resolveFromPolar(): Promise<PlanPricing | null> {
+function productPhase(metadata: Record<string, unknown> | null | undefined) {
+  return metadata?.pricing_phase === 'standard' ? 'standard' : 'founding'
+}
+
+async function resolveFromPolar(phase: PricingPhase) {
   const client = createPolarClient()
   if (!client) {
     return null
   }
   const collected: Collected = {}
+  const duplicates = new Set<PlanId>()
   const iterator = await client.products.list({ isArchived: false, limit: 100 })
   for await (const page of iterator) {
     for (const product of page.result.items) {
       const plan = product.metadata?.plan
-      const interval = product.metadata?.interval
-      if (!(typeof plan === 'string' && isPlanId(plan))) {
+      if (
+        !(
+          typeof plan === 'string' &&
+          isPlanId(plan) &&
+          product.metadata?.interval === 'month' &&
+          productPhase(product.metadata) === phase
+        )
+      ) {
         continue
       }
-      if (interval !== 'month') {
-        continue
-      }
-      // Only a plain fixed price carries a headline amount; skip
-      // free/custom/metered/seat-based prices.
-      const price = product.prices.find(
-        (p) => !p.isArchived && p.amountType === 'fixed',
+      const fixedPrice = product.prices.find(
+        (price) => !price.isArchived && price.amountType === 'fixed',
       )
-      if (!price || price.amountType !== 'fixed') {
+      const meteredPrice = product.prices.find(
+        (price) => !price.isArchived && price.amountType === 'metered_unit',
+      )
+      if (
+        !fixedPrice ||
+        fixedPrice.amountType !== 'fixed' ||
+        !meteredPrice ||
+        meteredPrice.amountType !== 'metered_unit'
+      ) {
+        continue
+      }
+      if (collected[plan]) {
+        duplicates.add(plan)
         continue
       }
       collected[plan] = {
-        amountCents: price.priceAmount,
-        currency: price.priceCurrency,
+        amountCents: fixedPrice.priceAmount,
+        currency: fixedPrice.priceCurrency,
+        overagePerGbCents: Number(meteredPrice.unitAmount),
       }
     }
   }
+  if (duplicates.size > 0) {
+    return null
+  }
   const plans = {} as PlanPricing['plans']
   for (const id of Object.keys(PLANS) as PlanId[]) {
-    const month = collected[id]
-    if (!month) {
+    const price = collected[id]
+    if (!(price && Number.isFinite(price.overagePerGbCents))) {
       return null
     }
-    plans[id] = { month }
+    plans[id] = {
+      month: {
+        amountCents: price.amountCents,
+        currency: price.currency,
+      },
+      overagePerGbCents: price.overagePerGbCents,
+    }
   }
-  return { source: 'polar', plans }
+  return plans
 }
 
-function resolveFromPolarBounded(): Promise<PlanPricing | null> {
-  // Own .catch so a late rejection (after the timeout already won the race) can't
-  // surface as an unhandled rejection.
-  const live = resolveFromPolar().catch((error) => {
+function resolveFromPolarBounded(phase: PricingPhase) {
+  const live = resolveFromPolar(phase).catch((error) => {
     logger.warn(
       errorContext(error),
-      'plan pricing: Polar lookup failed, falling back to catalog',
+      `plan pricing: Polar ${phase} lookup failed, falling back to catalog`,
     )
     return null
   })
@@ -84,29 +116,58 @@ function resolveFromPolarBounded(): Promise<PlanPricing | null> {
   return Promise.race([live, timeout])
 }
 
-// Displayed plan pricing, sourced from live Polar products so the marketing and
-// checkout cards never diverge from the real charge, with the code catalog as the
-// offline/self-host fallback. Cached in-process and single-flighted so the public
-// marketing page never triggers a Polar call per visit or a request stampede.
-export function getPlanPricing(): Promise<PlanPricing> {
-  const now = Date.now()
-  if (cache) {
-    const ttl = cache.value.source === 'polar' ? POLAR_TTL_MS : FALLBACK_TTL_MS
-    if (now - cache.at < ttl) {
-      return Promise.resolve(cache.value)
+function getPriceCatalog(phase: PricingPhase) {
+  const cached = cache.get(phase)
+  if (cached) {
+    const ttl = cached.source === 'polar' ? POLAR_TTL_MS : FALLBACK_TTL_MS
+    if (Date.now() - cached.at < ttl) {
+      return Promise.resolve({ plans: cached.plans, source: cached.source })
     }
   }
-  if (inFlight) {
-    return inFlight
+  const pending = inFlight.get(phase)
+  if (pending) {
+    return pending
   }
-  inFlight = resolveFromPolarBounded()
-    .then((polar) => polar ?? catalogPricing())
+  const request = resolveFromPolarBounded(phase)
+    .then((polar) => {
+      if (polar) {
+        return { plans: polar, source: 'polar' as const }
+      }
+      const fallback = catalogPricing(phase)
+      return { plans: fallback.plans, source: fallback.source }
+    })
     .then((value) => {
-      cache = { at: Date.now(), value }
+      cache.set(phase, { at: Date.now(), ...value })
       return value
     })
     .finally(() => {
-      inFlight = null
+      inFlight.delete(phase)
     })
-  return inFlight
+  inFlight.set(phase, request)
+  return request
+}
+
+export async function getPlanPricing() {
+  // Fail closed on a database error: showing standard pricing cannot consume an
+  // extra founding slot, while assuming zero paid customers could.
+  const claimed = await countFoundingCustomers().catch((error) => {
+    logger.warn(
+      errorContext(error),
+      'plan pricing: founding customer count unavailable; using standard pricing',
+    )
+    return FOUNDING_CUSTOMER_LIMIT
+  })
+  const remaining = Math.max(0, FOUNDING_CUSTOMER_LIMIT - claimed)
+  const phase: PricingPhase = remaining > 0 ? 'founding' : 'standard'
+  const catalog = await getPriceCatalog(phase)
+  return {
+    ...catalog,
+    phase,
+    foundingOffer: {
+      active: remaining > 0,
+      claimed,
+      limit: FOUNDING_CUSTOMER_LIMIT,
+      remaining,
+    },
+  }
 }

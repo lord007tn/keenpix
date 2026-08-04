@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { CheckIcon } from 'lucide-react'
+import { FoundingOfferBanner } from '@/components/app/founding-offer-banner'
 import {
   Accordion,
   AccordionContent,
@@ -19,7 +20,7 @@ import {
 } from '@/components/ui/table'
 import { SiteFooter, SiteHeader } from '@/features/blog/blog-chrome'
 import {
-  PLAN_CARD_FEATURES,
+  getPlanCardFeatures,
   PLAN_CARD_ORDER,
   PLAN_TAGLINES,
 } from '@/features/marketing/plan-card-content'
@@ -49,20 +50,26 @@ export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'What exactly am I billed for?',
     answer:
-      'One meter: optimized response bytes returned by the Keenpix application. Transformations, responsive variants, and modern-format conversion are unlimited on every plan. There are no per-image, per-transform, per-request, or storage charges — Keenpix has no asset storage; it returns optimized images from origins you already have. If an upstream Cloudflare cache serves an edge HIT, that request never reaches Keenpix and is not in the billing meter. Optional Cloudflare analytics reports edge traffic separately.',
+      'One meter: optimized bytes delivered to end users through Keenpix managed cloud, whether Cloudflare serves an edge hit, Keenpix returns a cached variant, or Keenpix creates a new transform. Each successful response is counted once. Transformations, responsive variants, requests, and team members are unlimited, and Keenpix has no asset-storage charge. Browser or customer-owned CDN cache hits that never reach Keenpix are not counted.',
   },
   {
     question: 'How does the free trial work?',
     answer: `Every plan starts with a ${TRIAL.days}-day free trial (card required, powered by Polar). You get the plan's full features with up to ${TRIAL.maxProjects} projects and ${gb(TRIAL.bandwidthBytes)} delivered, and trial usage is never billed — metering starts only when the trial converts. Polar emails you before the first charge and you can cancel anytime.`,
   },
   {
-    question: 'What happens when I use more than my included bandwidth?',
-    answer: `Delivery keeps working and additional gigabytes are billed at your plan's single published overage rate ($${(PLANS.basic.overagePerGbCents / 100).toFixed(2)}/GB on Basic, $${(PLANS.pro.overagePerGbCents / 100).toFixed(2)} on Pro, $${(PLANS.business.overagePerGbCents / 100).toFixed(2)} on Business) — no tiers or penalty pricing. Polar charges accumulated usage at the end of the billing period.`,
+    question: 'What happens when I use more than my included delivery?',
+    answer:
+      'Delivery keeps working and additional gigabytes are billed at the rate shown for the plan you subscribed to. Founding customers retain $0.08/$0.06/$0.05 per GB on Basic/Pro/Business; standard pricing is $0.12/$0.09/$0.07. Polar charges accumulated usage at the end of the billing period.',
+  },
+  {
+    question: 'Who qualifies for founding pricing?',
+    answer:
+      'The first 25 organizations whose Polar subscription becomes actively paid qualify. A free trial does not claim a spot, complimentary access granted by an administrator never claims one, and each paying organization can claim only one. The remaining count shown on this page comes from that paid-customer ledger.',
   },
   {
     question: 'Can overage take my images offline?',
     answer:
-      'No. Basic, Pro, and Business continue serving after their included bandwidth is used. The dashboard shows estimated overage and Keenpix emails you as usage approaches and passes the included allowance. Only an ended subscription, an exhausted free trial, or a separate fraud or abuse intervention stops delivery.',
+      'No. Basic, Pro, and Business continue serving after their included delivery is used. The dashboard shows estimated overage and Keenpix emails you as usage approaches and passes the included allowance. Only an ended subscription, an exhausted free trial, or a separate fraud or abuse intervention stops delivery.',
   },
   {
     question: 'What happens if my payment fails?',
@@ -84,7 +91,7 @@ const MATRIX: Array<{
   values: [string, string, string, string] // self-host, basic, pro, business
 }> = [
   {
-    feature: 'Included Keenpix response bytes / month',
+    feature: 'Included managed delivery / month',
     values: [
       'Unlimited (your infra)',
       gb(PLANS.basic.includedBandwidthBytes),
@@ -103,6 +110,10 @@ const MATRIX: Array<{
   },
   {
     feature: 'Transformations',
+    values: ['Unlimited', 'Unlimited', 'Unlimited', 'Unlimited'],
+  },
+  {
+    feature: 'Team members',
     values: ['Unlimited', 'Unlimited', 'Unlimited', 'Unlimited'],
   },
   {
@@ -166,6 +177,19 @@ const MATRIX: Array<{
 
 export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
   const prices = pricing ?? catalogPricing()
+  const matrix = MATRIX.map((row) =>
+    row.feature === 'Overage per GB'
+      ? {
+          ...row,
+          values: [
+            '—',
+            `$${(prices.plans.basic.overagePerGbCents / 100).toFixed(2)}`,
+            `$${(prices.plans.pro.overagePerGbCents / 100).toFixed(2)}`,
+            `$${(prices.plans.business.overagePerGbCents / 100).toFixed(2)}`,
+          ] as [string, string, string, string],
+        }
+      : row,
+  )
 
   return (
     <div className="min-h-svh bg-background">
@@ -177,20 +201,28 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
               Pricing
             </span>
             <h1 className="mt-2 text-balance font-semibold text-4xl tracking-tight sm:text-5xl">
-              One meter: bytes returned by Keenpix.
+              One meter: optimized bytes delivered.
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-balance text-lg text-muted-foreground leading-relaxed">
-              Unlimited transforms on every plan. A single published overage
-              rate, metered through the period without interrupting delivery. A{' '}
-              {TRIAL.days}-day free trial that is never billed. Or self-host the
-              whole engine, free.
+              Edge hits, cache hits, and new transforms count once in one clear
+              delivery meter. A single published overage rate keeps production
+              online through the period. A {TRIAL.days}-day free trial that is
+              never billed. Or self-host the whole engine, free.
             </p>
 
-            <div className="mt-8 grid gap-4 text-left lg:grid-cols-3">
+            <div className="mt-8 text-left">
+              <FoundingOfferBanner offer={prices.foundingOffer} />
+            </div>
+
+            <div className="mt-5 grid gap-4 text-left lg:grid-cols-3">
               {PLAN_CARD_ORDER.map((planId) => {
                 const plan = PLANS[planId]
                 const price = prices.plans[planId]
                 const monthlyCents = price.month.amountCents
+                const card = getPlanCardFeatures(
+                  planId,
+                  price.overagePerGbCents,
+                )
                 const featured = planId === 'pro'
                 return (
                   <Card
@@ -213,13 +245,13 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
                       <p className="text-muted-foreground text-sm">
                         {PLAN_TAGLINES[planId]}
                       </p>
-                      {PLAN_CARD_FEATURES[planId].lead ? (
+                      {card.lead ? (
                         <p className="font-medium text-foreground text-sm">
-                          {PLAN_CARD_FEATURES[planId].lead}
+                          {card.lead}
                         </p>
                       ) : null}
                       <ul className="flex flex-col gap-2 text-sm">
-                        {PLAN_CARD_FEATURES[planId].features.map((feature) => (
+                        {card.features.map((feature) => (
                           <li className="flex items-start gap-2" key={feature}>
                             <CheckIcon className="mt-0.5 size-4 shrink-0 text-primary" />
                             <span className="text-muted-foreground">
@@ -276,11 +308,11 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
                     <TableCell>$0 · AGPL-3.0</TableCell>
                     {PLAN_CARD_ORDER.map((planId) => (
                       <TableCell key={planId}>
-                        ${PLANS[planId].priceMonthlyUsd}/mo
+                        ${formatUsd(prices.plans[planId].month.amountCents)}/mo
                       </TableCell>
                     ))}
                   </TableRow>
-                  {MATRIX.map((row) => (
+                  {matrix.map((row) => (
                     <TableRow key={row.feature}>
                       <TableCell className="font-medium">
                         {row.feature}

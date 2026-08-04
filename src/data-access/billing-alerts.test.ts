@@ -25,6 +25,7 @@ describe('listAlertableSubscriptions', () => {
       },
       select: {
         orgId: true,
+        overagePerGbCents: true,
         plan: true,
         status: true,
         currentPeriodStart: true,

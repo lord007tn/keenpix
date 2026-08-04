@@ -30,11 +30,21 @@ function polarWithProducts(products: unknown[]) {
 }
 
 const monthlyProducts = [
-  { id: 'prod_basic_month', metadata: { plan: 'basic', interval: 'month' } },
-  { id: 'prod_pro_month', metadata: { plan: 'pro', interval: 'month' } },
+  {
+    id: 'prod_basic_month',
+    metadata: { plan: 'basic', interval: 'month', pricing_phase: 'founding' },
+  },
+  {
+    id: 'prod_pro_month',
+    metadata: { plan: 'pro', interval: 'month', pricing_phase: 'founding' },
+  },
   {
     id: 'prod_business_month',
-    metadata: { plan: 'business', interval: 'month' },
+    metadata: {
+      plan: 'business',
+      interval: 'month',
+      pricing_phase: 'founding',
+    },
   },
 ]
 const FOUND_NONE = /found 0/
@@ -58,6 +68,7 @@ describe('listCheckoutProducts', () => {
           metadata: { addon: 'custom_domains', interval: 'month', units: '5' },
         },
       ]),
+      'founding',
     )
 
     expect(products).toEqual([
@@ -80,11 +91,32 @@ describe('listCheckoutProducts', () => {
             metadata: { plan: 'basic', interval: 'month' },
           },
         ]),
+        'founding',
       ),
     ).resolves.toEqual([])
     await expect(
-      listCheckoutProducts(polarWithProducts(monthlyProducts.slice(0, 2))),
+      listCheckoutProducts(
+        polarWithProducts(monthlyProducts.slice(0, 2)),
+        'founding',
+      ),
     ).resolves.toEqual([])
+  })
+
+  it('selects the standard catalog after the founding phase', async () => {
+    const standard = monthlyProducts.map((product) => ({
+      ...product,
+      id: `${product.id}_standard`,
+      metadata: { ...product.metadata, pricing_phase: 'standard' },
+    }))
+
+    const products = await listCheckoutProducts(
+      polarWithProducts([...monthlyProducts, ...standard]),
+      'standard',
+    )
+
+    expect(products.map((product) => product.productId)).toEqual(
+      standard.map((product) => product.id),
+    )
   })
 })
 

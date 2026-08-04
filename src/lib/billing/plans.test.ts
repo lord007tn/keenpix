@@ -51,6 +51,12 @@ describe('plan catalog', () => {
     expect(PLANS.business.aiCreditsPerMonth).toBe(0)
   })
 
+  it('keeps team members unlimited on every paid plan', () => {
+    expect(PLANS.basic.maxSeats).toBeNull()
+    expect(PLANS.pro.maxSeats).toBeNull()
+    expect(PLANS.business.maxSeats).toBeNull()
+  })
+
   it('keeps aggregate analytics longer than raw logs on lower tiers', () => {
     expect(PLANS.basic.historyDays).toBe(90)
     expect(PLANS.pro.historyDays).toBe(365)
@@ -76,5 +82,18 @@ describe('catalogPricing', () => {
     for (const id of ['basic', 'pro', 'business'] as const) {
       expect(pricing.plans[id].month.amountCents).toBeGreaterThan(0)
     }
+  })
+
+  it('switches to the final $9/$29/$69 catalog after the founding cohort', () => {
+    const pricing = catalogPricing('standard', 25)
+
+    expect(pricing.phase).toBe('standard')
+    expect(pricing.foundingOffer.remaining).toBe(0)
+    expect(pricing.plans.basic.month.amountCents).toBe(900)
+    expect(pricing.plans.pro.month.amountCents).toBe(2900)
+    expect(pricing.plans.business.month.amountCents).toBe(6900)
+    expect(pricing.plans.basic.overagePerGbCents).toBe(12)
+    expect(pricing.plans.pro.overagePerGbCents).toBe(9)
+    expect(pricing.plans.business.overagePerGbCents).toBe(7)
   })
 })

@@ -19,24 +19,39 @@ function currentHourStart(now: Date): Date {
   )
 }
 
-// Delivered bytes for an org over the complete hours in [since, currentHour),
-// read from the hourly rollups — always populated (written in the request-log
-// transaction), per-org, so billing never depends on the optional ClickHouse
-// tier. `through` is the exclusive upper bound to store as the next watermark.
+// Managed delivery for an org over the complete hours in [since, currentHour).
+// Application responses come from the durable request-log rollup; successful
+// Cloudflare offloads come from the project-attributed edge rollup. A response
+// is counted exactly once: edge hits use stage=edge, while edge misses reach the
+// application and are already present in bytesOut. `through` is the exclusive
+// upper bound to store as the next billing watermark.
 export async function deliveredBytesSince(
   orgId: string,
   since: Date | null,
   db: Db = prisma,
 ): Promise<{ bytes: number; through: Date }> {
   const through = currentHourStart(new Date())
-  const agg = await db.analyticsRollupHourly.aggregate({
-    where: {
-      orgId,
-      bucketStart: since ? { gte: since, lt: through } : { lt: through },
-    },
-    _sum: { bytesOut: true },
-  })
-  return { bytes: Number(agg._sum.bytesOut ?? 0n), through }
+  const bucketStart = since ? { gte: since, lt: through } : { lt: through }
+  const [application, edge] = await Promise.all([
+    db.analyticsRollupHourly.aggregate({
+      where: { orgId, bucketStart },
+      _sum: { bytesOut: true },
+    }),
+    db.projectEdgeRollupHourly.aggregate({
+      where: {
+        orgId,
+        bucketStart,
+        stage: 'edge',
+        status: { gte: 200, lt: 300 },
+      },
+      _sum: { bytes: true },
+    }),
+  ])
+  return {
+    bytes:
+      Number(application._sum.bytesOut ?? 0n) + Number(edge._sum.bytes ?? 0n),
+    through,
+  }
 }
 
 // Period usage for the billing panel: delivered bytes since the period start,

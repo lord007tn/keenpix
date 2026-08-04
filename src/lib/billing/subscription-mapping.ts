@@ -4,12 +4,19 @@ import {
   CUSTOM_DOMAIN_ADDON,
   isSubscriptionAddonKind,
 } from '@/lib/billing/addons'
-import { getPlan } from '@/lib/billing/plans'
+import {
+  getPlan,
+  getPlanCommercialTerms,
+  type PricingPhase,
+} from '@/lib/billing/plans'
 
 // The subset of a Polar subscription webhook payload we read. Declared locally
 // (not imported from the SDK) so the active/updated/canceled/revoked payloads
 // all flow through one mapper by structural typing.
 export interface PolarSubscriptionData {
+  // Polar's fixed recurring subscription amount in cents. Metered usage is
+  // separate and does not inflate this base MRR snapshot.
+  amount?: number
   // Polar's cancel_at_period_end. When true the subscription is set to end at
   // currentPeriodEnd (status stays `active` until then), so it must NOT renew.
   cancelAtPeriodEnd?: boolean | null
@@ -56,8 +63,19 @@ export function mapSubscriptionSnapshot(
   if (!(orgId && plan)) {
     return null
   }
+  const phase: PricingPhase =
+    sub.product?.metadata?.pricing_phase === 'standard'
+      ? 'standard'
+      : 'founding'
+  const terms = getPlanCommercialTerms(plan.id, phase)
+  const productOverage = Number(sub.product?.metadata?.overage_per_gb_cents)
   return {
+    amountCents:
+      typeof sub.amount === 'number' ? sub.amount : terms.priceMonthlyUsd * 100,
     orgId,
+    overagePerGbCents: Number.isFinite(productOverage)
+      ? productOverage
+      : terms.overagePerGbCents,
     polarSubscriptionId: sub.id,
     plan: plan.id,
     status,

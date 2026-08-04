@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { CodeBlock } from '@/components/app/code-block'
+import { FoundingOfferBanner } from '@/components/app/founding-offer-banner'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { ModeToggle } from '@/components/theme/mode-toggle'
 import {
@@ -32,7 +33,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 import {
-  PLAN_CARD_FEATURES,
+  getPlanCardFeatures,
   PLAN_CARD_ORDER,
   PLAN_TAGLINES,
 } from '@/features/marketing/plan-card-content'
@@ -41,7 +42,9 @@ import { cn } from '@/lib/cn/utils'
 import { SOCIAL_X_URL } from '@/shared/authors'
 import { MARKETING_FAQ } from '@/shared/marketing-faq'
 import { REPOSITORY_URL } from '@/shared/repository'
+import { AiExtensionsPreview } from './ai-extensions-preview'
 import { FrameworkLogos } from './framework-logos'
+import { PricingComparison } from './pricing-comparison'
 
 // Drop a trailing `.00` so whole-dollar prices read as "$9" not "$9.00".
 const TRAILING_ZEROS = /\.00$/
@@ -53,7 +56,7 @@ const FEATURES = [
   {
     icon: WalletIcon,
     title: 'No surprise bills',
-    body: 'One published, linear overage rate — no pooled credits and no per-transform metering. Paid delivery stays online while usage accrues for the end-of-period invoice.',
+    body: 'One managed-delivery meter and one published overage rate — no pooled credits, request fees, or per-transform metering. Every successful response counts once.',
   },
   {
     icon: GlobeIcon,
@@ -73,7 +76,7 @@ const FEATURES = [
   {
     icon: ChartColumnIcon,
     title: 'Analytics without another vendor',
-    body: 'Requests, application response bytes and savings, format mix, cache hit rate, top assets, and latency — built in on every plan. Optional Cloudflare analytics reports upstream edge traffic separately.',
+    body: 'Requests, total managed delivery, bandwidth savings, format mix, cache hit rate, top assets, and latency — including project-attributed Cloudflare edge traffic.',
   },
   {
     icon: GitBranchIcon,
@@ -242,9 +245,9 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
               <p className="mt-5 max-w-xl text-balance text-lg text-white/80 leading-relaxed sm:text-xl">
                 Keenpix transforms and delivers your images in modern formats
                 from one URL — with one honest, published price. No pooled
-                credits, no per-transform metering, and uninterrupted paid
-                overage billed at the end of the period. Or self-host the whole
-                thing, free.
+                credits, no per-transform or per-seat pricing, and one proper
+                managed-delivery meter from edge to client. Or self-host the
+                whole thing, free.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
@@ -453,17 +456,22 @@ Vary: Accept`}</CodeBlock>
                 </h2>
               </div>
               <p className="max-w-md text-muted-foreground leading-relaxed">
-                Every plan bills on bytes returned by Keenpix — never per
-                transform. Upstream CDN edge hits are not added to the meter.
-                Overage is one linear published rate and paid delivery remains
-                online throughout the billing period. Every plan starts with a
-                14-day free trial.
+                Every successful managed-cloud response counts once, whether it
+                came from the Cloudflare edge, the Keenpix variant cache, or a
+                new transform. Overage is linear, published, and keeps paid
+                delivery online. Team members and transforms are unlimited.
               </p>
+            </div>
+            <div className="mb-5">
+              <FoundingOfferBanner offer={prices.foundingOffer} />
             </div>
             <div className="grid items-stretch gap-4 lg:grid-cols-3">
               {PLAN_CARD_ORDER.map((planId) => {
                 const plan = PLANS[planId]
-                const card = PLAN_CARD_FEATURES[planId]
+                const card = getPlanCardFeatures(
+                  planId,
+                  prices.plans[planId].overagePerGbCents,
+                )
                 const featured = planId === 'pro'
                 return (
                   <Card
@@ -540,6 +548,10 @@ Vary: Accept`}</CodeBlock>
             </p>
           </div>
         </section>
+
+        <PricingComparison />
+
+        <AiExtensionsPreview />
 
         <section className="border-b" id="self-host">
           <div className="mx-auto grid min-w-0 max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[0.9fr_1.1fr]">

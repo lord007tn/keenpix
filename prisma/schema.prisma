@@ -84,6 +84,14 @@ model Subscription {
   status              String
   // Monthly recurring revenue in cents. Complimentary rows are always zero.
   amountCents         Int          @default(0)
+  // The metered overage price captured from the subscribed Polar product.
+  // Kept on the subscription because founding and standard customers can share
+  // the same feature plan while retaining different commercial terms.
+  overagePerGbCents   Int          @default(0)
+  // First time this provider-managed organization became active after payment.
+  // Null for trials and complimentary grants. This is monotonic so churn never
+  // reopens a founding slot and one organization can only claim one slot.
+  becamePayingAt      DateTime?
   currentPeriodStart  DateTime?
   currentPeriodEnd    DateTime?
   overageAllowed      Boolean      @default(false)
@@ -99,6 +107,7 @@ model Subscription {
   updatedAt           DateTime     @updatedAt
 
   @@index([orgId])
+  @@index([becamePayingAt])
 }
 
 // Append-only audit ledger for local complimentary-plan changes. The current

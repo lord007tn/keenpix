@@ -17,7 +17,8 @@ const GB = 1024 ** 3
 const ENTITLED = new Set(['active', 'trialing'])
 
 export interface UsageState {
-  // Delivered bytes over the period — the metered quantity billed to Polar.
+  // Managed delivery over the period, including Cloudflare edge offloads — the
+  // metered quantity billed to Polar.
   bandwidthBytes: number
   customDomains: { used: number; limit: number | null }
   // Plan's included bytes, or null when unsubscribed (no allowance).
@@ -113,7 +114,12 @@ export async function getBillingState(orgId: string): Promise<BillingState> {
   // charged on the fractional overage, not rounded up to whole GB.
   const overageCostCents =
     plan && !trialing
-      ? Math.round((overageBytes / GB) * plan.overagePerGbCents)
+      ? Math.round(
+          (overageBytes / GB) *
+            (billingSource === 'polar' && sub?.overagePerGbCents
+              ? sub.overagePerGbCents
+              : plan.overagePerGbCents),
+        )
       : 0
   const addonUnits =
     domainAddon && ENTITLED.has(domainAddon.status) ? domainAddon.units : 0

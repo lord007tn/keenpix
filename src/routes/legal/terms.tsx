@@ -72,14 +72,16 @@ function TermsPage() {
       <p>
         Paid plans are billed through our merchant of record, Polar, which
         handles payment processing, invoicing, and applicable taxes. Each plan
-        includes a monthly bandwidth allotment; delivery above that allotment is
-        billed at the published per-GB overage rate for your plan. Transforms
-        are unlimited. Subscriptions renew automatically until cancelled; you
-        can cancel at any time from your billing portal and retain access
-        through the end of the paid period. Fees are non-refundable except where
-        required by law. If you believe a charge is incorrect, contact us with
-        the invoice or receipt before opening a payment dispute so we can
-        investigate it.
+        includes a monthly managed-delivery allotment. Successful optimized
+        responses delivered through the Keenpix-managed edge or application
+        count once; delivery above that allotment is billed at the published
+        per-GB overage rate for your plan. Transforms, requests, and team
+        members are not separately metered. Subscriptions renew automatically
+        until cancelled; you can cancel at any time from your billing portal and
+        retain access through the end of the paid period. Fees are
+        non-refundable except where required by law. If you believe a charge is
+        incorrect, contact us with the invoice or receipt before opening a
+        payment dispute so we can investigate it.
       </p>
 
       <h2>5. Your content and origins</h2>

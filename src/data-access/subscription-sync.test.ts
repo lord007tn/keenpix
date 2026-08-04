@@ -25,7 +25,10 @@ const NEWER = new Date('2026-07-10T11:00:00Z')
 
 function snapshot(overrides: Record<string, unknown> = {}) {
   return {
+    amountCents: 1900,
+    currentPeriodStart: new Date('2026-07-01T00:00:00Z'),
     orgId: 'org_a',
+    overagePerGbCents: 6,
     polarSubscriptionId: 'sub_1',
     plan: 'pro',
     status: 'active',
@@ -105,6 +108,7 @@ describe('webhook out-of-order guard', () => {
       create: expect.objectContaining({
         polarSubscriptionId: 'sub_1',
         amountCents: 1900,
+        becamePayingAt: new Date('2026-07-01T00:00:00Z'),
       }),
     })
     expect(createAudit).toHaveBeenCalledWith({
@@ -115,6 +119,38 @@ describe('webhook out-of-order guard', () => {
         plan: 'pro',
       },
     })
+  })
+
+  it('does not count a provider trial as a paying founding customer', async () => {
+    subFindUnique.mockResolvedValue(null)
+
+    await upsertSubscription(
+      snapshot({ status: 'trialing', currentPeriodStart: null }),
+    )
+
+    expect(subUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ becamePayingAt: null }),
+      }),
+    )
+  })
+
+  it('preserves the first paid timestamp after cancellation', async () => {
+    const becamePayingAt = new Date('2026-06-01T00:00:00Z')
+    subFindUnique.mockResolvedValue({
+      becamePayingAt,
+      polarSubscriptionId: 'sub_1',
+      status: 'active',
+      polarModifiedAt: OLDER,
+    })
+
+    await upsertSubscription(snapshot({ status: 'canceled' }))
+
+    expect(subUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({ becamePayingAt }),
+      }),
+    )
   })
 
   it('applies events without a modifiedAt (older payload shapes)', async () => {

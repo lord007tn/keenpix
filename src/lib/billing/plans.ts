@@ -5,6 +5,9 @@
 // active subscription resolves to `null` (no included usage → gated in cloud).
 
 export type PlanId = 'basic' | 'pro' | 'business'
+export type PricingPhase = 'founding' | 'standard'
+
+export const FOUNDING_CUSTOMER_LIMIT = 25
 
 export interface Plan {
   advancedAnalytics: boolean
@@ -22,7 +25,8 @@ export interface Plan {
   logRetentionDays: number
   // null = unlimited
   maxProjects: number | null
-  maxSeats: number
+  // null = unlimited. Team size is never a pricing dimension.
+  maxSeats: number | null
   name: string
   overagePerGbCents: number
   priceMonthlyUsd: number
@@ -39,7 +43,7 @@ export const PLANS: Record<PlanId, Plan> = {
     overagePerGbCents: 8,
     aiCreditsPerMonth: 0,
     maxProjects: 5,
-    maxSeats: 3,
+    maxSeats: null,
     advancedAnalytics: false,
     advancedLogs: false,
     customDomains: 0,
@@ -54,7 +58,7 @@ export const PLANS: Record<PlanId, Plan> = {
     overagePerGbCents: 6,
     aiCreditsPerMonth: 0,
     maxProjects: 25,
-    maxSeats: 10,
+    maxSeats: null,
     advancedAnalytics: true,
     advancedLogs: true,
     customDomains: 1,
@@ -69,7 +73,7 @@ export const PLANS: Record<PlanId, Plan> = {
     overagePerGbCents: 5,
     aiCreditsPerMonth: 0,
     maxProjects: null,
-    maxSeats: 25,
+    maxSeats: null,
     advancedAnalytics: true,
     advancedLogs: true,
     // A finite allowance keeps Cloudflare's per-hostname cost bounded while
@@ -78,6 +82,25 @@ export const PLANS: Record<PlanId, Plan> = {
     historyDays: 365,
     logRetentionDays: 365,
   },
+}
+
+export const STANDARD_PLAN_PRICES: Record<
+  PlanId,
+  { overagePerGbCents: number; priceMonthlyUsd: number }
+> = {
+  basic: { priceMonthlyUsd: 9, overagePerGbCents: 12 },
+  pro: { priceMonthlyUsd: 29, overagePerGbCents: 9 },
+  business: { priceMonthlyUsd: 69, overagePerGbCents: 7 },
+}
+
+export function getPlanCommercialTerms(planId: PlanId, phase: PricingPhase) {
+  if (phase === 'standard') {
+    return STANDARD_PLAN_PRICES[planId]
+  }
+  return {
+    priceMonthlyUsd: PLANS[planId].priceMonthlyUsd,
+    overagePerGbCents: PLANS[planId].overagePerGbCents,
+  }
 }
 
 export interface PricePoint {
@@ -89,21 +112,44 @@ export interface PricePoint {
 // the amounts came from live Polar products or this code catalog, so the UI can
 // render real charges when available and never blank when Polar is unreachable.
 export interface PlanPricing {
-  plans: Record<PlanId, { month: PricePoint }>
+  foundingOffer: {
+    active: boolean
+    claimed: number
+    limit: number
+    remaining: number
+  }
+  phase: PricingPhase
+  plans: Record<PlanId, { month: PricePoint; overagePerGbCents: number }>
   source: 'catalog' | 'polar'
 }
 
 // Monthly pricing derived from this catalog. Used in self-host and whenever live
 // Polar prices are unavailable so prices never render blank.
-export function catalogPricing(): PlanPricing {
+export function catalogPricing(
+  phase: PricingPhase = 'founding',
+  claimed = 0,
+): PlanPricing {
   const plans = {} as PlanPricing['plans']
   for (const id of Object.keys(PLANS) as PlanId[]) {
-    const monthly = PLANS[id].priceMonthlyUsd
+    const terms = getPlanCommercialTerms(id, phase)
     plans[id] = {
-      month: { amountCents: monthly * 100, currency: 'usd' },
+      month: { amountCents: terms.priceMonthlyUsd * 100, currency: 'usd' },
+      overagePerGbCents: terms.overagePerGbCents,
     }
   }
-  return { source: 'catalog', plans }
+  const boundedClaimed = Math.max(0, claimed)
+  const remaining = Math.max(0, FOUNDING_CUSTOMER_LIMIT - boundedClaimed)
+  return {
+    source: 'catalog',
+    phase,
+    foundingOffer: {
+      active: remaining > 0,
+      claimed: boundedClaimed,
+      limit: FOUNDING_CUSTOMER_LIMIT,
+      remaining,
+    },
+    plans,
+  }
 }
 
 // Free-trial guardrails: a trial gets the chosen plan's full features with a

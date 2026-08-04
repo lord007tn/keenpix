@@ -1,6 +1,6 @@
 ---
 title: "ImageKit Bandwidth Pricing Explained: Limits and Overage"
-description: Learn how ImageKit bandwidth allowances and overage work, then compare their boundary with Keenpix application-response pricing.
+description: Learn how ImageKit bandwidth allowances and overage work, then compare their boundary with Keenpix managed-delivery pricing.
 date: "2026-07-02"
 updated: "2026-07-12"
 author: Raed Bahri
@@ -14,11 +14,11 @@ ImageKit publishes bandwidth-oriented plans rather than a pooled transformation-
 
 ## Same meter, lower rate
 
-Both products publish bandwidth-oriented plans, but the measurement boundaries and plan details differ. Keenpix counts optimized bytes returned by its application; upstream CDN edge `HIT`s are visible only when optional edge analytics is connected and are not added to billing.
+Both products publish bandwidth-oriented plans. Keenpix counts optimized bytes delivered through its managed Cloudflare edge and application once, while ImageKit counts optimized delivery through its own network.
 
 | | Keenpix | ImageKit |
 | --- | --- | --- |
-| Billing unit | Keenpix application response bytes (GB) | Bandwidth delivered (GB) |
+| Billing unit | Keenpix managed delivery (GB) | Bandwidth delivered (GB) |
 | Transformations | Unlimited, free | Included |
 | Overage rate | $0.05–0.08/GB | Higher per-GB |
 | Entry price | $9/mo | Comparable-to-higher |
@@ -46,8 +46,8 @@ ImageKit ships a media library and DAM-style features, and a mature global edge 
 ## Related comparisons
 
 - [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) — credits vs bandwidth pricing.
-- [Keenpix vs imgix](/blog/keenpix-vs-imgix) — current credit packages vs application-byte billing.
-- [How the Keenpix application-byte meter works](/blog/transparent-image-cdn-pricing) — including the upstream-CDN boundary.
+- [Keenpix vs imgix](/blog/keenpix-vs-imgix) — current credit packages vs managed-delivery billing.
+- [How the Keenpix managed-delivery meter works](/blog/transparent-image-cdn-pricing) — including its cache boundary.
 - [Keenpix pricing](/pricing) — current plans and meter boundary.
 
 ## Compare on your own traffic

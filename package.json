@@ -50,6 +50,7 @@
     "db:backfill-cuid": "tsx prisma/backfill-rollup-cuid.ts",
     "db:backfill-project-edge": "tsx scripts/backfill-project-edge-from-zone.ts",
     "billing:configure-benefits": "node scripts/configure-polar-benefits.mjs",
+    "billing:configure-catalog": "node scripts/configure-polar-catalog.mjs",
     "db:reset": "prisma migrate reset --force"
   },
   "prisma": {

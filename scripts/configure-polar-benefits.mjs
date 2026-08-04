@@ -37,16 +37,16 @@ const targets = products.filter(
     product.metadata.interval === 'month',
 )
 
-if (targets.length !== 3) {
+if (targets.length !== 6) {
   throw new Error(
-    `Expected exactly 3 active monthly plan products, found ${targets.length}. Refusing to mutate.`,
+    `Expected exactly 6 active monthly founding + standard plan products, found ${targets.length}. Refusing to mutate.`,
   )
 }
 
 const meterIds = new Set()
 for (const product of targets) {
   const meteredPrices = product.prices.filter(
-    (price) => price.amountType === 'metered_unit',
+    (price) => price.amountType === 'metered_unit' && !price.isArchived,
   )
   if (meteredPrices.length !== 1) {
     throw new Error(
@@ -56,7 +56,7 @@ for (const product of targets) {
   meterIds.add(meteredPrices[0].meterId)
 }
 if (meterIds.size !== 1) {
-  throw new Error('The three products do not share one canonical usage meter.')
+  throw new Error('The six products do not share one canonical usage meter.')
 }
 const canonicalMeterId = [...meterIds][0]
 
@@ -64,9 +64,9 @@ for (const plan of Object.keys(PLAN_UNITS)) {
   const planProducts = targets.filter(
     (product) => product.metadata.plan === plan,
   )
-  if (planProducts.length !== 1) {
+  if (planProducts.length !== 2) {
     throw new Error(
-      `Expected one monthly ${plan} product, found ${planProducts.length}.`,
+      `Expected founding + standard monthly ${plan} products, found ${planProducts.length}.`,
     )
   }
 
@@ -75,7 +75,6 @@ for (const plan of Object.keys(PLAN_UNITS)) {
     (benefit) =>
       benefit.type === 'meter_credit' &&
       !benefit.isDeleted &&
-      benefit.description.toLowerCase() === `included bandwidth (${plan})` &&
       benefit.properties.units === expectedUnits &&
       benefit.properties.rollover === false &&
       benefit.properties.meterId === canonicalMeterId,
@@ -85,12 +84,40 @@ for (const plan of Object.keys(PLAN_UNITS)) {
       `Expected one ${plan} ${expectedUnits} GB no-rollover benefit, found ${matchingBenefits.length}.`,
     )
   }
-  const benefit = matchingBenefits[0]
+  let benefit = matchingBenefits[0]
+  const description = `Included managed delivery (${plan})`
+  if (
+    benefit.description !== description ||
+    benefit.metadata.billing_scope !== 'managed_delivery'
+  ) {
+    if (apply) {
+      benefit = await client.benefits.update({
+        id: benefit.id,
+        requestBody: {
+          type: 'meter_credit',
+          description,
+          metadata: {
+            ...benefit.metadata,
+            billing_scope: 'managed_delivery',
+          },
+        },
+      })
+      if (
+        benefit.description !== description ||
+        benefit.metadata.billing_scope !== 'managed_delivery'
+      ) {
+        throw new Error(`${plan}: Polar did not retain benefit settings.`)
+      }
+      process.stdout.write(`${plan}: benefit description updated\n`)
+    } else {
+      process.stdout.write(`${plan}: would update benefit description\n`)
+    }
+  }
 
   for (const product of planProducts) {
     const existing = product.benefits.map((item) => item.id)
     const next = [...new Set([...existing, benefit.id])]
-    const interval = product.metadata.interval
+    const interval = `${product.metadata.pricing_phase ?? 'founding'}/${product.metadata.interval}`
     if (next.length === existing.length) {
       process.stdout.write(`${plan}/${interval}: already attached\n`)
       continue
