@@ -52,11 +52,12 @@ export async function fetchProjectEdgeHourly(
       blob1 AS stage,
       blob2 AS cacheStatus,
       blob3 AS host,
-      toInt32(blob4) AS status,
+      blob4 AS status,
       SUM(_sample_interval * double2) AS requests,
       SUM(_sample_interval * double1) AS bytes
     FROM ${DATASET}
-    WHERE timestamp >= '${since}' AND timestamp < '${until}'
+    WHERE timestamp >= toDateTime('${since}')
+      AND timestamp < toDateTime('${until}')
     GROUP BY bucketStart, projectId, stage, cacheStatus, host, status
     ORDER BY bucketStart ASC
   `
