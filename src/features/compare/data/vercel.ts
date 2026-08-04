@@ -8,7 +8,7 @@ export const vercelComparison = {
     'Keenpix vs Vercel Image Optimization: one meter vs three, unlimited transforms, next/image loader support, and always-on paid usage. Pricing as of July 2026.',
   heroHeadline: 'Keenpix vs Vercel Image Optimization: a portable alternative',
   heroSubhead:
-    'Vercel Image Optimization bills transformations, cache reads, and cache writes — plus data transfer — and Hobby can return 402 at its included limits. Keenpix bills optimized response bytes returned by the application; paid usage continues at the published overage rate. Upstream CDN edge hits do not reach the Keenpix meter.',
+    'Vercel Image Optimization bills transformations, cache reads, and cache writes — plus data transfer — and Hobby can return 402 at its included limits. Keenpix bills optimized managed delivery once across its edge and application; paid usage continues at the published overage rate.',
   verdict:
     "If your site fits inside Vercel's Hobby allowances, or you already pay for Vercel Pro and image usage costs little, stay put — the default next/image loader is zero-config and Keenpix cannot beat free or nearly-free. Consider Keenpix when you prefer one bandwidth meter, image-specific analytics, managed custom domains, always-on paid usage, and the upcoming v0.2.0 AGPL-3.0 self-host path. Keenpix is a young, focused product with no video or storage, so the trade is portability and predictability for platform breadth and maturity.",
   pricingRows: [
@@ -47,7 +47,7 @@ export const vercelComparison = {
     {
       feature: 'Billing meters',
       competitor: '3 (transforms, cache reads, cache writes) + data transfer',
-      keenpix: '1 — application response bytes',
+      keenpix: '1 — optimized managed delivery',
     },
     {
       feature: 'Transformations',

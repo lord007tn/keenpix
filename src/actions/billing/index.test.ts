@@ -54,6 +54,7 @@ describe('getBillingState', () => {
       currentPeriodStart: start,
       currentPeriodEnd: end,
       cancelAtPeriodEnd: true,
+      overagePerGbCents: 6,
     })
     orgHasBillingCustomer.mockResolvedValue(true)
     // 450 GB used against Pro's 400 GB allowance → 50 GB overage at 6¢/GB.
@@ -79,11 +80,34 @@ describe('getBillingState', () => {
     expect(state.usage.overageCostCents).toBe(300)
     expect(state.usage.projects).toEqual({ used: 3, limit: 25 })
     expect(state.usage.customDomains).toEqual({ used: 1, limit: 1 })
-    expect(state.usage.seats).toEqual({ used: 3, limit: 10, pending: 1 })
+    expect(state.usage.seats).toEqual({ used: 3, limit: null, pending: 1 })
     expect(state.planLimits).toEqual({
       analyticsHistoryDays: 365,
       logRetentionDays: 90,
     })
+  })
+
+  it('uses the subscribed Polar overage rate for standard pricing', async () => {
+    getOrgSubscription.mockResolvedValue({
+      polarSubscriptionId: 'sub_standard',
+      plan: 'pro',
+      status: 'active',
+      currentPeriodStart: new Date('2026-07-01T00:00:00.000Z'),
+      currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
+      overagePerGbCents: 9,
+    })
+    orgHasBillingCustomer.mockResolvedValue(true)
+    billingUsageSnapshot.mockResolvedValue({
+      bytes: 450 * GB,
+      customDomains: 0,
+      pendingSeats: 0,
+      projects: 1,
+      seats: 1,
+    })
+
+    const state = await getBillingState('org_a')
+
+    expect(state.usage.overageCostCents).toBe(450)
   })
 
   it('returns an unsubscribed snapshot (no allowance, no overage) when there is no row', async () => {

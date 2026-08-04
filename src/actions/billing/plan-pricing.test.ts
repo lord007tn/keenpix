@@ -1,7 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const createPolarClient = vi.hoisted(() => vi.fn())
+const countFoundingCustomers = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/billing/polar-client', () => ({ createPolarClient }))
+vi.mock('@/data-access/subscriptions', () => ({ countFoundingCustomers }))
 vi.mock('@/lib/logger/logger', () => ({
   errorContext: (error: unknown) => ({ error }),
   logger: { warn: vi.fn() },
@@ -31,10 +33,24 @@ function fixed(amountCents: number): FakePrice {
   }
 }
 
-function fakeProduct(plan: string, interval: string, prices: FakePrice[]) {
+function metered(unitAmount: number) {
+  return {
+    amountType: 'metered_unit',
+    isArchived: false,
+    meterId: 'meter_delivery',
+    unitAmount,
+  }
+}
+
+function fakeProduct(
+  plan: string,
+  interval: string,
+  prices: FakePrice[],
+  pricingPhase: 'founding' | 'standard' = 'founding',
+) {
   return {
     id: `prod_${plan}_${interval}`,
-    metadata: { plan, interval },
+    metadata: { plan, interval, pricing_phase: pricingPhase },
     prices,
   }
 }
@@ -67,13 +83,20 @@ function fakeClient(products: unknown[]) {
 }
 
 const FULL_CATALOG = [
-  fakeProduct('basic', 'month', [fixed(900)]),
-  fakeProduct('pro', 'month', [fixed(1900)]),
-  fakeProduct('business', 'month', [fixed(2900)]),
+  fakeProduct('basic', 'month', [fixed(900), metered(8)]),
+  fakeProduct('pro', 'month', [fixed(1900), metered(6)]),
+  fakeProduct('business', 'month', [fixed(3900), metered(5)]),
+  fakeProduct('basic', 'month', [fixed(900), metered(12)], 'standard'),
+  fakeProduct('pro', 'month', [fixed(2900), metered(9)], 'standard'),
+  fakeProduct('business', 'month', [fixed(6900), metered(7)], 'standard'),
   // Archived dashboard records may remain readable, but an annual product must
   // never influence displayed pricing or become a checkout option.
   fakeProduct('pro', 'year', [fixed(19_000)]),
 ]
+
+beforeEach(() => {
+  countFoundingCustomers.mockResolvedValue(0)
+})
 
 afterEach(() => {
   vi.clearAllMocks()
@@ -86,6 +109,7 @@ describe('getPlanPricing', () => {
     const pricing = await getPlanPricing()
     expect(pricing.source).toBe('catalog')
     expect(pricing.plans.pro.month.amountCents).toBe(1900)
+    expect(pricing.foundingOffer.remaining).toBe(25)
   })
 
   it('sources monthly prices from Polar products', async () => {
@@ -101,6 +125,7 @@ describe('getPlanPricing', () => {
       fakeProduct('basic', 'month', [
         { amountType: 'free', isArchived: false },
         fixed(900),
+        metered(8),
       ]),
       ...FULL_CATALOG.filter(
         (p) =>
@@ -133,5 +158,35 @@ describe('getPlanPricing', () => {
     await getPlanPricing()
     expect(listSpy).toHaveBeenCalledTimes(1)
     expect(createPolarClient).toHaveBeenCalledTimes(1)
+  })
+
+  it('switches to standard pricing after 25 real paid customers', async () => {
+    countFoundingCustomers.mockResolvedValue(25)
+    createPolarClient.mockReturnValue(fakeClient(FULL_CATALOG))
+    const getPlanPricing = await loadGetPlanPricing()
+
+    const pricing = await getPlanPricing()
+
+    expect(pricing.phase).toBe('standard')
+    expect(pricing.foundingOffer).toEqual({
+      active: false,
+      claimed: 25,
+      limit: 25,
+      remaining: 0,
+    })
+    expect(pricing.plans.pro.month.amountCents).toBe(2900)
+    expect(pricing.plans.business.month.amountCents).toBe(6900)
+    expect(pricing.plans.business.overagePerGbCents).toBe(7)
+  })
+
+  it('fails closed to standard pricing when the count is unavailable', async () => {
+    countFoundingCustomers.mockRejectedValue(new Error('database unavailable'))
+    createPolarClient.mockReturnValue(null)
+    const getPlanPricing = await loadGetPlanPricing()
+
+    const pricing = await getPlanPricing()
+
+    expect(pricing.phase).toBe('standard')
+    expect(pricing.plans.pro.month.amountCents).toBe(2900)
   })
 })

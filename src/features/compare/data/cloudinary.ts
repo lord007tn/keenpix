@@ -8,7 +8,7 @@ export const cloudinaryComparison = {
     'Keenpix vs Cloudinary (July 2026): pooled credits vs one always-on bandwidth meter. Honest pricing, migration steps, and when each wins.',
   heroHeadline: 'Keenpix vs Cloudinary: a focused image CDN alternative',
   heroSubhead:
-    'Cloudinary bundles transformations, storage, and bandwidth into credits. Keenpix bills exactly one thing: optimized response bytes returned by the application, with unlimited transforms and always-on paid overage. Upstream CDN edge hits do not reach that meter.',
+    'Cloudinary bundles transformations, storage, and bandwidth into credits. Keenpix bills exactly one thing: optimized bytes delivered through managed cloud, with unlimited transforms and team members plus always-on paid overage.',
   verdict:
     'If you need video transcoding, a full digital asset manager, or AI-powered transforms, pick Cloudinary — its breadth is real and Keenpix does not pretend to match it. If what you use Cloudinary for is resizing and delivering images, Keenpix offers one bandwidth meter, unlimited transformations, managed custom domains, always-on paid usage, and an upcoming AGPL-3.0 v0.2.0 self-host path. Be aware of what you give up: Keenpix is a young solo-founder product with no video or storage. As of July 2026, 400 GB/month is $19 on Keenpix; Cloudinary bandwidth draws from the Advanced plan’s pooled credits alongside transforms and storage.',
   pricingRows: [
@@ -16,7 +16,7 @@ export const cloudinaryComparison = {
       scenario: 'Credits → GB translation',
       competitor:
         '1 credit = 1 GB bandwidth OR 1k transforms OR 1 GB storage, one pool',
-      keenpix: 'No translation — 1 GB returned by Keenpix is 1 GB metered',
+      keenpix: 'No translation — 1 GB managed delivery is 1 GB metered',
     },
     {
       scenario: '100 GB delivered / month',
@@ -49,7 +49,7 @@ export const cloudinaryComparison = {
     {
       feature: 'Billing model',
       competitor: 'Pooled credits (transforms + storage + GB)',
-      keenpix: 'One meter: application response bytes',
+      keenpix: 'One meter: optimized managed delivery',
     },
     {
       feature: 'Transformations',
@@ -59,7 +59,7 @@ export const cloudinaryComparison = {
     {
       feature: 'Entry paid plan',
       competitor: '$99/mo · 225 pooled credits ($89 annual)',
-      keenpix: '$9/mo · 100 GB returned by Keenpix',
+      keenpix: '$9/mo · 100 GB managed delivery',
     },
     {
       feature: 'Overage handling',
@@ -99,12 +99,12 @@ export const cloudinaryComparison = {
     {
       feature: 'AI features',
       competitor: 'Yes — tagging, gen fill, smart crop',
-      keenpix: 'No',
+      keenpix: 'Coming soon; separate transparent meter planned',
     },
     {
       feature: 'Custom domain (CNAME)',
       competitor: 'Advanced plan ($249/mo) and up',
-      keenpix: 'Not yet',
+      keenpix: 'Pro: 1 · Business: 10',
     },
     {
       feature: 'CDN',
@@ -121,7 +121,7 @@ export const cloudinaryComparison = {
     {
       title: 'One meter you can actually forecast',
       detail:
-        'Cloudinary credits cover transformations, storage, and bandwidth at different rates, so forecasting needs all three dimensions. Keenpix meters optimized response bytes returned by the application, while connected Cloudflare analytics adds Edge delivery to operator totals.',
+        'Cloudinary credits cover transformations, storage, and bandwidth at different rates, so forecasting needs all three dimensions. Keenpix meters optimized managed delivery once across Cloudflare edge hits and application responses.',
     },
     {
       title: 'A customer-set ceiling instead of an open-ended estimate',
@@ -141,7 +141,7 @@ export const cloudinaryComparison = {
     {
       title: 'Real analytics at $9, not at enterprise',
       detail:
-        'Bandwidth saved, cache hit rate, format mix, top images, latency percentiles, and live request logs are included on every Keenpix tier — the $9 plan sees the same core dashboards as the $29 one. You should not need a sales call to find out what your images are doing.',
+        'Bandwidth saved, cache hit rate, format mix, top images, latency percentiles, and live request logs are included on every Keenpix tier — the $9 plan sees the same core dashboards as the $19 one. You should not need a sales call to find out what your images are doing.',
     },
   ],
   whenCompetitorWins: [
@@ -156,7 +156,7 @@ export const cloudinaryComparison = {
     'Create a Keenpix project and allowlist your origin hosts (e.g. your-bucket.s3.amazonaws.com or res.cloudinary.com). Per-project allowlists replace public API keys entirely.',
     "Translate URLs: https://res.cloudinary.com/<cloud>/image/upload/w_800,q_75/photo.jpg becomes https://cdn.keenpix.com/p/<project-id>/img/<origin-url>?w=800&q=75. Cloudinary's f_auto needs no parameter — AVIF/WebP negotiation is automatic. c_fill,w_800,h_600 maps to w=800&h=600&fit=cover.",
     "Swap URL generation in code with a small helper or your framework's image loader. Common resize, crop, quality, and format parameters have documented Keenpix equivalents; test every modifier your application uses before switching.",
-    'Keep your CDN in front. Keenpix is designed to sit behind Cloudflare (or any CDN), so cached edge hits never touch your Keenpix quota.',
+    'Use the managed Keenpix delivery hostname or custom domain so edge and application delivery are attributed once. You can place a customer-owned CDN in front when you want to operate an additional cache layer.',
     'Optionally enable HMAC signed URLs on hotlink-sensitive routes.',
     "Run both side by side through the 14-day trial, watch cache hit rate, projected usage cost, and bandwidth-saved analytics, then cut over — it's only URL changes, no DNS.",
   ],
@@ -183,7 +183,7 @@ export const cloudinaryComparison = {
     },
     {
       q: 'Is there a free tier?',
-      a: 'The managed cloud has a 14-day free trial (card required), with plans starting at $9/month for 100 GB of optimized responses returned by Keenpix. A released open-source version can be self-hosted without a Keenpix license fee, but you pay for and operate the infrastructure.',
+      a: 'The managed cloud has a 14-day free trial (card required), with plans starting at $9/month for 100 GB of optimized managed delivery. A released open-source version can be self-hosted without a Keenpix license fee, but you pay for and operate the infrastructure.',
     },
   ],
   sources: [

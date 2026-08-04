@@ -171,16 +171,13 @@ describe('quota — cloud enforcement', () => {
     expect(await orgCanServe('org_a')).toBe(true)
   })
 
-  it('blocks a new seat at the plan seat limit', async () => {
+  it('allows unlimited team members on every paid plan', async () => {
     isCloud.mockReturnValue(true)
-    getOrgPlan.mockResolvedValue(PLANS.basic) // maxSeats: 3
-    invitationCount.mockResolvedValue(0)
-    memberCount.mockResolvedValue(3)
-    await expect(assertCanAddSeat('org_a')).rejects.toThrow(BASIC)
-    memberCount.mockResolvedValue(2)
+    getOrgPlan.mockResolvedValue(PLANS.basic)
+    invitationCount.mockResolvedValue(999)
+    memberCount.mockResolvedValue(999)
     await expect(assertCanAddSeat('org_a')).resolves.toBeUndefined()
-
-    invitationCount.mockResolvedValue(1)
-    await expect(assertCanAddSeat('org_a')).rejects.toThrow(BASIC)
+    expect(invitationCount).not.toHaveBeenCalled()
+    expect(memberCount).not.toHaveBeenCalled()
   })
 })

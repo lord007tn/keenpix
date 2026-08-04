@@ -17,6 +17,16 @@ export function getOrgSubscription(orgId: string) {
   return prisma.subscription.findUnique({ where: { orgId } })
 }
 
+// Counts organizations that have reached a real Polar-paid active state at
+// least once. Trialing subscriptions and local admin grants never set this
+// timestamp, while churned customers remain counted so founding slots cannot
+// reopen later.
+export function countFoundingCustomers() {
+  return prisma.subscription.count({
+    where: { becamePayingAt: { not: null } },
+  })
+}
+
 // Whether an org may serve transforms right now, including the dunning grace.
 // Cloud-only concern; self-host never calls this (it always serves).
 export async function orgIsServable(orgId: string): Promise<boolean> {
@@ -63,6 +73,7 @@ export async function getOrgPlan(orgId: string): Promise<Plan | null> {
 }
 
 export interface SubscriptionSnapshot {
+  amountCents: number
   // Mirrors Polar's cancel_at_period_end. Persisted on every webhook sync (the
   // upserts below spread the whole snapshot), so the billing UI can distinguish
   // "renews" from "ends" for an active-but-canceling subscription.
@@ -71,6 +82,7 @@ export interface SubscriptionSnapshot {
   currentPeriodStart?: Date | null
   orgId: string
   overageAllowed?: boolean
+  overagePerGbCents: number
   plan: string
   // Polar's modified_at on the webhook payload — the ordering key for the
   // stale-event guard below.
@@ -101,6 +113,7 @@ async function applySubscriptionSync(
   const existing = await db.subscription.findUnique({
     where: { orgId: input.orgId },
     select: {
+      becamePayingAt: true,
       plan: true,
       polarModifiedAt: true,
       polarSubscriptionId: true,
@@ -120,10 +133,14 @@ async function applySubscriptionSync(
       return { applied: false, previousStatus }
     }
   }
-  const plan = getPlan(input.plan)
+  const becamePayingAt =
+    existing?.becamePayingAt ??
+    (input.status === 'active'
+      ? (input.currentPeriodStart ?? new Date())
+      : null)
   const providerSnapshot = {
     ...input,
-    amountCents: plan ? plan.priceMonthlyUsd * 100 : 0,
+    becamePayingAt,
   }
   await db.subscription.upsert({
     where: { orgId: input.orgId },

@@ -96,7 +96,7 @@ export const bunnyOptimizerComparison = {
     {
       title: 'One bundled image-delivery allowance',
       detail:
-        'Keenpix combines optimization and an application-response allowance into one plan. Upstream CDN edge hits do not reach that meter. This can be easier to budget than a per-pull-zone optimizer fee plus region-dependent CDN bandwidth, though it is not automatically cheaper.',
+        'Keenpix combines optimization and managed delivery into one allowance, counted once across its edge and application. This can be easier to budget than a per-pull-zone optimizer fee plus region-dependent CDN bandwidth, though it is not automatically cheaper.',
     },
     {
       title: 'Image-specific operational analytics',
@@ -122,7 +122,7 @@ export const bunnyOptimizerComparison = {
     'Map Bunny width, height, crop, quality, format, and other used parameters to documented Keenpix equivalents. Treat CSS/JavaScript minification and unsupported effects as separate workloads.',
     'Generate representative URLs from production traffic and compare output dimensions, visual quality, formats, cache headers, and bytes.',
     'Put a CDN in front of Keenpix, configure query-string and Accept-header cache variation correctly, then verify cache hits before sending user traffic.',
-    'Canary traffic, compare the complete Bunny optimizer-plus-bandwidth cost with Keenpix application response bytes, and cut over only after error and quality checks pass.',
+    'Canary traffic, compare the complete Bunny optimizer-plus-bandwidth cost with Keenpix managed delivery, and cut over only after error and quality checks pass.',
   ],
   faq: [
     {

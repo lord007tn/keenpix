@@ -54,6 +54,8 @@ const customerOrgArgs = {
         overageAllowed: true,
         polarSubscriptionId: true,
         amountCents: true,
+        becamePayingAt: true,
+        overagePerGbCents: true,
         updatedAt: true,
       },
     },
@@ -212,6 +214,11 @@ function mapCustomerAccount(
       amountCents:
         subscriptionSource === 'polar'
           ? (org.subscription?.amountCents ?? 0)
+          : 0,
+      becamePayingAt: org.subscription?.becamePayingAt?.toISOString() ?? null,
+      overagePerGbCents:
+        subscriptionSource === 'polar'
+          ? (org.subscription?.overagePerGbCents ?? 0)
           : 0,
       addonAmountCents,
       mrrCents: primaryMrrCents + addonAmountCents,

@@ -72,7 +72,7 @@ describe('SEO entity graphs', () => {
 
   it('reports the three monthly managed plans with a numeric count', () => {
     expect(softwareApplicationJsonLd().offers.offerCount).toBe(3)
-    expect(softwareApplicationJsonLd().offers.highPrice).toBe('39')
+    expect(softwareApplicationJsonLd().offers.highPrice).toBe('69')
 
     const graph = pricingPageJsonLd()['@graph']
     const catalog = graph.find((node) => node['@type'] === 'OfferCatalog')

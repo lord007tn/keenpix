@@ -14,18 +14,17 @@ import {
 
 const pricingMetaFn = createServerFn({ method: 'GET' }).handler(() => {
   const selfHost = !isCloud()
-  if (selfHost) {
-    return { selfHost, jsonLd: null }
-  }
-  const jsonLd = [pricingPageJsonLd(), faqPageJsonLd(PRICING_FAQ)]
-  return { selfHost, jsonLd }
+  return { selfHost }
 })
 
 export const Route = createFileRoute('/pricing')({
   loader: async () => {
     const meta = await pricingMetaFn()
     const pricing = meta.selfHost ? null : await getPlanPricingFn()
-    return { ...meta, pricing }
+    const jsonLd = pricing
+      ? [pricingPageJsonLd(pricing), faqPageJsonLd(PRICING_FAQ)]
+      : null
+    return { ...meta, jsonLd, pricing }
   },
   head: ({ loaderData }) => {
     const canonicalUrl = absoluteUrl('/pricing')

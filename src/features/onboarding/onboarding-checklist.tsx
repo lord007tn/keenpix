@@ -39,7 +39,7 @@ function ChoosePlanDialog({ orgId }: { orgId: string }) {
           <DialogTitle>Choose your plan</DialogTitle>
           <DialogDescription>
             Every plan starts with a {TRIAL.days}-day free trial and bills on
-            application response bytes — never per transform. Unlimited
+            managed delivery — never per transform or teammate. Unlimited
             transforms on every monthly plan.
           </DialogDescription>
         </DialogHeader>

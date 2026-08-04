@@ -45,9 +45,8 @@ totals plus a per-project breakdown; pick a single project to scope every chart,
 logs, and the KPIs to it.
 
 <Callout type="info">
-  Origin-shield analytics are aggregated from the hourly Postgres rollups, with raw logs
-  kept for live/debug views. Edge hits are served before the origin and never reach the
-  Keenpix server, so edge analytics are pulled separately from Cloudflare's adaptive
-  Analytics API — and persisted by Keenpix so they survive Cloudflare's 24h window and
-  build up history for wider ranges over time.
+  Origin-shield analytics are aggregated from hourly Postgres rollups, with raw logs
+  kept for live/debug views. Managed edge hits are captured separately through trusted,
+  project-attributed Cloudflare telemetry, persisted into hourly rollups, and included
+  once in managed-delivery billing.
 </Callout>

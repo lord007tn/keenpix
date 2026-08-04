@@ -11,6 +11,7 @@ import {
   summarizeAgg,
   timeSeriesFromBuckets,
 } from '@/helpers/analytics/rollup-shapers'
+import { FOUNDING_CUSTOMER_LIMIT } from '@/lib/billing/plans'
 import type { platformAnalyticsSchema } from '@/schemas/admin'
 
 type PlanBucket = 'free' | 'basic' | 'pro' | 'business'
@@ -48,6 +49,9 @@ export async function getPlatformAnalytics(
   const paidAccounts = accounts.filter(
     (account) => account.billing.mrrCents > 0,
   )
+  const foundingClaimed = accounts.filter((account) =>
+    Boolean(account.billing.becamePayingAt),
+  ).length
 
   return {
     range: input.range,
@@ -77,6 +81,12 @@ export async function getPlatformAnalytics(
     complimentaryCustomerCount: accounts.filter(
       (account) => account.billing.source === 'admin_grant',
     ).length,
+    foundingOffer: {
+      active: foundingClaimed < FOUNDING_CUSTOMER_LIMIT,
+      claimed: foundingClaimed,
+      limit: FOUNDING_CUSTOMER_LIMIT,
+      remaining: Math.max(0, FOUNDING_CUSTOMER_LIMIT - foundingClaimed),
+    },
     suspendedCount: accounts.filter((account) => account.suspendedAt).length,
     servedCount: accounts.filter(
       (account) => account.effectivePlan && !account.suspendedAt,

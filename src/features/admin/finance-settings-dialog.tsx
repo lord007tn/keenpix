@@ -27,7 +27,7 @@ import {
   getFinanceSettingsFn,
   updateFinanceSettingsFn,
 } from '@/functions/admin'
-import { PLANS } from '@/lib/billing/plans'
+import { PLANS, STANDARD_PLAN_PRICES } from '@/lib/billing/plans'
 
 type FinanceSettings = Awaited<ReturnType<typeof getFinanceSettingsFn>>
 
@@ -247,11 +247,15 @@ export function FinanceSettingsDialog({
                   <div className="flex flex-col gap-1" key={plan.id}>
                     <span className="font-medium text-sm">{plan.name}</span>
                     <span className="text-muted-foreground text-xs">
-                      ${plan.priceMonthlyUsd}/month ·{' '}
+                      ${STANDARD_PLAN_PRICES[plan.id].priceMonthlyUsd}/month ·{' '}
                       {plan.includedBandwidthBytes / 1024 ** 3} GB included
                     </span>
                     <span className="text-xs tabular-nums">
-                      ${(plan.overagePerGbCents / 100).toFixed(2)}/GB overage
+                      $
+                      {(
+                        STANDARD_PLAN_PRICES[plan.id].overagePerGbCents / 100
+                      ).toFixed(2)}
+                      /GB overage
                     </span>
                   </div>
                 ))}

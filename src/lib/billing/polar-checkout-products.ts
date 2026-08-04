@@ -1,12 +1,13 @@
 import type { Polar } from '@polar-sh/sdk'
 import { CUSTOM_DOMAIN_ADDON } from '@/lib/billing/addons'
-import { isPlanId } from '@/lib/billing/plans'
+import { isPlanId, type PricingPhase } from '@/lib/billing/plans'
 
 // Resolve the launchable catalog without hardcoding environment-specific Polar
 // ids. Annual products are deliberately excluded: Polar uses the subscription
 // period as the usage-meter period, while Keenpix's allowances reset monthly.
 export async function listCheckoutProducts(
   client: Polar,
+  phase: PricingPhase,
 ): Promise<{ productId: string; slug: string }[]> {
   try {
     const products = new Map<string, string>()
@@ -21,7 +22,10 @@ export async function listCheckoutProducts(
         if (
           typeof plan === 'string' &&
           isPlanId(plan) &&
-          interval === 'month'
+          interval === 'month' &&
+          (product.metadata?.pricing_phase === 'standard'
+            ? 'standard'
+            : 'founding') === phase
         ) {
           const slug = `${plan}-month`
           if (products.has(slug)) {
