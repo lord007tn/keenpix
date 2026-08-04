@@ -7,6 +7,7 @@ import {
 
 const base: PolarSubscriptionData = {
   id: 'sub_1',
+  amount: 1900,
   status: 'active',
   currentPeriodStart: '2026-07-01T00:00:00.000Z',
   currentPeriodEnd: '2026-08-01T00:00:00.000Z',
@@ -19,6 +20,8 @@ describe('mapSubscriptionSnapshot', () => {
   it('maps a valid subscription onto a snapshot', () => {
     expect(mapSubscriptionSnapshot(base, 'active')).toEqual({
       orgId: 'org_a',
+      amountCents: 1900,
+      overagePerGbCents: 6,
       polarSubscriptionId: 'sub_1',
       plan: 'pro',
       status: 'active',
@@ -28,6 +31,26 @@ describe('mapSubscriptionSnapshot', () => {
       cancelAtPeriodEnd: false,
       polarModifiedAt: null,
     })
+  })
+
+  it('captures standard pricing terms from the Polar product', () => {
+    const snapshot = mapSubscriptionSnapshot(
+      {
+        ...base,
+        amount: 2900,
+        product: {
+          metadata: {
+            plan: 'pro',
+            pricing_phase: 'standard',
+            overage_per_gb_cents: 9,
+          },
+        },
+      },
+      'active',
+    )
+
+    expect(snapshot?.amountCents).toBe(2900)
+    expect(snapshot?.overagePerGbCents).toBe(9)
   })
 
   it('carries the payload modified_at as the ordering key', () => {

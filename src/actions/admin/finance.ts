@@ -11,6 +11,7 @@ import {
   platformAnalyticsCoverageStart,
 } from '@/data-access/admin/platform-analytics'
 import { historicalRollupBucketing } from '@/data-access/analytics-rollups'
+import { buildSaasScaleProjection } from '@/helpers/admin/finance/build-saas-scale-projection'
 import {
   calculateOperatingCost,
   type FinanceCostSettings,
@@ -265,5 +266,6 @@ export async function getFinanceDashboard(
       originBandwidthBytes: Number(originAgg.bytesOut ?? 0),
       originRequests: originAgg.requests ?? 0,
     },
+    scaleProjection: buildSaasScaleProjection(),
   }
 }

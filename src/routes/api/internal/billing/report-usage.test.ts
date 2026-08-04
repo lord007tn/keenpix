@@ -45,7 +45,7 @@ describe('usage and edge history job', () => {
     shouldRunRetention.mockReturnValue(false)
   })
 
-  it('returns independent edge capture evidence with successful metering', async () => {
+  it('captures edge delivery before successful metering', async () => {
     const response = await handleReportUsage(request())
 
     expect(response.status).toBe(200)
@@ -53,6 +53,9 @@ describe('usage and edge history job', () => {
       reported: 2,
       edgeHistory: { configured: true, groups: 4 },
     })
+    expect(captureEdgeHistory.mock.invocationCallOrder[0]).toBeLessThan(
+      reportUsage.mock.invocationCallOrder[0],
+    )
   })
 
   it('still completes edge capture when Polar metering fails', async () => {
@@ -60,6 +63,13 @@ describe('usage and edge history job', () => {
 
     expect((await handleReportUsage(request())).status).toBe(500)
     expect(captureEdgeHistory).toHaveBeenCalledOnce()
+  })
+
+  it('does not advance billing when edge capture fails', async () => {
+    captureEdgeHistory.mockRejectedValue(new Error('Cloudflare unavailable'))
+
+    expect((await handleReportUsage(request())).status).toBe(500)
+    expect(reportUsage).not.toHaveBeenCalled()
   })
 
   it('rejects an invalid scheduler credential before starting work', async () => {

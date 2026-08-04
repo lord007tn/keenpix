@@ -11,10 +11,6 @@ function gb(bytes: number): string {
   return value >= 1000 ? `${value / 1000} TB` : `${value} GB`
 }
 
-function overage(planId: PlanId): string {
-  return `$${(PLANS[planId].overagePerGbCents / 100).toFixed(2)}`
-}
-
 export const PLAN_CARD_ORDER: PlanId[] = ['basic', 'pro', 'business']
 
 export const PLAN_TAGLINES: Record<PlanId, string> = {
@@ -23,41 +19,57 @@ export const PLAN_TAGLINES: Record<PlanId, string> = {
   business: 'One plan for all your client sites.',
 }
 
-export const PLAN_CARD_FEATURES: Record<
+const PLAN_CARD_FEATURES: Record<
   PlanId,
-  { features: string[]; lead?: string }
+  { features: Array<string | null>; lead?: string }
 > = {
   basic: {
     features: [
-      `${gb(PLANS.basic.includedBandwidthBytes)} delivered / month`,
+      `${gb(PLANS.basic.includedBandwidthBytes)} managed delivery / month`,
       'Unlimited transforms — AVIF, WebP + 6 more formats',
+      'Unlimited team members',
       `${PLANS.basic.maxProjects} projects`,
       'Bandwidth-saved, cache-hit & top-image analytics',
       `Live request logs · ${PLANS.basic.logRetentionDays}-day retention`,
       'Signed URLs + per-project allowlists',
-      `Always-on overage · ${overage('basic')}/GB`,
+      null,
     ],
   },
   pro: {
     lead: 'Everything in Basic, plus:',
     features: [
-      `${gb(PLANS.pro.includedBandwidthBytes)} delivered / month`,
+      `${gb(PLANS.pro.includedBandwidthBytes)} managed delivery / month`,
       'Advanced analytics — geo, latency percentiles, 365-day history',
       `Full log search · ${PLANS.pro.logRetentionDays}-day retention`,
       `${PLANS.pro.maxProjects} projects`,
       `${PLANS.pro.customDomains} custom delivery domain`,
-      `Cheaper overage · ${overage('pro')}/GB, billed monthly`,
+      null,
     ],
   },
   business: {
     lead: 'Everything in Pro, plus:',
     features: [
-      `${gb(PLANS.business.includedBandwidthBytes)} delivered / month`,
+      `${gb(PLANS.business.includedBandwidthBytes)} managed delivery / month`,
       'Unlimited projects',
       `${PLANS.business.customDomains} custom delivery domains`,
       'Add 5 more custom domains for $5/month',
       `${PLANS.business.logRetentionDays}-day log retention`,
-      `Lowest overage · ${overage('business')}/GB, billed monthly`,
+      null,
     ],
   },
+}
+
+export function getPlanCardFeatures(planId: PlanId, overagePerGbCents: number) {
+  const card = PLAN_CARD_FEATURES[planId]
+  const overage = `$${(overagePerGbCents / 100).toFixed(2)}/GB`
+  let overageLabel = `Lowest overage · ${overage}, billed monthly`
+  if (planId === 'basic') {
+    overageLabel = `Always-on overage · ${overage}`
+  } else if (planId === 'pro') {
+    overageLabel = `Cheaper overage · ${overage}, billed monthly`
+  }
+  return {
+    ...card,
+    features: card.features.map((feature) => feature ?? overageLabel),
+  }
 }

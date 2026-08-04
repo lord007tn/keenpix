@@ -8,9 +8,9 @@ export const cloudflareImagesComparison = {
     'Keenpix vs Cloudflare Images: bandwidth pricing versus unique-transform pricing, storage choices, limits, migration steps, and when each wins.',
   heroHeadline: 'Keenpix vs Cloudflare Images: a bandwidth-priced alternative',
   heroSubhead:
-    'Cloudflare Images is deeply integrated with the Cloudflare edge and meters unique transformations or hosted-image storage and delivery. Keenpix sits behind the CDN you choose and meters optimized response bytes returned by the application; upstream CDN edge hits do not reach that meter.',
+    'Cloudflare Images is deeply integrated with the Cloudflare edge and meters unique transformations or hosted-image storage and delivery. Keenpix meters optimized bytes delivered through its managed edge and application, counted once, with no transformation or seat charge.',
   verdict:
-    'Choose Cloudflare Images when you want Cloudflare-native storage, custom-domain delivery, Workers integration, or a free allowance for up to 5,000 unique remote-image transformations each month. Choose Keenpix when your originals already live elsewhere and application response bytes are the clearest planning unit. These meters are not interchangeable: Cloudflare can be less expensive for repeated delivery of a small variant set, while Keenpix can be easier to forecast when responsive variants change frequently. Test your real catalog and traffic before moving.',
+    'Choose Cloudflare Images when you want Cloudflare-native storage, custom-domain delivery, Workers integration, or a free allowance for up to 5,000 unique remote-image transformations each month. Choose Keenpix when your originals already live elsewhere and managed delivery is the clearest planning unit. These meters are not interchangeable: Cloudflare can be less expensive for repeated delivery of a small variant set, while Keenpix can be easier to forecast when responsive variants change frequently. Test your real catalog and traffic before moving.',
   pricingRows: [
     {
       scenario: 'Up to 5,000 unique remote transformations / month',
@@ -21,14 +21,12 @@ export const cloudflareImagesComparison = {
     {
       scenario: '10,000 unique remote transformations / month',
       competitor: '$2.50 on Images Paid after the first 5,000 included',
-      keenpix:
-        'No transformation charge; application response bytes determine the plan',
+      keenpix: 'No transformation charge; managed delivery determines the plan',
     },
     {
       scenario: '100,000 images stored and 100,000 hosted deliveries / month',
       competitor: '$5 storage + $1 delivery on Images Paid',
-      keenpix:
-        'No managed storage; $9 Basic includes 100 GB returned by Keenpix',
+      keenpix: 'No managed storage; $9 Basic includes 100 GB managed delivery',
     },
     {
       scenario: 'Remote-origin image delivery',
@@ -40,7 +38,7 @@ export const cloudflareImagesComparison = {
     {
       feature: 'Primary meter',
       competitor: 'Unique transforms; hosted storage and deliveries',
-      keenpix: 'Application response bytes',
+      keenpix: 'Optimized managed delivery',
     },
     {
       feature: 'Free managed tier',
@@ -55,7 +53,7 @@ export const cloudflareImagesComparison = {
     {
       feature: 'Custom delivery domain',
       competitor: 'Yes',
-      keenpix: 'Not yet',
+      keenpix: 'Pro: 1 · Business: 10',
     },
     {
       feature: 'Workers integration',
@@ -113,12 +111,12 @@ export const cloudflareImagesComparison = {
     'Map Cloudflare width, height, fit, quality, and format options to documented Keenpix query parameters; test unsupported or advanced options separately.',
     'Run representative URLs side by side and compare visual output, cache headers, file size, and latency.',
     'Place your chosen CDN in front of Keenpix, verify its query-string and Accept-header cache behavior, and test cache hits.',
-    'Canary a small traffic share, monitor Keenpix application response bytes and errors, then migrate only after the results meet your acceptance thresholds.',
+    'Canary a small traffic share, monitor Keenpix managed delivery and errors, then migrate only after the results meet your acceptance thresholds.',
   ],
   faq: [
     {
       q: 'Is Keenpix always cheaper than Cloudflare Images?',
-      a: 'No. Cloudflare gives 5,000 unique remote transformations per month free and charges by unique transformation after that; repeat requests for the same transformation in a calendar month do not add transformation usage. Keenpix charges for optimized response bytes returned by its application; upstream edge hits do not reach that meter. The lower-cost model depends on variant count, cache behavior, and bytes delivered.',
+      a: 'No. Cloudflare gives 5,000 unique remote transformations per month free and charges by unique transformation after that; repeat requests for the same transformation in a calendar month do not add transformation usage. Keenpix charges for optimized managed delivery across its edge and application. The lower-cost model depends on variant count, cache behavior, and bytes delivered.',
     },
     {
       q: 'Can Keenpix replace Cloudflare Images storage?',

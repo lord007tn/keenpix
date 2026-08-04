@@ -1,11 +1,13 @@
 import { checkout, polar, portal, webhooks } from '@polar-sh/better-auth'
 import { upsertSubscriptionAddon } from '@/data-access/subscription-addons'
 import {
+  countFoundingCustomers,
   upsertSubscription,
   upsertSubscriptionWithCustomer,
 } from '@/data-access/subscriptions'
 import { env } from '@/env/server'
 import { notifyPaymentIssue } from '@/lib/billing/alerts'
+import { FOUNDING_CUSTOMER_LIMIT } from '@/lib/billing/plans'
 import { errorContext, logger } from '@/lib/logger/logger'
 import { listCheckoutProducts } from './polar-checkout-products'
 import { createPolarClient } from './polar-client'
@@ -82,7 +84,15 @@ export function buildPolarPlugin() {
     return null
   }
   const checkoutPlugin = checkout({
-    products: () => listCheckoutProducts(client),
+    products: async () => {
+      const claimed = await countFoundingCustomers().catch(
+        () => FOUNDING_CUSTOMER_LIMIT,
+      )
+      return listCheckoutProducts(
+        client,
+        claimed < FOUNDING_CUSTOMER_LIMIT ? 'founding' : 'standard',
+      )
+    },
     successUrl: env.POLAR_SUCCESS_URL ?? SUCCESS_URL,
     authenticatedUsersOnly: true,
   })

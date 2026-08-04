@@ -55,6 +55,7 @@ interface AlertableSubscription {
   currentPeriodStart: Date | null
   organization: { name: string }
   orgId: string
+  overagePerGbCents: number
   plan: string
   status: string
 }
@@ -90,18 +91,20 @@ export function usageAlertsFor(
     return alerts
   }
   const included = plan.includedBandwidthBytes
+  const overagePerGbCents =
+    sub.overagePerGbCents > 0 ? sub.overagePerGbCents : plan.overagePerGbCents
   const overageBytes = Math.max(0, deliveredBytes - included)
   if (overageBytes > 0) {
     alerts.push({
       kind: 'usage_100',
-      subject: `Keenpix: ${org} used all included bandwidth this period`,
-      text: `${org} has delivered ${humanBytes(deliveredBytes)} this period — past the ${humanBytes(included)} included in your ${plan.name} plan. Additional delivery keeps serving and is billed at $${(plan.overagePerGbCents / 100).toFixed(2)}/GB at the end of the billing period.`,
+      subject: `Keenpix: ${org} used all included delivery this period`,
+      text: `${org} has delivered ${humanBytes(deliveredBytes)} this period — past the ${humanBytes(included)} included in your ${plan.name} plan. Additional delivery keeps serving and is billed at $${(overagePerGbCents / 100).toFixed(2)}/GB at the end of the billing period.`,
     })
   } else if (deliveredBytes >= included * 0.8) {
     alerts.push({
       kind: 'usage_80',
-      subject: `Keenpix: ${org} used 80% of its included bandwidth`,
-      text: `${org} has delivered ${humanBytes(deliveredBytes)} of the ${humanBytes(included)} included in your ${plan.name} plan this period. Past the allowance, delivery is billed at $${(plan.overagePerGbCents / 100).toFixed(2)}/GB.`,
+      subject: `Keenpix: ${org} used 80% of its included delivery`,
+      text: `${org} has delivered ${humanBytes(deliveredBytes)} of the ${humanBytes(included)} included in your ${plan.name} plan this period. Past the allowance, delivery is billed at $${(overagePerGbCents / 100).toFixed(2)}/GB.`,
     })
   }
   return alerts

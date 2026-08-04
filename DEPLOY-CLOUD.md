@@ -13,9 +13,10 @@ the CLOUD MODE section of `.env.example`.
 - **clickhouse** — advanced analytics + full-history logs (advanced tier).
 - **maxio** — S3-compatible shared image cache. **Prefer Cloudflare R2** in
   production: point `KEENPIX_CACHE_S3_*` at your R2 bucket and delete this service.
-- **usage-cron** — hourly `POST /api/internal/billing/report-usage` (reports
-  delivered GB to Polar for overage billing). In Coolify, use a native Scheduled
-  Task instead.
+- **usage-cron** — hourly `POST /api/internal/billing/report-usage` (captures
+  project-attributed Cloudflare edge delivery, combines it with application
+  responses without double-counting, and reports managed-delivery GB to Polar).
+  In Coolify, use a native Scheduled Task instead.
 
 ## One-time setup
 
@@ -26,16 +27,24 @@ the CLOUD MODE section of `.env.example`.
    `EMAIL_PROVIDER=resend` + `RESEND_API_KEY` + `RESEND_FROM`. SMTP:
    `EMAIL_PROVIDER=smtp` + `SMTP_HOST` + `SMTP_FROM_EMAIL` (+ auth).
 3. **Polar (production org)** —
-   - Create the 3 monthly products (basic/pro/business) with metadata
-     `plan`, `interval`, `included_gb`, `overage_per_gb_cents`.
+   - Keep two monthly product sets for basic/pro/business: `founding` and
+     `standard`. Each product carries `plan`, `interval`, `pricing_phase`,
+     `included_gb`, and `overage_per_gb_cents`. The application exposes the
+     founding set until 25 real Polar subscriptions have become active, then
+     switches checkout to the standard $9/$29/$69 set. Trials and local admin
+     grants never claim a founding slot, and churn does not reopen one.
      Set `interval=month`. Archive any older annual products: do not delete them,
      but do not leave public annual checkout links active. Annual checkout is
      intentionally disabled until monthly allowance resets can be reconciled
      with Polar's annual usage period.
-   - Create the `Bandwidth Delivered` meter (sum of `gb` on `bandwidth_delivered`
-     events) and, per plan, a `meter_credit` benefit (units = included GB) + a
-     `metered_unit` overage price on each product. (Scripts used in sandbox:
-     `scripts`/scratchpad `create-meter.mjs`, `overage-setup.mjs`.)
+   - Configure the `Managed Image Delivery` meter (sum of `gb` on
+     `bandwidth_delivered` events), the three fixed monthly prices, their
+     metered overages, and catalog metadata with
+     `pnpm billing:configure-catalog -- --server=production`. Inspect the dry
+     run, then repeat it with `--apply`. The command migrates the legacy three
+     products to the founding set and creates/verifies the three standard
+     products. Per plan, keep one `meter_credit` benefit whose units equal the
+     included GB and attach it to both pricing phases.
    - Create a webhook endpoint → `https://keenpix.com/api/auth/polar/webhooks`
      (events: `subscription.created`, `subscription.active`,
      `subscription.updated`, `subscription.canceled`,
@@ -48,9 +57,9 @@ the CLOUD MODE section of `.env.example`.
      and acknowledges sandbox delivery; it deliberately cannot sync production
      entitlements. Subscribe it to the same six subscription events for callback
      parity. Never reuse `POLAR_WEBHOOK_SECRET` for it.
-   - If the Polar dashboard cannot attach existing Meter Credits benefits to
-     products, run a dry check inside the cloud app container, then apply only
-     after it identifies exactly three monthly products and three benefits:
+   - To verify and attach the included managed-delivery credits, run a dry check
+     inside the cloud app container, then apply only after it identifies exactly
+     six monthly products and three benefits:
      `pnpm billing:configure-benefits -- --server=production`, followed by the
      same command with `--apply`. The script preserves any existing benefits,
      refuses ambiguous catalogs, and never prints the access token.
@@ -94,4 +103,5 @@ run `pnpm tsx scripts/backfill-clickhouse.ts` once so ClickHouse has history.
 - On Pro or Business, add a custom domain, create the displayed CNAME record,
   refresh until DNS and TLS are active, then load `/img/<source-url>` on that
   hostname without `?project=`.
-- After an hour (or trigger the cron), delivered GB shows on the Polar meter.
+- After an hour (or trigger the cron), application responses plus successful
+  Cloudflare edge hits show on the Polar managed-delivery meter exactly once.

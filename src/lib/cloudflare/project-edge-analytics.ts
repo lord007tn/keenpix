@@ -106,15 +106,3 @@ export async function fetchProjectEdgeHourly(
         Number.isInteger(row.status),
     )
 }
-
-export async function verifyProjectEdgeAccess(
-  settings: EffectiveCloudflareSettings,
-) {
-  if (!settings.accountId) {
-    return
-  }
-  await fetchProjectEdgeHourly(settings, {
-    since: dayjs().subtract(5, 'minute').toDate(),
-    until: dayjs().toDate(),
-  })
-}

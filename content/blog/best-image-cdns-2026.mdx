@@ -30,7 +30,7 @@ Our method is intentionally narrow: compare published self-service pricing, bill
 | Bunny Optimizer | Sites that want a flat optimizer fee plus CDN bandwidth | $9.50/mo per site + CDN bandwidth | Flat fee + bandwidth | No |
 | Vercel Image Optimization | Small Next.js apps on Vercel | Included in Pro, usage-billed | Transforms + cache reads + cache writes | No |
 | imgproxy | Maximum control, zero SaaS dependency | Free (Apache-2.0); Pro is quote-based | None (self-host) | Yes (Apache-2.0) |
-| Keenpix *(our product)* | Application-bandwidth billing behind your existing CDN | $9/mo (100 GB) | Bytes returned by Keenpix | Yes (AGPL) |
+| Keenpix *(our product)* | Low-cost managed image delivery with a self-host option | $9/mo (100 GB) | Optimized managed delivery | Yes (AGPL) |
 
 Now the details, grouped by camp — because "which image CDN is best" is really four different questions depending on which camp you are shopping in.
 
@@ -146,11 +146,11 @@ imgproxy is a mature open-source image processor with an Apache-2.0-licensed cor
 
 ### Keenpix — *disclosure: this is our product*
 
-**Best for:** developers who want unlimited transforms billed on bytes returned by Keenpix, behind the CDN they already run, with a self-host escape hatch.
+**Best for:** developers who want unlimited transforms and teammates billed on optimized managed delivery, with a self-host escape hatch.
 
-Keenpix is an image optimization and delivery layer: point a URL like `/img/<origin-url>?w=800&fmt=auto` at images on origins you already have (S3, R2, your own servers), and it handles documented resize, crop, quality, AVIF/WebP negotiation, and image modifiers with disk+memory caching and stale-while-revalidate. It is designed to sit **behind** your existing CDN, not replace it. Security is allowlist-based — per-project origin-host allowlists and SSRF hardening instead of public API keys, with optional HMAC-signed URLs. Analytics (application response bytes, bandwidth saved, cache hit rate, format mix, latency percentiles, live request logs) are included on every tier, not gated to enterprise.
+Keenpix is an image optimization and delivery layer: point a URL like `/img/<origin-url>?w=800&fmt=auto` at images on origins you already have (S3, R2, your own servers), and it handles documented resize, crop, quality, AVIF/WebP negotiation, and image modifiers with disk+memory caching and stale-while-revalidate. Security is allowlist-based — per-project origin-host allowlists and SSRF hardening instead of public API keys, with optional HMAC-signed URLs. Analytics (managed delivery, bandwidth saved, cache hit rate, format mix, latency percentiles, live request logs) are included on every tier, not gated to enterprise.
 
-**Pricing (verified July 16, 2026):** Basic $9/month for 100 GB returned by the Keenpix application, then $0.08/GB. Pro $19/month for 400 GB, then $0.06/GB. Business $39/month for 1 TB, then $0.05/GB. Transformations are unlimited — [read the exact meter boundary](/blog/transparent-image-cdn-pricing) or [see current plan details](/pricing). An upstream Cloudflare edge `HIT` does not reach Keenpix and is not added to billing; optional Cloudflare analytics can report edge traffic separately. Paid delivery continues and Polar bills accumulated overage at the end of the billing period. The engine is available under AGPL-3.0 for [self-hosting](/docs/self-hosting).
+**Pricing (verified August 4, 2026):** Basic is $9/month for 100 GB of optimized managed delivery, then $0.08/GB. Pro is $19/month for 400 GB, then $0.06/GB. Business is $39/month for 1 TB, then $0.05/GB. Managed Cloudflare edge hits, Keenpix cache hits, and new transforms each count once; transformations and team members are unlimited. [Read the exact meter boundary](/blog/transparent-image-cdn-pricing) or [see current plan details](/pricing). Paid delivery continues and Polar bills accumulated overage at the end of the billing period. The engine is available under AGPL-3.0 for [self-hosting](/docs/self-hosting).
 
 **The honest cons, same standard as everyone above:** there is no video support, DAM, storage, or upload library — Keenpix transforms and returns images from origins you already have. It is a younger product than the established platforms above, and public customer evidence is still limited. Managed custom delivery domains require Pro or Business. Depending on region and traffic shape, Bunny's flat optimizer fee plus CDN bandwidth can cost less. If those constraints matter, evaluate the other camps above.
 
