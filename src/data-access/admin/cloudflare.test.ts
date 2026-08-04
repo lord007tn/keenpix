@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { env, findUnique } = vi.hoisted(() => ({
   env: {
+    CLOUDFLARE_ACCOUNT_ID: 'environment-account',
     CLOUDFLARE_API_TOKEN: 'environment-token',
     CLOUDFLARE_HOST: 'keenpix.com',
     CLOUDFLARE_ZONE_ID: 'environment-zone',
@@ -28,6 +29,7 @@ describe('getPublicCloudflareSettings', () => {
   beforeEach(() => {
     findUnique.mockReset()
     env.CLOUDFLARE_API_TOKEN = 'environment-token'
+    env.CLOUDFLARE_ACCOUNT_ID = 'environment-account'
     env.CLOUDFLARE_HOST = 'keenpix.com'
     env.CLOUDFLARE_ZONE_ID = 'environment-zone'
   })
@@ -41,6 +43,7 @@ describe('getPublicCloudflareSettings', () => {
     })
 
     await expect(getPublicCloudflareSettings()).resolves.toEqual({
+      accountId: 'environment-account',
       enabled: true,
       host: 'keenpix.com',
       source: 'environment',
@@ -58,6 +61,7 @@ describe('getPublicCloudflareSettings', () => {
     })
 
     await expect(getPublicCloudflareSettings()).resolves.toEqual({
+      accountId: 'environment-account',
       enabled: true,
       host: 'images.keenpix.com',
       source: 'database',

@@ -3,6 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const aggregateRollupSummary = vi.hoisted(() => vi.fn())
 const groupRollupsByBucket = vi.hoisted(() => vi.fn())
 const getOrgPlan = vi.hoisted(() => vi.fn())
+const getEdgeCacheStats = vi.hoisted(() => vi.fn())
+
+vi.mock('@/actions/analytics', () => ({ getEdgeCacheStats }))
 
 vi.mock('@/data-access/analytics-aggregates', () => ({
   aggregateRollupSummary,
@@ -25,6 +28,7 @@ describe('getCustomerUsageSeries', () => {
     aggregateRollupSummary.mockResolvedValue({})
     groupRollupsByBucket.mockResolvedValue([])
     getOrgPlan.mockResolvedValue({ historyDays: 365 })
+    getEdgeCacheStats.mockResolvedValue(null)
   })
 
   afterEach(() => {

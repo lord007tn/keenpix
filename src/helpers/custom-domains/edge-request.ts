@@ -2,9 +2,11 @@ import { timingSafeEqual } from 'node:crypto'
 
 const HOSTNAME_RE =
   /^(?=.{4,253}$)(?!-)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/
+const PROJECT_ID_RE = /^[a-z0-9][a-z0-9_-]{7,127}$/
 const EDGE_CACHE_HOST_PARAM = '__keenpix_edge_host'
+export const EDGE_PROJECT_HEADER = 'x-keenpix-edge-project'
 
-export function getTrustedCustomDomainHostname(
+export function getTrustedEdgeRequest(
   request: Request,
   expectedSecret?: string,
 ) {
@@ -23,7 +25,20 @@ export function getTrustedCustomDomainHostname(
   ) {
     return
   }
-  return hostname
+  const requestedProjectId = request.headers.get(EDGE_PROJECT_HEADER) ?? ''
+  return {
+    hostname,
+    projectId: PROJECT_ID_RE.test(requestedProjectId)
+      ? requestedProjectId
+      : undefined,
+  }
+}
+
+export function getTrustedCustomDomainHostname(
+  request: Request,
+  expectedSecret?: string,
+) {
+  return getTrustedEdgeRequest(request, expectedSecret)?.hostname
 }
 
 export function validateCustomDomainCachePartition(

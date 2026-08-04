@@ -13,6 +13,11 @@ import {
   platformEdgeCoverageStart,
 } from '@/data-access/edge-rollups'
 import {
+  getProjectEdgeCaptureState,
+  listProjectEdgeRollups,
+  projectEdgeCoverageStart,
+} from '@/data-access/project-edge-rollups'
+import {
   getProject,
   listProjects,
   resolveProjectId,
@@ -44,7 +49,10 @@ import type {
   EdgeCacheStats,
 } from '@/shared/types'
 import { withAnalyticsSource } from './analytics-source'
-import { captureConfiguredEdgeHistory } from './edge-history'
+import {
+  captureConfiguredEdgeHistory,
+  captureConfiguredProjectEdgeHistory,
+} from './edge-history'
 
 // Every metric is a GROUP BY / aggregate, so the store returns a few pre-summed
 // rows instead of the full per-(hour × project × host × country × path × format
@@ -159,6 +167,7 @@ const lastCaptureAt = new Map<string, number>()
 // refresh, so this lets it report "still preparing" until the fetch lands — the
 // client polls on that flag instead of needing a manual reload to see fresh data.
 const captureInFlight = new Map<string, Promise<void>>()
+const projectCaptureInFlight = new Map<string, Promise<void>>()
 
 // Start a rollup capture unless one is already running or the throttle window
 // hasn't elapsed. Returns the in-flight promise (await it to capture
@@ -186,12 +195,38 @@ function startEdgeCapture(
   return run
 }
 
+function startProjectEdgeCapture(
+  settings: EffectiveCloudflareSettings,
+): Promise<void> | null {
+  if (!settings.accountId) {
+    return null
+  }
+  const key = `project:${settings.accountId}`
+  const running = projectCaptureInFlight.get(key)
+  if (running) {
+    return running
+  }
+  const last = lastCaptureAt.get(key)
+  if (last && Date.now() - last < CAPTURE_THROTTLE_MS) {
+    return null
+  }
+  lastCaptureAt.set(key, Date.now())
+  const run = captureConfiguredProjectEdgeHistory(settings)
+    .then(() => undefined)
+    .finally(() => {
+      projectCaptureInFlight.delete(key)
+    })
+  projectCaptureInFlight.set(key, run)
+  return run
+}
+
 // Edge cache stats for the selected range, reconstructed from our persisted
 // rollups. Split out of the page payload so a transient Cloudflare round-trip
 // never blocks the render — the client fetches it separately. `edgeCovered` is
 // false when the window reaches before our captured history (so the UI can show
 // the edge data without reconciling misleading totals).
 export async function getEdgeCacheStats(
+  orgId: string | undefined,
   input: z.output<typeof edgeCacheStatsSchema>,
   viewerIsAdmin: boolean,
 ): Promise<{
@@ -203,13 +238,8 @@ export async function getEdgeCacheStats(
   edgeRefreshing: boolean
   edgeStatus: 'unconfigured' | 'ready' | 'ok_empty' | 'partial' | 'failed'
 }> {
-  // The edge/CDN dataset is whole-zone — aggregate across every tenant, not
-  // per-tenant. In cloud that makes it an operator-only view: the platform owns
-  // the zone, so a regular tenant must never see zone-wide figures (it would leak
-  // cross-tenant traffic) nor be prompted to connect Cloudflare. The platform
-  // super-admin still sees it as the aggregated instance view. Self-host stays
-  // open — the single operator owns the whole instance and zone alike.
-  if (isCloud() && !viewerIsAdmin) {
+  const cloudflare = await getEffectiveCloudflareSettings()
+  if (!cloudflare) {
     return {
       edge: null,
       edgeConfigured: false,
@@ -220,8 +250,78 @@ export async function getEdgeCacheStats(
       edgeStatus: 'unconfigured',
     }
   }
-  const cloudflare = await getEffectiveCloudflareSettings()
-  if (!cloudflare) {
+
+  // Tenant dashboards use trusted Worker telemetry, scoped by org/project in
+  // Postgres. The legacy zone dataset remains only for the platform-wide admin
+  // reconciliation and for single-tenant self-hosted installs.
+  if (orgId && cloudflare.accountId) {
+    try {
+      const resolvedProject = await resolveProjectId(input.project, orgId)
+      const projectId = input.project
+        ? (resolvedProject ?? '__invalid_project_scope__')
+        : undefined
+      let captureState = await getProjectEdgeCaptureState()
+      let refreshing = false
+      if (captureState?.lastSuccessAt) {
+        const capture = startProjectEdgeCapture(cloudflare)
+        if (capture) {
+          capture.catch(() => {
+            // Best-effort refresh; serve the durable scoped history below.
+          })
+          refreshing = true
+        }
+      } else {
+        await startProjectEdgeCapture(cloudflare)
+        captureState = await getProjectEdgeCaptureState()
+      }
+      const coverageStart = await projectEdgeCoverageStart({ orgId, projectId })
+      const window = historicalRollupBucketing({ ...input, coverageStart })
+      const rows = await listProjectEdgeRollups({
+        gte: window.gte,
+        lt: window.lt,
+        orgId,
+        projectId,
+      })
+      const covered = captureState
+        ? hasContinuousEdgeCoverage(
+            [captureState],
+            window.gte,
+            window.lt,
+            CAPTURE_THROTTLE_MS + 60_000,
+          )
+        : false
+      let edgeStatus: 'ready' | 'ok_empty' | 'partial' | 'failed' = 'partial'
+      if (captureState?.status === 'failed') {
+        edgeStatus = 'failed'
+      } else if (covered) {
+        edgeStatus = rows.length === 0 ? 'ok_empty' : 'ready'
+      }
+      return {
+        edge: reconstructEdgeStats(rows, window),
+        edgeConfigured: true,
+        edgeCovered: covered,
+        edgeError: captureState?.lastError ?? null,
+        edgeLastSuccessAt: captureState?.lastSuccessAt?.toISOString() ?? null,
+        edgeRefreshing: refreshing,
+        edgeStatus,
+      }
+    } catch (error) {
+      return {
+        edge: null,
+        edgeConfigured: true,
+        edgeCovered: false,
+        edgeError:
+          error instanceof Error
+            ? error.message
+            : 'Cloudflare project analytics failed',
+        edgeLastSuccessAt: null,
+        edgeRefreshing: false,
+        edgeStatus: 'failed',
+      }
+    }
+  }
+
+  if (orgId && isCloud() && !viewerIsAdmin) {
     return {
       edge: null,
       edgeConfigured: false,

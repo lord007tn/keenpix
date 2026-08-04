@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import worker, { createOriginRequest } from './index'
+import worker, {
+  classifyDelivery,
+  createOriginRequest,
+  getFirstPartyDelivery,
+} from './index'
 
 const env = {
   APP_ORIGIN: 'https://keenpix.com',
+  EDGE_ANALYTICS: { writeDataPoint: () => undefined },
   EDGE_SECRET: 'a-secure-edge-secret-that-is-long-enough',
+  FIRST_PARTY_HOSTNAME: 'cdn.keenpix.com',
 }
 
 describe('custom-domain edge Worker', () => {
@@ -20,6 +26,30 @@ describe('custom-domain edge Worker', () => {
       'images.customer.com',
     )
     expect(result.headers.get('x-keenpix-edge-secret')).toBe(env.EDGE_SECRET)
+  })
+
+  it('adds a trusted project hint and rewrites first-party delivery paths', () => {
+    const result = createOriginRequest(
+      new Request('https://cdn.keenpix.com/p/project_123/img/source?q=80'),
+      env,
+    )
+
+    expect(result.url).toBe(
+      'https://keenpix.com/img/source?q=80&__keenpix_edge_host=cdn.keenpix.com&project=project_123',
+    )
+    expect(result.headers.get('x-keenpix-edge-project')).toBe('project_123')
+    expect(
+      getFirstPartyDelivery(
+        new URL('https://cdn.keenpix.com/p/project_123/img/source'),
+        'cdn.keenpix.com',
+      ),
+    ).toEqual({ projectId: 'project_123', originPathname: '/img/source' })
+    expect(
+      getFirstPartyDelivery(
+        new URL('https://other.example/p/project_123/img/source'),
+        'cdn.keenpix.com',
+      ),
+    ).toBeUndefined()
   })
 
   it('overwrites spoofed edge headers', () => {
@@ -66,5 +96,12 @@ describe('custom-domain edge Worker', () => {
 
     expect(response.status).toBe(405)
     expect(response.headers.get('allow')).toBe('GET, HEAD')
+  })
+
+  it('classifies the mutually exclusive delivery stages', () => {
+    expect(classifyDelivery(200, 'hit', 'miss')).toBe('edge')
+    expect(classifyDelivery(200, 'miss', 'hit')).toBe('cache')
+    expect(classifyDelivery(200, 'miss', 'miss')).toBe('optimized')
+    expect(classifyDelivery(404, 'hit', 'hit')).toBe('failed')
   })
 })

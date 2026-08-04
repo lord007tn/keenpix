@@ -4,7 +4,9 @@ import {
   verifyTransformSignature,
 } from '@/lib/transform-signing/signing'
 import {
+  EDGE_PROJECT_HEADER,
   getTrustedCustomDomainHostname,
+  getTrustedEdgeRequest,
   validateCustomDomainCachePartition,
 } from './edge-request'
 
@@ -40,6 +42,29 @@ describe('trusted custom-domain edge request', () => {
 
     expect(getTrustedCustomDomainHostname(spoofed, secret)).toBeUndefined()
     expect(getTrustedCustomDomainHostname(malformed, secret)).toBeUndefined()
+  })
+
+  it('accepts a project hint only on an authenticated edge request', () => {
+    const trusted = new Request('https://keenpix.com/img/source', {
+      headers: {
+        'x-keenpix-custom-host': 'project.cdn.keenpix.com',
+        'x-keenpix-edge-secret': secret,
+        [EDGE_PROJECT_HEADER]: 'project_123',
+      },
+    })
+    const spoofed = new Request('https://keenpix.com/img/source', {
+      headers: {
+        'x-keenpix-custom-host': 'project.cdn.keenpix.com',
+        'x-keenpix-edge-secret': 'forged',
+        [EDGE_PROJECT_HEADER]: 'victim_123',
+      },
+    })
+
+    expect(getTrustedEdgeRequest(trusted, secret)).toEqual({
+      hostname: 'project.cdn.keenpix.com',
+      projectId: 'project_123',
+    })
+    expect(getTrustedEdgeRequest(spoofed, secret)).toBeUndefined()
   })
 })
 

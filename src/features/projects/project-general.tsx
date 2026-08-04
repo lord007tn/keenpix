@@ -95,7 +95,7 @@ export function ProjectGeneral({
         <CardContent className="flex flex-col gap-6">
           <SettingRow
             className="sm:items-start"
-            description="Use this in your transform URLs: /img/<source-url>?project=<id>"
+            description="Cloud delivery: https://cdn.keenpix.com/p/<project-id>/img/<source-url>"
             label="Project ID"
           >
             <div className="flex items-center gap-2">

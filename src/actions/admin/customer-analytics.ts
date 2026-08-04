@@ -1,4 +1,5 @@
 import dayjs from 'dayjs'
+import { getEdgeCacheStats } from '@/actions/analytics'
 import {
   aggregateRollupSummary,
   groupRollupsByBucket,
@@ -26,9 +27,10 @@ export async function getCustomerUsageSeries(
   const range = limitHistorySearch(input, maxHistoryDays)
   const bucketing = historicalRollupBucketing(range)
   const opts = { gte: bucketing.gte, lt: bucketing.lt, orgId }
-  const [summaryAgg, buckets] = await Promise.all([
+  const [summaryAgg, buckets, edge] = await Promise.all([
     aggregateRollupSummary(opts),
     groupRollupsByBucket(opts),
+    getEdgeCacheStats(orgId, range, true).catch(() => null),
   ])
   return {
     ...range,
@@ -39,5 +41,6 @@ export async function getCustomerUsageSeries(
     },
     summary: summarizeAgg(summaryAgg),
     series: timeSeriesFromBuckets(buckets, bucketing),
+    edge,
   }
 }

@@ -6,6 +6,7 @@ import { DEFAULT_CLOUDFLARE_ID } from './constants'
 const TRAILING_DOT_RE = /\.$/
 
 export interface CloudflareSettingsInput {
+  accountId?: string | null
   apiToken?: string | null
   enabled?: boolean
   host?: string | null
@@ -13,6 +14,7 @@ export interface CloudflareSettingsInput {
 }
 
 export interface PublicCloudflareSettings {
+  accountId: string
   enabled: boolean
   host: string
   source: 'database' | 'environment' | 'none'
@@ -21,6 +23,7 @@ export interface PublicCloudflareSettings {
 }
 
 export interface EffectiveCloudflareSettings {
+  accountId?: string
   apiToken: string
   enabled: boolean
   host?: string
@@ -48,6 +51,7 @@ function envCloudflareSettings(): EffectiveCloudflareSettings | undefined {
   }
   return {
     enabled: true,
+    accountId: env.CLOUDFLARE_ACCOUNT_ID,
     apiToken: env.CLOUDFLARE_API_TOKEN,
     zoneId: env.CLOUDFLARE_ZONE_ID,
     host: normalizeCloudflareHost(env.CLOUDFLARE_HOST),
@@ -62,6 +66,7 @@ export async function getPublicCloudflareSettings(): Promise<PublicCloudflareSet
     return {
       source: 'database',
       enabled: true,
+      accountId: db.accountId ?? env.CLOUDFLARE_ACCOUNT_ID ?? '',
       zoneId: db.zoneId ?? '',
       host: normalizeCloudflareHost(db.host) ?? '',
       tokenSet: true,
@@ -72,6 +77,7 @@ export async function getPublicCloudflareSettings(): Promise<PublicCloudflareSet
     return {
       source: 'environment',
       enabled: true,
+      accountId: envSettings.accountId ?? '',
       zoneId: envSettings.zoneId,
       host: envSettings.host ?? '',
       tokenSet: true,
@@ -79,6 +85,7 @@ export async function getPublicCloudflareSettings(): Promise<PublicCloudflareSet
   }
   return {
     source: 'none',
+    accountId: db?.accountId ?? env.CLOUDFLARE_ACCOUNT_ID ?? '',
     enabled: db?.enabled ?? false,
     zoneId: db?.zoneId ?? '',
     host: db?.host ?? '',
@@ -103,6 +110,10 @@ export async function updateCloudflareSettings(
   const data = {
     enabled: input.enabled ?? current?.enabled ?? false,
     apiToken,
+    accountId:
+      input.accountId === undefined
+        ? current?.accountId
+        : input.accountId || null,
     zoneId: input.zoneId === undefined ? current?.zoneId : input.zoneId || null,
     host:
       input.host === undefined
@@ -124,6 +135,7 @@ export async function getEffectiveCloudflareSettings() {
   if (db?.enabled && db.apiToken && db.zoneId) {
     return {
       enabled: true,
+      accountId: db.accountId ?? env.CLOUDFLARE_ACCOUNT_ID,
       apiToken: decryptSecret(db.apiToken),
       zoneId: db.zoneId,
       host: normalizeCloudflareHost(db.host),

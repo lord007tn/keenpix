@@ -277,10 +277,9 @@ function AnalyticsPage() {
   const navigate = useNavigate({ from: Route.fullPath })
   const { cloud, user } = useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
-  // Zone-wide edge traffic stays hidden from ordinary cloud tenants because it
-  // cannot be attributed to one organization. An impersonating operator may
-  // see it for support/reconciliation, with the whole-zone scope called out.
-  const canSeeEdge = !cloud || Boolean(user.impersonatedBy)
+  // Worker telemetry is attributed by a trusted project marker, so Edge is safe
+  // for ordinary tenants as well as operators.
+  const canSeeEdge = true
   const { currentProject, isAll, setProject } = useProject()
   const { data: billing } = useQuery({
     enabled: cloud,
@@ -317,7 +316,7 @@ function AnalyticsPage() {
     edgeRefreshing,
     edgePending,
     edgeError,
-  } = useEdgeStats(canSeeEdge ? boundedWindow : undefined)
+  } = useEdgeStats({ ...boundedWindow, project: search.project })
   const [view, setView] = useState<AreaView>('requests')
   const [lens, setLens] = useState<ChartLens>('funnel')
   const [topMetric, setTopMetric] = useState<'requests' | 'bytes'>('requests')
@@ -490,10 +489,10 @@ function AnalyticsPage() {
       outcome?.length ||
       status?.length,
   )
-  // Edge is zone-wide /img/*, so it only reconciles with origin at all-projects
-  // scope with no domain filter — and only over a window our captured history
-  // fully covers (edgeCovered).
-  const edgeScopeOk = isAll && !hasAnalyticsFilters
+  // The Worker captures project ownership, but not origin request dimensions
+  // such as source domain, format, outcome, or status. Project filtering can be
+  // reconciled exactly; those deeper filters remain origin-only.
+  const edgeScopeOk = !hasAnalyticsFilters
   const edgeGated =
     edgeConfigured && edge !== null && edgeScopeOk && edgeCovered
   const edgeReady = edgeConfigured && edge !== null && edgeScopeOk
@@ -526,8 +525,7 @@ function AnalyticsPage() {
       edgeNote =
         'Cloudflare edge history is incomplete for this range; available edge deliveries are included in the totals.'
     } else {
-      edgeNote =
-        'Edge is whole-zone only — switch to All projects with no filters to see the source split.'
+      edgeNote = 'Clear the advanced filters to reconcile Edge with origin.'
     }
   }
 
@@ -543,7 +541,7 @@ function AnalyticsPage() {
   if (activeLens === 'compare') {
     lensDescription = `Edge vs origin, overlaid · ${windowDescription}`
   } else if (activeLens === 'edge') {
-    lensDescription = `Edge, zone-wide · ${windowDescription}`
+    lensDescription = `Edge delivery · ${windowDescription}`
   } else if (edgeReady) {
     lensDescription = `Edge → Cache → Optimized · ${windowDescription}`
   } else {
@@ -595,13 +593,10 @@ function AnalyticsPage() {
           ready={edgeReady}
           summary={data.summary}
         />
-        {canSeeEdge ? (
-          <p className="text-muted-foreground text-xs">
-            {cloud
-              ? 'Edge totals are visible in this impersonated operator view and remain zone-wide. Customer, project, and filter breakdowns use origin requests only.'
-              : 'Edge totals are available because this is a single-tenant deployment. Project breakdowns and filters use origin requests only.'}
-          </p>
-        ) : null}
+        <p className="text-muted-foreground text-xs">
+          Edge totals are scoped to this organization and selected project.
+          Advanced origin dimensions remain origin-only.
+        </p>
       </section>
 
       <Card>

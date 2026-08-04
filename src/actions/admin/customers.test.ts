@@ -2,19 +2,21 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const removeComplimentarySubscription = vi.hoisted(() => vi.fn())
 const setComplimentarySubscription = vi.hoisted(() => vi.fn())
+const listCustomerAccounts = vi.hoisted(() => vi.fn())
+const addCustomerFinance = vi.hoisted(() => vi.fn())
 
 vi.mock('@/data-access/admin/customers', () => ({
-  getCustomerAccount: vi.fn(),
-  listCustomerAccounts: vi.fn(),
+  listCustomerAccounts,
   setOrgSuspension: vi.fn(),
 }))
 vi.mock('@/data-access/admin/subscriptions', () => ({
   removeComplimentarySubscription,
   setComplimentarySubscription,
 }))
-vi.mock('./finance', () => ({ addCustomerFinance: vi.fn() }))
+vi.mock('./finance', () => ({ addCustomerFinance }))
 
-const { updateCustomerComplimentaryPlan } = await import('./customers')
+const { getCustomerAccountById, updateCustomerComplimentaryPlan } =
+  await import('./customers')
 
 afterEach(() => {
   vi.clearAllMocks()
@@ -58,5 +60,20 @@ describe('updateCustomerComplimentaryPlan', () => {
       plan: 'pro',
     })
     expect(removeComplimentarySubscription).not.toHaveBeenCalled()
+  })
+})
+
+describe('getCustomerAccountById', () => {
+  it('preserves the platform-wide fixed-cost allocation on customer detail', async () => {
+    const accounts = [{ id: 'org_1' }, { id: 'org_2' }]
+    const financed = [
+      { id: 'org_1', finance30d: { allocatedFixedCostCents: 300 } },
+      { id: 'org_2', finance30d: { allocatedFixedCostCents: 700 } },
+    ]
+    listCustomerAccounts.mockResolvedValue(accounts)
+    addCustomerFinance.mockResolvedValue(financed)
+
+    await expect(getCustomerAccountById('org_2')).resolves.toBe(financed[1])
+    expect(addCustomerFinance).toHaveBeenCalledWith(accounts)
   })
 })

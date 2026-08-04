@@ -28,7 +28,12 @@ describe('platform revenue reporting', () => {
       {
         id: 'paid',
         name: 'Paid',
-        billing: { source: 'polar', status: 'active', amountCents: 1900 },
+        billing: {
+          source: 'polar',
+          status: 'active',
+          amountCents: 1900,
+          mrrCents: 2400,
+        },
         effectivePlan: { plan: 'pro' },
         suspendedAt: null,
       },
@@ -39,6 +44,7 @@ describe('platform revenue reporting', () => {
           source: 'admin_grant',
           status: 'active',
           amountCents: 0,
+          mrrCents: 0,
         },
         effectivePlan: { plan: 'business' },
         suspendedAt: null,
@@ -46,14 +52,24 @@ describe('platform revenue reporting', () => {
       {
         id: 'canceled',
         name: 'Canceled',
-        billing: { source: 'polar', status: 'canceled', amountCents: 3900 },
+        billing: {
+          source: 'polar',
+          status: 'canceled',
+          amountCents: 3900,
+          mrrCents: 0,
+        },
         effectivePlan: null,
         suspendedAt: null,
       },
       {
         id: 'free',
         name: 'Free',
-        billing: { source: 'free', status: null, amountCents: 0 },
+        billing: {
+          source: 'free',
+          status: null,
+          amountCents: 0,
+          mrrCents: 0,
+        },
         effectivePlan: null,
         suspendedAt: null,
       },
@@ -61,7 +77,7 @@ describe('platform revenue reporting', () => {
 
     const result = await getPlatformAnalytics({ range: '30d' })
 
-    expect(result.paidMrrCents).toBe(1900)
+    expect(result.paidMrrCents).toBe(2400)
     expect(result.activePaidSubscriptionCount).toBe(1)
     expect(result.complimentaryCustomerCount).toBe(1)
   })

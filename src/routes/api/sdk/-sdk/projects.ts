@@ -14,6 +14,7 @@ import {
   internalProjectSettingsPatchSchema,
   projectPrewarmSchema,
 } from '@/schemas/projects'
+import { isCloud } from '@/server/deployment'
 import type { SdkApiActivityContext } from './activity'
 import { verifySdkApiKey } from './auth'
 import { getPublicBaseUrl } from './request-url'
@@ -71,6 +72,10 @@ export async function getProjectConfiguration(
   }
 
   const publicBaseUrl = getPublicBaseUrl(request)
+  const deliveryBaseUrl = isCloud()
+    ? `https://cdn.keenpix.com/p/${project.id}`
+    : publicBaseUrl
+  const projectQuery = isCloud() ? '' : `?project=${project.id}`
 
   return json({
     configuration: {
@@ -78,8 +83,8 @@ export async function getProjectConfiguration(
       projectName: project.name,
       origin: project.origin,
       allowedOrigins: project.allowedOrigins,
-      imageBaseUrl: `${publicBaseUrl}/img`,
-      transformUrlTemplate: `${publicBaseUrl}/img/<source-url>?project=${project.id}`,
+      imageBaseUrl: `${deliveryBaseUrl}/img`,
+      transformUrlTemplate: `${deliveryBaseUrl}/img/<source-url>${projectQuery}`,
       defaults: {
         autoFormat: project.autoFormat,
         defaultQuality: project.defaultQuality,

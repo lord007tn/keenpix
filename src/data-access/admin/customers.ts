@@ -1,6 +1,7 @@
 import dayjs from 'dayjs'
 import { prisma } from '@/db'
 import type { Prisma } from '@/generated/prisma/client'
+import { CUSTOM_DOMAIN_ADDON } from '@/lib/billing/addons'
 import { getPlan } from '@/lib/billing/plans'
 
 // Operator kill-switch write: set suspendedAt/reason (suspend) or clear (both null
@@ -56,6 +57,12 @@ const customerOrgArgs = {
         updatedAt: true,
       },
     },
+    subscriptionAddons: {
+      select: {
+        kind: true,
+        status: true,
+      },
+    },
     _count: { select: { members: true, projects: true } },
   },
 } satisfies Prisma.OrganizationDefaultArgs
@@ -73,13 +80,24 @@ interface UsageRow {
   status: number
 }
 
+interface EdgeUsageRow {
+  _max: { bucketStart: Date | null }
+  _sum: { bytes: bigint | null; requests: number | null }
+  orgId: string
+  stage: string
+}
+
 function numberFromBigInt(value: bigint | number | null | undefined) {
   return Number(value ?? 0)
 }
 
 // Provider linkage is the billing-source discriminator. A null Polar id is a
 // local complimentary entitlement with zero revenue.
-function mapCustomerAccount(org: CustomerOrg, usageRows: UsageRow[]) {
+function mapCustomerAccount(
+  org: CustomerOrg,
+  usageRows: UsageRow[],
+  edgeRows: EdgeUsageRow[],
+) {
   const firstTrafficAt = usageRows[0]?._max.bucketStart ?? null
   const usage = usageRows.reduce(
     (total, row) => {
@@ -110,6 +128,28 @@ function mapCustomerAccount(org: CustomerOrg, usageRows: UsageRow[]) {
       lastTrafficAt: firstTrafficAt,
     },
   )
+  const edge = edgeRows.reduce(
+    (total, row) => {
+      // Only Worker-classified Edge responses are additive. Cache, optimized,
+      // and failed requests reached the origin and already exist in its rollup.
+      if (row.stage === 'edge') {
+        total.requests += row._sum.requests ?? 0
+        total.bandwidthBytes += numberFromBigInt(row._sum.bytes)
+      }
+      if (
+        row._max.bucketStart &&
+        (!total.lastTrafficAt || row._max.bucketStart > total.lastTrafficAt)
+      ) {
+        total.lastTrafficAt = row._max.bucketStart
+      }
+      return total
+    },
+    {
+      requests: 0,
+      bandwidthBytes: 0,
+      lastTrafficAt: edgeRows[0]?._max.bucketStart ?? null,
+    },
+  )
   const subscriptionPlan = getPlan(org.subscription?.plan)
   const subscriptionActive = org.subscription
     ? ENTITLED_SUBSCRIPTION_STATUSES.has(org.subscription.status)
@@ -121,6 +161,17 @@ function mapCustomerAccount(org: CustomerOrg, usageRows: UsageRow[]) {
       ? 'polar'
       : 'admin_grant'
   }
+  const entitledAddons = org.subscriptionAddons.filter(
+    (addon) =>
+      addon.kind === CUSTOM_DOMAIN_ADDON.kind &&
+      ENTITLED_SUBSCRIPTION_STATUSES.has(addon.status),
+  )
+  const addonAmountCents =
+    entitledAddons.length * CUSTOM_DOMAIN_ADDON.priceMonthlyUsd * 100
+  const primaryMrrCents =
+    subscriptionSource === 'polar' && subscriptionActive
+      ? (org.subscription?.amountCents ?? 0)
+      : 0
 
   return {
     id: org.id,
@@ -162,6 +213,10 @@ function mapCustomerAccount(org: CustomerOrg, usageRows: UsageRow[]) {
         subscriptionSource === 'polar'
           ? (org.subscription?.amountCents ?? 0)
           : 0,
+      addonAmountCents,
+      mrrCents: primaryMrrCents + addonAmountCents,
+      recurringChargeCount:
+        (primaryMrrCents > 0 ? 1 : 0) + entitledAddons.length,
       updatedAt: org.subscription?.updatedAt.toISOString() ?? null,
     },
     effectivePlan: effectivePlan
@@ -173,15 +228,27 @@ function mapCustomerAccount(org: CustomerOrg, usageRows: UsageRow[]) {
         }
       : null,
     usage30d: {
-      attemptedRequests: usage.attemptedRequests,
-      requests: usage.requests,
-      cachedRequests: usage.cachedRequests,
+      attemptedRequests: usage.attemptedRequests + edge.requests,
+      requests: usage.requests + edge.requests,
+      cachedRequests: usage.cachedRequests + edge.requests,
       cacheHitRate:
-        usage.requests > 0 ? usage.cachedRequests / usage.requests : 0,
-      bandwidthBytes: usage.bandwidthBytes,
-      totalBandwidthBytes: usage.totalBandwidthBytes,
+        usage.requests + edge.requests > 0
+          ? (usage.cachedRequests + edge.requests) /
+            (usage.requests + edge.requests)
+          : 0,
+      bandwidthBytes: usage.bandwidthBytes + edge.bandwidthBytes,
+      totalBandwidthBytes: usage.totalBandwidthBytes + edge.bandwidthBytes,
       bytesSaved: usage.bytesSaved,
-      lastTrafficAt: usage.lastTrafficAt?.toISOString() ?? null,
+      edgeRequests: edge.requests,
+      edgeBandwidthBytes: edge.bandwidthBytes,
+      originAttemptedRequests: usage.attemptedRequests,
+      originRequests: usage.requests,
+      originBandwidthBytes: usage.bandwidthBytes,
+      lastTrafficAt:
+        [usage.lastTrafficAt, edge.lastTrafficAt]
+          .filter((value) => value !== null)
+          .sort((a, b) => b.getTime() - a.getTime())[0]
+          ?.toISOString() ?? null,
     },
   }
 }
@@ -190,7 +257,7 @@ export type CustomerAccount = ReturnType<typeof mapCustomerAccount>
 
 export async function listCustomerAccounts() {
   const since = dayjs().subtract(CUSTOMER_USAGE_DAYS, 'day').toDate()
-  const [orgs, usageRows] = await Promise.all([
+  const [orgs, usageRows, edgeRows] = await Promise.all([
     prisma.organization.findMany({
       orderBy: { createdAt: 'desc' },
       select: customerOrgArgs.select,
@@ -206,6 +273,12 @@ export async function listCustomerAccounts() {
         bytesSaved: true,
       },
     }),
+    prisma.projectEdgeRollupHourly.groupBy({
+      by: ['orgId', 'stage'],
+      where: { bucketStart: { gte: since } },
+      _max: { bucketStart: true },
+      _sum: { requests: true, bytes: true },
+    }),
   ])
   const usageByOrg = new Map<string, UsageRow[]>()
   for (const row of usageRows) {
@@ -213,33 +286,17 @@ export async function listCustomerAccounts() {
     rows.push(row)
     usageByOrg.set(row.orgId, rows)
   }
-  return orgs.map((org) =>
-    mapCustomerAccount(org, usageByOrg.get(org.id) ?? []),
-  )
-}
-
-// Single-customer variant for the operator detail dashboard.
-export async function getCustomerAccount(orgId: string) {
-  const since = dayjs().subtract(CUSTOMER_USAGE_DAYS, 'day').toDate()
-  const [org, usageRows] = await Promise.all([
-    prisma.organization.findUnique({
-      where: { id: orgId },
-      select: customerOrgArgs.select,
-    }),
-    prisma.analyticsRollupHourly.groupBy({
-      by: ['orgId', 'status'],
-      where: { orgId, bucketStart: { gte: since } },
-      _max: { bucketStart: true },
-      _sum: {
-        requests: true,
-        cachedRequests: true,
-        bytesOut: true,
-        bytesSaved: true,
-      },
-    }),
-  ])
-  if (!org) {
-    return null
+  const edgeByOrg = new Map<string, EdgeUsageRow[]>()
+  for (const row of edgeRows) {
+    const rows = edgeByOrg.get(row.orgId) ?? []
+    rows.push(row)
+    edgeByOrg.set(row.orgId, rows)
   }
-  return mapCustomerAccount(org, usageRows)
+  return orgs.map((org) =>
+    mapCustomerAccount(
+      org,
+      usageByOrg.get(org.id) ?? [],
+      edgeByOrg.get(org.id) ?? [],
+    ),
+  )
 }

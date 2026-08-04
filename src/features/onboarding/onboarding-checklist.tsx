@@ -235,7 +235,7 @@ export function OnboardingChecklist({
             title="Create your first project"
           />
           <Step
-            description="Request /img/<source-url>?project=<id> — Keenpix fetches, optimizes, caches, and delivers it. No API key needed."
+            description="Request https://cdn.keenpix.com/p/<project-id>/img/<source-url> — Keenpix fetches, optimizes, caches, and delivers it. No API key needed."
             done={false}
             locked={!hasProjects || (cloud && !subscribed)}
             title="Make your first request"

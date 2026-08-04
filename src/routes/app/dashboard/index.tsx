@@ -73,11 +73,9 @@ function DashboardPage() {
   const { user, cloud, orgRole, productAccess, workspaceReady } =
     useRouteContext({ from: '/app' })
   const isSuperAdmin = user.role === 'super_admin'
-  // Cloudflare edge analytics are zone-wide and cannot be attributed to one
-  // tenant. Keep them hidden from ordinary cloud customers, but restore them
-  // for an operator actively impersonating a customer so that support can see
-  // the same whole-zone delivery funnel available in Admin.
-  const canSeeEdge = !cloud || Boolean(user.impersonatedBy)
+  // The delivery Worker writes a trusted project id for every request, so Edge
+  // analytics are safe at both organization and individual-project scope.
+  const canSeeEdge = true
   const { data: billing } = useQuery({
     enabled: cloud,
     queryFn: () => getBillingStateFn(),
@@ -114,7 +112,9 @@ function DashboardPage() {
     edgeRefreshing,
     edgePending,
     edgeError,
-  } = useEdgeStats(canSeeEdge && workspaceReady ? boundedWindow : undefined)
+  } = useEdgeStats(
+    workspaceReady ? { ...boundedWindow, project: search.project } : undefined,
+  )
 
   let overviewSubtitle = `${currentProject?.name ?? 'This project'} — trends and recent activity.`
   if (isAll) {
@@ -184,10 +184,8 @@ function DashboardPage() {
     totalRequests: kpis.requests.value,
     hitRate: kpis.hitRate.value,
   }
-  // Edge is zone-wide, so it only reconciles at all-projects scope and only over
-  // a window our captured history fully covers.
-  const edgeGated = edgeConfigured && edge !== null && isAll && edgeCovered
-  const edgeReady = edgeConfigured && edge !== null && isAll
+  const edgeGated = edgeConfigured && edge !== null && edgeCovered
+  const edgeReady = edgeConfigured && edge !== null
   // Only the operator can wire Cloudflare, so only the super-admin ever sees the
   // "connect" prompt on a single-tenant self-hosted instance.
   const edgeNotConfigured =
@@ -208,12 +206,9 @@ function DashboardPage() {
         isSuperAdmin || user.impersonatedBy
           ? "Couldn't load edge data — check the CLOUDFLARE_* env vars (Admin → Settings)."
           : undefined
-    } else if (isAll) {
-      edgeNote =
-        'Cloudflare edge history is incomplete for this range; available edge deliveries are included in the totals.'
     } else {
       edgeNote =
-        'Edge is whole-zone only — switch to All projects to see the source split.'
+        'Cloudflare edge history is incomplete for this range; available edge deliveries are included in the totals.'
     }
   }
   const deltas = {

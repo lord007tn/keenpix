@@ -391,12 +391,11 @@ export function CustomersTable() {
         </Table>
       </Card>
       <p className="text-muted-foreground text-xs">
-        Requests and bandwidth include all customer-scoped origin responses;
-        delivered values include successful responses only. Cloudflare Edge is
-        zone-wide and is not assigned to individual customers. Cost combines
-        Polar fees, modeled origin delivery cost, and a bandwidth-weighted share
-        of fixed operations. Contribution is current paid MRR minus that total
-        cost.
+        Requests and bandwidth combine customer-scoped Edge delivery with origin
+        responses; delivered values include successful responses only. Cost
+        combines Polar fees, modeled Edge and origin delivery, and a
+        bandwidth-weighted share of fixed operations. Contribution is current
+        paid MRR minus that total cost.
       </p>
     </div>
   )

@@ -16,7 +16,12 @@ export function QuickStart({ project }: { project: Project }) {
     typeof window === 'undefined'
       ? 'https://keenpix.com'
       : window.location.origin
-  const url = `${base}/img/${project.origin}/your-image.jpg?project=${project.id}&w=800&fmt=webp`
+  const cloudDelivery = new URL(base).hostname === 'keenpix.com'
+  const deliveryBase = cloudDelivery
+    ? `https://cdn.keenpix.com/p/${project.id}`
+    : base
+  const projectQuery = cloudDelivery ? '' : `project=${project.id}&`
+  const url = `${deliveryBase}/img/${project.origin}/your-image.jpg?${projectQuery}w=800&fmt=webp`
   return (
     <Card>
       <CardHeader>

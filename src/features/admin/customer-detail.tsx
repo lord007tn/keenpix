@@ -54,6 +54,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { getErrorMessage } from '@/errors/common'
 import { PlanChange } from '@/features/admin/plan-change'
+import { SourceSplitCards } from '@/features/analytics/source-split-cards'
 import {
   getCustomerAccountFn,
   getCustomerAnalyticsFn,
@@ -62,7 +63,6 @@ import {
 import { limitHistorySearch } from '@/helpers/history/window'
 import { authClient } from '@/lib/auth/client'
 import { DEFAULT_HISTORY_DAYS } from '@/lib/billing/plans'
-import { compactNumber, humanBytes } from '@/shared/format'
 
 const money = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -451,38 +451,16 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
           ) : null}
 
           {summary ? (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-              <StatCard
-                label="Image requests"
-                sub={`${compactNumber(summary.successfulDeliveries)} origin delivered`}
-                value={compactNumber(summary.totalRequests)}
-              />
-              <StatCard
-                label="Cache"
-                sub={`${summary.hitRate.toFixed(1)}% of delivered requests`}
-                value={compactNumber(summary.cacheHits)}
-              />
-              <StatCard
-                label="Optimized"
-                sub="Freshly optimized"
-                value={compactNumber(summary.liveOptimizations)}
-              />
-              <StatCard
-                label="Failed"
-                sub="Non-2xx origin requests"
-                value={compactNumber(summary.failedRequests)}
-              />
-              <StatCard
-                label="Origin delivery"
-                sub={`${humanBytes(summary.bandwidthSaved)} saved`}
-                value={humanBytes(summary.bandwidthOut)}
-              />
-              <StatCard
-                label="Origin cache hit rate"
-                sub={`${summary.savingsPct.toFixed(0)}% bytes saved`}
-                value={`${summary.hitRate.toFixed(1)}%`}
-              />
-            </div>
+            <SourceSplitCards
+              edge={analytics?.edge?.edge ?? null}
+              note={
+                analytics?.edge?.edgeConfigured && !analytics.edge.edgeCovered
+                  ? 'Edge history is incomplete for this range; available attributed delivery is shown.'
+                  : undefined
+              }
+              ready={Boolean(analytics?.edge?.edge)}
+              summary={summary}
+            />
           ) : null}
           <div className="grid gap-3 sm:grid-cols-3">
             <StatCard
@@ -516,8 +494,8 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
           <p className="text-muted-foreground text-xs">
             Fixed operations are allocated by successful delivered bandwidth,
             with request attempts as the fallback when no bytes were delivered.
-            Platform Edge remains unassigned because Cloudflare’s zone analytics
-            cannot identify this organization.
+            Edge delivery is assigned from Worker telemetry carrying a trusted
+            project identifier; origin, Edge, and fixed costs are all included.
           </p>
           {!summary && analyticsQuery.isPending ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -527,7 +505,13 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
             </div>
           ) : null}
 
-          {analytics ? <ChartAreaInteractive data={analytics.series} /> : null}
+          {analytics ? (
+            <ChartAreaInteractive
+              data={analytics.series}
+              edge={analytics.edge?.edge?.series}
+              funnel={Boolean(analytics.edge?.edge)}
+            />
+          ) : null}
           {!analytics && analyticsQuery.isPending ? (
             <Skeleton className="h-72" />
           ) : null}
@@ -581,8 +565,14 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
               <Fact label="Billing source" value={billingSourceLabel} />
               <Fact
                 label="Monthly revenue"
-                value={`$${(customer.billing.amountCents / 100).toFixed(2)}`}
+                value={`$${(customer.billing.mrrCents / 100).toFixed(2)}`}
               />
+              {customer.billing.addonAmountCents > 0 ? (
+                <Fact
+                  label="Add-on revenue"
+                  value={`$${(customer.billing.addonAmountCents / 100).toFixed(2)}`}
+                />
+              ) : null}
               <Fact
                 label={billingPeriodLabel}
                 value={
