@@ -5,6 +5,10 @@ const source = readFileSync(
   new URL('./backfill-project-edge-from-zone.ts', import.meta.url),
   'utf8',
 )
+const dockerfile = readFileSync(
+  new URL('../Dockerfile', import.meta.url),
+  'utf8',
+)
 
 describe('legacy project Edge backfill contract', () => {
   it('is read-only by default and requires an explicit exclusivity assertion', () => {
@@ -35,5 +39,11 @@ describe('legacy project Edge backfill contract', () => {
     expect(source).toContain('Backfill reconciliation failed')
     expect(source).toContain('actualBytes !== expected.bytes')
     expect(source).toContain('actualRequests !== expected.requests')
+  })
+
+  it('is available in the production operator image', () => {
+    expect(dockerfile).toContain(
+      'COPY --from=build /app/scripts/backfill-project-edge-from-zone.ts ./scripts/backfill-project-edge-from-zone.ts',
+    )
   })
 })

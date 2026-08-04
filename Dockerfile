@@ -57,6 +57,7 @@ COPY --from=build /app/src/generated ./src/generated
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/scripts/backfill-project-edge-from-zone.ts ./scripts/backfill-project-edge-from-zone.ts
 COPY --from=build /app/scripts/configure-polar-benefits.mjs ./scripts/configure-polar-benefits.mjs
 COPY --chmod=755 docker-entrypoint.sh ./docker-entrypoint.sh
 # Run as the unprivileged node user. Own the cache directory so a named Docker
