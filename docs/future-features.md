@@ -12,14 +12,16 @@ aggregated in SQL, persisted zone/host-wide Cloudflare edge rollups
 distribution (`CF-IPCountry`), status-class trends over time, per-time-bucket
 latency percentiles, top images by delivered bytes, scheduled hourly edge
 capture, plan-bounded 365-day/all-available/custom windows, and filtered CSV
-export. Live logs use the same plan-bounded date picker.
+export. Live logs use the same plan-bounded date picker. Keenpix Cloud also
+ships project-attributed Worker telemetry for canonical project URLs and
+verified custom domains, persisted as `ProjectEdgeRollupHourly`.
 
 Still future, building on those:
 
-- Per-URL and per-project Cloudflare edge attribution from Logpush or a richer
-  edge-ingest pipeline. Edge data is persisted but zone/host-wide — Cloudflare
-  cannot attribute `/img/*` traffic to a keenpix project, so per-URL and
-  per-project edge breakdowns still need Logpush (or similar).
+- Per-URL edge attribution. Project, organization, hostname, delivery stage,
+  cache status, response status, request count, and bytes are attributed today;
+  recording the full source URL would require a separate bounded-cardinality
+  pipeline such as Logpush.
 - Top images ranked by cache hit-rate (by request count and delivered bytes ship today).
 - Daily/monthly rollup compaction if production volume proves that the durable
   hourly table needs a second aggregation tier. Raw-log retention already ships;

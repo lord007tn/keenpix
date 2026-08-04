@@ -191,11 +191,9 @@ export interface EdgeCachePoint {
   start: string
 }
 
-// Cloudflare edge-cache rollup for the last 24h, fetched from the Cloudflare
-// GraphQL Analytics API. Zone-wide for the configured host's /img/* traffic,
-// since Cloudflare does not know the keenpix project id. These hits are served
-// before the origin, so they never appear in RequestLog. The adaptive dataset
-// is capped at a 1-day window on non-enterprise plans, hence the fixed 24h.
+// Edge-cache rollup reconstructed from durable hourly rows. Keenpix Cloud uses
+// project-attributed Worker telemetry; self-hosted installations can use the
+// zone-wide Cloudflare GraphQL compatibility source.
 export interface EdgeCacheStats {
   // Per Cloudflare cache status (hit, miss, expired, bypass, none, ...).
   byStatus: Array<{ requests: number; status: string }>

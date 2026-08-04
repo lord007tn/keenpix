@@ -50,7 +50,7 @@ export async function upsertProjectEdgeRollups(
 export async function listProjectEdgeRollups(input: {
   gte: Date
   lt: Date
-  orgId: string
+  orgId?: string
   projectId?: string
 }) {
   const rows = await prisma.projectEdgeRollupHourly.findMany({
@@ -79,7 +79,7 @@ export async function listProjectEdgeRollups(input: {
 }
 
 export async function projectEdgeCoverageStart(input: {
-  orgId: string
+  orgId?: string
   projectId?: string
 }) {
   const result = await prisma.projectEdgeRollupHourly.aggregate({
