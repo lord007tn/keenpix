@@ -251,15 +251,18 @@ export async function getEdgeCacheStats(
     }
   }
 
-  // Tenant dashboards use trusted Worker telemetry, scoped by org/project in
-  // Postgres. The legacy zone dataset remains only for the platform-wide admin
-  // reconciliation and for single-tenant self-hosted installs.
-  if (orgId && cloudflare.accountId) {
+  // Cloud dashboards and platform finance use the same trusted Worker
+  // telemetry. It covers canonical project paths and verified custom domains,
+  // while keeping every row attributable to a project and organization.
+  if (cloudflare.accountId) {
     try {
-      const resolvedProject = await resolveProjectId(input.project, orgId)
-      const projectId = input.project
-        ? (resolvedProject ?? '__invalid_project_scope__')
+      const resolvedProject = orgId
+        ? await resolveProjectId(input.project, orgId)
         : undefined
+      const projectId =
+        input.project && orgId
+          ? (resolvedProject ?? '__invalid_project_scope__')
+          : undefined
       let captureState = await getProjectEdgeCaptureState()
       let refreshing = false
       if (captureState?.lastSuccessAt) {
@@ -332,6 +335,8 @@ export async function getEdgeCacheStats(
       edgeStatus: 'unconfigured',
     }
   }
+  // Self-hosted installations without Analytics Engine retain the zone-wide
+  // Cloudflare GraphQL capture as their compatibility source.
   const host = cloudflare.host ?? ''
   try {
     let captureState = await getEdgeCaptureState(cloudflare.zoneId, host)
