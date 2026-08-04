@@ -258,8 +258,9 @@ export function PlatformFinances() {
         <CardHeader>
           <CardTitle>Revenue and cost scale model</CardTitle>
           <CardDescription>
-            Planning scenario for the final $9 / $29 / $69 catalog. Break-even
-            is approximately {data.scaleProjection.breakEvenCustomers} paying
+            Planning scenario with the first 25 customers at founding prices,
+            followed by the final $9 / $29 / $69 catalog. Break-even is
+            approximately {data.scaleProjection.breakEvenCustomers} paying
             customers under these assumptions.
           </CardDescription>
         </CardHeader>
