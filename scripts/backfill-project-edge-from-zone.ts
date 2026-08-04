@@ -13,7 +13,6 @@
 // By default the cutoff is the first hour already present in trusted Worker
 // telemetry. Only full hours strictly before it are copied. An explicit,
 // hour-aligned PROJECT_EDGE_BACKFILL_BEFORE may move the boundary earlier.
-import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'

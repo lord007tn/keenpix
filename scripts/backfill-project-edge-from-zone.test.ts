@@ -42,6 +42,7 @@ describe('legacy project Edge backfill contract', () => {
   })
 
   it('is available in the production operator image', () => {
+    expect(source).not.toContain("import 'dotenv/config'")
     expect(dockerfile).toContain(
       'COPY --from=build /app/scripts/backfill-project-edge-from-zone.ts ./scripts/backfill-project-edge-from-zone.ts',
     )
