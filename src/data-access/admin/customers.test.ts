@@ -82,6 +82,7 @@ describe('customer usage summaries', () => {
       cachedRequests: 6,
       cacheHitRate: 2 / 3,
       bandwidthBytes: 900,
+      totalBandwidthBytes: 1000,
       bytesSaved: 1800,
       lastTrafficAt: '2026-08-03T13:00:00.000Z',
     })

@@ -125,34 +125,40 @@ const columns: ColumnDef<CustomerAccount>[] = [
   },
   {
     id: 'requests',
-    accessorFn: (row) => row.usage30d.requests,
+    accessorFn: (row) => row.usage30d.attemptedRequests,
     header: ({ column }) => (
       <SortHeader
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       >
-        Origin delivered 30d
+        Requests 30d
       </SortHeader>
     ),
     cell: ({ row }) => (
-      <span className="tabular-nums">
-        {compactNumber(row.original.usage30d.requests)}
-      </span>
+      <div className="flex flex-col gap-0.5 tabular-nums">
+        <span>{compactNumber(row.original.usage30d.attemptedRequests)}</span>
+        <span className="text-muted-foreground text-xs">
+          {compactNumber(row.original.usage30d.requests)} delivered
+        </span>
+      </div>
     ),
   },
   {
     id: 'bandwidth',
-    accessorFn: (row) => row.usage30d.bandwidthBytes,
+    accessorFn: (row) => row.usage30d.totalBandwidthBytes,
     header: ({ column }) => (
       <SortHeader
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       >
-        Origin bandwidth 30d
+        Bandwidth 30d
       </SortHeader>
     ),
     cell: ({ row }) => (
-      <span className="tabular-nums">
-        {humanBytes(row.original.usage30d.bandwidthBytes)}
-      </span>
+      <div className="flex flex-col gap-0.5 tabular-nums">
+        <span>{humanBytes(row.original.usage30d.totalBandwidthBytes)}</span>
+        <span className="text-muted-foreground text-xs">
+          {humanBytes(row.original.usage30d.bandwidthBytes)} delivered
+        </span>
+      </div>
     ),
   },
   {
@@ -385,11 +391,12 @@ export function CustomersTable() {
         </Table>
       </Card>
       <p className="text-muted-foreground text-xs">
-        Origin delivery is successful customer-scoped traffic that reached
-        Keenpix. Cloudflare Edge is zone-wide and is not assigned to individual
-        customers. Cost combines Polar fees, modeled origin delivery cost, and a
-        bandwidth-weighted share of fixed operations. Contribution is current
-        paid MRR minus that total cost.
+        Requests and bandwidth include all customer-scoped origin responses;
+        delivered values include successful responses only. Cloudflare Edge is
+        zone-wide and is not assigned to individual customers. Cost combines
+        Polar fees, modeled origin delivery cost, and a bandwidth-weighted share
+        of fixed operations. Contribution is current paid MRR minus that total
+        cost.
       </p>
     </div>
   )
