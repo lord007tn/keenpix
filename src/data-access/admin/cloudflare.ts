@@ -23,6 +23,7 @@ export interface PublicCloudflareSettings {
 }
 
 export interface EffectiveCloudflareSettings {
+  accountApiToken?: string
   accountId?: string
   apiToken: string
   enabled: boolean
@@ -52,6 +53,8 @@ function envCloudflareSettings(): EffectiveCloudflareSettings | undefined {
   return {
     enabled: true,
     accountId: env.CLOUDFLARE_ACCOUNT_ID,
+    accountApiToken:
+      env.CLOUDFLARE_ACCOUNT_API_TOKEN ?? env.CLOUDFLARE_API_TOKEN,
     apiToken: env.CLOUDFLARE_API_TOKEN,
     zoneId: env.CLOUDFLARE_ZONE_ID,
     host: normalizeCloudflareHost(env.CLOUDFLARE_HOST),
@@ -136,6 +139,7 @@ export async function getEffectiveCloudflareSettings() {
     return {
       enabled: true,
       accountId: db.accountId ?? env.CLOUDFLARE_ACCOUNT_ID,
+      accountApiToken: decryptSecret(db.apiToken),
       apiToken: decryptSecret(db.apiToken),
       zoneId: db.zoneId,
       host: normalizeCloudflareHost(db.host),

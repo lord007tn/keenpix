@@ -225,8 +225,9 @@ export function PlatformSettings() {
             Cloudflare edge analytics
           </CardTitle>
           <CardDescription>
-            Read-only edge cache hit-rate, sourced from CLOUDFLARE_* env vars
-            (zone-scoped Analytics → Read token).
+            Read-only edge cache hit-rate and project attribution, sourced from
+            CLOUDFLARE_* env vars (zone Analytics → Read plus account Account
+            Analytics → Read).
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">

@@ -121,6 +121,7 @@ export const serverEnvSchema = {
   // Optional Cloudflare edge-analytics fallback. Used when database-managed
   // Cloudflare settings (Settings -> CDN cache) are not enabled.
   CLOUDFLARE_API_TOKEN: z.string().min(1).optional(),
+  CLOUDFLARE_ACCOUNT_API_TOKEN: z.string().min(1).optional(),
   CLOUDFLARE_ACCOUNT_ID: z.string().min(1).optional(),
   CLOUDFLARE_ZONE_ID: z.string().min(1).optional(),
   CLOUDFLARE_HOST: z.string().min(1).optional(),
