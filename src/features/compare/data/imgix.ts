@@ -5,10 +5,10 @@ export const imgixComparison = {
   competitor: 'imgix',
   title: 'imgix Alternative: Keenpix vs imgix (2026)',
   metaDescription:
-    "Compare Keenpix and imgix after imgix's 2025 credit switch: one bandwidth meter, published rates, an AGPL self-host option, and a URL param migration map.",
+    "Compare Keenpix and imgix after imgix's 2025 credit switch: one managed-delivery meter, published rates, an AGPL self-host option, and a URL param migration map.",
   heroHeadline: 'Keenpix vs imgix: a predictable image CDN alternative',
   heroSubhead:
-    'Keenpix bills optimized bytes delivered through managed cloud — no credits, management meter, request fees, or seat charges. The upcoming v0.2.0 code is AGPL-3.0 and can be self-hosted without a Keenpix license fee, or used as a managed service from $9/month.',
+    'Keenpix bills optimized bytes delivered through managed cloud — no credits, management meter, request fees, or seat charges. Published v0.2.0 is AGPL-3.0 and can be self-hosted without a Keenpix license fee, or used as a managed service from $9/month.',
   verdict:
     "imgix has a broader rendering API — if you lean on face-aware cropping, text overlays, video, or its long tail of advanced parameters, Keenpix won't replace that today, and a mature vendor with enterprise support may matter more to you than price. imgix's credit model draws delivery and cached-storage management from one pool, with published self-serve packages from $25 Starter through $500 Growth Plus. Keenpix charges for managed delivery, publishes self-serve overage rates, and includes analytics on every tier. For core resize, crop, quality, and modern-format delivery, compare both services on your own traffic during the trial; do not assume feature or output parity.",
   pricingRows: [
@@ -20,12 +20,12 @@ export const imgixComparison = {
     {
       scenario: '400 GB delivered / month',
       competitor: '$150/mo Midrange (830 credits, before management credits)',
-      keenpix: '$19/mo Pro — 400 GB included',
+      keenpix: '$19 founding / $29 standard Pro — 400 GB included',
     },
     {
       scenario: '1 TB delivered / month',
       competitor: '$300/mo Growth (1,875 credits)',
-      keenpix: '$39/mo Business — 1 TB included',
+      keenpix: '$39 founding / $69 standard Business — 1 TB included',
     },
     {
       scenario: '50 GB of cached originals under management',
@@ -36,12 +36,13 @@ export const imgixComparison = {
       scenario: 'Overage beyond plan',
       competitor:
         'Published packages end at $500/mo Growth Plus; larger needs require current terms',
-      keenpix: '$0.05–0.08/GB, published; paid delivery stays online',
+      keenpix:
+        '$0.05–0.08/GB founding or $0.07–0.12/GB standard; paid delivery stays online',
     },
     {
       scenario: 'Transformations',
       competitor: 'Rendering included; delivery + management billed in credits',
-      keenpix: 'Unlimited on every plan — bandwidth is the only meter',
+      keenpix: 'Unlimited on every plan — managed delivery is the only meter',
     },
   ],
   featureRows: [
@@ -83,7 +84,7 @@ export const imgixComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No',
-      keenpix: 'Upcoming v0.2.0: AGPL-3.0 with Docker deployment files',
+      keenpix: 'v0.2.0: AGPL-3.0 with Docker deployment files',
     },
     {
       feature: 'Signed URLs',
@@ -125,7 +126,7 @@ export const imgixComparison = {
     {
       title: 'Published pricing, no renewal roulette',
       detail:
-        'Keenpix publishes rates and overage ($0.05–0.08/GB depending on plan) for every self-serve tier. imgix publishes packages through Growth Plus at $500/month; larger requirements need current terms. Compare a written imgix quote with your measured workload rather than relying on third-party anecdotes.',
+        'Keenpix publishes founding overage of $0.05–0.08/GB and standard overage of $0.07–0.12/GB for every self-serve tier. imgix publishes packages through Growth Plus at $500/month; larger requirements need current terms. Compare a written imgix quote with your measured workload rather than relying on third-party anecdotes.',
     },
     {
       title: 'Always-on paid usage with transparent rates',
@@ -135,7 +136,7 @@ export const imgixComparison = {
     {
       title: 'An AGPL self-host option in v0.2.0',
       detail:
-        'The upcoming v0.2.0 release is AGPL-3.0 and includes Docker/Coolify deployment files; the latest published v0.1.11 remains Apache-2.0 until v0.2.0 is tagged. You can operate a released version in-house, while owning infrastructure and routing. imgix is managed-only.',
+        'The published v0.2.0 release is AGPL-3.0 and includes Docker/Coolify deployment files. You can operate it in-house while owning infrastructure and routing. imgix is managed-only.',
     },
     {
       title: 'Analytics on every plan, not a premium add-on',
@@ -174,11 +175,11 @@ export const imgixComparison = {
     },
     {
       q: 'How does Keenpix billing work?',
-      a: 'One meter: managed image delivery. Basic is $9/mo for 100 GB then $0.08/GB, Pro $19/mo for 400 GB then $0.06/GB, and Business $39/mo for 1 TB then $0.05/GB. Cloudflare edge hits and application responses count once. Transformations and team members are unlimited; paid usage continues and accumulated overage is charged at the end of the period.',
+      a: 'One meter: managed image delivery. Founding terms are Basic $9 for 100 GB then $0.08/GB, Pro $19 for 400 GB then $0.06/GB, and Business $39 for 1 TB then $0.05/GB. Standard terms are $9/$29/$69 with $0.12/$0.09/$0.07 overage. Cloudflare edge hits and application responses count once. Transformations and team members are unlimited; paid usage continues and accumulated overage is charged at period end.',
     },
     {
       q: 'Can I self-host Keenpix instead of paying for cloud?',
-      a: 'The v0.2.0 cloud code is licensed AGPL-3.0 and includes Docker and Coolify deployment files. The latest published v0.1.11 release remains Apache-2.0 until v0.2.0 is tagged. Self-hosting has no Keenpix license fee, but you operate the infrastructure.',
+      a: 'The published v0.2.0 release is licensed AGPL-3.0 and includes Docker and Coolify deployment files. Self-hosting has no Keenpix license fee, but you operate the infrastructure.',
     },
     {
       q: 'What does Keenpix not do?',
@@ -194,8 +195,8 @@ export const imgixComparison = {
     { label: 'imgix payment policy', url: 'https://www.imgix.com/payments' },
     { label: 'Keenpix pricing', url: '/pricing' },
   ],
-  pricingAsOf: 'July 2026',
+  pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
-  verifiedAt: '2026-07-13',
+  verifiedAt: '2026-08-05',
   nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

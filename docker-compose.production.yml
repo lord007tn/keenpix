@@ -1,8 +1,7 @@
-# Branch cloud deployment for Coolify.
+# Production deployment for keenpix.com on Coolify.
 #
-# This stack builds Keenpix from the selected Git branch instead of pulling the
-# published image. Use it for disposable/staging cloud-mode testing under the
-# Raed project in Coolify.
+# This stack builds Keenpix from the reviewed `master` commit selected in
+# Coolify. Pushing `master` does not deploy it automatically.
 services:
   postgres:
     image: postgres:18-alpine
@@ -70,7 +69,7 @@ services:
       args:
         VITE_KEENPIX_PUBLIC_URL: ${VITE_KEENPIX_PUBLIC_URL:-http://localhost:3000}
         VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:-}
-        VERSION: ${SOURCE_COMMIT:-branch-cloud}
+        VERSION: ${SOURCE_COMMIT:-master}
     restart: unless-stopped
     mem_limit: ${KEENPIX_MEM_LIMIT:-0}
     cpus: ${KEENPIX_CPU_LIMIT:-0}
@@ -145,8 +144,8 @@ services:
       SMTP_HOST: ${SMTP_HOST:-mailpit}
       SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_SECURE: ${SMTP_SECURE:-false}
-      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-no-reply@branch-cloud.keenpix.test}
-      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Keenpix Branch Cloud}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-no-reply@keenpix.test}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Keenpix}
       CRON_SECRET: ${CRON_SECRET}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     expose:
@@ -183,7 +182,7 @@ services:
   # KEENPIX_BACKUP_KEEP_DAYS. Postgres is the money-critical source of truth
   # (users, subscriptions, billing watermarks) — this protects against container
   # or data-volume loss. Pair it with host/volume-level offsite backups (or an
-  # R2 sync) for disk-loss coverage; restore steps in DEPLOY-BRANCH-CLOUD.md.
+  # R2 sync) for disk-loss coverage; restore steps in DEPLOY-PRODUCTION.md.
   pg-backup:
     image: postgres:18-alpine
     restart: unless-stopped
@@ -215,6 +214,8 @@ services:
       - keenpix_branch_pg_backups:/backups
 
 volumes:
+  # Preserve these legacy names: changing them would attach fresh empty volumes
+  # on the next production deployment.
   keenpix_branch_pg18:
   keenpix_branch_clickhouse:
   keenpix_branch_maxio:

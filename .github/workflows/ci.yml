@@ -1,17 +1,18 @@
 name: CI
 
-# `cloud` deploys straight to production (Coolify builds it), so it must never
-# receive commits that skipped the health gate.
+# Production Coolify tracks `master` and has no GitHub webhook. This workflow
+# verifies the maintained branch; a separate manual Coolify action deploys
+# a reviewed `master` commit.
 on:
   push:
-    branches: [master, cloud]
+    branches: [master]
     paths-ignore:
       - "*.md"
       - "docs/**"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE.md"
   pull_request:
-    branches: [master, cloud]
+    branches: [master]
     paths-ignore:
       - "*.md"
       - "docs/**"

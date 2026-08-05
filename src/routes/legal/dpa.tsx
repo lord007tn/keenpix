@@ -40,8 +40,9 @@ function DpaPage() {
       <p>
         Keenpix fetches, transforms, caches, and delivers images from origins
         you control, and records per-request operational metadata to power your
-        analytics, logs, and bandwidth billing. The categories of data subjects
-        and personal data are those you choose to route through the service.
+        analytics, logs, and managed-delivery billing. The categories of data
+        subjects and personal data are those you choose to route through the
+        service.
       </p>
 
       <h2>3. Confidentiality</h2>

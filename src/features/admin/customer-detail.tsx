@@ -492,9 +492,9 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
             />
           </div>
           <p className="text-muted-foreground text-xs">
-            Fixed operations are allocated by successful delivered bandwidth,
-            with request attempts as the fallback when no bytes were delivered.
-            Edge delivery is assigned from Worker telemetry carrying a trusted
+            Fixed operations are allocated by successful managed delivery, with
+            request attempts as the fallback when no bytes were delivered. Edge
+            delivery is assigned from Worker telemetry carrying a trusted
             project identifier; origin, Edge, and fixed costs are all included.
           </p>
           {!summary && analyticsQuery.isPending ? (

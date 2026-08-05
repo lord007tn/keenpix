@@ -5,8 +5,9 @@ export const cloudflareImagesComparison = {
   competitor: 'Cloudflare Images',
   title: 'Cloudflare Images Alternative: Keenpix vs Cloudflare (2026)',
   metaDescription:
-    'Keenpix vs Cloudflare Images: bandwidth pricing versus unique-transform pricing, storage choices, limits, migration steps, and when each wins.',
-  heroHeadline: 'Keenpix vs Cloudflare Images: a bandwidth-priced alternative',
+    'Keenpix vs Cloudflare Images: managed-delivery pricing versus unique-transform pricing, storage choices, limits, migration steps, and when each wins.',
+  heroHeadline:
+    'Keenpix vs Cloudflare Images: a managed-delivery-priced alternative',
   heroSubhead:
     'Cloudflare Images is deeply integrated with the Cloudflare edge and meters unique transformations or hosted-image storage and delivery. Keenpix meters optimized bytes delivered through its managed edge and application, counted once, with no transformation or seat charge.',
   verdict:
@@ -31,7 +32,8 @@ export const cloudflareImagesComparison = {
     {
       scenario: 'Remote-origin image delivery',
       competitor: '$0.50 per 1,000 unique transformations after 5,000 included',
-      keenpix: '$0.05–0.08/GB overage after the plan allowance',
+      keenpix:
+        '$0.05–$0.08/GB founding or $0.07–$0.12/GB standard overage after the plan allowance',
     },
   ],
   featureRows: [
@@ -95,14 +97,14 @@ export const cloudflareImagesComparison = {
     {
       title: 'A self-operated path',
       detail:
-        'The v0.2.0 cloud code is AGPL-3.0 and includes deployment files. The latest published v0.1.11 release remains Apache-2.0 until v0.2.0 is tagged. Self-hosting removes a Keenpix service bill but adds infrastructure and operational work.',
+        'The current v0.2.0 code is AGPL-3.0 and includes deployment files. Self-hosting removes a Keenpix service bill but adds infrastructure and operational work.',
     },
   ],
   whenCompetitorWins: [
     'Your workload stays within 5,000 unique remote transformations per month and the free allowance is sufficient.',
     'You want Cloudflare to store originals, issue direct-upload URLs, and deliver hosted images from custom domains.',
     'Your application already uses Workers and benefits from the native Images binding and edge controls.',
-    'You repeatedly deliver a stable, small set of variants; unique-transform pricing may be cheaper than bandwidth pricing.',
+    'You repeatedly deliver a stable, small set of variants; unique-transform pricing may be cheaper than managed-delivery pricing.',
     'You need a large global vendor, enterprise support options, and one Cloudflare platform for networking and media.',
   ],
   migrationSteps: [
@@ -142,8 +144,8 @@ export const cloudflareImagesComparison = {
     },
     { label: 'Keenpix pricing', url: '/pricing' },
   ],
-  pricingAsOf: 'July 2026',
+  pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
-  verifiedAt: '2026-07-12',
+  verifiedAt: '2026-08-05',
   nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

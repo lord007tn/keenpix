@@ -18,7 +18,7 @@ const { basic, pro, business } = PLANS
 export const MARKETING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'How does Keenpix pricing work?',
-    answer: `Keenpix bills on one thing — optimized bytes delivered through its managed cloud — and never per transform, request, or team member. The first 25 paying organizations receive founding prices of $${basic.priceMonthlyUsd}/$${pro.priceMonthlyUsd}/$${business.priceMonthlyUsd} per month; trials and complimentary grants do not consume a spot. Standard prices are $${STANDARD_PLAN_PRICES.basic.priceMonthlyUsd}/$${STANDARD_PLAN_PRICES.pro.priceMonthlyUsd}/$${STANDARD_PLAN_PRICES.business.priceMonthlyUsd}. A Cloudflare edge hit, a Keenpix cache hit, and a new transform each count once when delivered. Browser or customer-owned CDN cache hits that never reach Keenpix are not counted. Prefer to pay nothing? Self-host the same open-source engine for free.`,
+    answer: `Keenpix bills on one thing — optimized bytes delivered through its managed cloud — and never per transform, request, or team member. The first 25 paying organizations receive founding prices of $${basic.priceMonthlyUsd}/$${pro.priceMonthlyUsd}/$${business.priceMonthlyUsd} per month; trials and complimentary grants do not consume a spot, and a claimed spot never reopens after churn. Standard prices are $${STANDARD_PLAN_PRICES.basic.priceMonthlyUsd}/$${STANDARD_PLAN_PRICES.pro.priceMonthlyUsd}/$${STANDARD_PLAN_PRICES.business.priceMonthlyUsd}. A Cloudflare edge hit, a Keenpix cache hit, and a new origin transform each count once when delivered. Bandwidth saved is separate analytics and is never added to delivered bytes. Browser or customer-owned CDN cache hits that never reach Keenpix are not counted. The same open-source engine can be self-hosted with no Keenpix license fee; you still operate and pay for its infrastructure.`,
   },
   {
     question: 'Does delivery stop when I use my included managed delivery?',
@@ -51,7 +51,7 @@ export const MARKETING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Do I have to migrate or re-upload my images?',
     answer:
-      'No. Keenpix is a bring-your-own-origin proxy: point it at your existing S3, R2, or any origin and keep your URLs. There is no re-upload, no digital-asset-manager migration, and no lock-in.',
+      'No. Keenpix is a bring-your-own-origin proxy: point it at your existing S3, R2, or any origin. There is no re-upload or digital-asset-manager migration, but adopting or leaving the service still requires planned URL or hostname routing changes.',
   },
   {
     question: 'Which image formats and transforms does Keenpix support?',

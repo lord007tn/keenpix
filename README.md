@@ -6,7 +6,7 @@ Keenpix is a self-hosted image optimization layer for teams that want the speed 
 
 It is built for operators who want the important parts kept visible: project allowlists, request logs, disk cache behavior, and deployment configuration all live in your own stack.
 
-Don't want to run it yourself? The same engine is available as a managed cloud at [keenpix.com](https://keenpix.com) — one bandwidth meter, unlimited transforms, 14-day free trial. The cloud funds the open-source work.
+Don't want to run it yourself? The same engine is available as a managed cloud at [keenpix.com](https://keenpix.com) — one managed-delivery meter, unlimited transforms and team members, and a 14-day free trial. The cloud funds the open-source work.
 
 ## What Keenpix ships
 
@@ -136,9 +136,12 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_PG_MEM_LIMIT` / `KEENPIX_PG_CPU_LIMIT` / `KEENPIX_PG_MEM_RESERVATION` | – | Same opt-in resource caps for the bundled Postgres container. Default `0` = no limit. |
 
 The cloud usage job also captures project-attributed Cloudflare `/img/*` edge
-history hourly. Billing combines successful edge hits with application-served
-responses exactly once; an edge miss is counted only when the application
-returns it. Customer analytics remain organization/project scoped. See
+history hourly. Billing counts every successful response once regardless of
+whether Cloudflare, Keenpix's optimized-variant cache, or a new origin transform
+serves it: an edge hit is counted at the edge, while an edge miss is counted only
+when the application returns it. Optimizer savings (`bytesSaved`) remain a
+separate analytics measure and are never added to delivered bytes. Customer
+analytics remain organization/project scoped. See
 [`docs/analytics-history.md`](docs/analytics-history.md) for retention, export,
 coverage, and the prospective project-attributed edge design.
 

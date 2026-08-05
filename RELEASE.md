@@ -3,19 +3,16 @@
 Keenpix publishes a GitHub release and GHCR Docker images from a semantic-version tag.
 This is the maintainer checklist for cutting one.
 
-## Cloud v0.2.0 pull-request gate
+## Managed-cloud production gate
 
-The managed-cloud release is prepared on `cloud` before the normal tag flow:
+Production Coolify currently tracks `master` and has no GitHub webhook. A push to
+`master` runs CI and publishes the `master`/`latest` GHCR tags, but it does not
+redeploy keenpix.com. Run `pnpm health`, browser smoke tests, SEO drift, and the
+cloud integration checklist; then manually deploy the reviewed `master` commit
+to the `keenpix` Coolify application and record its deployment id and rollback
+evidence. Production uses `docker-compose.production.yml`.
 
-- keep application, provider, and infrastructure work on `cloud`;
-- run `pnpm health`, browser smoke tests, SEO drift, and the cloud integration checklist;
-- push `cloud`, manually deploy the reviewed commit to `keenpix-branch-cloud`, and record cloud-only rollback evidence;
-- open a `cloud` → `master` pull request with tests, configuration changes, known limitations, and migration explicitly deferred;
-- do not merge, tag, or move `latest` without explicit owner approval.
-
-The release evidence lives in `V0.2.0-RELEASE-TRACKER.md` and
-`docs/releases/v0.2.0.md`. Legacy production and migration execution are outside
-this gate.
+The public v0.2.0 release record remains in `docs/releases/v0.2.0.md`.
 
 ## 1. Pre-flight (on `master`, clean tree)
 

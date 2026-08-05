@@ -41,9 +41,9 @@ function PrivacyPage() {
           <strong>Operational logs and analytics:</strong> per-request metadata
           — timestamp, requested path, image format, response status, cache
           result, latency, and bytes delivered — used to power your dashboard
-          and to bill bandwidth. Coarse country may be recorded when a trusted
-          edge supplies it; it is otherwise left empty. We do not store the
-          image bytes beyond the transform cache.
+          and to bill managed delivery. Coarse country may be recorded when a
+          trusted edge supplies it; it is otherwise left empty. We do not store
+          the image bytes beyond the transform cache.
         </li>
         <li>
           <strong>Billing data:</strong> handled by our merchant of record,
@@ -75,7 +75,8 @@ function PrivacyPage() {
       <ul>
         <li>to operate, secure, and improve the service;</li>
         <li>
-          to render your analytics and logs and to meter bandwidth for billing;
+          to render your analytics and logs and to meter managed delivery for
+          billing;
         </li>
         <li>
           to send transactional email (verification, password reset,

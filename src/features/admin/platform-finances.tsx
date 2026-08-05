@@ -183,9 +183,9 @@ export function PlatformFinances() {
             {[
               ['Fixed operations', data.cost.fixedCents],
               ['Keenpix requests', data.cost.originRequestCents],
-              ['Keenpix bandwidth', data.cost.originBandwidthCents],
+              ['Keenpix application egress', data.cost.originBandwidthCents],
               ['Edge requests', data.cost.edgeRequestCents],
-              ['Edge bandwidth', data.cost.edgeBandwidthCents],
+              ['Managed edge egress', data.cost.edgeBandwidthCents],
             ].map(([label, cents]) => (
               <div
                 className="flex items-center justify-between border-b pb-3 text-sm last:border-0 last:pb-0"
@@ -258,10 +258,11 @@ export function PlatformFinances() {
         <CardHeader>
           <CardTitle>Revenue and cost scale model</CardTitle>
           <CardDescription>
-            Planning scenario with the first 25 customers at founding prices,
-            followed by the final $9 / $29 / $69 catalog. Break-even is
-            approximately {data.scaleProjection.breakEvenCustomers} paying
-            customers under these assumptions.
+            Planning estimate—not observed break-even—with the first 25
+            customers at founding prices, followed by the final $9 / $29 / $69
+            catalog. Modeled break-even is approximately{' '}
+            {data.scaleProjection.breakEvenCustomers} paying customers under
+            these assumptions.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">

@@ -172,7 +172,7 @@ export function upsertSubscription(
 // org can never end up entitled-but-unmetered — a Subscription row (which gates
 // serving) without the BillingCustomer that the usage cron iterates. With pure
 // metered billing there is no cap, so an unmetered entitled org would serve
-// unlimited bandwidth billed to nobody.
+// unlimited managed delivery billed to nobody.
 export function upsertSubscriptionWithCustomer(
   input: SubscriptionSnapshot,
   polarCustomerId: string,

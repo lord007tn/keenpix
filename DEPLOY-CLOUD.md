@@ -1,8 +1,9 @@
 # Deploying keenpix cloud (keenpix.com)
 
 The managed multi-tenant SaaS. Self-host operators do **not** need any of this —
-this is only for running the hosted product. See `docker-compose.cloud.yml` and
-the CLOUD MODE section of `.env.example`.
+this is only for running the hosted product. `docker-compose.cloud.yml` is the
+portable reference stack; the live Coolify resource uses the volume-compatible
+`docker-compose.production.yml`. See the CLOUD MODE section of `.env.example`.
 
 ## Stack
 
@@ -30,9 +31,11 @@ the CLOUD MODE section of `.env.example`.
    - Keep two monthly product sets for basic/pro/business: `founding` and
      `standard`. Each product carries `plan`, `interval`, `pricing_phase`,
      `included_gb`, and `overage_per_gb_cents`. The application exposes the
-     founding set until 25 real Polar subscriptions have become active, then
-     switches checkout to the standard $9/$29/$69 set. Trials and local admin
-     grants never claim a founding slot, and churn does not reopen one.
+     founding set until 25 real paying Polar organizations have become active,
+     then switches checkout to the standard set. Founding Basic/Pro/Business is
+     $9/$19/$39 with $0.08/$0.06/$0.05 per delivered GB of overage; standard is
+     $9/$29/$69 with $0.12/$0.09/$0.07. Trials and local admin grants never
+     claim a founding slot, and churn does not reopen one.
      Set `interval=month`. Archive any older annual products: do not delete them,
      but do not leave public annual checkout links active. Annual checkout is
      intentionally disabled until monthly allowance resets can be reconciled
@@ -45,6 +48,11 @@ the CLOUD MODE section of `.env.example`.
      products to the founding set and creates/verifies the three standard
      products. Per plan, keep one `meter_credit` benefit whose units equal the
      included GB and attach it to both pricing phases.
+   - Founding products carry `price_lock_months=12` as catalog metadata and the
+     public promise is "at least 12 months." That metadata is descriptive: no
+     scheduler, webhook handler, or Polar product migration automatically moves
+     a founding subscription to standard pricing after month 12. Do not describe
+     the transition as automatic unless that workflow is implemented and tested.
    - Create a webhook endpoint → `https://keenpix.com/api/auth/polar/webhooks`
      (events: `subscription.created`, `subscription.active`,
      `subscription.updated`, `subscription.canceled`,
@@ -84,6 +92,13 @@ the CLOUD MODE section of `.env.example`.
    `CRON_SECRET` (random), Postgres/admin creds (Coolify generates `SERVICE_*`).
 
 ## Deploy
+
+The production Coolify application (`keenpix`) currently tracks `master` and
+uses `docker-compose.production.yml`. It has no GitHub
+webhook, so pushing `master` publishes CI/GHCR artifacts but does **not** redeploy
+keenpix.com. Select and deploy the reviewed `master` commit manually in Coolify,
+then record the deployment id and smoke-test results. Repository GitHub Actions
+run on `ubuntu-latest`; no Blacksmith runner is configured.
 
 ```
 docker compose -f docker-compose.cloud.yml up -d

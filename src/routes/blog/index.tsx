@@ -37,7 +37,7 @@ export const Route = createFileRoute('/blog/')({
         ...seo({
           title: 'Blog - Keenpix',
           description:
-            'Guides on image optimization, transparent bandwidth pricing, and how Keenpix compares to Cloudinary, imgix, ImageKit, and more.',
+            'Guides on image optimization, transparent managed-delivery pricing, and how Keenpix compares to Cloudinary, imgix, ImageKit, and more.',
           url: canonicalUrl,
         }),
         ...(loaderData?.selfHost

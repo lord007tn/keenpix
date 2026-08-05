@@ -108,7 +108,7 @@ function ogCardSvg() {
   <text x="86" y="292" fill="#FFFFFF" font-family="Inter, Segoe UI, sans-serif" font-size="67" font-weight="720" letter-spacing="-3">Optimized images.</text>
   <text x="86" y="370" fill="#FFFFFF" font-family="Inter, Segoe UI, sans-serif" font-size="67" font-weight="720" letter-spacing="-3">Minus the surprise bill.</text>
   <text x="88" y="443" fill="#B8CADB" font-family="Inter, Segoe UI, sans-serif" font-size="29" font-weight="500">AVIF/WebP · one URL · unlimited transforms</text>
-  <text x="88" y="492" fill="#B8CADB" font-family="Inter, Segoe UI, sans-serif" font-size="29" font-weight="500">Honest bandwidth pricing, or self-host free.</text>
+  <text x="88" y="492" fill="#B8CADB" font-family="Inter, Segoe UI, sans-serif" font-size="29" font-weight="500">Honest managed-delivery pricing, or self-host.</text>
   <text x="88" y="563" fill="${colors.cyan}" font-family="Inter, Segoe UI, sans-serif" font-size="25" font-weight="700" letter-spacing="1.5">KEENPIX.COM</text>
 </svg>
 `
@@ -310,7 +310,7 @@ const webManifest = {
   name: 'Keenpix — image optimization CDN',
   short_name: 'Keenpix',
   description:
-    'Optimize and deliver AVIF/WebP images from one URL with honest bandwidth pricing, unlimited transforms, and a free self-hosted option.',
+    'Optimize and deliver AVIF/WebP images from one URL with honest managed-delivery pricing, unlimited transforms, and a self-hosted option with no Keenpix license fee.',
   lang: 'en',
   start_url: '/',
   scope: '/',

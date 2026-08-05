@@ -1,22 +1,26 @@
-# Deploying Keenpix branch cloud on Coolify
+# Deploying Keenpix production on Coolify
 
 **This compose file runs the production keenpix.com deployment** (Coolify
-application `keenpix-branch-cloud` under the **Raed** project, built from the
-`cloud` branch, manual redeploys). It can also be pointed at any branch for a
-disposable staging copy. The stack: app, Postgres, ClickHouse, an S3-compatible
-cache, Mailpit (staging email sink), the hourly usage cron, and a daily
-Postgres backup job.
+application `keenpix` under the **Raed** project, built from `master` with
+manual redeploys). The application has no GitHub webhook: pushing `master` does
+not deploy production. The stack includes the app, Postgres, ClickHouse, an
+S3-compatible cache, Mailpit (used only as a non-production email sink), the
+hourly usage cron, and a daily Postgres backup job.
 
 ## Coolify resource
 
 1. Open `https://coolify.joodlab.com/` and log in.
 2. Go to the **Raed** project.
-3. Create a new resource from the Keenpix Git repository.
+3. Open the existing `keenpix` application.
 4. Build Pack: **Docker Compose**.
-5. Branch: `cloud` for production; any branch for staging.
+5. Branch: `master`.
 6. Base Directory: `/`.
-7. Docker Compose Location: `docker-compose.branch-cloud.yml`.
-8. Name the resource `keenpix-branch-cloud`.
+7. Docker Compose Location: `docker-compose.production.yml`.
+8. Resource name: `keenpix`.
+
+After a reviewed change reaches `master`, manually redeploy that exact commit in
+Coolify and record the deployment id. The repository's GitHub Actions run on
+`ubuntu-latest`; no Blacksmith runner is configured.
 
 Coolify's Docker Compose docs say to route non-80 app ports by assigning the
 domain to the service with the container port. This compose file uses
@@ -148,10 +152,10 @@ Restore drill (run it once so it isn't theory):
 
 ```bash
 # list available dumps
-docker compose -f docker-compose.branch-cloud.yml exec pg-backup ls -la /backups
+docker compose -f docker-compose.production.yml exec pg-backup ls -la /backups
 
 # restore INTO THE RUNNING DATABASE (destructive: --clean drops objects first)
-docker compose -f docker-compose.branch-cloud.yml exec pg-backup \
+docker compose -f docker-compose.production.yml exec pg-backup \
   pg_restore --clean --if-exists -d "$PGDATABASE" /backups/keenpix-<ts>.dump
 
 # then restart the app so caches/entitlements reload

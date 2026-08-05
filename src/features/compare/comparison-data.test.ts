@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { COMPARISONS } from './comparison-data'
 
 const comparisonIntentPattern = /alternative|vs/
-const currentVerificationDatePattern = /^2026-07-(12|13)$/
+const currentVerificationDate = '2026-08-05'
 
 describe('comparison data', () => {
   it('publishes the intended evidence-led competitor set', () => {
@@ -27,7 +27,7 @@ describe('comparison data', () => {
         comparisonIntentPattern,
       )
       expect(comparison.reviewer).toContain('Raed Bahri')
-      expect(comparison.verifiedAt).toMatch(currentVerificationDatePattern)
+      expect(comparison.verifiedAt).toBe(currentVerificationDate)
       expect(comparison.nextReviewAt).toBe('2026-10-12')
       expect(comparison.sources.length).toBeGreaterThanOrEqual(3)
       expect(

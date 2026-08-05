@@ -55,11 +55,11 @@ const DELIVERY_FIELDS = [
   },
   {
     key: 'originBandwidthPerGb',
-    label: 'Keenpix bandwidth',
+    label: 'Keenpix application egress',
     suffix: '/ GB',
   },
   { key: 'edgeRequestsPerMillion', label: 'Edge requests', suffix: '/ 1M' },
-  { key: 'edgeBandwidthPerGb', label: 'Edge bandwidth', suffix: '/ GB' },
+  { key: 'edgeBandwidthPerGb', label: 'Managed edge egress', suffix: '/ GB' },
 ] as const
 
 type FinanceFieldKey =
@@ -202,7 +202,7 @@ export function FinanceSettingsDialog({
                   Fixed monthly operations
                 </h3>
                 <p className="text-muted-foreground text-xs">
-                  Allocated to customers by delivered bandwidth, with request
+                  Allocated to customers by managed delivery, with request
                   attempts as the fallback when no bytes were delivered.
                 </p>
               </div>

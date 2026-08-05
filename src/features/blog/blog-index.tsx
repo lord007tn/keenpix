@@ -59,9 +59,9 @@ export function BlogIndex({ posts }: { posts: BlogListItem[] }) {
               Image delivery, pricing, and the honest CDN.
             </h1>
             <p className="mt-4 max-w-2xl text-balance text-lg text-muted-foreground leading-relaxed">
-              Guides on image optimization, transparent bandwidth pricing, and
-              how Keenpix compares to the incumbents — from the team building
-              the open-source engine.
+              Guides on image optimization, transparent managed-delivery
+              pricing, and how Keenpix compares to the incumbents — from the
+              team building the open-source engine.
             </p>
           </div>
         </section>

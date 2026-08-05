@@ -10,7 +10,7 @@ export const SELF_HOSTED_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Is the self-hosted version really free?',
     answer:
-      'The upcoming v0.2.0 source is AGPL-3.0, with no Keenpix license fee, seat limit, transform limit, or telemetry. You operate and pay for the infrastructure. The latest tagged v0.1.11 remains Apache-2.0 until v0.2.0 is released. Managed cloud starts at $9/month for 100 GB of managed image delivery with unlimited transformations and team members (as of August 2026).',
+      'The current v0.2.0 source is AGPL-3.0, with no Keenpix license fee, team-member limit, transform limit, or telemetry. You operate and pay for the infrastructure. Managed cloud starts at $9/month for 100 GB of managed image delivery with unlimited transformations and team members (as of August 2026).',
   },
   {
     question: 'How does Keenpix compare to imgproxy?',
@@ -115,7 +115,7 @@ const PROMISES = [
   },
   {
     title: 'AGPL-3.0, free forever',
-    body: 'The upcoming v0.2.0 source is AGPL-3.0. The latest tagged v0.1.11 remains Apache-2.0 until the release is published.',
+    body: 'The current v0.2.0 source is AGPL-3.0. Earlier releases through v0.1.11 remain available under Apache-2.0.',
   },
   {
     title: 'No CLA',

@@ -157,7 +157,7 @@ export function BlogPostCta() {
             })}
             href="/docs/self-hosting"
           >
-            Self-host free
+            Self-host
           </a>
           <Link
             className={buttonVariants({

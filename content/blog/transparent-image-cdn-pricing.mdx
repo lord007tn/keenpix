@@ -1,12 +1,12 @@
 ---
-title: "Image CDN Pricing: Why Keenpix Bills by Bandwidth"
+title: "Image CDN Pricing: Why Keenpix Bills by Managed Delivery"
 description: See why Keenpix bills for optimized managed delivery instead of transformations, with published plans, included transforms, and always-on metered overage.
 date: "2026-06-28"
-updated: "2026-08-04"
+updated: "2026-08-05"
 author: Raed Bahri
 tags: [pricing, philosophy, image-cdn]
 image: /og/blog/transparent-image-cdn-pricing.png?v=2026-07-11
-imageAlt: Transparent image CDN bandwidth and projected-cost meter
+imageAlt: Transparent image CDN managed-delivery and projected-cost meter
 ---
 
 Image CDN bills can be hard to predict when several usage dimensions share one meter. Keenpix uses a narrower model: **optimized bytes delivered through managed cloud**, with transformations and team members included.
@@ -23,7 +23,7 @@ None of that reflects real value delivered to real users. It just makes the mete
 
 ## What we meter instead
 
-Keenpix's billing meter records one thing: **optimized bytes delivered to end users through the managed Keenpix network**. A Cloudflare edge hit, a Keenpix variant-cache hit, and a newly optimized response each count once; creating another transform does not create a separate charge.
+Keenpix's billing meter records one thing: **optimized bytes delivered to end users through the managed Keenpix network**. A Cloudflare edge hit, a Keenpix optimized-variant-cache hit, and a newly optimized response from the origin each count once; the source changes, but the returned bytes remain one delivered response. Creating another transform does not create a separate charge.
 
 - **Transformations are free and unlimited.** Build as many variants as you want.
 - **One linear overage rate.** Published, per-GB, no pooled-credit math.
@@ -33,6 +33,8 @@ Keenpix's billing meter records one thing: **optimized bytes delivered to end us
 
 Managed Cloudflare delivery is part of Keenpix, so its successful edge responses count toward the same delivery allowance as application responses. They are not added twice: an edge hit is counted at the edge, while an edge miss is counted when the Keenpix application returns the image. A browser cache hit—or a hit in a customer-owned CDN placed in front of Keenpix—never reaches the managed network and is not counted.
 
+Bandwidth saved is different. Keenpix analytics compare source bytes with the smaller optimized response and report the reduction as `bytesSaved`. That savings value is never added to delivered bytes and never sent to Polar as billable usage.
+
 ## The result
 
 Optimizing aggressively — more formats, more breakpoints, higher quality where it matters — should reduce delivered bytes when the resulting files are smaller, not add a separate transformation fee. See the exact allowances and overage rates on [Keenpix pricing](/pricing).
@@ -41,6 +43,6 @@ And if you would rather not be billed at all, you can always [self-host Keenpix 
 
 ## See it against the incumbents
 
-- [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) — credits vs bandwidth pricing.
+- [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) — credits vs managed-delivery pricing.
 - [Keenpix vs imgix](/blog/keenpix-vs-imgix) — credit packages vs managed-delivery billing.
-- [Keenpix vs ImageKit](/blog/keenpix-vs-imagekit) — the closest bandwidth-priced alternative, compared.
+- [Keenpix vs ImageKit](/blog/keenpix-vs-imagekit) — two delivery-pricing models, compared.

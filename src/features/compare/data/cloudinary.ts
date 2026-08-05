@@ -5,12 +5,12 @@ export const cloudinaryComparison = {
   competitor: 'Cloudinary',
   title: 'Cloudinary Alternative: Keenpix vs Cloudinary (2026)',
   metaDescription:
-    'Keenpix vs Cloudinary (July 2026): pooled credits vs one always-on bandwidth meter. Honest pricing, migration steps, and when each wins.',
+    'Keenpix vs Cloudinary (August 2026): pooled credits vs one managed-delivery meter. Honest pricing, migration steps, and when each wins.',
   heroHeadline: 'Keenpix vs Cloudinary: a focused image CDN alternative',
   heroSubhead:
     'Cloudinary bundles transformations, storage, and bandwidth into credits. Keenpix bills exactly one thing: optimized bytes delivered through managed cloud, with unlimited transforms and team members plus always-on paid overage.',
   verdict:
-    'If you need video transcoding, a full digital asset manager, or AI-powered transforms, pick Cloudinary — its breadth is real and Keenpix does not pretend to match it. If what you use Cloudinary for is resizing and delivering images, Keenpix offers one bandwidth meter, unlimited transformations, managed custom domains, always-on paid usage, and an upcoming AGPL-3.0 v0.2.0 self-host path. Be aware of what you give up: Keenpix is a young solo-founder product with no video or storage. As of July 2026, 400 GB/month is $19 on Keenpix; Cloudinary bandwidth draws from the Advanced plan’s pooled credits alongside transforms and storage.',
+    'If you need video transcoding, a full digital asset manager, or AI-powered transforms today, pick Cloudinary — its breadth is real and Keenpix AI extensions are only coming soon. If what you use Cloudinary for is resizing and delivering images, Keenpix offers one managed-delivery meter, unlimited transformations and team members, managed custom domains, always-on paid usage, and an AGPL-3.0 v0.2.0 self-host path. Be aware of what you give up: Keenpix is a young solo-founder product with no video or storage. As of August 2026, 400 GB/month is $19 at Keenpix founding pricing or $29 at standard pricing; Cloudinary bandwidth draws from the Advanced plan’s pooled credits alongside transforms and storage.',
   pricingRows: [
     {
       scenario: 'Credits → GB translation',
@@ -21,22 +21,23 @@ export const cloudinaryComparison = {
     {
       scenario: '100 GB delivered / month',
       competitor: '$99/mo Plus — 100 of 225 credits gone before any transforms',
-      keenpix: '$9/mo Basic',
+      keenpix: '$9/mo Basic (founding and standard)',
     },
     {
       scenario: '400 GB delivered / month',
       competitor: "$249/mo Advanced — Plus's 225 credits can't cover it",
-      keenpix: '$19/mo Pro',
+      keenpix: '$19 founding / $29 standard Pro',
     },
     {
       scenario: '1 TB delivered / month',
       competitor: "Custom/enterprise — past Advanced's 600 credits",
-      keenpix: '$39/mo Business',
+      keenpix: '$39 founding / $69 standard Business',
     },
     {
       scenario: 'Effective cost per GB',
       competitor: '~$0.44 per credit-GB on Plus',
-      keenpix: '$0.03–0.09/GB by plan; overage $0.05–0.08/GB',
+      keenpix:
+        'Plan effective rate varies; overage $0.05–0.08 founding / $0.07–0.12 standard',
     },
     {
       scenario: 'The month you exceed the plan',
@@ -59,12 +60,12 @@ export const cloudinaryComparison = {
     {
       feature: 'Entry paid plan',
       competitor: '$99/mo · 225 pooled credits ($89 annual)',
-      keenpix: '$9/mo · 100 GB managed delivery',
+      keenpix: '$9/mo · 100 GB managed delivery (both pricing phases)',
     },
     {
       feature: 'Overage handling',
       competitor: 'Soft limits; plan upgrade or custom terms may be required',
-      keenpix: 'Linear $0.05–0.08/GB, billed at period end',
+      keenpix: 'Linear $0.05–0.08/GB founding or $0.07–0.12/GB standard',
     },
     {
       feature: 'Paid overage behavior',
@@ -74,7 +75,7 @@ export const cloudinaryComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No',
-      keenpix: 'Upcoming v0.2.0: AGPL-3.0 with Docker deployment files',
+      keenpix: 'v0.2.0: AGPL-3.0 with Docker deployment files',
     },
     {
       feature: 'Analytics',
@@ -124,7 +125,7 @@ export const cloudinaryComparison = {
         'Cloudinary credits cover transformations, storage, and bandwidth at different rates, so forecasting needs all three dimensions. Keenpix meters optimized managed delivery once across Cloudflare edge hits and application responses.',
     },
     {
-      title: 'A customer-set ceiling instead of an open-ended estimate',
+      title: 'Published linear overage instead of a pooled estimate',
       detail:
         'Cloudinary documents its plan limits as soft limits and says it contacts customers about upgrading. Keenpix bills linear per-GB overage while paid delivery continues, with usage alerts and projected charges visible during the billing period.',
     },
@@ -136,12 +137,12 @@ export const cloudinaryComparison = {
     {
       title: 'An open-source escape hatch',
       detail:
-        'The upcoming v0.2.0 release is AGPL-3.0 and includes Docker/Coolify deployment files; the latest published v0.1.11 remains Apache-2.0 until v0.2.0 is tagged. Moving in-house still requires infrastructure, operations, and a hostname/routing plan. Cloudinary has no self-host path.',
+        'The published v0.2.0 release is AGPL-3.0 and includes Docker/Coolify deployment files. Moving in-house still requires infrastructure, operations, and a hostname/routing plan. Cloudinary has no self-host path.',
     },
     {
-      title: 'Real analytics at $9, not at enterprise',
+      title: 'Core analytics on every Keenpix tier',
       detail:
-        'Bandwidth saved, cache hit rate, format mix, top images, latency percentiles, and live request logs are included on every Keenpix tier — the $9 plan sees the same core dashboards as the $19 one. You should not need a sales call to find out what your images are doing.',
+        'Bandwidth saved, cache hit rate, format mix, top images, latency percentiles, and live request logs are included on every Keenpix tier. You should not need a sales call to find out what your images are doing.',
     },
   ],
   whenCompetitorWins: [
@@ -158,16 +159,16 @@ export const cloudinaryComparison = {
     "Swap URL generation in code with a small helper or your framework's image loader. Common resize, crop, quality, and format parameters have documented Keenpix equivalents; test every modifier your application uses before switching.",
     'Use the managed Keenpix delivery hostname or custom domain so edge and application delivery are attributed once. You can place a customer-owned CDN in front when you want to operate an additional cache layer.',
     'Optionally enable HMAC signed URLs on hotlink-sensitive routes.',
-    "Run both side by side through the 14-day trial, watch cache hit rate, projected usage cost, and bandwidth-saved analytics, then cut over — it's only URL changes, no DNS.",
+    'Run both side by side through the 14-day trial, watch cache hit rate, projected usage cost, and bandwidth-saved analytics, then plan a canary cutover with the required URL or hostname routing changes.',
   ],
   faq: [
     {
       q: 'How do Cloudinary credits translate to gigabytes?',
-      a: 'One credit buys 1 GB of bandwidth, 1,000 transformations, or 1 GB of managed storage — all drawn from a single pool. Plus ($99/mo) includes 225 credits, so 225 GB delivered is the theoretical maximum if you spend zero credits on transforms and storage; real delivery is always less. That works out to roughly $0.44 per credit-GB, versus $0.03–0.09/GB effective on Keenpix (as of July 2026).',
+      a: 'One credit buys 1 GB of bandwidth, 1,000 transformations, or 1 GB of managed storage — all drawn from a single pool. Plus ($99/mo) includes 225 credits, so 225 GB delivered is the theoretical maximum if you spend zero credits on transforms and storage; real delivery is always less. Keenpix instead publishes separate founding and standard plan prices plus one delivered-GB overage rate per plan.',
     },
     {
       q: 'What happens when I hit my plan limit?',
-      a: "Cloudinary describes its plan limits as soft limits and says it contacts customers about upgrading to a plan that better fits their usage. Keenpix bills a published linear rate ($0.05–0.08/GB by plan), keeps paid delivery online, and charges accumulated overage at the end of the billing period. Confirm either service's current terms before relying on a failure mode.",
+      a: "Cloudinary describes its plan limits as soft limits and says it contacts customers about upgrading to a plan that better fits their usage. Keenpix bills $0.05–0.08/GB at founding pricing or $0.07–0.12/GB at standard pricing, keeps paid delivery online, and charges accumulated overage at the end of the billing period. Confirm either service's current terms before relying on a failure mode.",
     },
     {
       q: 'Do I have to migrate my images out of Cloudinary?',
@@ -179,7 +180,7 @@ export const cloudinaryComparison = {
     },
     {
       q: 'Is the self-hosted version feature-limited?',
-      a: 'The upcoming v0.2.0 cloud release publishes its engine under AGPL-3.0 and includes the transform pipeline, caching, and analytics. The latest published v0.1.11 release remains Apache-2.0 until v0.2.0 is tagged. Self-hosting still requires your own infrastructure and operations.',
+      a: 'The published v0.2.0 release provides the engine under AGPL-3.0 and includes the transform pipeline, caching, and analytics. Self-hosting still requires your own infrastructure and operations.',
     },
     {
       q: 'Is there a free tier?',
@@ -195,8 +196,8 @@ export const cloudinaryComparison = {
     { label: 'Cloudinary plan-limit FAQ', url: 'https://cloudinary.com/faq' },
     { label: 'Keenpix pricing', url: '/pricing' },
   ],
-  pricingAsOf: 'July 2026',
+  pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
-  verifiedAt: '2026-07-12',
+  verifiedAt: '2026-08-05',
   nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

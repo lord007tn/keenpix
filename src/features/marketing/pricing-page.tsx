@@ -50,7 +50,7 @@ export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'What exactly am I billed for?',
     answer:
-      'One meter: optimized bytes delivered to end users through Keenpix managed cloud, whether Cloudflare serves an edge hit, Keenpix returns a cached variant, or Keenpix creates a new transform. Each successful response is counted once. Transformations, responsive variants, requests, and team members are unlimited, and Keenpix has no asset-storage charge. Browser or customer-owned CDN cache hits that never reach Keenpix are not counted.',
+      'One meter: optimized bytes delivered to end users through Keenpix managed cloud, whether Cloudflare serves an edge hit, Keenpix returns a cached variant, or Keenpix creates a new transform from the origin. Each successful response is counted once. Bandwidth saved is a separate analytics measure and is never added to delivered bytes. Transformations, responsive variants, requests, and team members are unlimited, and Keenpix has no asset-storage charge. Browser or customer-owned CDN cache hits that never reach Keenpix are not counted.',
   },
   {
     question: 'How does the free trial work?',
@@ -64,7 +64,12 @@ export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Who qualifies for founding pricing?',
     answer:
-      'The first 25 organizations whose Polar subscription becomes actively paid qualify. A free trial does not claim a spot, complimentary access granted by an administrator never claims one, and each paying organization can claim only one. The remaining count shown on this page comes from that paid-customer ledger.',
+      'The first 25 organizations whose Polar subscription becomes actively paid qualify. A free trial does not claim a spot, complimentary access granted by an administrator never claims one, and each paying organization can claim only one. Once claimed, the spot remains in the paid-customer ledger after cancellation or churn and never reopens.',
+  },
+  {
+    question: 'What does the 12-month founding price lock mean?',
+    answer:
+      'Founding pricing is promised for at least 12 months. The current billing implementation keeps the organization on its founding Polar product and does not automatically migrate it to standard pricing at month 12. If that implementation changes, affected customers will receive notice before any price change.',
   },
   {
     question: 'Can overage take my images offline?',
@@ -296,7 +301,7 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-56" />
-                    <TableHead>Self-host (free)</TableHead>
+                    <TableHead>Self-host (no license fee)</TableHead>
                     <TableHead>Basic</TableHead>
                     <TableHead>Pro</TableHead>
                     <TableHead>Business</TableHead>
@@ -305,7 +310,7 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
                 <TableBody>
                   <TableRow>
                     <TableCell className="font-medium">Price</TableCell>
-                    <TableCell>$0 · AGPL-3.0</TableCell>
+                    <TableCell>No Keenpix fee · infrastructure extra</TableCell>
                     {PLAN_CARD_ORDER.map((planId) => (
                       <TableCell key={planId}>
                         ${formatUsd(prices.plans[planId].month.amountCents)}/mo
