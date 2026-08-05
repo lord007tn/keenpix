@@ -16,9 +16,9 @@ Don't want to run it yourself? The same engine is available as a managed cloud a
 - **Projects and origins** - each project owns its source host rules, settings, request logs, and analytics.
 - **Built-in analytics** - requests, bandwidth saved, cache hit rate, output formats, latency, top images, and source domains come from Postgres rollups fed by the request log; optional Cloudflare edge analytics show the cache layer in front.
 - **Self-host dashboard** - seeded super admin, staff invitations, project settings, API keys, Cloudflare edge analytics, and operational views. Transactional email is configured via `EMAIL_PROVIDER` (Postmark / Resend / SMTP) in the environment.
-- **Open-internet hardening** - allowlist checks, private/loopback/link-local/CGNAT blocking, IPv4-mapped IPv6 handling, DNS rebinding protection, response-size limits, decompression-bomb limits, and transform back-pressure.
+- **Open-internet hardening** - allowlist checks, private/loopback/link-local/CGNAT blocking, IPv4-mapped IPv6 handling, DNS rebinding protection, response-size limits, decompression-bomb limits, and bounded worker concurrency.
 
-Stack: TanStack Start (React 19, SSR) · Prisma 7 + PostgreSQL · sharp · Docker. AGPL-3.0 licensed.
+Stack: TanStack Start (React 19, SSR) · Prisma 7 + PostgreSQL · sharp · BullMQ + Dragonfly · Docker. AGPL-3.0 licensed.
 
 ---
 
@@ -43,13 +43,14 @@ Requires Docker + Docker Compose.
 
 ```bash
 cp .env.example .env
-# Generate a signing secret and put it in .env (compose refuses to start without one):
+# Generate independent auth and worker secrets (compose refuses to start without them):
 #   openssl rand -hex 32   →   BETTER_AUTH_SECRET=...
+#   openssl rand -hex 32   →   KEENPIX_WORKER_SECRET=...
 # Set POSTGRES_PASSWORD, KEENPIX_SUPER_ADMIN_EMAIL, and KEENPIX_SUPER_ADMIN_PASSWORD in .env.
 docker compose up -d
 ```
 
-The app comes up on **http://localhost:3000** by default. Set `KEENPIX_PORT` to publish a different host port, `BETTER_AUTH_URL` to your public base URL, or `KEENPIX_IMAGE` to a pinned image tag/digest. Compose runs Postgres, applies migrations on boot, seeds the default org and super admin user, and exposes `/api/health` for the container healthcheck. Self-host is the default (`KEENPIX_MODE` unset), so `/` shows a private self-host splash with links into `/app` and `/docs`; the dashboard, API, and docs are served, while public marketing and LLM export routes are not.
+The app comes up on **http://localhost:3000** by default. Set `KEENPIX_PORT` to publish a different host port, `BETTER_AUTH_URL` to your public base URL, or `KEENPIX_IMAGE` to a pinned image tag/digest. Compose runs Postgres, Dragonfly, the app, and its BullMQ worker; applies migrations on boot; seeds the default org and super admin user; and exposes `/api/health` for the container healthcheck. Dragonfly is configured with its BullMQ-required Lua compatibility flag and five-minute snapshots. Self-host is the default (`KEENPIX_MODE` unset), so `/` shows a private self-host splash with links into `/app` and `/docs`; the dashboard, API, and docs are served, while public marketing and LLM export routes are not.
 
 The Docker image entrypoint accepts `start` (default), `migrate`, and `seed`. For normal installs, leave the default `start`; it applies migrations, seeds bootstrap data, then starts the app. Set `KEENPIX_RUN_MIGRATIONS=false` or `KEENPIX_RUN_SEED=false` only when an external deployment workflow owns those steps.
 
@@ -131,7 +132,9 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_MAX_INPUT_PIXELS` | – | Decompression-bomb ceiling (default ~50 MP). |
 | `KEENPIX_MAX_DIMENSION` | – | Longest output side when a request omits `w`/`h` (default 4096). |
 | `KEENPIX_ORIGIN_TIMEOUT_MS` | – | Per-attempt origin fetch timeout; a slow origin returns 504 (default 10000). |
-| `KEENPIX_MAX_CONCURRENCY` / `KEENPIX_MAX_QUEUE` | – | Concurrent transform jobs / queue depth before shedding 503. |
+| `KEENPIX_QUEUE_URL` | – | BullMQ connection URL. Compose points it at the bundled Dragonfly service. |
+| `KEENPIX_WORKER_SECRET` | ✅ (prod) | Independent 32+ character secret authenticating worker callbacks to the app. |
+| `KEENPIX_WORKER_CONCURRENCY` | – | Concurrent durable prewarm jobs per worker process (default 4). |
 | `KEENPIX_MEM_LIMIT` / `KEENPIX_CPU_LIMIT` / `KEENPIX_MEM_RESERVATION` | – | Opt-in Docker Compose resource caps for the app container. Default `0` = no limit. When set, Docker enforces them and the Operations page CPU/RAM gauges read the cap as the real ceiling. A too-low memory cap can get the app OOM-killed. |
 | `KEENPIX_PG_MEM_LIMIT` / `KEENPIX_PG_CPU_LIMIT` / `KEENPIX_PG_MEM_RESERVATION` | – | Same opt-in resource caps for the bundled Postgres container. Default `0` = no limit. |
 
@@ -178,7 +181,7 @@ Simple source URLs can be written directly in the path. If the source URL contai
 
 Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`, so a CDN can cache each image variant once you configure it to cache `/img/*` with the full query string. The source URL lives in the path so Cloudflare and other CDNs can still see the source file extension; use omitted `fmt` / `fmt=auto` only when your CDN can cache separate `Accept` variants, and use explicit `fmt` values when you intentionally want a fixed output format.
 
-Keenpix also supports internal stale-while-revalidate for the disk cache. After `KEENPIX_CACHE_STALE_MS`, a cached variant is still served immediately and a refresh is queued in the background. This keeps user-facing p95 low while allowing long-lived variants to be refreshed from the origin.
+Keenpix also supports internal stale-while-revalidate for the disk cache. After `KEENPIX_CACHE_STALE_MS`, a cached variant is still served immediately and a refresh starts in the background. This keeps user-facing p95 low while allowing long-lived variants to be refreshed from the origin.
 
 For good cache hit rates, keep frontend widths normalized. Instead of generating arbitrary widths from every viewport value, choose a small shared ladder such as `320`, `480`, `640`, `768`, `960`, and `1280`, then reuse those values across your CMS and frontend. Each unique `src + project + w + h + q + fmt + fit + dpr + blur` combination is a separate variant.
 
@@ -230,7 +233,6 @@ Keenpix is remote-origin and project-allowlist oriented rather than a storage-pr
 | **404** | Unknown `project` id |
 | **413** | Origin image exceeds `KEENPIX_MAX_ORIGIN_BYTES` |
 | **502** | Origin unreachable, errored, returned a non-image body, or too many redirects |
-| **503** | Transform queue saturated (back-pressure) |
 | **504** | Origin timed out |
 
 In an `<img>`, any non-200 shows as a broken image — a 403 almost always means the source host isn't on the allowlist.
@@ -398,20 +400,22 @@ The repository is a pnpm/Turborepo monorepo. Product runtimes live in `apps/`; r
 
 ```text
 apps/
-  app/                 TanStack app, API, image transform runtime, and app jobs
+  app/                 TanStack app, API, and image transform runtime
   docs/                product docs content and repository architecture notes
+  worker/              independently scaled BullMQ prewarm consumer
   custom-domain-edge/  independently deployed Cloudflare Worker
 packages/
   auth/                shared Better Auth configuration primitives
   clickhouse/          ClickHouse client, configuration, queries, and schema
   database/            Prisma schema, migrations, generated client, and seed
+  queue/               BullMQ job contracts and connection factories
   sdk/                 publishable server-side management SDK
   frameworks/
     core/              framework-neutral URL and responsive-image behavior
     react, next, vue, nuxt, svelte, sveltekit, astro, remix, ...
 ```
 
-Inside `apps/app`, the one-way server layers remain **route → function → action → data-access**. The transform endpoint is an app route calling the Sharp/SSRF/cache actions directly. API handlers, transforms, the in-process concurrency queue, and app-owned jobs stay together until one gains an independent deployment or scaling lifecycle; the custom-domain edge Worker already has one, so it is a separate app.
+Inside `apps/app`, the one-way server layers remain **route → function → action → data-access**. The transform endpoint is an app route calling the Sharp/SSRF/cache actions directly, and normal cache-miss transforms execute within that request lifecycle. Durable SDK prewarm work has its own scaling and deployment lifecycle, so its BullMQ consumer lives in `apps/worker` and its shared job contract lives in `packages/queue`. The custom-domain edge Worker remains separate for the same lifecycle reason.
 
 Every framework adapter extends `@keenpix/core` rather than reimplementing URL construction, responsive attributes, or request signing. The initial family covers HTML, React, Next.js, Vue, Nuxt, Svelte, SvelteKit, Astro, Remix, TanStack Start, Angular, Analog, Solid, SolidStart, Qwik, Preact, Gatsby, Expo, React Native, Docusaurus, VitePress, Vite, Lit, Eleventy, Ember, Fresh, Redwood, and Waku.
 

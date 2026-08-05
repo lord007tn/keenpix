@@ -21,10 +21,23 @@ services:
       timeout: 5s
       retries: 10
 
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.37.0
+    restart: unless-stopped
+    ulimits:
+      memlock: -1
+    command:
+      - --dir=/data
+      - --default_lua_flags=allow-undeclared-keys
+      - --snapshot_cron=*/5 * * * *
+    volumes:
+      - keenpix_dragonfly:/data
+
   app:
     image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
     env_file:
-      - .env
+      - path: .env
+        required: false
     restart: unless-stopped
     # Opt-in resource caps. Default 0 = no limit. Setting KEENPIX_MEM_LIMIT makes
     # the Operations page CPU/RAM gauges read against a real cgroup cap and lets
@@ -35,6 +48,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      dragonfly:
+        condition: service_started
     environment:
       NODE_ENV: production
       PORT: "3000"
@@ -50,6 +65,9 @@ services:
       KEENPIX_CACHE_MAX_BYTES: "${KEENPIX_CACHE_MAX_BYTES:-8589934592}"
       KEENPIX_CACHE_STALE_MS: "${KEENPIX_CACHE_STALE_MS:-86400000}"
       KEENPIX_MEMORY_CACHE_MAX_BYTES: "${KEENPIX_MEMORY_CACHE_MAX_BYTES:-268435456}"
+      KEENPIX_QUEUE_URL: redis://dragonfly:6379
+      KEENPIX_WORKER_CONCURRENCY: "${KEENPIX_WORKER_CONCURRENCY:-4}"
+      KEENPIX_WORKER_SECRET: "${KEENPIX_WORKER_SECRET:?set KEENPIX_WORKER_SECRET (openssl rand -hex 32)}"
     ports:
       - "${KEENPIX_PORT:-3000}:3000"
     volumes:
@@ -61,6 +79,28 @@ services:
       retries: 6
       start_period: 40s
 
+  worker:
+    image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
+    command: ["worker"]
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      app:
+        condition: service_healthy
+      dragonfly:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      KEENPIX_APP_URL: http://app:3000
+      KEENPIX_QUEUE_URL: redis://dragonfly:6379
+      KEENPIX_WORKER_CONCURRENCY: "${KEENPIX_WORKER_CONCURRENCY:-4}"
+      KEENPIX_WORKER_SECRET: "${KEENPIX_WORKER_SECRET:?set KEENPIX_WORKER_SECRET (openssl rand -hex 32)}"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
 volumes:
   keenpix_pg:
+  keenpix_dragonfly:
   keenpix_cache:

@@ -102,8 +102,11 @@ export const serverEnvSchema = {
     .default(50_000_000),
   KEENPIX_MAX_DIMENSION: z.coerce.number().int().positive().default(4096),
   KEENPIX_ORIGIN_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
-  KEENPIX_MAX_CONCURRENCY: z.coerce.number().int().positive().optional(),
-  KEENPIX_MAX_QUEUE: z.coerce.number().int().positive().default(100),
+  // Durable prewarm jobs use BullMQ with a Redis-compatible backend. Dragonfly
+  // is bundled in Docker Compose; external Redis/Dragonfly URLs work unchanged.
+  KEENPIX_QUEUE_URL: optionalUrlSchema.default('redis://127.0.0.1:6379'),
+  KEENPIX_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
+  KEENPIX_WORKER_SECRET: z.string().min(32).optional(),
   KEENPIX_SUPER_ADMIN_EMAIL: z.email().optional(),
   KEENPIX_SUPER_ADMIN_PASSWORD: z.string().min(1).optional(),
   KEENPIX_ADMIN_EMAIL: z.email().optional(),

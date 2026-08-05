@@ -13,6 +13,11 @@ if [ "$command" = "seed" ]; then
   exec pnpm --filter @keenpix/database seed
 fi
 
+if [ "$command" = "worker" ]; then
+  printf '[keenpix] Starting durable job worker\n'
+  exec node /app/apps/worker/dist/index.mjs
+fi
+
 if [ "$command" != "start" ]; then
   exec "$@"
 fi

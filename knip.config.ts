@@ -32,6 +32,10 @@ const config: KnipConfig = {
       entry: ['src/index.ts'],
       project: ['src/**/*.ts'],
     },
+    'apps/worker': {
+      entry: ['src/index.ts'],
+      project: ['src/**/*.ts'],
+    },
     'apps/docs': {
       entry: ['source.config.ts'],
       project: ['source.config.ts'],

@@ -73,7 +73,7 @@ portable reference stack; the live Coolify resource uses the volume-compatible
      refuses ambiguous catalogs, and never prints the access token.
 4. **Custom delivery domains** — enable Cloudflare for SaaS and create an
    originless fallback such as `fallback.keenpix.com` (the Worker handles the
-   request before that placeholder origin). Deploy `workers/custom-domain-edge`
+   request before that placeholder origin). Deploy `apps/custom-domain-edge`
    as `keenpix-custom-domain-edge`, set its `EDGE_SECRET`, and keep
    `APP_ORIGIN=https://keenpix.com`. Create `customers.keenpix.com` as the CNAME
    target customers use. The application token needs **Zone → SSL and
@@ -106,7 +106,7 @@ docker compose -f docker-compose.cloud.yml up -d
 
 Migrations run on boot (`KEENPIX_RUN_MIGRATIONS=true`); seeding is off by default
 in cloud (`KEENPIX_RUN_SEED=false`). If you migrate existing self-host data first,
-run `pnpm tsx scripts/backfill-clickhouse.ts` once so ClickHouse has history.
+run `pnpm --filter @keenpix/app exec tsx scripts/backfill-clickhouse.ts` once so ClickHouse has history.
 
 ## Verify after deploy
 

@@ -1,0 +1,28 @@
+{
+  "name": "@keenpix/worker",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Durable Keenpix background job worker.",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsdown src/index.ts --platform node",
+    "start": "node dist/index.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "git clean -xdf dist node_modules"
+  },
+  "dependencies": {
+    "@keenpix/queue": "workspace:*",
+    "pino": "^10.3.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "tsdown": "0.22.3",
+    "tsx": "^4.22.3",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

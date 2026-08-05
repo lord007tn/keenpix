@@ -36,7 +36,7 @@ test('public pages and health endpoint respond', async ({ page, request }) => {
   const body = await health.json()
   expect(body.service).toBe('keenpix')
   expect(body.checks).toHaveProperty('cache')
-  expect(body.checks).toHaveProperty('transformQueue')
+  expect(body.checks).toHaveProperty('prewarmQueue')
 })
 
 test('dashboard is auth-gated and accepts seeded admin credentials', async ({

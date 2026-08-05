@@ -168,7 +168,7 @@ export async function prewarmProjectImagesResource(
   }
   const input = projectPrewarmSchema.parse(await readJson(request))
   const sources = [...(input.sources ?? []), ...(input.src ? [input.src] : [])]
-  const result = prewarmProjectImages({
+  const result = await prewarmProjectImages({
     dpr: input.dpr,
     fit: input.fit,
     formats: input.formats,

@@ -102,6 +102,7 @@ export const env = createEnv({
         const when = 'in a production build'
         requireVar('DATABASE_URL', value.DATABASE_URL, when)
         requireVar('BETTER_AUTH_SECRET', value.BETTER_AUTH_SECRET, when)
+        requireVar('KEENPIX_WORKER_SECRET', value.KEENPIX_WORKER_SECRET, when)
       }
       // Multi-tenant cloud needs the full hosted stack or it boots green with
       // silently-dead signup (no email), billing, and serving (no Polar → 402s).

@@ -57,14 +57,17 @@ function percent(value: number, max: number) {
   return Math.min(100, Math.round((value / max) * 100))
 }
 
-function queueTone(queued: number, maxQueue: number) {
+function queueTone(queued: number, failed: number, status: string) {
+  if (status === 'unavailable') {
+    return 'destructive'
+  }
+  if (failed > 0 || queued > 0) {
+    return 'warning'
+  }
   if (queued === 0) {
     return 'success'
   }
-  if (queued >= maxQueue * 0.8) {
-    return 'destructive'
-  }
-  return 'warning'
+  return 'secondary'
 }
 
 function usageTone(value: number, warnAt: number) {
@@ -335,11 +338,9 @@ export function OperationsHealth({ cloud }: { cloud: boolean }) {
   const memoryUsed = health
     ? percent(health.cache.memorySizeBytes, health.cache.memoryMaxBytes)
     : 0
-  const queueUsed = health
-    ? percent(health.transformQueue.queued, health.transformQueue.maxQueue)
-    : 0
-  const queueRejected = health?.transformQueue.rejected ?? 0
-  const queueHasBacklog = (health?.transformQueue.queued ?? 0) > 0
+  const queueFailed = health?.prewarmQueue.failed ?? 0
+  const queueHasBacklog = (health?.prewarmQueue.queued ?? 0) > 0
+  const queueUnavailable = health?.prewarmQueue.status === 'unavailable'
   const diskEvictedFiles = health?.cache.diskEvictedFiles ?? 0
   const diskEvictedBytes = health?.cache.diskEvictedBytes ?? 0
   const cacheHitRate = health?.cacheHits.hitRate ?? null
@@ -379,8 +380,8 @@ export function OperationsHealth({ cloud }: { cloud: boolean }) {
   // is the healthy steady state. Real operational pressure is queue backlog,
   // load shedding, or the container running near its CPU/RAM limit.
   const hasPressure =
-    queueUsed >= 75 ||
-    queueRejected > 0 ||
+    queueFailed > 0 ||
+    queueUnavailable ||
     cpuPercent >= PRESSURE_PERCENT ||
     memPercent >= PRESSURE_PERCENT
 
@@ -408,10 +409,8 @@ export function OperationsHealth({ cloud }: { cloud: boolean }) {
           <Badge variant="secondary">
             {health ? `${health.projectCount} projects` : 'Loading'}
           </Badge>
-          <Badge
-            variant={health?.transformQueue.active ? 'warning' : 'success'}
-          >
-            {health?.transformQueue.active ?? 0} active transforms
+          <Badge variant={health?.prewarmQueue.active ? 'warning' : 'success'}>
+            {health?.prewarmQueue.active ?? 0} active prewarm jobs
           </Badge>
           {health ? (
             <Badge
@@ -452,11 +451,11 @@ export function OperationsHealth({ cloud }: { cloud: boolean }) {
             {memPercent >= PRESSURE_PERCENT
               ? `Memory is at ${memPercent}% of the limit — close to an OOM kill. `
               : null}
-            {queueUsed >= 75
-              ? `Transform queue is ${queueUsed}% full; requests may start shedding. `
+            {queueUnavailable
+              ? 'The durable prewarm queue is unavailable. '
               : null}
-            {queueRejected > 0
-              ? `${queueRejected} transform requests were rejected since boot.`
+            {queueFailed > 0
+              ? `${queueFailed} prewarm jobs need attention.`
               : null}
           </AlertDescription>
         </Alert>
@@ -607,32 +606,32 @@ export function OperationsHealth({ cloud }: { cloud: boolean }) {
           </div>
         </Panel>
 
-        <Panel icon={ActivityIcon} title="Transform queue">
+        <Panel icon={ActivityIcon} title="Durable prewarm queue">
           <div className="flex items-baseline justify-between gap-3">
             <span className="font-semibold text-2xl tabular-nums">
-              {health?.transformQueue.queued ?? 0}
+              {health?.prewarmQueue.queued ?? 0}
             </span>
             <Badge
               variant={
                 health
                   ? queueTone(
-                      health.transformQueue.queued,
-                      health.transformQueue.maxQueue,
+                      health.prewarmQueue.queued,
+                      health.prewarmQueue.failed,
+                      health.prewarmQueue.status,
                     )
                   : 'secondary'
               }
             >
-              {health?.transformQueue.status ?? 'loading'}
+              {health?.prewarmQueue.status ?? 'loading'}
             </Badge>
           </div>
-          <Progress aria-label="Transform queue usage" value={queueUsed} />
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-muted-foreground text-xs">
-              {health?.transformQueue.concurrency ?? 0} workers, {queueRejected}{' '}
-              rejected since boot
+              {health?.prewarmQueue.waiting ?? 0} waiting ·{' '}
+              {health?.prewarmQueue.delayed ?? 0} delayed · {queueFailed} failed
             </span>
             <Badge variant={queueHasBacklog ? 'warning' : 'outline'}>
-              max {health?.transformQueue.maxQueue ?? 0}
+              {health?.prewarmQueue.active ?? 0} active
             </Badge>
           </div>
         </Panel>

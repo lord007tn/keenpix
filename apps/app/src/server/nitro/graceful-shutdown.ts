@@ -1,16 +1,13 @@
 import type { NitroAppPlugin } from 'nitro/types'
+import { closePrewarmQueue } from '@/integrations/queue/prewarm'
 import { flushRequestLogs } from '@/lib/analytics-buffer/buffer'
 import { logger } from '@/lib/logger/logger'
-import {
-  beginShutdown,
-  drainTransformQueue,
-  isShuttingDown,
-} from '@/server/shutdown'
+import { beginShutdown, isShuttingDown } from '@/server/shutdown'
 
 // Coolify sends SIGTERM on a rolling deploy. srvx (under Nitro's node preset)
-// already drains in-flight HTTP connections on that signal, but it never (a) marks
-// us un-ready so the orchestrator stops routing, nor (b) waits for transforms still
-// queued behind the concurrency gate. This does both, then lets the process exit.
+// already drains in-flight HTTP connections on that signal. This marks the app
+// un-ready, flushes telemetry, and closes the BullMQ producer connection; durable
+// jobs continue in the independent worker process.
 async function handleSignal(signal: NodeJS.Signals): Promise<void> {
   if (isShuttingDown()) {
     return
@@ -18,11 +15,9 @@ async function handleSignal(signal: NodeJS.Signals): Promise<void> {
   // Flip the readiness flag first (synchronously) so /api/health starts returning
   // 503 and the orchestrator stops routing new traffic here immediately.
   beginShutdown()
-  logger.info({ signal }, 'graceful shutdown: draining transform queue')
-  await drainTransformQueue()
-  // Persist any buffered analytics (the drain above just produced some).
-  await flushRequestLogs()
-  logger.info('graceful shutdown: drain complete')
+  logger.info({ signal }, 'graceful shutdown started')
+  await Promise.all([flushRequestLogs(), closePrewarmQueue()])
+  logger.info('graceful shutdown complete')
   // srvx's own SIGTERM handler closes the HTTP server in parallel, so the process
   // usually exits on its own once both settle. This unref'd backstop force-exits if
   // a stuck keep-alive socket would otherwise block the deploy — and covers the
@@ -42,8 +37,7 @@ const plugin: NitroAppPlugin = (nitroApp) => {
   // Presets that DO fire `close` (dev IPC, serverless) still drain cleanly.
   nitroApp.hooks.hook('close', async () => {
     beginShutdown()
-    await drainTransformQueue()
-    await flushRequestLogs()
+    await Promise.all([flushRequestLogs(), closePrewarmQueue()])
   })
 }
 

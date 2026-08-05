@@ -16,7 +16,7 @@ export const Route = createFileRoute('/admin/operations/')({
   head: () =>
     appPageHead(
       'Operations',
-      'Cache storage, transform queue pressure, and instance limits for this deployment.',
+      'Cache storage, durable prewarm queue pressure, and instance limits for this deployment.',
     ),
   component: OperationsAdminPage,
 })
@@ -27,7 +27,7 @@ function OperationsAdminPage() {
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
       <PageHeader
-        subtitle="Cache storage, transform queue pressure, and instance limits for this running instance."
+        subtitle="Cache storage, durable prewarm queue pressure, and instance limits for this running instance."
         title="Operations"
       />
 
@@ -35,8 +35,8 @@ function OperationsAdminPage() {
         <CardHeader>
           <CardTitle>Operations health</CardTitle>
           <CardDescription>
-            Disk and memory cache storage and transform queue pressure for this
-            running instance.
+            Disk and memory cache storage and durable prewarm queue pressure for
+            this running instance.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -55,8 +55,7 @@ function OperationsAdminPage() {
             </CardTitle>
             <CardDescription>
               Instance-wide cache caps applied to this running instance
-              immediately; concurrency and queue depth are
-              environment-configured.
+              immediately; worker concurrency is environment-configured.
             </CardDescription>
           </CardHeader>
           <CardContent>

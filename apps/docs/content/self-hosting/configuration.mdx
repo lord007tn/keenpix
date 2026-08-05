@@ -102,8 +102,9 @@ only needs the zone-scoped **Analytics → Read** permission.
 | `KEENPIX_CACHE_STALE_MS` | `86400000` (24h) | Serve stale disk entries immediately and refresh them in the background; `0` disables stale refresh |
 | `KEENPIX_MEMORY_CACHE_MAX_BYTES` | app default: `67108864` (64MB); Docker/Coolify: `268435456` (256MB) | In-process hot variant LRU cap; `0` disables memory caching |
 | `KEENPIX_MAX_ORIGIN_BYTES` | `52428800` (50MB) | Max bytes pulled from an origin before `413`  |
-| `KEENPIX_MAX_CONCURRENCY`  | CPU count      | Max simultaneous transforms before queueing      |
-| `KEENPIX_MAX_QUEUE`        | `100`          | Queue depth before shedding load with `503`      |
+| `KEENPIX_QUEUE_URL`        | `redis://127.0.0.1:6379` | BullMQ connection URL; Compose uses Dragonfly |
+| `KEENPIX_WORKER_SECRET`    | —              | 32+ character secret for worker-to-app callbacks |
+| `KEENPIX_WORKER_CONCURRENCY` | `4`          | Concurrent prewarm jobs per worker process       |
 | `KEENPIX_MAX_INPUT_PIXELS` | `50000000`     | Decode-time pixel ceiling (decompression-bomb guard) |
 | `KEENPIX_MAX_DIMENSION`    | `4096`         | Longest output side when a request gives no `w`/`h` |
 | `KEENPIX_ORIGIN_TIMEOUT_MS` | `10000`       | Per-attempt origin fetch timeout before `504`    |

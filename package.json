@@ -9,8 +9,11 @@
   "packageManager": "pnpm@10.30.3",
   "scripts": {
     "dev": "turbo watch dev --filter @keenpix/app",
+    "dev:worker": "turbo watch dev --filter @keenpix/worker",
+    "dev:all": "turbo watch dev --filter @keenpix/app --filter @keenpix/worker",
     "build": "turbo run build",
     "build:app": "turbo run build --filter @keenpix/app...",
+    "build:runtime": "turbo run build --filter @keenpix/app... --filter @keenpix/worker...",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "lint": "biome check",

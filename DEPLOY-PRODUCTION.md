@@ -91,7 +91,7 @@ CLOUDFLARE_HOST=keenpix.com
 ```
 
 Managed custom delivery domains use a separate write-capable Cloudflare for
-SaaS token. Deploy `workers/custom-domain-edge`, configure the zone's
+SaaS token. Deploy `apps/custom-domain-edge`, configure the zone's
 originless fallback origin, and set the application variables together:
 
 ```dotenv

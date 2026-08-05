@@ -13,8 +13,7 @@ import {
 type Config = Awaited<ReturnType<typeof getOperationsConfigFn>>
 
 // Instance operations configuration. Disk + memory cache caps are editable and
-// hot-applied to the running instance; concurrency + queue depth are env-set
-// and shown read-only.
+// hot-applied; durable worker concurrency is environment-owned and read-only.
 export function OperationsConfig() {
   const [config, setConfig] = useState<Config | null>(null)
   const [disk, setDisk] = useState('')
@@ -111,22 +110,12 @@ export function OperationsConfig() {
         </SettingRow>
 
         <SettingRow
-          className="py-4 sm:items-center"
-          description="Concurrent sharp workers. Set via KEENPIX_MAX_CONCURRENCY; applies at startup."
-          label="Transform concurrency"
-        >
-          <span className="font-mono text-sm tabular-nums">
-            {config?.transformConcurrency ?? '—'}
-          </span>
-        </SettingRow>
-
-        <SettingRow
           className="py-4 last:pb-0 sm:items-center"
-          description="Max queued transforms before requests shed load. Set via KEENPIX_MAX_QUEUE; applies at startup."
-          label="Max queue depth"
+          description="Concurrent durable prewarm jobs per worker process. Set via KEENPIX_WORKER_CONCURRENCY and applied when the worker starts."
+          label="Worker concurrency"
         >
           <span className="font-mono text-sm tabular-nums">
-            {config?.maxQueueDepth ?? '—'}
+            {config?.workerConcurrency ?? '—'}
           </span>
         </SettingRow>
       </div>

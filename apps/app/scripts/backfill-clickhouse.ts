@@ -5,7 +5,7 @@
 // analytics/log windows would look empty until it fills. Run this once to seed
 // it with existing Postgres history:
 //
-//   pnpm tsx scripts/backfill-clickhouse.ts
+//   pnpm --filter @keenpix/app exec tsx scripts/backfill-clickhouse.ts
 //
 // Idempotency: request_events is a plain MergeTree and does NOT dedup, so a naive
 // re-run (or running while the app is live-teeing) would double-count every

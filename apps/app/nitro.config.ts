@@ -22,8 +22,8 @@ export default defineNitroConfig({
   alias: {
     '@': fileURLToPath(new URL('./src', import.meta.url)),
   },
-  // Lifecycle + observability plugins that wrap the h3 app: graceful-shutdown drains
-  // the transform queue on SIGTERM and marks us un-ready; request-log emits a
+  // Lifecycle + observability plugins that wrap the h3 app: graceful shutdown
+  // marks us un-ready and closes buffered resources; request-log emits a
   // structured access line per request.
   plugins: [
     './src/server/nitro/graceful-shutdown.ts',

@@ -41,20 +41,19 @@ Example response:
       "ok": true,
       "latencyMs": 2
     },
-    "transformQueue": {
+    "prewarmQueue": {
       "active": 0,
+      "waiting": 0,
+      "delayed": 0,
       "queued": 0,
-      "concurrency": 4,
-      "maxQueue": 100,
-      "rejected": 0,
-      "status": "idle"
+      "failed": 0,
+      "status": "ready"
     }
   },
   "latencyMs": 3
 }
 ```
 
-The exact cache and queue fields may grow as the operations dashboard grows, so treat
+The exact cache and prewarm queue fields may grow as the operations dashboard grows, so treat
 `ok`, `status`, `checks.database.ok`, and the HTTP status as the stable monitoring
 contract.
-

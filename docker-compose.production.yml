@@ -41,6 +41,18 @@ services:
       retries: 12
       start_period: 30s
 
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.37.0
+    restart: unless-stopped
+    ulimits:
+      memlock: -1
+    command:
+      - --dir=/data
+      - --default_lua_flags=allow-undeclared-keys
+      - --snapshot_cron=*/5 * * * *
+    volumes:
+      - keenpix_branch_dragonfly:/data
+
   maxio:
     image: ghcr.io/coollabsio/maxio:latest
     command: serve
@@ -73,15 +85,15 @@ services:
     restart: unless-stopped
     mem_limit: ${KEENPIX_MEM_LIMIT:-0}
     cpus: ${KEENPIX_CPU_LIMIT:-0}
-    # Give the graceful shutdown room to run before Docker SIGKILLs: on SIGTERM the
-    # app marks itself un-ready (health → 503) and drains in-flight transforms
-    # (~25s budget + backstop). Must exceed SERVER_SHUTDOWN_TIMEOUT below.
+    # Give the HTTP server room to drain active requests before Docker SIGKILLs.
     stop_grace_period: ${KEENPIX_SHUTDOWN_GRACE:-30s}
     depends_on:
       postgres:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
+      dragonfly:
+        condition: service_started
       maxio:
         condition: service_started
       mailpit:
@@ -114,6 +126,9 @@ services:
       KEENPIX_CACHE_S3_ACCESS_KEY_ID: ${KEENPIX_CACHE_S3_ACCESS_KEY_ID}
       KEENPIX_CACHE_S3_SECRET_ACCESS_KEY: ${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY}
       KEENPIX_CACHE_DIR: /var/cache/keenpix
+      KEENPIX_QUEUE_URL: redis://dragonfly:6379
+      KEENPIX_WORKER_CONCURRENCY: ${KEENPIX_WORKER_CONCURRENCY:-4}
+      KEENPIX_WORKER_SECRET: ${SERVICE_HEX_64_KEENPIX_WORKER}
       # Seconds srvx waits for in-flight HTTP requests to finish on SIGTERM before
       # force-closing. Keep ≤ stop_grace_period so slow transforms can complete.
       SERVER_SHUTDOWN_TIMEOUT: "${SERVER_SHUTDOWN_TIMEOUT:-25}"
@@ -158,6 +173,30 @@ services:
       timeout: 5s
       retries: 6
       start_period: 60s
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/app/Dockerfile
+      args:
+        VITE_KEENPIX_PUBLIC_URL: ${VITE_KEENPIX_PUBLIC_URL:-http://localhost:3000}
+        VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:-}
+        VERSION: ${SOURCE_COMMIT:-master}
+    command: ["worker"]
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      app:
+        condition: service_healthy
+      dragonfly:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      KEENPIX_APP_URL: http://app:3000
+      KEENPIX_QUEUE_URL: redis://dragonfly:6379
+      KEENPIX_WORKER_CONCURRENCY: ${KEENPIX_WORKER_CONCURRENCY:-4}
+      KEENPIX_WORKER_SECRET: ${SERVICE_HEX_64_KEENPIX_WORKER}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
 
   usage-cron:
     image: curlimages/curl:latest
@@ -218,6 +257,7 @@ volumes:
   # on the next production deployment.
   keenpix_branch_pg18:
   keenpix_branch_clickhouse:
+  keenpix_branch_dragonfly:
   keenpix_branch_maxio:
   keenpix_branch_cache:
   keenpix_branch_pg_backups:

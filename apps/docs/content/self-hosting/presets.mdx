@@ -53,17 +53,17 @@ SMTP_USER="..."
 SMTP_PASSWORD="..."
 SMTP_FROM_EMAIL="keenpix@example.com"
 
-# This box answers every transform: give the disk cache room, bound concurrency.
+# This box answers transforms and runs durable prewarm jobs.
 KEENPIX_CACHE_MAX_BYTES="10737418240"   # 10 GB
-KEENPIX_MAX_CONCURRENCY="4"
-KEENPIX_MAX_QUEUE="200"
+KEENPIX_WORKER_SECRET="<openssl rand -hex 32>"
+KEENPIX_WORKER_CONCURRENCY="4"
 ```
 
 - An `https://` URL turns on secure cookies automatically.
 - Size `KEENPIX_CACHE_MAX_BYTES` to the disk volume; the in-memory LRU
   (`KEENPIX_MEMORY_CACHE_MAX_BYTES`) keeps the hottest variants in RAM.
-- Set `KEENPIX_MAX_CONCURRENCY` near the CPU count; load past `KEENPIX_MAX_QUEUE` sheds
-  with `503` instead of overrunning the box.
+- Set `KEENPIX_WORKER_CONCURRENCY` for the prewarm worker. Normal image requests
+  remain synchronous HTTP work and are protected by origin/input limits.
 
 ## CDN-fronted production
 
@@ -91,8 +91,8 @@ SMTP_FROM_EMAIL="keenpix@example.com"
 KEENPIX_CACHE_MAX_BYTES="8589934592"    # 8 GB
 KEENPIX_MEMORY_CACHE_MAX_BYTES="268435456" # 256 MB
 KEENPIX_CACHE_STALE_MS="86400000"       # 24 hours
-KEENPIX_MAX_CONCURRENCY="4"
-KEENPIX_MAX_QUEUE="200"
+KEENPIX_WORKER_SECRET="<openssl rand -hex 32>"
+KEENPIX_WORKER_CONCURRENCY="4"
 ```
 
 <Callout type="warn">

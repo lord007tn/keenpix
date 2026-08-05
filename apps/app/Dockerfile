@@ -30,6 +30,7 @@ ENV VITE_GTM_CONTAINER_ID=$VITE_GTM_CONTAINER_ID
 ENV VITE_GA_MEASUREMENT_ID=$VITE_GA_MEASUREMENT_ID
 RUN pnpm db:generate
 RUN pnpm build:app
+RUN pnpm --filter @keenpix/worker build
 
 FROM package-manager AS runner
 ARG VERSION=0.3.0
@@ -44,7 +45,9 @@ LABEL org.opencontainers.image.title="Keenpix" \
   org.opencontainers.image.version=$VERSION
 COPY --from=prod-deps /app /app
 COPY --from=build /app/apps/app/.output /app/apps/app/.output
+COPY --from=build /app/apps/worker/dist /app/apps/worker/dist
 COPY --from=build /app/packages/database/src/generated /app/packages/database/src/generated
+COPY --from=build /app/packages/queue/dist /app/packages/queue/dist
 COPY --chmod=755 docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN mkdir -p /var/cache/keenpix && chown -R node:node /var/cache/keenpix
 USER node

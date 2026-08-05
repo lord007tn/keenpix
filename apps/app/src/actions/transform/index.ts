@@ -1,13 +1,13 @@
 import { getProjectById } from '@/data-access/projects'
 import { getTransformErrorStatus, TransformError } from '@/errors/transform'
 import { parseTransformParams } from '@/helpers/transform/params'
+import { enqueuePrewarmJobs } from '@/integrations/queue/prewarm'
 import { enqueueRequestLog } from '@/lib/analytics-buffer/buffer'
 import { orgEntitledForServing } from '@/lib/billing/service-gate'
 import { buildCacheKey, readCacheEntry, writeCache } from '@/lib/cache/cache'
 import { errorContext, logger } from '@/lib/logger/logger'
 import { fetchOriginImage } from '@/lib/origin/fetch-image'
 import { assertAllowedOrigin, assertSafeOrigin } from '@/lib/origin/safe-origin'
-import { runQueuedJob } from '@/lib/queue/transform-queue'
 import { transformImage } from '@/lib/sharp/transform'
 import { optimizeSvgImage } from '@/lib/svg/optimize'
 import { verifyTransformSignature } from '@/lib/transform-signing/signing'
@@ -130,7 +130,7 @@ async function readOrCreateTransform({
 }
 
 function startTransformRefresh(input: CachedTransformInput) {
-  const work = runQueuedJob(async () => {
+  const work = (async () => {
     const { allowedOrigins, cacheKey, format, src, transformOptions } = input
     const origin = await assertSafeOrigin(src, allowedOrigins)
     const originBytes = await fetchOriginImage(origin, allowedOrigins)
@@ -154,7 +154,7 @@ function startTransformRefresh(input: CachedTransformInput) {
     })
 
     return { bytesIn, out: output }
-  })
+  })()
 
   inflightTransforms.set(input.cacheKey, work)
   work.then(
@@ -284,7 +284,7 @@ export async function optimizeProjectImage({
   }
 }
 
-export function prewarmProjectImages({
+export async function prewarmProjectImages({
   dpr,
   fit,
   formats,
@@ -310,51 +310,15 @@ export function prewarmProjectImages({
         if (dpr) {
           searchParams.set('dpr', String(dpr))
         }
-        return () =>
-          optimizeProjectImage({
-            accept: format === 'auto' ? 'image/avif,image/webp,image/*' : '',
-            projectId,
-            recordLog: false,
-            searchParams,
-            src,
-            // Prewarm arrives via the authenticated SDK API, not the public
-            // route, so it doesn't carry (or need) a URL signature.
-            trusted: true,
-          })
+        return {
+          accept: format === 'auto' ? 'image/avif,image/webp,image/*' : '',
+          params: Object.fromEntries(searchParams),
+          projectId,
+          src,
+        }
       }),
     ),
   )
-
-  // The endpoint accepts up to 200 variants while the global transform queue
-  // deliberately holds only 100. Starting every promise at once made a large
-  // prewarm overflow its own queue and self-reject with 503. A small worker set
-  // feeds jobs as capacity completes, preserving the queue for normal traffic.
-  const workerCount = Math.min(4, jobs.length)
-  const completion = Promise.all(
-    Array.from({ length: workerCount }, async (_, workerIndex) => {
-      let failed = 0
-      for (
-        let jobIndex = workerIndex;
-        jobIndex < jobs.length;
-        jobIndex += workerCount
-      ) {
-        try {
-          await jobs[jobIndex]()
-        } catch {
-          failed += 1
-        }
-      }
-      return failed
-    }),
-  ).then((failedByWorker) => {
-    const failed = failedByWorker.reduce((total, count) => total + count, 0)
-    if (failed > 0) {
-      logger.warn(
-        { failed, total: jobs.length },
-        'Image prewarm completed with failures',
-      )
-    }
-  })
-
-  return { variantCount: jobs.length, completion }
+  await enqueuePrewarmJobs(jobs)
+  return { variantCount: jobs.length }
 }

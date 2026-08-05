@@ -12,13 +12,14 @@ import {
   pruneResourceRollups,
   upsertResourceRollup,
 } from '@/data-access/resource-rollups'
+import { env } from '@/env/server'
+import { getPrewarmQueueStats } from '@/integrations/queue/prewarm'
 import {
   applyCacheLimits,
   clearCacheStorage,
   getCacheLimits,
   getCacheStorageStats,
 } from '@/lib/cache/cache'
-import { getQueueStats } from '@/lib/queue/transform-queue'
 import {
   getResourceLiveStats,
   readResourceSnapshot,
@@ -92,12 +93,14 @@ export async function getOperationsHealth() {
   // Operator health reflects the INSTANCE itself — cache/CPU/RAM/queue plus the
   // instance-wide project count and cache-hit rate across every tenant it serves
   // (in self-host that is just org_default). It is never tenant-scoped.
-  const [cache, projectCount, cacheHits, resources] = await Promise.all([
-    getCacheStorageStats(),
-    countAllProjects(),
-    getCacheHitStatsAllOrgs(since),
-    getResourceLiveStats(),
-  ])
+  const [cache, projectCount, cacheHits, prewarmQueue, resources] =
+    await Promise.all([
+      getCacheStorageStats(),
+      countAllProjects(),
+      getCacheHitStatsAllOrgs(since),
+      getPrewarmQueueStats(),
+      getResourceLiveStats(),
+    ])
   return {
     cache,
     cacheHits: {
@@ -112,7 +115,7 @@ export async function getOperationsHealth() {
     generatedAt: dayjs().toISOString(),
     projectCount,
     resources,
-    transformQueue: getQueueStats(),
+    prewarmQueue,
     uptimeSeconds,
   }
 }
@@ -130,20 +133,18 @@ export function runCacheMaintenance(
   return clearCacheStorage(input.target)
 }
 
-// Instance operations config. Cache caps are editable + hot-applied; transform
-// concurrency and queue depth stay env-configured and are surfaced read-only.
+// Instance operations config. Cache caps are editable + hot-applied; durable
+// worker concurrency stays environment-configured and is surfaced read-only.
 export async function getOperationsConfig() {
   await reassertCacheOverride()
   const row = await getOperationsConfigRow()
   const limits = getCacheLimits()
-  const queue = getQueueStats()
   return {
     diskCacheMaxMb: Math.round(limits.diskMaxBytes / MB),
     memoryCacheMaxMb: Math.round(limits.memoryMaxBytes / MB),
     diskOverride: row.diskCacheMaxMb != null,
     memoryOverride: row.memoryCacheMaxMb != null,
-    transformConcurrency: queue.concurrency,
-    maxQueueDepth: queue.maxQueue,
+    workerConcurrency: env.KEENPIX_WORKER_CONCURRENCY,
   }
 }
 

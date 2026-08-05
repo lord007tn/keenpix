@@ -2,13 +2,14 @@ import { pingClickhouse } from '@keenpix/clickhouse/client'
 import dayjs from 'dayjs'
 import { ensureResourceSampler } from '@/actions/admin/operations'
 import { checkDatabaseHealth } from '@/data-access/health'
+import { getPrewarmQueueStats } from '@/integrations/queue/prewarm'
 import { getCacheRuntimeStats, probeDurableCache } from '@/lib/cache/cache'
-import { getQueueStats } from '@/lib/queue/transform-queue'
 import { isCloud } from '@/server/deployment'
 import { isShuttingDown } from '@/server/shutdown'
 
 export async function getHealthStatus() {
   const started = performance.now()
+  const prewarmQueue = await getPrewarmQueueStats()
 
   // Draining for a rolling deploy: report un-ready (503) BEFORE touching the DB so
   // the orchestrator stops routing new traffic here while in-flight transforms
@@ -20,7 +21,7 @@ export async function getHealthStatus() {
       status: 'shutting_down',
       timestamp: dayjs().toISOString(),
       uptimeSeconds: Math.round(process.uptime()),
-      checks: { transformQueue: getQueueStats() },
+      checks: { prewarmQueue },
       latencyMs: Math.round(performance.now() - started),
     }
   }
@@ -54,7 +55,7 @@ export async function getHealthStatus() {
       checks: {
         cache: getCacheRuntimeStats(),
         database,
-        transformQueue: getQueueStats(),
+        prewarmQueue,
         ...subsystems,
       },
       latencyMs: Math.round(performance.now() - started),
@@ -69,7 +70,7 @@ export async function getHealthStatus() {
       checks: {
         cache: getCacheRuntimeStats(),
         database: { ok: false },
-        transformQueue: getQueueStats(),
+        prewarmQueue,
         ...subsystems,
       },
       latencyMs: Math.round(performance.now() - started),
