@@ -6,11 +6,11 @@ export PATH="/app/node_modules/.bin:$PATH"
 command="${1:-start}"
 
 if [ "$command" = "migrate" ]; then
-  exec prisma migrate deploy
+  exec pnpm --filter @keenpix/database deploy
 fi
 
 if [ "$command" = "seed" ]; then
-  exec node /app/prisma/seed.ts
+  exec pnpm --filter @keenpix/database seed
 fi
 
 if [ "$command" != "start" ]; then
@@ -22,7 +22,7 @@ if [ "$run_migrations" = "false" ] || [ "$run_migrations" = "0" ] || [ "$run_mig
   printf '[keenpix] Skipping database migrations\n'
 else
   printf '[keenpix] Applying database migrations\n'
-  prisma migrate deploy
+  pnpm --filter @keenpix/database deploy
 fi
 
 run_seed="${KEENPIX_RUN_SEED:-true}"
@@ -30,8 +30,8 @@ if [ "$run_seed" = "false" ] || [ "$run_seed" = "0" ] || [ "$run_seed" = "no" ];
   printf '[keenpix] Skipping database seed\n'
 else
   printf '[keenpix] Seeding bootstrap data\n'
-  node /app/prisma/seed.ts
+  pnpm --filter @keenpix/database seed
 fi
 
 printf '[keenpix] Starting Keenpix on port %s\n' "${PORT:-3000}"
-exec node .output/server/index.mjs
+exec node /app/apps/app/.output/server/index.mjs

@@ -64,7 +64,7 @@ services:
     image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: apps/app/Dockerfile
       args:
         VITE_KEENPIX_PUBLIC_URL: ${SERVICE_URL_APP}
         VITE_GTM_CONTAINER_ID: ${VITE_GTM_CONTAINER_ID:-}

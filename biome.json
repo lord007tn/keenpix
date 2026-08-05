@@ -45,6 +45,22 @@
       "trailingCommas": "all"
     }
   },
+  "overrides": [
+    {
+      "includes": [
+        "packages/**/src/index.ts",
+        "packages/**/src/index.tsx",
+        "packages/sdk/src/signing.ts"
+      ],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "off"
+          }
+        }
+      }
+    }
+  ],
   "extends": [
     "ultracite/biome/core",
     "ultracite/biome/react",

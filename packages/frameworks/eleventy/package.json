@@ -1,0 +1,40 @@
+{
+  "name": "@keenpix/eleventy",
+  "version": "0.1.0",
+  "description": "Keenpix image primitives for Eleventy.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts --dts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@keenpix/core": "workspace:^"
+  },
+  "peerDependencies": {
+    "@11ty/eleventy": ">=2"
+  },
+  "peerDependenciesMeta": {
+    "@11ty/eleventy": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "tsdown": "0.22.3",
+    "typescript": "^5.9.3"
+  }
+}

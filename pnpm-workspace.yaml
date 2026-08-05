@@ -1,5 +1,14 @@
 packages:
-  - .
+  - apps/*
+  - packages/*
+  - packages/frameworks/*
 
+autoInstallPeers: false
 minimumReleaseAge: 10080
 trustPolicy: no-downgrade
+trustPolicyExclude:
+  # Already present in the v0.2.1 lockfile. The publisher dropped provenance
+  # for this exact transitive release, so keep the exception version-scoped.
+  - undici-types@6.21.0
+  - reselect@5.1.1
+  - semver@6.3.1

@@ -8,12 +8,12 @@ count.txt
 .nitro
 .tanstack
 .wrangler
-.output
+**/.output
 .vinxi
 __unconfig*
 todos.json
-/src/generated
-.source
+**/src/generated
+**/.source
 .keenpix-cache
 .keenpix-cache-*/
 .seo-cache/

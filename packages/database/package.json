@@ -1,0 +1,36 @@
+{
+  "name": "@keenpix/database",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/generated/prisma/client.ts"
+  },
+  "scripts": {
+    "generate": "prisma generate",
+    "build": "pnpm generate",
+    "typecheck": "tsc --noEmit",
+    "migrate": "prisma migrate dev",
+    "deploy": "prisma migrate deploy",
+    "push": "prisma db push",
+    "seed": "tsx prisma/seed.ts",
+    "reset": "prisma migrate reset --force",
+    "clean": "git clean -xdf src/generated node_modules"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "better-auth": "^1.6.11",
+    "cuid": "^3.0.0",
+    "dotenv": "^17.4.2",
+    "pg": "^8.21.0",
+    "prisma": "^7.8.0",
+    "tsx": "^4.22.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "@types/pg": "^8.20.0",
+    "typescript": "^5.9.3"
+  }
+}

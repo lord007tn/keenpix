@@ -7,14 +7,14 @@ on:
       - "v*"
     paths-ignore:
       - "*.md"
-      - "docs/**"
+      - "apps/docs/**"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE.md"
   pull_request:
     branches: [master]
     paths-ignore:
       - "*.md"
-      - "docs/**"
+      - "apps/docs/**"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE.md"
 
@@ -69,7 +69,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: ./Dockerfile
+          file: ./apps/app/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

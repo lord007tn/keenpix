@@ -1,0 +1,21 @@
+{
+  "name": "@keenpix/docs",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Keenpix product documentation content and MDX build boundary.",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "build": "fumadocs-mdx",
+    "typecheck": "fumadocs-mdx && tsc --noEmit",
+    "clean": "git clean -xdf .source node_modules"
+  },
+  "dependencies": {
+    "fumadocs-mdx": "15.0.10",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "typescript": "^5.9.3"
+  }
+}

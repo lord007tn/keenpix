@@ -1,0 +1,43 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [
+    [
+      "@keenpix/angular",
+      "@keenpix/analog",
+      "@keenpix/astro",
+      "@keenpix/core",
+      "@keenpix/docusaurus",
+      "@keenpix/eleventy",
+      "@keenpix/ember",
+      "@keenpix/expo",
+      "@keenpix/fresh",
+      "@keenpix/gatsby",
+      "@keenpix/html",
+      "@keenpix/lit",
+      "@keenpix/next",
+      "@keenpix/nuxt",
+      "@keenpix/preact",
+      "@keenpix/qwik",
+      "@keenpix/react",
+      "@keenpix/react-native",
+      "@keenpix/redwood",
+      "@keenpix/remix",
+      "@keenpix/sdk",
+      "@keenpix/solid",
+      "@keenpix/solid-start",
+      "@keenpix/svelte",
+      "@keenpix/sveltekit",
+      "@keenpix/tanstack-start",
+      "@keenpix/vite",
+      "@keenpix/vitepress",
+      "@keenpix/vue",
+      "@keenpix/waku"
+    ]
+  ],
+  "access": "restricted",
+  "baseBranch": "master",
+  "updateInternalDependencies": "patch",
+  "ignore": []
+}

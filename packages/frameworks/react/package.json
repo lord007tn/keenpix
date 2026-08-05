@@ -1,0 +1,37 @@
+{
+  "name": "@keenpix/react",
+  "version": "0.1.0",
+  "description": "Responsive Keenpix image component for React.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsdown src/index.tsx --dts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@keenpix/core": "workspace:^"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "react": "^19.2.4",
+    "tsdown": "0.22.3",
+    "typescript": "^5.9.3"
+  }
+}

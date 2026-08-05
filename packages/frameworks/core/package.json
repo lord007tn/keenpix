@@ -1,0 +1,39 @@
+{
+  "name": "@keenpix/core",
+  "version": "0.1.0",
+  "description": "Framework-agnostic Keenpix image URL, loader, and responsive image primitives.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts --dts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "publint": "publint",
+    "clean": "git clean -xdf dist node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "publint": "^0.3.15",
+    "tsdown": "0.22.3",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

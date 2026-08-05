@@ -1,6 +1,6 @@
 # Keenpix
 
-![Keenpix brand image](./public/brand/keenpix-og-card.png)
+![Keenpix brand image](./apps/app/public/brand/keenpix-og-card.png)
 
 Keenpix is a self-hosted image optimization layer for teams that want the speed of an image CDN without handing the pipeline to another service. Point it at an allowlisted origin, request one URL, and Keenpix fetches the image, transforms it with [sharp](https://sharp.pixelplumbing.com/), caches the variant to disk, records analytics, and serves a CDN-ready response.
 
@@ -33,7 +33,7 @@ Keenpix keeps helpers and utils scoped by folder and purpose:
 - `data-access/` talks to the database; `actions/` combine data-access/helpers/utils/integrations into use cases; `functions/` validate, authorize, shape entry/exit data, and call actions.
 - Function complexity lint rules are disabled on purpose. Prefer readable local control flow over splitting code only for a metric.
 
-See [AGENTS.md](./AGENTS.md) and [src/README.md](./src/README.md) for the full repository rules.
+See [AGENTS.md](./AGENTS.md) and [apps/app/src/README.md](./apps/app/src/README.md) for the full repository rules.
 
 ---
 
@@ -142,7 +142,7 @@ serves it: an edge hit is counted at the edge, while an edge miss is counted onl
 when the application returns it. Optimizer savings (`bytesSaved`) remain a
 separate analytics measure and are never added to delivered bytes. Customer
 analytics remain organization/project scoped. See
-[`docs/analytics-history.md`](docs/analytics-history.md) for retention, export,
+[`apps/docs/notes/analytics-history.md`](apps/docs/notes/analytics-history.md) for retention, export,
 coverage, and the prospective project-attributed edge design.
 
 ---
@@ -373,7 +373,9 @@ Failure modes:
 
 ## Releases and Docker Images
 
-Keenpix releases from a semantic version tag (`vMAJOR.MINOR.PATCH`, e.g. `v0.1.0`). Before tagging, add a matching `## [vX.Y.Z] - YYYY-MM-DD` section to [CHANGELOG.md](./CHANGELOG.md) and bump `version` in `package.json`. Pushing the tag then creates the GitHub release from that changelog section ([release.yml](./.github/workflows/release.yml)) and publishes the GHCR image as `vX.Y.Z` and `vX.Y` ([docker.yml](./.github/workflows/docker.yml)); pushes to `master` publish `latest`.
+Keenpix application releases use semantic version tags (`vMAJOR.MINOR.PATCH`, e.g. `v0.2.1`). Before tagging, add a matching section to [CHANGELOG.md](./CHANGELOG.md) and bump `apps/app/package.json`. Pushing the tag creates the GitHub release ([release.yml](./.github/workflows/release.yml)) and publishes the GHCR image as `vX.Y.Z` and `vX.Y` ([docker.yml](./.github/workflows/docker.yml)); pushes to `master` publish `latest`.
+
+Public `@keenpix/*` integration packages use Changesets and are released independently from the application image. Run `pnpm changeset` for a package-facing change. The package family is versioned together so adapters cannot drift away from the shared core contract.
 
 ```bash
 git tag v0.1.0
@@ -392,21 +394,31 @@ Hosted builds serve the marketing page, Fumadocs documentation, docs search, `ll
 
 ## Architecture
 
-Four one-way layers: **route → server fn (`*Fn`) → action (pure) → data-access (Prisma)**. The transform endpoint (`/img/*`) is a route handler calling the pure sharp/SSRF/cache actions directly. Every record is `orgId`-scoped (self-host runs as a single org; SaaS-ready later).
+The repository is a pnpm/Turborepo monorepo. Product runtimes live in `apps/`; reusable and publishable boundaries live in `packages/`. There are intentionally no `internal/` or `tooling/` namespaces.
 
+```text
+apps/
+  app/                 TanStack app, API, image transform runtime, and app jobs
+  docs/                product docs content and repository architecture notes
+  custom-domain-edge/  independently deployed Cloudflare Worker
+packages/
+  auth/                shared Better Auth configuration primitives
+  clickhouse/          ClickHouse client, configuration, queries, and schema
+  database/            Prisma schema, migrations, generated client, and seed
+  sdk/                 publishable server-side management SDK
+  frameworks/
+    core/              framework-neutral URL and responsive-image behavior
+    react, next, vue, nuxt, svelte, sveltekit, astro, remix, ...
 ```
-src/
-  routes/        UI + API route handlers (/img/*, /api/health, /api/auth)
-  functions/     server fns (auth-gated via middleware)
-  actions/       pure logic — transform pipeline, SSRF guard
-  data-access/   Prisma queries
-  lib/           sharp, cache, auth
-```
+
+Inside `apps/app`, the one-way server layers remain **route → function → action → data-access**. The transform endpoint is an app route calling the Sharp/SSRF/cache actions directly. API handlers, transforms, the in-process concurrency queue, and app-owned jobs stay together until one gains an independent deployment or scaling lifecycle; the custom-domain edge Worker already has one, so it is a separate app.
+
+Every framework adapter extends `@keenpix/core` rather than reimplementing URL construction, responsive attributes, or request signing. The initial family covers HTML, React, Next.js, Vue, Nuxt, Svelte, SvelteKit, Astro, Remix, TanStack Start, Angular, Analog, Solid, SolidStart, Qwik, Preact, Gatsby, Expo, React Native, Docusaurus, VitePress, Vite, Lit, Eleventy, Ember, Fresh, Redwood, and Waku.
 
 ---
 
 ## License
 
-[GNU Affero General Public License v3.0](./LICENSE) (AGPL-3.0-only).
+[GNU Affero General Public License v3.0](./LICENSE) (AGPL-3.0-only) covers the Keenpix application and private operational packages. The public SDK and framework integrations are MIT licensed so applications can adopt them without inheriting the server's copyleft license.
 
 The self-host engine stays AGPL and free — no rug-pull, no CLA, and no features removed from self-host to upsell the cloud. Releases published before the relicense (v0.1.11 and earlier) remain available under Apache-2.0.
