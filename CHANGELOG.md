@@ -6,6 +6,27 @@ All notable changes to Keenpix are documented here.
 
 No unreleased changes.
 
+## [v0.2.1] - 2026-08-05
+
+### Added
+
+- Founding-customer pricing and production catalog configuration.
+- Project-attributed edge analytics, billing-period filters, platform finance reporting, and admin impersonation for customer support.
+- A safe legacy edge-data backfill packaged with the production runtime.
+
+### Changed
+
+- Pricing, cost projections, and production workflows now use the same founding-cohort assumptions and attributed delivery data.
+- Cloud image delivery URLs are canonicalized consistently across application and edge reporting paths.
+- Analytics delivery labels and finance telemetry now describe the reconciled edge, cache, and live-origin stages.
+
+### Fixed
+
+- Tenant analytics no longer rely on shared edge placeholders or leak platform-level values into customer views.
+- Platform costs, successful-delivery rankings, request-attempt totals, and founding-cohort projections now use reconciled inputs.
+- Cloudflare account credentials are separated from project analytics credentials, and Analytics Engine queries use its supported SQL surface.
+- Runtime startup no longer depends on dotenv, and production images include the edge backfill required by the deployed revision.
+
 ## [v0.2.0] - 2026-07-13
 
 ### Added
