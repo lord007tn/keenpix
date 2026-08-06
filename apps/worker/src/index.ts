@@ -1,24 +1,31 @@
-import { createServer } from 'node:http'
+import { serve } from '@hono/node-server'
 import {
+  createPrewarmQueue,
   createPrewarmWorker,
+  createQueueProducerConnection,
   createQueueWorkerConnection,
 } from '@keenpix/bullmq'
 import { createLogger, flushLogger, initializeLogger } from '@keenpix/logger'
 import { env } from './env'
-import { getWorkerHealth } from './health'
+import { getWorkerHealthDetails } from './health'
 import { createPrewarmProcessor } from './process-prewarm'
+import { createSystemRoutes } from './system-routes'
 
 initializeLogger({
-  environment: process.env.NODE_ENV,
+  environment: env.NODE_ENV,
   level: env.LOG_LEVEL,
   logDir: env.KEENPIX_LOG_DIR,
   service: 'keenpix-worker',
 })
 
 const logger = createLogger()
-const connection = createQueueWorkerConnection(env.KEENPIX_QUEUE_URL)
-connection.on('error', (error) => {
-  logger.error({ error }, 'queue connection error')
+const workerConnection = createQueueWorkerConnection(env.KEENPIX_QUEUE_URL)
+const queueConnection = createQueueProducerConnection(env.KEENPIX_QUEUE_URL)
+workerConnection.on('error', (error) => {
+  logger.error({ error }, 'worker queue connection error')
+})
+queueConnection.on('error', (error) => {
+  logger.error({ error }, 'workbench queue connection error')
 })
 const processPrewarm = createPrewarmProcessor({
   appUrl: env.KEENPIX_APP_URL,
@@ -26,36 +33,46 @@ const processPrewarm = createPrewarmProcessor({
   timeoutMs: env.KEENPIX_WORKER_TIMEOUT_MS,
 })
 const worker = createPrewarmWorker(
-  connection,
+  workerConnection,
   env.KEENPIX_WORKER_CONCURRENCY,
   async (job) => processPrewarm(job.data),
 )
+const prewarmQueue = createPrewarmQueue(queueConnection)
 let shuttingDown = false
 
-const healthServer = createServer(async (request, response) => {
-  if (request.url !== '/health') {
-    response.writeHead(404).end()
-    return
-  }
-
-  const health = await getWorkerHealth({
-    isShuttingDown: () => shuttingDown,
-    isWorkerRunning: () => worker.isRunning(),
-    pingQueue: () => connection.ping(),
-  })
-  response
-    .writeHead(health.ready ? 200 : 503, {
-      'Content-Type': 'application/json',
-    })
-    .end(JSON.stringify(health))
+const systemRoutes = createSystemRoutes({
+  getHealth: () =>
+    getWorkerHealthDetails({
+      environment: env.NODE_ENV,
+      isShuttingDown: () => shuttingDown,
+      isWorkerRunning: () => worker.isRunning(),
+      pingQueue: () => workerConnection.ping(),
+    }),
+  queue: prewarmQueue,
+  workbenchAuth:
+    env.KEENPIX_WORKBENCH_USERNAME && env.KEENPIX_WORKBENCH_PASSWORD
+      ? {
+          password: env.KEENPIX_WORKBENCH_PASSWORD,
+          username: env.KEENPIX_WORKBENCH_USERNAME,
+        }
+      : undefined,
 })
-
-healthServer.listen(env.KEENPIX_WORKER_PORT, '0.0.0.0', () => {
-  logger.info(
-    { port: env.KEENPIX_WORKER_PORT },
-    'queue worker health server started',
-  )
-})
+const healthServer = serve(
+  {
+    fetch: systemRoutes.fetch,
+    hostname: '0.0.0.0',
+    port: env.KEENPIX_WORKER_PORT,
+  },
+  (info) => {
+    logger.info(
+      {
+        health: `http://${info.address}:${info.port}/health`,
+        workbench: `http://${info.address}:${info.port}/workbench`,
+      },
+      'queue worker ops server started',
+    )
+  },
+)
 
 worker.on('completed', (job) => {
   logger.debug({ jobId: job.id }, 'prewarm transform completed')
@@ -76,6 +93,7 @@ async function shutdown(signal: NodeJS.Signals) {
   try {
     await Promise.all([
       worker.close(),
+      prewarmQueue.close(),
       healthServer.listening
         ? new Promise((resolve, reject) => {
             healthServer.close((error) => {
@@ -88,18 +106,22 @@ async function shutdown(signal: NodeJS.Signals) {
           })
         : Promise.resolve(),
     ])
-    await connection.quit()
+    await Promise.all([workerConnection.quit(), queueConnection.quit()])
     logger.info({ signal }, 'queue worker stopped')
   } finally {
     await flushLogger()
   }
 }
 
-function handleSignal(signal: NodeJS.Signals) {
-  return shutdown(signal).catch((error) => {
+async function handleSignal(signal: NodeJS.Signals) {
+  try {
+    await shutdown(signal)
+    process.exit(0)
+  } catch (error) {
     logger.error({ error, signal }, 'queue worker shutdown failed')
-    process.exitCode = 1
-  })
+    await flushLogger().catch(() => undefined)
+    process.exit(1)
+  }
 }
 
 async function exitAfterFlush() {
@@ -107,8 +129,12 @@ async function exitAfterFlush() {
   process.exit(1)
 }
 
-process.once('SIGTERM', () => handleSignal('SIGTERM'))
-process.once('SIGINT', () => handleSignal('SIGINT'))
+process.once('SIGTERM', () => {
+  handleSignal('SIGTERM').catch(() => process.exit(1))
+})
+process.once('SIGINT', () => {
+  handleSignal('SIGINT').catch(() => process.exit(1))
+})
 process.once('uncaughtException', (error) => {
   logger.error(error, 'uncaught exception')
   return exitAfterFlush()

@@ -50,7 +50,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-The app comes up on **http://localhost:3000** by default. Set `KEENPIX_PORT` to publish a different host port, `BETTER_AUTH_URL` to your public base URL, or `KEENPIX_IMAGE` to a pinned image tag/digest. Compose runs Postgres, Dragonfly, the app, and its BullMQ worker; applies migrations on boot; seeds the default org and super admin user; and exposes `/api/health` for the container healthcheck. Dragonfly is configured with its BullMQ-required Lua compatibility flag and five-minute snapshots. Self-host is the default (`KEENPIX_MODE` unset), so `/` shows a private self-host splash with links into `/app` and `/docs`; the dashboard, API, and docs are served, while public marketing and LLM export routes are not.
+The app comes up on **http://localhost:3000** by default. Set `KEENPIX_PORT` to publish a different host port, `BETTER_AUTH_URL` to your public base URL, or `KEENPIX_IMAGE` to a pinned image tag/digest. Compose runs Postgres, Dragonfly, the app, and its BullMQ worker; applies migrations on boot; seeds the default org and super admin user; and exposes `/api/health` for the app container healthcheck. The private worker ops server provides `/health/live`, `/health/ready`, `/health/details`, and a BullMQ dashboard at `/workbench` on port 3001. Dragonfly is configured with its BullMQ-required Lua compatibility flag and five-minute snapshots. Self-host is the default (`KEENPIX_MODE` unset), so `/` shows a private self-host splash with links into `/app` and `/docs`; the dashboard, API, and docs are served, while public marketing and LLM export routes are not.
 
 The Docker image entrypoint accepts `start` (default), `migrate`, and `seed`. For normal installs, leave the default `start`; it applies migrations, seeds bootstrap data, then starts the app. Set `KEENPIX_RUN_MIGRATIONS=false` or `KEENPIX_RUN_SEED=false` only when an external deployment workflow owns those steps.
 
@@ -134,9 +134,10 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_MAX_DIMENSION` | – | Longest output side when a request omits `w`/`h` (default 4096). |
 | `KEENPIX_ORIGIN_TIMEOUT_MS` | – | Per-attempt origin fetch timeout; a slow origin returns 504 (default 10000). |
 | `KEENPIX_QUEUE_URL` | – | BullMQ connection URL. Compose points it at the bundled Dragonfly service. |
+| `KEENPIX_WORKBENCH_USERNAME` / `KEENPIX_WORKBENCH_PASSWORD` | – | Optional basic auth for the worker's `/workbench` BullMQ dashboard. Both must be set together; production presets generate them. |
 | `KEENPIX_WORKER_SECRET` | ✅ (prod) | Independent 32+ character secret authenticating worker callbacks to the app. |
 | `KEENPIX_WORKER_CONCURRENCY` | – | Concurrent durable prewarm jobs per worker process (default 4). |
-| `KEENPIX_WORKER_PORT` | – | Internal worker readiness port (default 3001). Compose probes `/health` without publishing it publicly. |
+| `KEENPIX_WORKER_PORT` | – | Internal worker ops port (default 3001). Compose probes `/health/live` without publishing it publicly. |
 | `KEENPIX_MEM_LIMIT` / `KEENPIX_CPU_LIMIT` / `KEENPIX_MEM_RESERVATION` | – | Opt-in Docker Compose resource caps for the app container. Default `0` = no limit. When set, Docker enforces them and the Operations page CPU/RAM gauges read the cap as the real ceiling. A too-low memory cap can get the app OOM-killed. |
 | `KEENPIX_PG_MEM_LIMIT` / `KEENPIX_PG_CPU_LIMIT` / `KEENPIX_PG_MEM_RESERVATION` | – | Same opt-in resource caps for the bundled Postgres container. Default `0` = no limit. |
 

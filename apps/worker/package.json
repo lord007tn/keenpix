@@ -14,8 +14,12 @@
     "clean": "git clean -xdf dist node_modules"
   },
   "dependencies": {
+    "@getworkbench/hono": "0.9.1",
+    "@hono/node-server": "^1.19.14",
     "@keenpix/bullmq": "workspace:*",
     "@keenpix/logger": "workspace:*",
+    "dayjs": "^1.11.20",
+    "hono": "^4.12.30",
     "zod": "^4.4.3"
   },
   "devDependencies": {

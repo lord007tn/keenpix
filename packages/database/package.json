@@ -9,7 +9,7 @@
   },
   "scripts": {
     "generate": "prisma generate",
-    "build": "pnpm generate",
+    "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "migrate": "prisma migrate dev",
     "deploy": "prisma migrate deploy",

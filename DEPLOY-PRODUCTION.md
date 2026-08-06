@@ -167,6 +167,11 @@ For a full rebuild: create fresh volumes, start only `postgres`, copy a dump in
 ## After deploy
 
 - App health: open the generated app URL and `/api/health`.
+- Worker: verify `/health/live`, `/health/ready`, and `/health/details` inside
+  the worker container. If operators need Workbench, assign the worker service
+  an access-controlled domain on port `3001` and sign in with Coolify's generated
+  `SERVICE_USER_WORKBENCH` / `SERVICE_PASSWORD_64_WORKBENCH` credentials. Do not
+  expose the worker port without authentication.
 - Email: staging — open the Mailpit URL; production — send a signup and confirm
   it arrives at a real inbox via Postmark.
 - Billing: configure the Polar webhook endpoint to

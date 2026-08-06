@@ -4,7 +4,7 @@
   "ui": "stream",
   "tasks": {
     "build": {
-      "dependsOn": ["^build", "^generate"],
+      "dependsOn": ["generate", "^build", "^generate"],
       "outputs": ["dist/**", ".output/**", ".source/**"]
     },
     "dev": {
@@ -16,11 +16,11 @@
       "cache": false
     },
     "test": {
-      "dependsOn": ["^build", "^generate"],
+      "dependsOn": ["generate", "^build", "^generate"],
       "outputs": ["coverage/**"]
     },
     "typecheck": {
-      "dependsOn": ["^build", "^generate"],
+      "dependsOn": ["generate", "^build", "^generate"],
       "outputs": []
     },
     "clean": {

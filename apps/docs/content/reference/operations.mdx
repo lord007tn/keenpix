@@ -57,3 +57,22 @@ Example response:
 The exact cache and prewarm queue fields may grow as the operations dashboard grows, so treat
 `ok`, `status`, `checks.database.ok`, and the HTTP status as the stable monitoring
 contract.
+
+## Worker operations
+
+The worker has a separate internal ops server on `KEENPIX_WORKER_PORT` (default
+`3001`). Compose keeps this port private and uses the cheap liveness endpoint for
+container health:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /health/live` | Confirms the worker process and HTTP server are alive. |
+| `GET /health/ready` | Confirms the BullMQ consumer is accepting jobs and Dragonfly responds. |
+| `GET /health` | Compatibility alias for readiness. |
+| `GET /health/details` | Returns component status, queue latency, environment, and uptime. |
+| `GET /workbench` | Opens the embedded BullMQ queue dashboard. |
+
+Set both `KEENPIX_WORKBENCH_USERNAME` and `KEENPIX_WORKBENCH_PASSWORD` before
+assigning the worker service a private admin domain. Never expose port `3001`
+publicly without authentication; an SSH tunnel or access-controlled internal
+domain is preferred.

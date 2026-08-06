@@ -186,7 +186,7 @@ services:
     restart: unless-stopped
     stop_grace_period: 30s
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -200,6 +200,8 @@ services:
       NODE_ENV: production
       KEENPIX_APP_URL: http://app:3000
       KEENPIX_QUEUE_URL: redis://dragonfly:6379
+      KEENPIX_WORKBENCH_PASSWORD: ${SERVICE_PASSWORD_64_WORKBENCH}
+      KEENPIX_WORKBENCH_USERNAME: ${SERVICE_USER_WORKBENCH}
       KEENPIX_WORKER_CONCURRENCY: ${KEENPIX_WORKER_CONCURRENCY:-4}
       KEENPIX_WORKER_PORT: 3001
       KEENPIX_WORKER_SECRET: ${SERVICE_HEX_64_KEENPIX_WORKER}
