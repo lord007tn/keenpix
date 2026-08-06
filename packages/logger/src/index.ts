@@ -1,7 +1,9 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import type { DrainContext, LogLevel } from 'evlog'
 import { log as evlog, initLogger } from 'evlog'
 import { createFsDrain } from 'evlog/fs'
 import { createDrainPipeline } from 'evlog/pipeline'
+import { KEENPIX_REDACTION } from './redaction'
 
 export type KeenpixLogLevel =
   | 'fatal'
@@ -32,6 +34,7 @@ export interface Logger {
 
 let initialized = false
 let fileDrain: ReturnType<ReturnType<typeof createDrainPipeline<DrainContext>>>
+const logContextStorage = new AsyncLocalStorage<Record<string, unknown>>()
 
 function getEvlogLevel(level: KeenpixLogLevel): LogLevel {
   if (level === 'fatal') {
@@ -64,10 +67,15 @@ export function initializeLogger(options: LoggerOptions) {
       maxBufferSize: 2000,
       onDropped: (events, error) => {
         process.stderr.write(
-          `[evlog] Dropped ${events.length} log events: ${String(error)}\n`,
+          `[evlog] Dropped ${events.length} log events${error ? `: ${error.message}` : ''}\n`,
         )
       },
-      retry: { maxAttempts: 3 },
+      retry: {
+        backoff: 'exponential',
+        initialDelayMs: 250,
+        maxAttempts: 3,
+        maxDelayMs: 2000,
+      },
     })(writeLogs)
   }
 
@@ -81,26 +89,7 @@ export function initializeLogger(options: LoggerOptions) {
     },
     minLevel: getEvlogLevel(level),
     pretty: options.environment !== 'production',
-    redact: {
-      builtins: [
-        'bearer',
-        'creditCard',
-        'email',
-        'iban',
-        'ipv4',
-        'jwt',
-        'phone',
-      ],
-      paths: [
-        'authorization',
-        'cookie',
-        'headers.authorization',
-        'headers.cookie',
-        '**.password',
-        '**.secret',
-        '**.token',
-      ],
-    },
+    redact: KEENPIX_REDACTION,
   })
   initialized = true
 }
@@ -130,14 +119,32 @@ export function getErrorContext(error: unknown, includeStack = false) {
 
 function normalizeError(error: Error) {
   return {
-    ...getErrorContext(error, process.env.NODE_ENV !== 'production'),
+    ...getErrorContext(error, true),
     code: 'code' in error ? String(error.code) : undefined,
   }
 }
 
+export function getLogContext() {
+  return logContextStorage.getStore()
+}
+
+export function enterLogContext(context: Record<string, unknown>) {
+  logContextStorage.enterWith({ ...getLogContext(), ...context })
+}
+
+export function runWithLogContext<T>(
+  context: Record<string, unknown>,
+  operation: () => T,
+) {
+  return logContextStorage.run({ ...getLogContext(), ...context }, operation)
+}
+
 export function createLogger(bindings: Record<string, unknown> = {}): Logger {
   const write = (level: LogLevel, input: LogInput, message?: string) => {
-    const event: Record<string, unknown> = { ...bindings }
+    const event: Record<string, unknown> = {
+      ...getLogContext(),
+      ...bindings,
+    }
 
     if (input instanceof Error) {
       event.error = normalizeError(input)

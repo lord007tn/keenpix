@@ -10,6 +10,7 @@ initializeLogger({
   level: env.LOG_LEVEL,
   logDir: env.KEENPIX_LOG_DIR,
   service: 'keenpix-app',
+  version: import.meta.env.VITE_APP_VERSION,
 })
 
 export const logger = createLogger()

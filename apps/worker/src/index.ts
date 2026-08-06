@@ -5,7 +5,13 @@ import {
   createQueueProducerConnection,
   createQueueWorkerConnection,
 } from '@keenpix/bullmq'
-import { createLogger, flushLogger, initializeLogger } from '@keenpix/logger'
+import {
+  createLogger,
+  flushLogger,
+  initializeLogger,
+  runWithLogContext,
+} from '@keenpix/logger'
+import packageJson from '../package.json' with { type: 'json' }
 import { env } from './env'
 import { getWorkerHealthDetails } from './health'
 import { createPrewarmProcessor } from './process-prewarm'
@@ -16,6 +22,7 @@ initializeLogger({
   level: env.LOG_LEVEL,
   logDir: env.KEENPIX_LOG_DIR,
   service: 'keenpix-worker',
+  version: packageJson.version,
 })
 
 const logger = createLogger()
@@ -35,7 +42,15 @@ const processPrewarm = createPrewarmProcessor({
 const worker = createPrewarmWorker(
   workerConnection,
   env.KEENPIX_WORKER_CONCURRENCY,
-  async (job) => processPrewarm(job.data),
+  (job) =>
+    runWithLogContext(
+      {
+        jobId: job.id,
+        jobName: job.name,
+        queue: job.queueName,
+      },
+      () => processPrewarm(job.data),
+    ),
 )
 const prewarmQueue = createPrewarmQueue(queueConnection)
 let shuttingDown = false
