@@ -1,4 +1,4 @@
-import type { PrewarmTransformJob } from '@keenpix/queue'
+import type { PrewarmTransformJob } from '@keenpix/bullmq'
 
 export function createPrewarmProcessor({
   appUrl,

@@ -13,7 +13,7 @@ import {
   upsertResourceRollup,
 } from '@/data-access/resource-rollups'
 import { env } from '@/env/server'
-import { getPrewarmQueueStats } from '@/integrations/queue/prewarm'
+import { getPrewarmQueueStats } from '@/integrations/bullmq/prewarm'
 import {
   applyCacheLimits,
   clearCacheStorage,

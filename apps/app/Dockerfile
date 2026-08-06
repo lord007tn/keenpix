@@ -29,8 +29,7 @@ ENV VITE_KEENPIX_PUBLIC_URL=$VITE_KEENPIX_PUBLIC_URL
 ENV VITE_GTM_CONTAINER_ID=$VITE_GTM_CONTAINER_ID
 ENV VITE_GA_MEASUREMENT_ID=$VITE_GA_MEASUREMENT_ID
 RUN pnpm db:generate
-RUN pnpm build:app
-RUN pnpm --filter @keenpix/worker build
+RUN pnpm build:runtime
 
 FROM package-manager AS runner
 ARG VERSION=0.3.0
@@ -47,10 +46,12 @@ COPY --from=prod-deps /app /app
 COPY --from=build /app/apps/app/.output /app/apps/app/.output
 COPY --from=build /app/apps/worker/dist /app/apps/worker/dist
 COPY --from=build /app/packages/database/src/generated /app/packages/database/src/generated
-COPY --from=build /app/packages/queue/dist /app/packages/queue/dist
+COPY --from=build /app/packages/bullmq/dist /app/packages/bullmq/dist
+COPY --from=build /app/packages/email/dist /app/packages/email/dist
+COPY --from=build /app/packages/logger/dist /app/packages/logger/dist
 COPY --chmod=755 docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN mkdir -p /var/cache/keenpix && chown -R node:node /var/cache/keenpix
 USER node
-EXPOSE 3000
+EXPOSE 3000 3001
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["start"]

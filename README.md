@@ -111,6 +111,7 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_SUPER_ADMIN_PASSWORD` | ✅ | Password for the seeded super admin account. |
 | `KEENPIX_ADMIN_EMAIL` / `KEENPIX_ADMIN_PASSWORD` | – | Legacy aliases for the super-admin bootstrap variables. |
 | `LOG_LEVEL` | – | Server log level (`info` by default). |
+| `KEENPIX_LOG_DIR` | – | Optional directory for rotating evlog NDJSON files. Structured logs always continue to stdout. |
 | `VITE_KEENPIX_PUBLIC_URL` | – | Browser-facing app URL for local/source builds when it cannot be inferred from the browser origin. |
 | `VITE_GTM_CONTAINER_ID` | – | Primary consent-gated Google Tag Manager container ID. The published container must contain an unpaused Google tag and event routing; setting the ID alone does not route events. Because Vite embeds this value at build time, set it as both a Docker build argument and a runtime variable in cloud deployments. |
 | `VITE_GA_MEASUREMENT_ID` | – | Consent-gated direct GA4 fallback used only when GTM is unset. Set it at both Docker build time and runtime. |
@@ -135,6 +136,7 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_QUEUE_URL` | – | BullMQ connection URL. Compose points it at the bundled Dragonfly service. |
 | `KEENPIX_WORKER_SECRET` | ✅ (prod) | Independent 32+ character secret authenticating worker callbacks to the app. |
 | `KEENPIX_WORKER_CONCURRENCY` | – | Concurrent durable prewarm jobs per worker process (default 4). |
+| `KEENPIX_WORKER_PORT` | – | Internal worker readiness port (default 3001). Compose probes `/health` without publishing it publicly. |
 | `KEENPIX_MEM_LIMIT` / `KEENPIX_CPU_LIMIT` / `KEENPIX_MEM_RESERVATION` | – | Opt-in Docker Compose resource caps for the app container. Default `0` = no limit. When set, Docker enforces them and the Operations page CPU/RAM gauges read the cap as the real ceiling. A too-low memory cap can get the app OOM-killed. |
 | `KEENPIX_PG_MEM_LIMIT` / `KEENPIX_PG_CPU_LIMIT` / `KEENPIX_PG_MEM_RESERVATION` | – | Same opt-in resource caps for the bundled Postgres container. Default `0` = no limit. |
 
@@ -406,16 +408,18 @@ apps/
   custom-domain-edge/  independently deployed Cloudflare Worker
 packages/
   auth/                shared Better Auth configuration primitives
+  bullmq/              BullMQ connections, queues, jobs, and worker factories
   clickhouse/          ClickHouse client, configuration, queries, and schema
   database/            Prisma schema, migrations, generated client, and seed
-  queue/               BullMQ job contracts and connection factories
+  email/               provider-neutral transactional email delivery
+  logger/              shared evlog terminal and optional disk logging
   sdk/                 publishable server-side management SDK
   frameworks/
     core/              framework-neutral URL and responsive-image behavior
     react, next, vue, nuxt, svelte, sveltekit, astro, remix, ...
 ```
 
-Inside `apps/app`, the one-way server layers remain **route → function → action → data-access**. The transform endpoint is an app route calling the Sharp/SSRF/cache actions directly, and normal cache-miss transforms execute within that request lifecycle. Durable SDK prewarm work has its own scaling and deployment lifecycle, so its BullMQ consumer lives in `apps/worker` and its shared job contract lives in `packages/queue`. The custom-domain edge Worker remains separate for the same lifecycle reason.
+Inside `apps/app`, the one-way server layers remain **route → function → action → data-access**. The transform endpoint is an app route calling the Sharp/SSRF/cache actions directly, and normal cache-miss transforms execute within that request lifecycle. Durable SDK prewarm work has its own scaling and deployment lifecycle, so its consumer lives in `apps/worker` while every BullMQ connection, queue, job contract, and worker factory lives in `packages/bullmq`. Transactional delivery lives in `packages/email`, and both runtimes share evlog through `packages/logger`. The custom-domain edge Worker remains separate for the same lifecycle reason.
 
 Every framework adapter extends `@keenpix/core` rather than reimplementing URL construction, responsive attributes, or request signing. The initial family covers HTML, React, Next.js, Vue, Nuxt, Svelte, SvelteKit, Astro, Remix, TanStack Start, Angular, Analog, Solid, SolidStart, Qwik, Preact, Gatsby, Expo, React Native, Docusaurus, VitePress, Vite, Lit, Eleventy, Ember, Fresh, Redwood, and Waku.
 

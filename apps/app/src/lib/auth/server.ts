@@ -4,6 +4,7 @@ import {
   organizationRoles,
 } from '@keenpix/auth/access-control'
 import { prisma } from '@keenpix/database'
+import { escapeEmailHtml } from '@keenpix/email'
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import {
@@ -20,7 +21,6 @@ import { env } from '@/env/server'
 import { buildPolarPlugin } from '@/lib/billing/polar-plugin'
 import { assertCanAddSeat, getSeatLimit } from '@/lib/billing/quota'
 import { sendPlatformEmail } from '@/lib/email/send'
-import { escapeEmailHtml } from '@/lib/email/utils/html/escape'
 import { errorContext, logger } from '@/lib/logger/logger'
 import { getAppUrl, isCloud } from '@/server/deployment'
 

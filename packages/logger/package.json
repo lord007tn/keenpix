@@ -1,27 +1,27 @@
 {
-  "name": "@keenpix/worker",
-  "version": "0.3.0",
+  "name": "@keenpix/logger",
+  "version": "0.0.0",
   "private": true,
-  "description": "Durable Keenpix background job worker.",
   "type": "module",
   "license": "AGPL-3.0-only",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsdown src/index.ts --platform node",
-    "start": "node dist/index.mjs",
+    "build": "tsdown src/index.ts --dts --platform node",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "clean": "git clean -xdf dist node_modules"
   },
   "dependencies": {
-    "@keenpix/bullmq": "workspace:*",
-    "@keenpix/logger": "workspace:*",
-    "zod": "^4.4.3"
+    "evlog": "^2.22.0"
   },
   "devDependencies": {
     "@types/node": "^22.19.15",
     "tsdown": "0.22.3",
-    "tsx": "^4.22.3",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }

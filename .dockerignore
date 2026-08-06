@@ -1,5 +1,7 @@
 # Dependency and package-manager caches
 node_modules
+**/node_modules
+**/node_modules/**
 .pnpm-store
 .yarn
 .npm
@@ -10,7 +12,11 @@ node_modules
 .tanstack
 .vinxi
 dist
+**/dist
+**/dist/**
 dist-ssr
+**/.turbo
+**/.turbo/**
 src/generated
 
 # Local environment, data, and logs

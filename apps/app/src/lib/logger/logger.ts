@@ -1,28 +1,19 @@
-import pino from 'pino'
+import {
+  createLogger,
+  getErrorContext,
+  initializeLogger,
+} from '@keenpix/logger'
 import { env } from '@/env/server'
 
-export const logger = pino({
-  base: {
-    service: 'keenpix',
-  },
+initializeLogger({
+  environment: env.NODE_ENV,
   level: env.LOG_LEVEL,
+  logDir: env.KEENPIX_LOG_DIR,
+  service: 'keenpix-app',
 })
 
-export function errorContext(error: unknown) {
-  if (!(error instanceof Error)) {
-    return { error: String(error) }
-  }
+export const logger = createLogger()
 
-  return {
-    error: error.message,
-    name: error.name,
-    stack: env.NODE_ENV === 'production' ? undefined : error.stack,
-    cause:
-      error.cause instanceof Error
-        ? {
-            message: error.cause.message,
-            name: error.cause.name,
-          }
-        : error.cause,
-  }
+export function errorContext(error: unknown) {
+  return getErrorContext(error, env.NODE_ENV !== 'production')
 }

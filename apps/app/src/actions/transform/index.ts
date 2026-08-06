@@ -1,7 +1,7 @@
 import { getProjectById } from '@/data-access/projects'
 import { getTransformErrorStatus, TransformError } from '@/errors/transform'
 import { parseTransformParams } from '@/helpers/transform/params'
-import { enqueuePrewarmJobs } from '@/integrations/queue/prewarm'
+import { enqueuePrewarmJobs } from '@/integrations/bullmq/prewarm'
 import { enqueueRequestLog } from '@/lib/analytics-buffer/buffer'
 import { orgEntitledForServing } from '@/lib/billing/service-gate'
 import { buildCacheKey, readCacheEntry, writeCache } from '@/lib/cache/cache'

@@ -1,5 +1,6 @@
+import { flushLogger } from '@keenpix/logger'
 import type { NitroAppPlugin } from 'nitro/types'
-import { closePrewarmQueue } from '@/integrations/queue/prewarm'
+import { closePrewarmQueue } from '@/integrations/bullmq/prewarm'
 import { flushRequestLogs } from '@/lib/analytics-buffer/buffer'
 import { logger } from '@/lib/logger/logger'
 import { beginShutdown, isShuttingDown } from '@/server/shutdown'
@@ -18,6 +19,7 @@ async function handleSignal(signal: NodeJS.Signals): Promise<void> {
   logger.info({ signal }, 'graceful shutdown started')
   await Promise.all([flushRequestLogs(), closePrewarmQueue()])
   logger.info('graceful shutdown complete')
+  await flushLogger()
   // srvx's own SIGTERM handler closes the HTTP server in parallel, so the process
   // usually exits on its own once both settle. This unref'd backstop force-exits if
   // a stuck keep-alive socket would otherwise block the deploy — and covers the
@@ -38,6 +40,7 @@ const plugin: NitroAppPlugin = (nitroApp) => {
   nitroApp.hooks.hook('close', async () => {
     beginShutdown()
     await Promise.all([flushRequestLogs(), closePrewarmQueue()])
+    await flushLogger()
   })
 }
 

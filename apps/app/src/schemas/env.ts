@@ -17,6 +17,9 @@ export const serverEnvSchema = {
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
     .default('info'),
+  // Evlog always writes structured events to stdout. Set this to also retain
+  // rotating NDJSON files on a persistent volume.
+  KEENPIX_LOG_DIR: z.string().min(1).optional(),
   KEENPIX_APP_URL: optionalUrlSchema,
   // The single deployment switch. `cloud` enables the multi-tenant hosted product
   // (self-signup, billing, quotas, shared cache, marketing site); `selfhost` is

@@ -4,7 +4,7 @@ import {
   createQueueProducerConnection,
   type PrewarmTransformJob,
   getPrewarmQueueStats as readPrewarmQueueStats,
-} from '@keenpix/queue'
+} from '@keenpix/bullmq'
 import { env } from '@/env/server'
 import { errorContext, logger } from '@/lib/logger/logger'
 

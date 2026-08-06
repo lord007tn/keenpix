@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 const enqueuePrewarmJobs = vi.hoisted(() => vi.fn())
 
 vi.mock('@/data-access/projects', () => ({ getProjectById: vi.fn() }))
-vi.mock('@/integrations/queue/prewarm', () => ({ enqueuePrewarmJobs }))
+vi.mock('@/integrations/bullmq/prewarm', () => ({ enqueuePrewarmJobs }))
 vi.mock('@/lib/analytics-buffer/buffer', () => ({
   enqueueRequestLog: vi.fn(),
 }))

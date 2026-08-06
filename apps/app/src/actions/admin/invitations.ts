@@ -1,3 +1,4 @@
+import { escapeEmailHtml } from '@keenpix/email'
 import type { z } from 'zod'
 import {
   acceptInvitation as acceptInvitationInDb,
@@ -6,7 +7,6 @@ import {
   revokeInvitation as revokeInvitationInDb,
 } from '@/data-access/admin/invitations'
 import { sendPlatformEmail } from '@/lib/email/send'
-import { escapeEmailHtml } from '@/lib/email/utils/html/escape'
 import type {
   acceptInvitationSchema,
   createInvitationSchema,

@@ -194,6 +194,12 @@ services:
     command: ["worker"]
     restart: unless-stopped
     stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     depends_on:
       app:
         condition: service_healthy
@@ -204,6 +210,7 @@ services:
       - KEENPIX_APP_URL=http://app:3000
       - KEENPIX_QUEUE_URL=redis://dragonfly:6379
       - KEENPIX_WORKER_CONCURRENCY=${KEENPIX_WORKER_CONCURRENCY:-4}
+      - KEENPIX_WORKER_PORT=3001
       - KEENPIX_WORKER_SECRET=${KEENPIX_WORKER_SECRET}
       - LOG_LEVEL=${LOG_LEVEL:-info}
 

@@ -24,6 +24,7 @@ Set these in `.env` (or your orchestrator's secrets).
 | `KEENPIX_CACHE_DIR`              | no            | `./.keenpix-cache` | Where transformed images are cached on disk                                                |
 | `KEENPIX_MODE`                   | no            | `selfhost`         | `selfhost` (default) or `cloud`. Self-host disables the marketing site, self-signup, and billing |
 | `LOG_LEVEL`                      | no            | `info`             | Server log level: `fatal`, `error`, `warn`, `info`, `debug`, `trace`, or `silent`          |
+| `KEENPIX_LOG_DIR`                | no            | —                  | Also retain rotating evlog NDJSON files in this directory; stdout logging remains enabled  |
 
 ## Browser public URLs
 
@@ -105,6 +106,7 @@ only needs the zone-scoped **Analytics → Read** permission.
 | `KEENPIX_QUEUE_URL`        | `redis://127.0.0.1:6379` | BullMQ connection URL; Compose uses Dragonfly |
 | `KEENPIX_WORKER_SECRET`    | —              | 32+ character secret for worker-to-app callbacks |
 | `KEENPIX_WORKER_CONCURRENCY` | `4`          | Concurrent prewarm jobs per worker process       |
+| `KEENPIX_WORKER_PORT`      | `3001`         | Internal `/health` listener for the worker container; Compose does not publish it |
 | `KEENPIX_MAX_INPUT_PIXELS` | `50000000`     | Decode-time pixel ceiling (decompression-bomb guard) |
 | `KEENPIX_MAX_DIMENSION`    | `4096`         | Longest output side when a request gives no `w`/`h` |
 | `KEENPIX_ORIGIN_TIMEOUT_MS` | `10000`       | Per-attempt origin fetch timeout before `504`    |
