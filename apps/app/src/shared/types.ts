@@ -1,6 +1,16 @@
 import type { OutputFormat } from '@keenpix/transform'
 
 export type ProjectFit = 'cover' | 'contain' | 'fill' | 'inside' | 'outside'
+export type WatermarkPosition =
+  | 'center'
+  | 'north'
+  | 'northeast'
+  | 'northwest'
+  | 'south'
+  | 'southeast'
+  | 'southwest'
+  | 'east'
+  | 'west'
 
 export interface Project {
   allowedOrigins: string[]
@@ -20,11 +30,18 @@ export interface Project {
   name: string
   orgId: string
   origin: string
-  // When true, /img requests must carry a valid `s=` HMAC signature. The secret
+  // When true, /img requests must carry a valid `sig=` HMAC signature. The secret
   // itself is never on this shape — admins fetch it via getProjectSigningFn.
   requireSignedUrls: boolean
+  signedUrlTtlSeconds: number | null
   // false preserves metadata such as EXIF, GPS, and ICC profiles.
   stripMetadata: boolean
+  watermarkEnabled: boolean
+  watermarkMargin: number
+  watermarkOpacity: number
+  watermarkPosition: WatermarkPosition
+  watermarkScale: number
+  watermarkUrl: string | null
 }
 
 export type AnalyticsRange = '24h' | '7d' | '30d' | '90d'

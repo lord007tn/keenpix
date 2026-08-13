@@ -236,6 +236,9 @@ The same rules apply to any proxy or CDN:
   key already includes the query string.
 - Respect `Cache-Control` from Keenpix — do not shorten or strip it.
 - Respect `Vary: Accept` if you use `fmt=auto`; otherwise generate explicit `fmt` values.
+- If you use `w=auto` or `dpr=auto`, include the `Sec-CH-DPR`, `Sec-CH-Width`,
+  and `Sec-CH-Viewport-Width` request headers in the cache key. If your CDN plan
+  cannot vary by those headers, keep numeric framework width ladders instead.
 - Keep dashboard, auth, docs, and `/api/health` uncached.
 
 If the CDN cannot vary by `Accept`, use explicit `fmt=avif`, `fmt=webp`, `fmt=jpeg`,

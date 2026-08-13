@@ -22,7 +22,7 @@ export interface KeenpixTransform {
   animated?: boolean
   background?: string
   blur?: number
-  dpr?: number
+  dpr?: number | 'auto'
   enlarge?: boolean
   fit?: KeenpixFit
   flatten?: boolean
@@ -35,7 +35,7 @@ export interface KeenpixTransform {
   quality?: number
   rotate?: number
   sharpen?: number | true
-  width?: number
+  width?: number | 'auto'
 }
 
 export interface KeenpixLoaderInput {

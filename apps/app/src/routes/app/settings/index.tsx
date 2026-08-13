@@ -33,6 +33,7 @@ import { NewProjectDialog } from '@/features/projects/new-project-dialog'
 import { PipelineSettings } from '@/features/projects/pipeline-settings'
 import { ProjectGeneral } from '@/features/projects/project-general'
 import { SignedUrls } from '@/features/projects/signed-urls'
+import { WatermarkSettings } from '@/features/projects/watermark-settings'
 import { TeamManagement } from '@/features/team/team-management'
 import { cn } from '@/lib/cn/utils'
 import { appPageHead } from '@/shared/seo'
@@ -305,19 +306,33 @@ function SettingsPage() {
           ) : null}
 
           {active === 'pipeline' && currentProject ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Pipeline</CardTitle>
-                <CardDescription>
-                  Defaults applied when a transform request omits the matching
-                  parameter. Toggles save automatically; Default quality applies
-                  when you click Save.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PipelineSettings project={currentProject} />
-              </CardContent>
-            </Card>
+            <div className="flex flex-col gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pipeline</CardTitle>
+                  <CardDescription>
+                    Defaults applied when a transform request omits the matching
+                    parameter. Toggles save automatically; Default quality
+                    applies when you click Save.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PipelineSettings project={currentProject} />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Overlay watermark</CardTitle>
+                  <CardDescription>
+                    Configure the project-wide brand overlay applied to every
+                    raster transform and included in its cache identity.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <WatermarkSettings project={currentProject} />
+                </CardContent>
+              </Card>
+            </div>
           ) : null}
 
           {active === 'security' && currentProject ? (

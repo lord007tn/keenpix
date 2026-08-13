@@ -6,6 +6,17 @@ const SCHEME_RE = /^https?:\/\//
 const PATH_RE = /\/.*$/
 const PORT_RE = /:\d+$/
 const PREWARM_MAX_VARIANTS = 200
+const watermarkPositionSchema = z.enum([
+  'center',
+  'north',
+  'northeast',
+  'northwest',
+  'south',
+  'southeast',
+  'southwest',
+  'east',
+  'west',
+])
 
 const normalizeAllowedHost = (input: string) =>
   input
@@ -98,11 +109,28 @@ export const projectSettingsSchema = z.object({
     .min(1, 'Use a value from 1 to 3.')
     .max(3, 'Use a value from 1 to 3.')
     .optional(),
+  watermarkEnabled: z.boolean().optional(),
+  watermarkUrl: z
+    .union([z.literal(''), z.url('Enter a valid http or https URL.')])
+    .refine(
+      (value) =>
+        !value || ['http:', 'https:'].includes(new URL(value).protocol),
+      'Enter a valid http or https URL.',
+    )
+    .transform((value) => value || null)
+    .optional(),
+  watermarkPosition: watermarkPositionSchema.optional(),
+  watermarkOpacity: z.coerce.number().int().min(1).max(100).optional(),
+  watermarkScale: z.coerce.number().int().min(1).max(100).optional(),
+  watermarkMargin: z.coerce.number().int().min(0).max(500).optional(),
 })
 
 export const projectSigningSchema = z.object({
   projectId: nonEmptyStringSchema(),
   requireSignedUrls: z.boolean(),
+  signedUrlTtlSeconds: z
+    .union([z.null(), z.coerce.number().int().min(60).max(2_592_000)])
+    .optional(),
 })
 
 export const projectSigningReadSchema = z.object({

@@ -7,6 +7,7 @@ function memoryKey(key: string, format: OutputFormat) {
 }
 
 export class MemoryCacheStore implements CacheStore {
+  readonly name = 'memory'
   private cache
   private maxBytes
 
@@ -53,6 +54,10 @@ export class MemoryCacheStore implements CacheStore {
 
   setEntry(key: string, format: OutputFormat, entry: CacheEntry) {
     this.cache?.set(memoryKey(key, format), entry)
+  }
+
+  delete(key: string, format: OutputFormat) {
+    this.cache?.delete(memoryKey(key, format))
   }
 
   clear() {

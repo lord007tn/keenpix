@@ -1,6 +1,6 @@
 import { prisma } from '@keenpix/database'
 import dayjs from 'dayjs'
-import type { Project, ProjectFit } from '@/shared/types'
+import type { Project, ProjectFit, WatermarkPosition } from '@/shared/types'
 
 // Single source of truth for shaping a Prisma project row into the domain
 // Project. Writes validate defaultFit, so the cast holds at the boundary.
@@ -22,6 +22,13 @@ function toProject(
     defaultFit: p.defaultFit as ProjectFit,
     defaultDpr: p.defaultDpr,
     requireSignedUrls: p.requireSignedUrls,
+    signedUrlTtlSeconds: p.signedUrlTtlSeconds,
+    watermarkEnabled: p.watermarkEnabled,
+    watermarkUrl: p.watermarkUrl,
+    watermarkPosition: p.watermarkPosition as WatermarkPosition,
+    watermarkOpacity: p.watermarkOpacity,
+    watermarkScale: p.watermarkScale,
+    watermarkMargin: p.watermarkMargin,
     createdAt: dayjs(p.createdAt).format('MMM DD, YYYY'),
   }
 }
@@ -66,14 +73,25 @@ export async function getProject(id: string, orgId: string) {
 // this path), which the shared Project shape deliberately omits.
 export async function getProjectById(id: string) {
   const p = await prisma.project.findFirst({ where: { id } })
-  return p ? { ...toProject(p), signingSecret: p.signingSecret } : undefined
+  return p
+    ? {
+        ...toProject(p),
+        signingKeyVersion: p.signingKeyVersion,
+        signingSecret: p.signingSecret,
+      }
+    : undefined
 }
 
 // The signing config an org admin manages: the toggle plus the secret itself.
 export async function getProjectSigning(projectId: string, orgId: string) {
   const p = await prisma.project.findFirst({
     where: { id: projectId, orgId },
-    select: { requireSignedUrls: true, signingSecret: true },
+    select: {
+      requireSignedUrls: true,
+      signedUrlTtlSeconds: true,
+      signingKeyVersion: true,
+      signingSecret: true,
+    },
   })
   return p ?? undefined
 }
@@ -81,7 +99,12 @@ export async function getProjectSigning(projectId: string, orgId: string) {
 export async function updateProjectSigning(
   projectId: string,
   orgId: string,
-  patch: { requireSignedUrls?: boolean; signingSecret?: string },
+  patch: {
+    requireSignedUrls?: boolean
+    signedUrlTtlSeconds?: number | null
+    signingKeyVersion?: number
+    signingSecret?: string
+  },
 ) {
   const result = await prisma.project.updateMany({
     where: { id: projectId, orgId },
@@ -225,6 +248,12 @@ export interface ProjectSettingsPatch {
   defaultQuality?: number
   maxWidth?: number
   stripMetadata?: boolean
+  watermarkEnabled?: boolean
+  watermarkMargin?: number
+  watermarkOpacity?: number
+  watermarkPosition?: WatermarkPosition
+  watermarkScale?: number
+  watermarkUrl?: string | null
 }
 
 export async function updateProjectSettings(
@@ -250,6 +279,13 @@ export async function updateProjectSettings(
       defaultFit: patch.defaultFit ?? p.defaultFit,
       defaultDpr: patch.defaultDpr ?? p.defaultDpr,
       maxWidth,
+      watermarkEnabled: patch.watermarkEnabled ?? p.watermarkEnabled,
+      watermarkUrl:
+        patch.watermarkUrl === undefined ? p.watermarkUrl : patch.watermarkUrl,
+      watermarkPosition: patch.watermarkPosition ?? p.watermarkPosition,
+      watermarkOpacity: patch.watermarkOpacity ?? p.watermarkOpacity,
+      watermarkScale: patch.watermarkScale ?? p.watermarkScale,
+      watermarkMargin: patch.watermarkMargin ?? p.watermarkMargin,
     },
   })
   return toProject(updated)

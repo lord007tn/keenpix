@@ -10,6 +10,8 @@ export function applyResize(
   opts: TransformOptions,
   maxDimension: number,
 ) {
+  // TODO(smart-crop-research): design a Keenpix subject/focal-point model and
+  // deterministic fallback contract before replacing libvips attention/entropy.
   const dpr = opts.dpr && opts.dpr > 1 ? opts.dpr : 1
   const width = opts.width ? Math.round(opts.width * dpr) : undefined
   const height = opts.height ? Math.round(opts.height * dpr) : undefined

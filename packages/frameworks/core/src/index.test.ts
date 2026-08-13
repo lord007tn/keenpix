@@ -45,6 +45,15 @@ describe('buildImageUrl', () => {
       'https://keenpix.example.com/img/uploads/hero.jpg?project=project_1',
     )
   })
+
+  it('emits automatic Client Hint transform modes for every adapter', () => {
+    expect(
+      buildImageUrl(config, 'https://cdn.example.com/hero.jpg', {
+        dpr: 'auto',
+        width: 'auto',
+      }),
+    ).toContain('dpr=auto&w=auto')
+  })
 })
 
 it('builds sorted, unique width candidates', () => {

@@ -15,6 +15,7 @@ import {
   type TransformOptions,
   transformImage,
   verifyTransformSignature,
+  type WatermarkPosition,
 } from '@keenpix/transform'
 import dayjs from 'dayjs'
 import { getProjectById } from '@/data-access/projects'
@@ -27,6 +28,11 @@ import { errorContext, logger } from '@/lib/logger/logger'
 
 export interface OptimizeProjectImageInput {
   accept: string
+  clientHints?: {
+    dpr?: string | null
+    viewportWidth?: string | null
+    width?: string | null
+  }
   country?: string
   projectId: string
   recordLog?: boolean
@@ -145,10 +151,21 @@ function startTransformRefresh(input: CachedTransformInput) {
   const work = (async () => {
     const { allowedOrigins, cacheKey, format, src, transformOptions } = input
     const origin = await assertSafeOrigin(src, allowedOrigins)
-    const originBytes = await fetchOriginImage(origin, allowedOrigins, {
-      maxBytes: env.KEENPIX_MAX_ORIGIN_BYTES,
-      timeoutMs: env.KEENPIX_ORIGIN_TIMEOUT_MS,
-    })
+    const [originBytes, watermarkBytes] = await Promise.all([
+      fetchOriginImage(origin, allowedOrigins, {
+        maxBytes: env.KEENPIX_MAX_ORIGIN_BYTES,
+        timeoutMs: env.KEENPIX_ORIGIN_TIMEOUT_MS,
+      }),
+      transformOptions.watermark && format !== 'svg'
+        ? assertSafeOrigin(transformOptions.watermark.url, allowedOrigins).then(
+            (watermarkOrigin) =>
+              fetchOriginImage(watermarkOrigin, allowedOrigins, {
+                maxBytes: env.KEENPIX_MAX_WATERMARK_BYTES,
+                timeoutMs: env.KEENPIX_ORIGIN_TIMEOUT_MS,
+              }),
+          )
+        : undefined,
+    ])
     const bytesIn = originBytes.byteLength
 
     let output: Buffer
@@ -160,6 +177,7 @@ function startTransformRefresh(input: CachedTransformInput) {
               await transformImage(originBytes, transformOptions, {
                 maxDimension: env.KEENPIX_MAX_DIMENSION,
                 maxInputPixels: env.KEENPIX_MAX_INPUT_PIXELS,
+                watermarkBytes,
               })
             ).data
     } catch (error) {
@@ -188,6 +206,7 @@ function startTransformRefresh(input: CachedTransformInput) {
 // origin, run fetch + sharp + cache, then record request analytics.
 export async function optimizeProjectImage({
   accept,
+  clientHints,
   country = '',
   projectId,
   recordLog = true,
@@ -216,18 +235,32 @@ export async function optimizeProjectImage({
   // Trusted internal callers (SDK prewarm) are already authenticated.
   if (project.requireSignedUrls && !trusted) {
     const secret = project.signingSecret
-    if (!(secret && verifyTransformSignature(secret, src, searchParams))) {
+    if (
+      !(
+        secret &&
+        verifyTransformSignature(secret, src, searchParams, {
+          keyVersion: project.signingKeyVersion,
+          maxTtlSeconds: project.signedUrlTtlSeconds,
+          requireExpiration: Boolean(project.signedUrlTtlSeconds),
+        })
+      )
+    ) {
       throw new TransformError('Missing or invalid URL signature', 403)
     }
   }
 
-  const transformOptions = parseTransformParams(searchParams, accept, {
-    autoFormat: project.autoFormat,
-    defaultQuality: project.defaultQuality,
-    defaultDpr: project.defaultDpr,
-    defaultFit: project.defaultFit,
-    maxWidth: project.maxWidth,
-  })
+  const transformOptions = parseTransformParams(
+    searchParams,
+    accept,
+    {
+      autoFormat: project.autoFormat,
+      defaultQuality: project.defaultQuality,
+      defaultDpr: project.defaultDpr,
+      defaultFit: project.defaultFit,
+      maxWidth: project.maxWidth,
+    },
+    clientHints,
+  )
   const { width, quality, format } = transformOptions
 
   let status = 200
@@ -244,6 +277,16 @@ export async function optimizeProjectImage({
       transformOptions: {
         ...transformOptions,
         stripMetadata: project.stripMetadata,
+        watermark:
+          project.watermarkEnabled && project.watermarkUrl
+            ? {
+                margin: project.watermarkMargin,
+                opacity: project.watermarkOpacity,
+                position: project.watermarkPosition as WatermarkPosition,
+                scale: project.watermarkScale,
+                url: project.watermarkUrl,
+              }
+            : undefined,
       },
     })
 
@@ -255,6 +298,16 @@ export async function optimizeProjectImage({
       transformOptions: {
         ...transformOptions,
         stripMetadata: project.stripMetadata,
+        watermark:
+          project.watermarkEnabled && project.watermarkUrl
+            ? {
+                margin: project.watermarkMargin,
+                opacity: project.watermarkOpacity,
+                position: project.watermarkPosition as WatermarkPosition,
+                scale: project.watermarkScale,
+                url: project.watermarkUrl,
+              }
+            : undefined,
       },
     })
 
@@ -267,6 +320,8 @@ export async function optimizeProjectImage({
       body: result.out,
       format,
       cached,
+      contentDpr:
+        searchParams.get('dpr') === 'auto' ? transformOptions.dpr : undefined,
     }
   } catch (error) {
     status = getTransformErrorStatus(error)

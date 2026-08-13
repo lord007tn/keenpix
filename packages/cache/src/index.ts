@@ -1,37 +1,20 @@
 import { createHash } from 'node:crypto'
 import type { OutputFormat, TransformOptions } from '@keenpix/transform'
-import { createStorage } from 'unstorage'
-import redisDriver from 'unstorage/drivers/redis'
-import s3Driver from 'unstorage/drivers/s3'
-import type { CacheStore as CacheStoreValue } from './cache-store'
-import { DiskCacheStore as DiskCache } from './disk-cache-store'
-import { MemoryCacheStore as MemoryCache } from './memory-cache-store'
-
-const EXT: Record<OutputFormat, string> = {
-  avif: 'avif',
-  gif: 'gif',
-  heif: 'heif',
-  jpeg: 'jpg',
-  png: 'png',
-  svg: 'svg',
-  tiff: 'tiff',
-  webp: 'webp',
-}
-const METADATA_BYTES = 16
+import type { CacheEntry, CacheStore } from './cache-store'
+import { DiskCacheStore } from './disk-cache-store'
+import { DragonflyCacheStore } from './dragonfly-cache-store'
+import { MemoryCacheStore } from './memory-cache-store'
+import { type ObjectCacheOptions, ObjectCacheStore } from './object-cache-store'
 
 export interface CacheOptions {
   cacheControl: string
+  deleteAfterMs?: number
   dir: string
+  dragonflyMaxBytes?: number
   maxBytes: number
   memoryMaxBytes: number
   redisUrl?: string
-  s3?: {
-    accessKeyId: string
-    bucket: string
-    endpoint: string
-    region?: string
-    secretAccessKey: string
-  }
+  s3?: ObjectCacheOptions
   staleMs: number
 }
 
@@ -41,165 +24,208 @@ export interface TransformKeyInput {
   url: string
 }
 
-function entryKey(key: string, format: OutputFormat) {
-  return `${key}.${EXT[format]}`
-}
-
-function createUnstorageStore(
-  options: CacheOptions,
-): CacheStoreValue | undefined {
-  let storage = options.s3
-    ? createStorage({
-        driver: s3Driver({
-          accessKeyId: options.s3.accessKeyId,
-          bucket: options.s3.bucket,
-          endpoint: options.s3.endpoint,
-          region: options.s3.region ?? 'auto',
-          secretAccessKey: options.s3.secretAccessKey,
-        }),
-      })
-    : undefined
-  if (!storage && options.redisUrl) {
-    storage = createStorage({
-      driver: redisDriver({
-        base: 'keenpix:transform-cache',
-        url: options.redisUrl,
-      }),
-    })
-  }
-
-  if (!storage) {
+async function storeEntry(
+  store: CacheStore,
+  key: string,
+  format: OutputFormat,
+  entry: CacheEntry,
+) {
+  if (store.setEntry) {
+    await store.setEntry(key, format, entry)
     return
   }
+  await store.set(key, format, entry.data, entry.originalBytes)
+}
 
-  return {
-    async get(key, format) {
-      return (await this.getEntry(key, format))?.data ?? null
-    },
-    async getEntry(key, format) {
-      const cacheKey = entryKey(key, format)
-      const raw = await storage.getItemRaw(cacheKey)
-      if (!(raw && raw.byteLength > METADATA_BYTES)) {
+export class KeenpixTierCoordinator {
+  readonly cacheControl
+  readonly tierNames
+  private readonly disk
+  private readonly memory
+  private readonly options
+  private readonly tiers: CacheStore[]
+
+  constructor(options: CacheOptions) {
+    this.options = options
+    this.cacheControl = options.cacheControl
+    this.disk = options.s3
+      ? undefined
+      : new DiskCacheStore(options.dir, options.maxBytes)
+    this.memory = new MemoryCacheStore(options.memoryMaxBytes)
+    this.tiers = [this.memory]
+    if (options.redisUrl) {
+      this.tiers.push(
+        new DragonflyCacheStore(
+          options.redisUrl,
+          options.dragonflyMaxBytes ?? 512 * 1024 * 1024,
+        ),
+      )
+    }
+    if (options.s3) {
+      this.tiers.push(new ObjectCacheStore(options.s3))
+    } else if (this.disk) {
+      // Local development remains useful without infrastructure. Docker and
+      // Coolify always configure Dragonfly plus R2 or MaxIO.
+      this.tiers.push(this.disk)
+    }
+    this.tierNames = this.tiers.map(
+      (tier, index) => tier.name ?? `tier-${index}`,
+    )
+  }
+
+  buildKey(input: TransformKeyInput) {
+    return createHash('sha256').update(JSON.stringify(input)).digest('hex')
+  }
+
+  async read(key: string, format: OutputFormat) {
+    for (const [index, tier] of this.tiers.entries()) {
+      let entry: CacheEntry | null = null
+      try {
+        entry = await tier.getEntry(key, format)
+      } catch {
+        // A cache tier is an optimization, not the source of truth. Continue
+        // down the chain so Dragonfly failure can fall through to R2/MaxIO.
+        continue
+      }
+      if (!entry) {
+        continue
+      }
+      if (
+        this.options.deleteAfterMs &&
+        this.options.deleteAfterMs > 0 &&
+        Date.now() - entry.createdAt >= this.options.deleteAfterMs
+      ) {
+        await Promise.allSettled(
+          this.tiers.map((candidate) => candidate.delete?.(key, format)),
+        )
         return null
       }
-      const bytes = Buffer.from(raw as Uint8Array)
+      await Promise.allSettled(
+        this.tiers
+          .slice(0, index)
+          .map((candidate) => storeEntry(candidate, key, format, entry)),
+      )
       return {
-        createdAt: Number(bytes.readBigUInt64BE(0)),
-        data: bytes.subarray(METADATA_BYTES),
-        originalBytes: Number(bytes.readBigUInt64BE(8)),
+        ...entry,
+        stale:
+          this.options.staleMs > 0 &&
+          Date.now() - entry.createdAt >= this.options.staleMs,
+        tier: tier.name ?? `tier-${index}`,
       }
-    },
-    async set(key, format, data, originalBytes = 0) {
-      const bytes = Buffer.allocUnsafe(METADATA_BYTES + data.byteLength)
-      bytes.writeBigUInt64BE(BigInt(Date.now()), 0)
-      bytes.writeBigUInt64BE(BigInt(originalBytes), 8)
-      data.copy(bytes, METADATA_BYTES)
-      await storage.setItemRaw(entryKey(key, format), bytes)
-    },
-    stats() {
-      return { sharedCache: 1 }
-    },
+    }
+    return null
+  }
+
+  async write(
+    key: string,
+    format: OutputFormat,
+    data: Buffer,
+    originalBytes: number,
+  ) {
+    const entry = { createdAt: Date.now(), data, originalBytes }
+    // Write durable tiers first. An upper-tier eviction can therefore always
+    // fall through to a copy that already exists below it.
+    const [durable, ...faster] = [...this.tiers].reverse()
+    if (!durable) {
+      return
+    }
+    await storeEntry(durable, key, format, entry)
+    for (const tier of faster) {
+      try {
+        await storeEntry(tier, key, format, entry)
+      } catch {
+        // The durable copy is already safe. A failed hot-tier population can
+        // recover through normal read promotion on the next request.
+      }
+    }
+  }
+
+  async probe() {
+    const results = await Promise.allSettled(
+      this.tiers
+        .slice(1)
+        .map(async (tier) => (tier.probe ? tier.probe() : true)),
+    )
+    return results.every(
+      (result) => result.status === 'fulfilled' && result.value,
+    )
+  }
+
+  async inspect() {
+    return {
+      ...(this.disk ? await this.disk.inspect() : {}),
+      ...this.stats(),
+    }
+  }
+
+  async clear(target: 'all' | 'disk' | 'memory') {
+    const before = await this.inspect()
+    let selected = this.tiers
+    if (target === 'memory') {
+      selected = [this.memory]
+    } else if (target === 'disk') {
+      selected = this.tiers.filter((tier) => tier.name !== 'memory')
+    }
+    const removed =
+      this.disk && selected.includes(this.disk)
+        ? await this.disk.clear()
+        : { deletedBytes: 0, deletedFiles: 0 }
+    await Promise.allSettled(
+      selected
+        .filter((tier) => tier !== this.disk)
+        .map((tier) => tier.clear?.()),
+    )
+    return {
+      after: await this.inspect(),
+      before,
+      deletedDiskBytes: removed.deletedBytes,
+      deletedDiskFiles: removed.deletedFiles,
+      target,
+    }
+  }
+
+  limits() {
+    return {
+      diskMaxBytes: this.disk?.getMaxBytes() ?? this.options.maxBytes,
+      memoryMaxBytes: this.memory.getMaxBytes(),
+    }
+  }
+
+  applyLimits(input: { diskMaxBytes?: number; memoryMaxBytes?: number }) {
+    if (
+      this.disk &&
+      input.diskMaxBytes != null &&
+      input.diskMaxBytes !== this.disk.getMaxBytes()
+    ) {
+      this.disk.setMaxBytes(input.diskMaxBytes)
+    }
+    if (
+      input.memoryMaxBytes != null &&
+      input.memoryMaxBytes !== this.memory.getMaxBytes()
+    ) {
+      this.memory.setMaxBytes(input.memoryMaxBytes)
+    }
+  }
+
+  stats() {
+    return Object.assign(
+      {
+        cacheTierCount: this.tiers.length,
+        cacheTiers: this.tierNames,
+        diskMaxBytes: this.disk?.getMaxBytes() ?? this.options.maxBytes,
+      },
+      ...this.tiers.map((tier) => tier.stats()),
+    )
   }
 }
 
 export function createTransformCache(options: CacheOptions) {
-  const memory = new MemoryCache(options.memoryMaxBytes)
-  const disk = new DiskCache(options.dir, options.maxBytes)
-  const durable = createUnstorageStore(options) ?? disk
-
-  return {
-    cacheControl: options.cacheControl,
-    buildKey(input: TransformKeyInput) {
-      return createHash('sha256').update(JSON.stringify(input)).digest('hex')
-    },
-    async read(key: string, format: OutputFormat) {
-      const hot = await memory.getEntry(key, format)
-      if (hot) {
-        return {
-          ...hot,
-          stale:
-            options.staleMs > 0 &&
-            Date.now() - hot.createdAt >= options.staleMs,
-        }
-      }
-      const entry = await durable.getEntry(key, format)
-      if (!entry) {
-        return null
-      }
-      memory.setEntry(key, format, entry)
-      return {
-        ...entry,
-        stale:
-          options.staleMs > 0 &&
-          Date.now() - entry.createdAt >= options.staleMs,
-      }
-    },
-    async write(
-      key: string,
-      format: OutputFormat,
-      data: Buffer,
-      originalBytes: number,
-    ) {
-      await durable.set(key, format, data, originalBytes)
-      memory.set(key, format, data, originalBytes)
-    },
-    async probe() {
-      const key = `.health.${process.pid}`
-      try {
-        const data = Buffer.from('ok')
-        await durable.set(key, 'jpeg', data, data.byteLength)
-        return Boolean(await durable.getEntry(key, 'jpeg'))
-      } catch {
-        return false
-      }
-    },
-    async inspect() {
-      return { ...(await disk.inspect()), ...memory.stats() }
-    },
-    async clear(target: 'all' | 'disk' | 'memory') {
-      const before = { ...(await disk.inspect()), ...memory.stats() }
-      const removed =
-        target === 'disk' || target === 'all'
-          ? await disk.clear()
-          : { deletedBytes: 0, deletedFiles: 0 }
-      if (target === 'memory' || target === 'all') {
-        memory.clear()
-      }
-      return {
-        after: { ...(await disk.inspect()), ...memory.stats() },
-        before,
-        deletedDiskBytes: removed.deletedBytes,
-        deletedDiskFiles: removed.deletedFiles,
-        target,
-      }
-    },
-    limits() {
-      return {
-        diskMaxBytes: disk.getMaxBytes(),
-        memoryMaxBytes: memory.getMaxBytes(),
-      }
-    },
-    applyLimits(input: { diskMaxBytes?: number; memoryMaxBytes?: number }) {
-      if (
-        input.diskMaxBytes != null &&
-        input.diskMaxBytes !== disk.getMaxBytes()
-      ) {
-        disk.setMaxBytes(input.diskMaxBytes)
-      }
-      if (
-        input.memoryMaxBytes != null &&
-        input.memoryMaxBytes !== memory.getMaxBytes()
-      ) {
-        memory.setMaxBytes(input.memoryMaxBytes)
-      }
-    },
-    stats() {
-      return { ...disk.stats(), ...durable.stats(), ...memory.stats() }
-    },
-  }
+  return new KeenpixTierCoordinator(options)
 }
 
 export type TransformCache = ReturnType<typeof createTransformCache>
 export type { CacheEntry, CacheStore } from './cache-store'
 export { DiskCacheStore } from './disk-cache-store'
+export { DragonflyCacheStore } from './dragonfly-cache-store'
 export { MemoryCacheStore } from './memory-cache-store'
+export { ObjectCacheStore } from './object-cache-store'

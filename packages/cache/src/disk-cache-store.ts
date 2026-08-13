@@ -63,6 +63,7 @@ interface ScannedFile {
 }
 
 export class DiskCacheStore implements CacheStore {
+  readonly name = 'disk'
   private readonly cacheDir
   private maxBytes
   private targetBytes
@@ -177,6 +178,17 @@ export class DiskCacheStore implements CacheStore {
     this.totalBytes += data.byteLength
 
     await this.maybeEvict()
+  }
+
+  async delete(key: string, format: OutputFormat) {
+    await this.ready
+    const name = `${key}.${EXT[format]}`
+    const entry = this.index.get(name)
+    if (!entry) {
+      return
+    }
+    await unlink(entry.path).catch(noop)
+    this.forget(name)
   }
 
   stats() {

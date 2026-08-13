@@ -31,7 +31,8 @@ Every successful response sets:
 
 ```http
 Cache-Control: public, max-age=31536000, immutable
-Vary: Accept
+Accept-CH: Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width
+Vary: Accept, Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width
 ```
 
 Because the source URL and every transform live in the URL, the response is immutable.
@@ -45,8 +46,27 @@ supports caching separate variants by `Accept`. On CDNs that do not, prefer expl
 predictability, but they also disable browser-based AVIF/WebP negotiation for that URL.
 `fmt=svg` is one of those explicit formats; `fmt=auto` never preserves SVG output.
 
+For the first image request, and for a delivery hostname different from the page
+hostname, also advertise the hints on the HTML response and delegate them with a
+Permissions Policy, for example:
+
+```http
+Accept-CH: Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width
+Permissions-Policy: ch-dpr=(self "https://images.example.com"), ch-width=(self "https://images.example.com"), ch-viewport-width=(self "https://images.example.com")
+```
+
+Browsers may omit hints for privacy or compatibility reasons, so Keenpix always
+falls back to project defaults.
+
 ## Where does Keenpix store cached images?
 
-The disk cache lives at `KEENPIX_CACHE_DIR` (default `./.keenpix-cache`). Writes are
-atomic (temp file + rename) so a crash mid-write can't serve a truncated image. See
-[Configuration](/docs/self-hosting/configuration) for size limits and eviction.
+Production uses memory → Dragonfly → Cloudflare R2 or MaxIO. Lower-tier hits are
+promoted, durable writes happen first, and `KEENPIX_CACHE_DELETE_AFTER_MS`
+removes an expired variant from the complete chain. Local source development
+without those services uses the atomic disk cache at `KEENPIX_CACHE_DIR`.
+See [Configuration](/docs/self-hosting/configuration) for size limits and
+eviction.
+
+The full effective transform object is in the cache key. That includes resolved
+Client Hint dimensions and project watermark configuration, so neither feature
+can cross-contaminate variants.

@@ -4,6 +4,17 @@ export interface KeenpixClientConfig {
   fetch?: typeof globalThis.fetch
 }
 
+export type KeenpixWatermarkPosition =
+  | 'center'
+  | 'east'
+  | 'north'
+  | 'northeast'
+  | 'northwest'
+  | 'south'
+  | 'southeast'
+  | 'southwest'
+  | 'west'
+
 export interface KeenpixProject {
   allowedOrigins: string[]
   autoFormat: boolean
@@ -15,6 +26,12 @@ export interface KeenpixProject {
   name: string
   origin: string
   stripMetadata: boolean
+  watermarkEnabled: boolean
+  watermarkMargin: number
+  watermarkOpacity: number
+  watermarkPosition: KeenpixWatermarkPosition
+  watermarkScale: number
+  watermarkUrl: string | null
 }
 
 export interface KeenpixProjectConfiguration {
@@ -23,6 +40,7 @@ export interface KeenpixProjectConfiguration {
     autoFormat: boolean
     defaultQuality: number
     stripMetadata: boolean
+    watermarkEnabled: boolean
   }
   imageBaseUrl: string
   origin: string
@@ -30,6 +48,14 @@ export interface KeenpixProjectConfiguration {
   projectName: string
   supportedParameters: string[]
   transformUrlTemplate: string
+  watermark: {
+    enabled: boolean
+    margin: number
+    opacity: number
+    position: KeenpixWatermarkPosition
+    scale: number
+    url: string | null
+  }
 }
 
 export interface KeenpixPrewarmInput {
@@ -119,6 +145,12 @@ export function createKeenpixClient(config: KeenpixClientConfig) {
           | 'defaultQuality'
           | 'maxWidth'
           | 'stripMetadata'
+          | 'watermarkEnabled'
+          | 'watermarkMargin'
+          | 'watermarkOpacity'
+          | 'watermarkPosition'
+          | 'watermarkScale'
+          | 'watermarkUrl'
         >
       >,
     ) {

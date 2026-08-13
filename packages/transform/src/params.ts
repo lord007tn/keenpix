@@ -51,6 +51,10 @@ const COLOR_RE = /^[#(),.%\w\s-]+$/
 const SIZE_SEPARATOR_RE = /[x,]/
 const EXTRACT_SEPARATOR_RE = /[,:x]/
 const EXTEND_SEPARATOR_RE = /[,\s]+/
+const CLIENT_WIDTHS = [
+  320, 480, 640, 768, 960, 1280, 1600, 1920, 2560, 3200, 3840, 5000,
+]
+const CLIENT_DPRS = [1, 1.25, 1.5, 1.75, 2, 2.5, 3]
 
 function clampInt(value: string | null, min: number, max: number) {
   if (!value) {
@@ -72,6 +76,24 @@ function clampFloat(value: string | null, min: number, max: number) {
     return
   }
   return Math.min(max, Math.max(min, n))
+}
+
+function closestClientDpr(value: number | undefined) {
+  if (!value) {
+    return
+  }
+  return CLIENT_DPRS.reduce((closest, candidate) =>
+    Math.abs(candidate - value) < Math.abs(closest - value)
+      ? candidate
+      : closest,
+  )
+}
+
+function clientWidthBucket(value: number | undefined) {
+  if (!value) {
+    return
+  }
+  return CLIENT_WIDTHS.find((candidate) => candidate >= value) ?? 5000
 }
 
 function parseBoolean(value: string | null) {
@@ -235,23 +257,42 @@ export function parseTransformParams(
     defaultQuality: number
     maxWidth: number | null
   },
+  hints: {
+    dpr?: string | null
+    viewportWidth?: string | null
+    width?: string | null
+  } = {},
 ) {
   const fitParam = sp.get('fit')
   const size = parseSize(sp.get('resize') ?? sp.get('s'))
   const extend = parseExtend(sp.get('extend'))
   const gamma = clampFloat(sp.get('gamma'), 1, 3)
+  const requestedWidth = sp.get('w')
+  const requestedDpr = sp.get('dpr')
+  const dpr =
+    (requestedDpr === 'auto'
+      ? closestClientDpr(clampFloat(hints.dpr ?? null, 1, 3))
+      : clampInt(requestedDpr, 1, 3)) ?? defaults.defaultDpr
+  const hintedWidth = clampInt(hints.width ?? null, 1, 5000)
+  const automaticWidth = clientWidthBucket(
+    hintedWidth
+      ? Math.max(1, Math.round(hintedWidth / dpr))
+      : clampInt(hints.viewportWidth ?? null, 1, 5000),
+  )
   return {
     animated: parseBoolean(sp.get('animated') ?? sp.get('a')),
     background: parseColor(sp.get('background') ?? sp.get('bg')),
     width: capWidth(
-      clampInt(sp.get('w'), 1, 5000) ?? size.width,
+      (requestedWidth === 'auto'
+        ? automaticWidth
+        : clampInt(requestedWidth, 1, 5000)) ?? size.width,
       defaults.maxWidth,
     ),
     height: clampInt(sp.get('h'), 1, 5000) ?? size.height,
     quality:
       clampInt(sp.get('q'), 30, 100) ??
       Math.min(100, Math.max(30, Math.round(defaults.defaultQuality))),
-    dpr: clampInt(sp.get('dpr'), 1, 3) ?? defaults.defaultDpr,
+    dpr,
     blur: clampInt(sp.get('blur'), 0, 1000),
     enlarge: parseBoolean(sp.get('enlarge')),
     extend: extend

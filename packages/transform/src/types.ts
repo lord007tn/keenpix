@@ -39,6 +39,24 @@ export type ResizePosition =
   | 'top'
   | 'west'
 export type ExtendWith = 'background' | 'copy' | 'mirror' | 'repeat'
+export type WatermarkPosition =
+  | 'center'
+  | 'east'
+  | 'north'
+  | 'northeast'
+  | 'northwest'
+  | 'south'
+  | 'southeast'
+  | 'southwest'
+  | 'west'
+
+export interface WatermarkOptions {
+  margin: number
+  opacity: number
+  position: WatermarkPosition
+  scale: number
+  url: string
+}
 
 export interface ExtractOptions {
   height: number
@@ -107,6 +125,7 @@ export interface TransformOptions {
   threshold?: number
   tint?: string
   trim?: number | true
+  watermark?: WatermarkOptions
   width?: number
 }
 

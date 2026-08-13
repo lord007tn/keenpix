@@ -102,13 +102,16 @@ only needs the zone-scoped **Analytics → Read** permission.
 | `KEENPIX_CACHE_MAX_BYTES` | transform default: `2147483648` (2GB); Docker/Coolify: `8589934592` (8GB) | Disk cache LRU cap |
 | `KEENPIX_CACHE_STALE_MS` | `86400000` (24h) | Serve stale disk entries immediately and refresh them in the background; `0` disables stale refresh |
 | `KEENPIX_MEMORY_CACHE_MAX_BYTES` | transform default: `67108864` (64MB); Docker/Coolify: `268435456` (256MB) | In-process hot variant LRU cap; `0` disables memory caching |
-| `KEENPIX_CACHE_REDIS_URL` | — | Optional unstorage Redis backend for transformed images; do not reuse the queue URL by accident |
+| `KEENPIX_CACHE_REDIS_URL` | Compose: `redis://dragonfly:6379` | Shared Dragonfly variant tier; separate setting from the BullMQ queue URL |
+| `KEENPIX_CACHE_DRAGONFLY_MAX_BYTES` | `536870912` (512MB) | Dragonfly variant LRU budget |
+| `KEENPIX_CACHE_DELETE_AFTER_MS` | `2592000000` (30d) | Terminal age after which a variant is deleted from every tier; `0` disables |
 | `KEENPIX_CACHE_S3_BUCKET` | — | Shared S3/R2/MaxIO cache bucket |
 | `KEENPIX_CACHE_S3_ENDPOINT` | — | S3-compatible endpoint |
 | `KEENPIX_CACHE_S3_REGION` | `auto` | S3-compatible region |
 | `KEENPIX_CACHE_S3_ACCESS_KEY_ID` | — | S3-compatible access key |
 | `KEENPIX_CACHE_S3_SECRET_ACCESS_KEY` | — | S3-compatible secret key |
 | `KEENPIX_MAX_ORIGIN_BYTES` | `52428800` (50MB) | Max bytes pulled from an origin before `413`  |
+| `KEENPIX_MAX_WATERMARK_BYTES` | `5242880` (5MB) | Max bytes pulled for a project watermark asset |
 | `KEENPIX_QUEUE_URL`        | `redis://127.0.0.1:6379` | BullMQ connection URL; Compose uses Dragonfly |
 | `KEENPIX_WORKBENCH_USERNAME` | —            | Basic-auth username for the internal worker dashboard; set with the password |
 | `KEENPIX_WORKBENCH_PASSWORD` | —            | Basic-auth password for the internal worker dashboard; set with the username |

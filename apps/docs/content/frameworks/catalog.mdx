@@ -43,3 +43,8 @@ All packages are ESM, ship TypeScript declarations, are side-effect free where t
 The framework family is a Changesets fixed group. A compatibility change to `@keenpix/core` releases the adapters together, preventing adapters from silently drifting onto incompatible core behavior.
 
 Package support follows the peer-dependency ranges in each package manifest. Preview status means the upstream framework itself is still changing, not that the package skips validation.
+
+All 29 packages inherit automatic Client Hint transforms from `@keenpix/core`.
+Signing stays server-only through `@keenpix/sdk/signing`, and project watermark
+policy is applied at delivery time, so adapters do not duplicate security or
+overlay logic.

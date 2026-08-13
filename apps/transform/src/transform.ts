@@ -15,6 +15,7 @@ import {
   type TransformOptions,
   transformImage,
   verifyTransformSignature,
+  type WatermarkPosition,
 } from '@keenpix/transform'
 import {
   getProjectIdByCustomHostname,
@@ -49,10 +50,12 @@ const s3 =
 
 export const transformCache = createTransformCache({
   cacheControl: env.KEENPIX_CACHE_CONTROL,
+  deleteAfterMs: env.KEENPIX_CACHE_DELETE_AFTER_MS,
   dir: env.KEENPIX_CACHE_DIR,
+  dragonflyMaxBytes: env.KEENPIX_CACHE_DRAGONFLY_MAX_BYTES,
   maxBytes: env.KEENPIX_CACHE_MAX_BYTES,
   memoryMaxBytes: env.KEENPIX_MEMORY_CACHE_MAX_BYTES,
-  redisUrl: s3 ? undefined : env.KEENPIX_CACHE_REDIS_URL,
+  redisUrl: env.KEENPIX_CACHE_REDIS_URL,
   s3,
   staleMs: env.KEENPIX_CACHE_STALE_MS,
 })
@@ -82,10 +85,23 @@ function createTransform(input: {
 }) {
   const work = (async () => {
     const origin = await assertSafeOrigin(input.src, input.allowedOrigins)
-    const originBytes = await fetchOriginImage(origin, input.allowedOrigins, {
-      maxBytes: env.KEENPIX_MAX_ORIGIN_BYTES,
-      timeoutMs: env.KEENPIX_ORIGIN_TIMEOUT_MS,
-    })
+    const [originBytes, watermarkBytes] = await Promise.all([
+      fetchOriginImage(origin, input.allowedOrigins, {
+        maxBytes: env.KEENPIX_MAX_ORIGIN_BYTES,
+        timeoutMs: env.KEENPIX_ORIGIN_TIMEOUT_MS,
+      }),
+      input.transformOptions.watermark && input.format !== 'svg'
+        ? assertSafeOrigin(
+            input.transformOptions.watermark.url,
+            input.allowedOrigins,
+          ).then((watermarkOrigin) =>
+            fetchOriginImage(watermarkOrigin, input.allowedOrigins, {
+              maxBytes: env.KEENPIX_MAX_WATERMARK_BYTES,
+              timeoutMs: env.KEENPIX_ORIGIN_TIMEOUT_MS,
+            }),
+          )
+        : undefined,
+    ])
     let out: Buffer
     try {
       out =
@@ -95,6 +111,7 @@ function createTransform(input: {
               await transformImage(originBytes, input.transformOptions, {
                 maxDimension: env.KEENPIX_MAX_DIMENSION,
                 maxInputPixels: env.KEENPIX_MAX_INPUT_PIXELS,
+                watermarkBytes,
               })
             ).data
     } catch (error) {
@@ -149,6 +166,11 @@ async function readOrCreateTransform(
 
 export async function optimizeProjectImage(input: {
   accept: string
+  clientHints?: {
+    dpr?: string | null
+    viewportWidth?: string | null
+    width?: string | null
+  }
   country?: string
   projectId: string
   recordLog?: boolean
@@ -177,19 +199,29 @@ export async function optimizeProjectImage(input: {
         project.signingSecret,
         input.src,
         input.searchParams,
+        {
+          keyVersion: project.signingKeyVersion,
+          maxTtlSeconds: project.signedUrlTtlSeconds,
+          requireExpiration: Boolean(project.signedUrlTtlSeconds),
+        },
       )
     )
   ) {
     throw new TransformError('Missing or invalid URL signature', 403)
   }
 
-  const options = parseTransformParams(input.searchParams, input.accept, {
-    autoFormat: project.autoFormat,
-    defaultDpr: project.defaultDpr,
-    defaultFit: project.defaultFit as TransformOptions['fit'],
-    defaultQuality: project.defaultQuality,
-    maxWidth: project.maxWidth,
-  })
+  const options = parseTransformParams(
+    input.searchParams,
+    input.accept,
+    {
+      autoFormat: project.autoFormat,
+      defaultDpr: project.defaultDpr,
+      defaultFit: project.defaultFit as TransformOptions['fit'],
+      defaultQuality: project.defaultQuality,
+      maxWidth: project.maxWidth,
+    },
+    input.clientHints,
+  )
   let status = 200
   let cached = false
   let bytesIn = 0
@@ -200,6 +232,16 @@ export async function optimizeProjectImage(input: {
     const transformOptions = {
       ...options,
       stripMetadata: project.stripMetadata,
+      watermark:
+        project.watermarkEnabled && project.watermarkUrl
+          ? {
+              margin: project.watermarkMargin,
+              opacity: project.watermarkOpacity,
+              position: project.watermarkPosition as WatermarkPosition,
+              scale: project.watermarkScale,
+              url: project.watermarkUrl,
+            }
+          : undefined,
     }
     const result = await readOrCreateTransform({
       allowedOrigins: project.allowedOrigins,
@@ -216,7 +258,13 @@ export async function optimizeProjectImage(input: {
     bytesIn = result.bytesIn
     bytesOut = result.out.byteLength
     originalBytes = result.originalBytes
-    return { body: result.out, cached, format: options.format }
+    return {
+      body: result.out,
+      cached,
+      contentDpr:
+        input.searchParams.get('dpr') === 'auto' ? options.dpr : undefined,
+      format: options.format,
+    }
   } catch (error) {
     status = getTransformErrorStatus(error)
     if (status >= 500) {
@@ -280,6 +328,14 @@ export async function handleTransformRequest(
   try {
     const result = await optimizeProjectImage({
       accept: request.headers.get('accept') ?? '',
+      clientHints: {
+        dpr: request.headers.get('sec-ch-dpr') ?? request.headers.get('dpr'),
+        viewportWidth:
+          request.headers.get('sec-ch-viewport-width') ??
+          request.headers.get('viewport-width'),
+        width:
+          request.headers.get('sec-ch-width') ?? request.headers.get('width'),
+      },
       country: (
         request.headers.get('cf-ipcountry') ??
         request.headers.get('x-vercel-ip-country') ??
@@ -296,9 +352,13 @@ export async function handleTransformRequest(
       {
         headers: {
           'cache-control': transformCache.cacheControl,
+          'accept-ch': 'Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width',
           'content-length': String(result.body.byteLength),
           'content-type': getContentType(result.format),
-          vary: 'Accept',
+          vary: 'Accept, Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width, DPR, Width, Viewport-Width',
+          ...(result.contentDpr
+            ? { 'content-dpr': String(result.contentDpr) }
+            : {}),
           'x-content-type-options': 'nosniff',
           'x-keenpix-cache': result.cached ? 'HIT' : 'MISS',
           ...(edge ? { [EDGE_PROJECT_HEADER]: projectId } : {}),

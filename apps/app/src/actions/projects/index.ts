@@ -91,13 +91,19 @@ export async function updateProjectSigning(
   orgId: string,
   projectId: string,
   requireSignedUrls: boolean,
+  signedUrlTtlSeconds?: number | null,
 ) {
   const current = await getProjectSigningFromDb(projectId, orgId)
   if (!current) {
     return
   }
-  const patch: { requireSignedUrls: boolean; signingSecret?: string } = {
+  const patch: {
+    requireSignedUrls: boolean
+    signedUrlTtlSeconds?: number | null
+    signingSecret?: string
+  } = {
     requireSignedUrls,
+    signedUrlTtlSeconds,
   }
   if (requireSignedUrls && !current.signingSecret) {
     patch.signingSecret = generateSigningSecret()
@@ -107,8 +113,16 @@ export async function updateProjectSigning(
 
 // Mint a new secret, invalidating every URL signed with the old one. Callers
 // re-sign from the new secret shown in settings.
-export function rotateProjectSigningSecret(orgId: string, projectId: string) {
+export async function rotateProjectSigningSecret(
+  orgId: string,
+  projectId: string,
+) {
+  const current = await getProjectSigningFromDb(projectId, orgId)
+  if (!current) {
+    return
+  }
   return updateProjectSigningInDb(projectId, orgId, {
+    signingKeyVersion: current.signingKeyVersion + 1,
     signingSecret: generateSigningSecret(),
   })
 }

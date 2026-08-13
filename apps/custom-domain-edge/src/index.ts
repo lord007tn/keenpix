@@ -4,7 +4,17 @@ const EDGE_HOST_HEADER = 'x-keenpix-custom-host'
 const EDGE_SECRET_HEADER = 'x-keenpix-edge-secret'
 const EDGE_PROJECT_HEADER = 'x-keenpix-edge-project'
 const CACHE_HOST_PARAM = '__keenpix_edge_host'
-const FORWARDED_HEADERS = ['accept', 'accept-encoding', 'cf-ipcountry']
+const FORWARDED_HEADERS = [
+  'accept',
+  'accept-encoding',
+  'cf-ipcountry',
+  'dpr',
+  'sec-ch-dpr',
+  'sec-ch-viewport-width',
+  'sec-ch-width',
+  'viewport-width',
+  'width',
+]
 const EDGE_OFFLOAD_STATUSES = new Set(['hit', 'ignored', 'stale', 'updating'])
 const PROJECT_ID_RE = /^[a-z0-9][a-z0-9_-]{7,127}$/
 const FIRST_PARTY_PATH_RE = /^\/p\/([a-z0-9][a-z0-9_-]{7,127})(\/img\/.*)$/
@@ -64,6 +74,16 @@ export function createOriginRequest(request: Request, env: WorkerEnv) {
   }
   headers.set('x-forwarded-host', hostname)
   return new Request(target, {
+    cf: {
+      vary: {
+        default: { action: 'passthrough' },
+        headers: Object.fromEntries(
+          FORWARDED_HEADERS.filter((name) => name !== 'cf-ipcountry').map(
+            (name) => [name, { action: 'passthrough' }],
+          ),
+        ),
+      },
+    },
     method: request.method,
     headers,
     redirect: 'manual',

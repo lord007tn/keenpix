@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckIcon, CopyIcon, RefreshCwIcon } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { getErrorMessage } from '@/errors/common'
@@ -28,15 +29,21 @@ export function SignedUrls({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient()
   const [confirmRotate, setConfirmRotate] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [ttl, setTtl] = useState('')
   const queryKey = ['project-signing', projectId]
   const { data, isPending } = useQuery({
     queryKey,
     queryFn: () => getProjectSigningFn({ data: { projectId } }),
   })
+  useEffect(() => {
+    setTtl(data?.signedUrlTtlSeconds?.toString() ?? '')
+  }, [data?.signedUrlTtlSeconds])
 
   const toggle = useMutation({
-    mutationFn: (requireSignedUrls: boolean) =>
-      updateProjectSigningFn({ data: { projectId, requireSignedUrls } }),
+    mutationFn: (input: {
+      requireSignedUrls: boolean
+      signedUrlTtlSeconds?: number | null
+    }) => updateProjectSigningFn({ data: { projectId, ...input } }),
     onSuccess: (signing) => {
       queryClient.setQueryData(queryKey, signing)
       toast.success(
@@ -88,7 +95,9 @@ export function SignedUrls({ projectId }: { projectId: string }) {
           checked={data?.requireSignedUrls ?? false}
           disabled={isPending || toggle.isPending}
           id="require-signed-urls"
-          onCheckedChange={(checked) => toggle.mutate(checked)}
+          onCheckedChange={(checked) =>
+            toggle.mutate({ requireSignedUrls: checked })
+          }
         />
       </div>
 
@@ -129,6 +138,43 @@ export function SignedUrls({ projectId }: { projectId: string }) {
             <code>sig</code>) with HMAC-SHA256 and append the base64url digest
             as <code>sig=</code>.
           </p>
+          <p className="text-muted-foreground text-xs">
+            Current key version: <code>{data.signingKeyVersion}</code>. Include
+            it as <code>kid=</code>; rotation increments the version.
+          </p>
+
+          <div className="flex max-w-md flex-col gap-2 pt-2">
+            <Label htmlFor="signed-url-ttl">Maximum URL lifetime</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="signed-url-ttl"
+                inputMode="numeric"
+                min={60}
+                onChange={(event) => setTtl(event.target.value)}
+                placeholder="No expiration required"
+                type="number"
+                value={ttl}
+              />
+              <Button
+                disabled={toggle.isPending}
+                onClick={() =>
+                  toggle.mutate({
+                    requireSignedUrls: data.requireSignedUrls,
+                    signedUrlTtlSeconds: ttl ? Number(ttl) : null,
+                  })
+                }
+                size="sm"
+                variant="outline"
+              >
+                Save
+              </Button>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Seconds, from 60 to 2,592,000 (30 days). When configured, signed
+              URLs must include an <code>exp=</code> Unix timestamp and cannot
+              exceed this lifetime.
+            </p>
+          </div>
         </div>
       ) : null}
 

@@ -30,7 +30,8 @@ curl -I "https://keenpix.example.com/img/https://cdn.example.com/hero.jpg?projec
 # HTTP/1.1 200 OK
 # content-type: image/webp
 # cache-control: public, max-age=31536000, immutable
-# vary: Accept
+# accept-ch: Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width
+# vary: Accept, Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width, DPR, Width, Viewport-Width
 
 curl -I "https://keenpix.example.com/img/?url=https%3A%2F%2Fcdn.example.com%2Fhero.jpg&project=store&w=800&fmt=webp"
 ```

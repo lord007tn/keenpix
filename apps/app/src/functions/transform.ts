@@ -141,6 +141,14 @@ export async function handleTransformRequest(
   try {
     const result = await optimizeProjectImage({
       accept: request.headers.get('accept') ?? '',
+      clientHints: {
+        dpr: request.headers.get('sec-ch-dpr') ?? request.headers.get('dpr'),
+        viewportWidth:
+          request.headers.get('sec-ch-viewport-width') ??
+          request.headers.get('viewport-width'),
+        width:
+          request.headers.get('sec-ch-width') ?? request.headers.get('width'),
+      },
       country,
       projectId,
       searchParams,
@@ -158,7 +166,11 @@ export async function handleTransformRequest(
         'content-type': getContentType(result.format),
         'content-length': String(result.body.byteLength),
         'cache-control': cacheControl(),
-        vary: 'Accept',
+        'accept-ch': 'Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width',
+        vary: 'Accept, Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width, DPR, Width, Viewport-Width',
+        ...(result.contentDpr
+          ? { 'content-dpr': String(result.contentDpr) }
+          : {}),
         'x-content-type-options': 'nosniff',
         // Origin-shield cache status, for observability behind an outer CDN.
         'x-keenpix-cache': result.cached ? 'HIT' : 'MISS',

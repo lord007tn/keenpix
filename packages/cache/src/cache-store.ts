@@ -13,16 +13,25 @@ export interface CacheEntry {
 }
 
 export interface CacheStore {
+  clear?(): CacheStoreResult<unknown>
+  delete?(key: string, format: OutputFormat): CacheStoreResult<void>
   get(key: string, format: OutputFormat): CacheStoreResult<Buffer | null>
   getEntry(
     key: string,
     format: OutputFormat,
   ): CacheStoreResult<CacheEntry | null>
+  readonly name?: string
+  probe?(): Promise<boolean>
   set(
     key: string,
     format: OutputFormat,
     data: Buffer,
     originalBytes?: number,
+  ): CacheStoreResult<void>
+  setEntry?(
+    key: string,
+    format: OutputFormat,
+    entry: CacheEntry,
   ): CacheStoreResult<void>
   stats(): Record<string, number>
 }

@@ -30,6 +30,7 @@ export const serverEnvSchema = {
   // just `!isCloud()` — there is no separate KEENPIX_SELF_HOST flag.
   KEENPIX_MODE: z.enum(['selfhost', 'cloud']).default('selfhost'),
   KEENPIX_CACHE_DIR: z.string().min(1).default('./.keenpix-cache'),
+  KEENPIX_CACHE_REDIS_URL: optionalUrlSchema,
   // Optional shared object-storage cache tier (Cloudflare R2 / any S3). When all
   // are set AND KEENPIX_MODE=cloud, the durable cache moves off local disk to a
   // shared bucket so horizontally-scaled cloud replicas share one warm cache.
@@ -79,6 +80,16 @@ export const serverEnvSchema = {
     .int()
     .positive()
     .default(DEFAULT_CACHE_MAX_BYTES),
+  KEENPIX_CACHE_DELETE_AFTER_MS: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .default(30 * 24 * 60 * 60 * 1000),
+  KEENPIX_CACHE_DRAGONFLY_MAX_BYTES: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .default(512 * 1024 * 1024),
   KEENPIX_CACHE_STALE_MS: z.coerce
     .number()
     .int()
@@ -101,6 +112,11 @@ export const serverEnvSchema = {
     .int()
     .positive()
     .default(50 * 1024 * 1024),
+  KEENPIX_MAX_WATERMARK_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(5 * 1024 * 1024),
   KEENPIX_MAX_INPUT_PIXELS: z.coerce
     .number()
     .int()

@@ -17,8 +17,16 @@ export interface TransformProject {
   maxWidth: number | null
   orgId: string
   requireSignedUrls: boolean
+  signedUrlTtlSeconds: number | null
+  signingKeyVersion: number
   signingSecret: string | null
   stripMetadata: boolean
+  watermarkEnabled: boolean
+  watermarkMargin: number
+  watermarkOpacity: number
+  watermarkPosition: string
+  watermarkScale: number
+  watermarkUrl: string | null
 }
 
 export function getTransformProject(
@@ -36,8 +44,16 @@ export function getTransformProject(
       maxWidth: true,
       orgId: true,
       requireSignedUrls: true,
+      signedUrlTtlSeconds: true,
+      signingKeyVersion: true,
       signingSecret: true,
       stripMetadata: true,
+      watermarkEnabled: true,
+      watermarkMargin: true,
+      watermarkOpacity: true,
+      watermarkPosition: true,
+      watermarkScale: true,
+      watermarkUrl: true,
     },
   })
 }

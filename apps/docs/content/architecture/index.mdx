@@ -15,7 +15,7 @@ Internet / CDN
       │                                                        │
       ├── /img/* and custom domains ──▶ apps/transform ◀──── apps/worker
       │                                      │
-      │                                      ├── disk, Redis, or S3 cache
+      │                                      ├── memory → Dragonfly → R2/MaxIO
       │                                      ├── ClickHouse analytics (optional)
       │                                      └── customer image origins
       │

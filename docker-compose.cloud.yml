@@ -65,8 +65,8 @@ services:
     command: serve
     restart: unless-stopped
     environment:
-      - MAXIO_ACCESS_KEY=${KEENPIX_CACHE_S3_ACCESS_KEY_ID} # (required)
-      - MAXIO_SECRET_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY} # (required)
+      - MAXIO_ACCESS_KEY=${KEENPIX_CACHE_S3_ACCESS_KEY_ID:-keenpix}
+      - MAXIO_SECRET_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY:-keenpix-local-cache}
       - MAXIO_REGION=auto
       - MAXIO_DEFAULT_BUCKETS=${KEENPIX_CACHE_S3_BUCKET:-keenpix-cache}
     volumes:
@@ -125,8 +125,8 @@ services:
       - KEENPIX_CACHE_S3_BUCKET=${KEENPIX_CACHE_S3_BUCKET:-keenpix-cache}
       - KEENPIX_CACHE_S3_ENDPOINT=${KEENPIX_CACHE_S3_ENDPOINT:-http://maxio:9000}
       - KEENPIX_CACHE_S3_REGION=${KEENPIX_CACHE_S3_REGION:-auto}
-      - KEENPIX_CACHE_S3_ACCESS_KEY_ID=${KEENPIX_CACHE_S3_ACCESS_KEY_ID}
-      - KEENPIX_CACHE_S3_SECRET_ACCESS_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY}
+      - KEENPIX_CACHE_S3_ACCESS_KEY_ID=${KEENPIX_CACHE_S3_ACCESS_KEY_ID:-keenpix}
+      - KEENPIX_CACHE_S3_SECRET_ACCESS_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY:-keenpix-local-cache}
       - KEENPIX_CACHE_DIR=/var/cache/keenpix
       - KEENPIX_QUEUE_URL=redis://dragonfly:6379
       - KEENPIX_WORKER_CONCURRENCY=${KEENPIX_WORKER_CONCURRENCY:-4}
@@ -210,8 +210,12 @@ services:
       - KEENPIX_CACHE_S3_BUCKET=${KEENPIX_CACHE_S3_BUCKET:-keenpix-cache}
       - KEENPIX_CACHE_S3_ENDPOINT=${KEENPIX_CACHE_S3_ENDPOINT:-http://maxio:9000}
       - KEENPIX_CACHE_S3_REGION=${KEENPIX_CACHE_S3_REGION:-auto}
-      - KEENPIX_CACHE_S3_ACCESS_KEY_ID=${KEENPIX_CACHE_S3_ACCESS_KEY_ID}
-      - KEENPIX_CACHE_S3_SECRET_ACCESS_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY}
+      - KEENPIX_CACHE_S3_ACCESS_KEY_ID=${KEENPIX_CACHE_S3_ACCESS_KEY_ID:-keenpix}
+      - KEENPIX_CACHE_S3_SECRET_ACCESS_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY:-keenpix-local-cache}
+      - KEENPIX_CACHE_REDIS_URL=redis://dragonfly:6379
+      - KEENPIX_CACHE_DRAGONFLY_MAX_BYTES=${KEENPIX_CACHE_DRAGONFLY_MAX_BYTES:-536870912}
+      - KEENPIX_CACHE_DELETE_AFTER_MS=${KEENPIX_CACHE_DELETE_AFTER_MS:-2592000000}
+      - KEENPIX_MAX_WATERMARK_BYTES=${KEENPIX_MAX_WATERMARK_BYTES:-5242880}
       - KEENPIX_CACHE_DIR=/var/cache/keenpix
       - KEENPIX_TRANSFORM_PORT=3002
       - KEENPIX_WORKER_SECRET=${KEENPIX_WORKER_SECRET}
@@ -220,7 +224,7 @@ services:
     volumes:
       - keenpix_cache:/var/cache/keenpix
     healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "--output", "/dev/null", "http://127.0.0.1:3002/health/live"]
+      test: ["CMD", "curl", "--fail", "--silent", "--output", "/dev/null", "http://127.0.0.1:3002/health/ready"]
       interval: 10s
       timeout: 5s
       retries: 6
@@ -234,7 +238,7 @@ services:
     restart: unless-stopped
     stop_grace_period: 30s
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -20,21 +20,25 @@ Coolify generates:
 - `SERVICE_HEX_64_KEENPIX` for Better Auth
 - `SERVICE_HEX_64_KEENPIX_WORKER` for internal worker authentication
 - `SERVICE_USER_WORKBENCH` and `SERVICE_PASSWORD_64_WORKBENCH` for Workbench basic auth
+- `SERVICE_USER_MAXIO` and `SERVICE_PASSWORD_64_MAXIO` for the fallback object cache
 - `SERVICE_PASSWORD_64_ADMIN` for the initial super-admin password
 
 You may override Workbench with `KEENPIX_WORKBENCH_USERNAME` and `KEENPIX_WORKBENCH_PASSWORD`, but both must be set together.
 
 ## Service routing
 
-Only `app:3000` and `docs:3003` need public domains. Keep `transform:3002`, `worker:3001`, Postgres, and Dragonfly private. If you expose Workbench through a private operator domain, keep its basic auth enabled and add Coolify access controls in front of it.
+Only `app:3000` and `docs:3003` need public domains. Keep `transform:3002`,
+`worker:3001`, Postgres, Dragonfly, and MaxIO private. If you expose Workbench
+through a private operator domain, keep its basic auth enabled and add Coolify
+access controls in front of it.
 
 ## Health checks
 
 Coolify should show these containers as healthy:
 
 - app: `GET /api/health`
-- transform: `GET /health/live`
-- worker: `GET /health/live`
+- transform: `GET /health/ready` (database plus configured cache tiers)
+- worker: `GET /health/ready` (queue connectivity)
 - docs: `GET /health`
 - Postgres: `pg_isready`
 

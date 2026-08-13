@@ -42,6 +42,12 @@ await keenpix.updateProject(project.id, {
   defaultQuality: 82,
   maxWidth: 2400,
   stripMetadata: true,
+  watermarkEnabled: true,
+  watermarkUrl: 'https://assets.example.com/brand/watermark.png',
+  watermarkPosition: 'southeast',
+  watermarkOpacity: 65,
+  watermarkScale: 18,
+  watermarkMargin: 20,
 })
 ```
 
@@ -90,11 +96,18 @@ try {
 The optional `@keenpix/sdk/signing` export creates HMAC signatures with the same canonical payload as `@keenpix/core`:
 
 ```ts
-import { signTransformRequest } from '@keenpix/sdk/signing'
+import { signTransformUrl } from '@keenpix/sdk/signing'
 
-const params = new URLSearchParams({ project: 'website', w: '1280' })
-const signature = signTransformRequest(process.env.KEENPIX_SIGNING_SECRET!, '/hero.jpg', params)
-params.set('sig', signature)
+const signed = signTransformUrl(
+  'https://images.example.com/img?url=https%3A%2F%2Fassets.example.com%2Fhero.jpg&w=auto&dpr=auto',
+  process.env.KEENPIX_SIGNING_SECRET!,
+  {
+    expiresAt: Date.now() + 5 * 60 * 1000,
+    keyVersion: 3,
+  },
+)
 ```
 
-Keep the signing secret on the server. Browser framework adapters build unsigned public URLs unless your server signs them first.
+Keep the signing secret on the server. `signTransformUrl` signs `kid`, `iat`,
+`exp`, Client Hint modes, and every other query value. Browser framework adapters
+build unsigned public URLs unless your server signs them first.

@@ -27,6 +27,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "publint": "publint",
+    "pack:check": "pnpm run build && pnpm run publint && pnpm pack --dry-run",
+    "prepublishOnly": "pnpm run build && pnpm run test && pnpm run publint",
     "clean": "git clean -xdf dist node_modules"
   },
   "devDependencies": {

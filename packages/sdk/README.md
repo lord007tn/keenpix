@@ -41,10 +41,13 @@ Non-2xx responses throw `KeenpixApiError` with the HTTP `status` and parsed resp
 Server-side transform signing is available from `@keenpix/sdk/signing`:
 
 ```ts
-import { signTransformRequest } from '@keenpix/sdk/signing'
+import { signTransformUrl } from '@keenpix/sdk/signing'
 
-const params = new URLSearchParams({ project: 'website', w: '1280' })
-const signature = signTransformRequest(secret, '/hero.jpg', params)
+const signed = signTransformUrl(
+  'https://images.example.com/img?url=https%3A%2F%2Fassets.example.com%2Fhero.jpg&w=auto&dpr=auto',
+  secret,
+  { expiresAt: Date.now() + 300_000, keyVersion: 3 },
+)
 ```
 
 Never expose the management API key or signing secret to browser or mobile code. Public framework packages only need a delivery base URL and project ID.

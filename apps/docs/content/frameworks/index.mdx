@@ -41,6 +41,7 @@ import { createKeenpix, createImageAttributes } from '@keenpix/core'
 
 const keenpix = createKeenpix(config)
 const src = keenpix.url('/hero.jpg', { width: 1280, format: 'webp' })
+const hinted = keenpix.url('/hero.jpg', { width: 'auto', dpr: 'auto' })
 const attributes = createImageAttributes(config, {
   alt: 'Hero',
   src: '/hero.jpg',
@@ -49,3 +50,9 @@ const attributes = createImageAttributes(config, {
 ```
 
 Transform URLs do not require the management SDK or an API key. Use [`@keenpix/sdk`](/docs/reference/sdk-package) only from trusted server code when automating projects, domains, configuration, or prewarming.
+
+Every framework adapter inherits `width: 'auto'` and `dpr: 'auto'` from
+`@keenpix/core`. The browser-facing packages never receive a signing secret;
+generate HMAC URLs in trusted server/build code with `@keenpix/sdk/signing` and
+pass the resulting URL to the framework integration. Project watermarks require
+no adapter option because the transform service applies them consistently.

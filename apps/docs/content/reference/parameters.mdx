@@ -10,14 +10,16 @@ All transform parameters are optional; out-of-range values are clamped, not reje
 | --- | --- | --- | --- | --- |
 | `project` | string | — | **required** | Project id (allowlist gates access) |
 | `sig` | string | base64url HMAC-SHA256 | required when the project enables [signed URLs](/docs/concepts/signed-urls) | Request signature over the source URL + sorted params |
+| `kid` | int | current project key version | required for signed URLs | Invalidates old URL generations after secret rotation |
+| `iat` / `exp` | Unix seconds | project signing policy | required when a signing lifetime is configured | Signed issuance and expiration timestamps |
 | `url` | URL | absolute `http`/`https` URL | — | Source image URL when not using the `/img/<source-url>` path form |
-| `w` / `h` | int | 1–5000 | bounded original | Target width/height (px) |
+| `w` / `h` | int or `auto` for `w` | 1–5000 | bounded original | Target width/height; `w=auto` resolves `Sec-CH-Width`, then `Sec-CH-Viewport-Width` |
 | `resize` / `s` | string | `WIDTHxHEIGHT`, `WIDTH`, `xHEIGHT` | — | Compact size alias; explicit `w`/`h` win |
 | `q` | int | 30–100 | project default | Output quality |
 | `fmt` | enum | `auto` `avif` `webp` `jpeg` `png` `gif` `heif` `tiff` `svg` | `auto` | Output format (`auto` negotiates AVIF/WebP/JPEG) |
 | `fit` | enum | `cover` `contain` `fill` `inside` `outside` | `cover` | How to fit the `w`×`h` box |
 | `position` / `pos` / `gravity` | enum | edges, corners, compass gravities, `entropy`, `attention` | `centre` | Crop anchor for `cover`/`contain` |
-| `dpr` | int | 1–3 | `1` | Device pixel ratio (multiplies `w`/`h`) |
+| `dpr` | number or `auto` | 1–3 | `1` | Device pixel ratio; `auto` resolves the `Sec-CH-DPR` Client Hint |
 | `enlarge` | bool | `1` `true` `yes` `on` | `false` | Allow upscaling past source dimensions |
 | `kernel` | enum | `nearest` `linear` `cubic` `mitchell` `lanczos2` `lanczos3` `mks2013` `mks2021` | `lanczos3` | Resize kernel |
 | `background` / `bg` | color | Sharp color string | — | Fill color for `contain`, `flatten`, `extend`, and arbitrary rotate |
@@ -50,6 +52,14 @@ All transform parameters are optional; out-of-range values are clamped, not reje
   `/img/https://cdn.example.com/hero.jpg?project=ID&w=1200`, or send it as
   `/img/?url=https%3A%2F%2Fcdn.example.com%2Fhero.jpg&project=ID&w=1200`.
 - **`dpr`** multiplies the target dimensions — `w=400&dpr=2` renders at 800px.
+- **Client Hints.** `w=auto&dpr=auto` lets the browser provide `Width` or
+  `Sec-CH-Viewport-Width` plus `Sec-CH-DPR`. `Sec-CH-Width` is already in device
+  pixels, so Keenpix converts it back to a logical width before applying DPR and
+  avoids double scaling. Keenpix advertises and varies by all three current
+  headers; the older unprefixed forms are accepted for compatibility. Automatic
+  widths and DPRs are rounded to a bounded shared ladder so a signed `auto` URL
+  cannot be turned into unlimited cache variants by spoofing headers. Explicit
+  numeric values remain best for deterministic prewarming.
 - **`fmt=auto`** depends on the project's *Auto-format* setting; when off, `auto` serves
   JPEG. Omitting `fmt` is treated as `auto`. It is raster negotiation only: SVG origins
   are rasterized and returned as AVIF, WebP, or JPEG rather than preserved as SVG. An
@@ -62,3 +72,15 @@ All transform parameters are optional; out-of-range values are clamped, not reje
   optimizes them through SVGO, and strips active content. Raster transform modifiers do
   not apply to SVG output.
 - **`q`** defaults to the project's *Default quality* (**Settings → Pipeline**).
+- **Watermarks are project configuration, not public query parameters.** Configure
+  the asset, opacity, scale, position, and margin under **Settings → Pipeline**.
+  The asset host must be allowlisted. Raster variants receive the overlay; explicit
+  SVG output remains optimized SVG without raster compositing.
+
+## Smart-crop research TODO
+
+`position=attention` and `position=entropy` currently expose Sharp/libvips crop
+heuristics. A dedicated Keenpix subject-aware smart crop is deliberately not part
+of v0.3 yet. Its focal-point model, face/object behavior, privacy implications,
+fallbacks, and cache identity need a separate design study before implementation.
+Named transform presets are also intentionally outside this release.

@@ -124,6 +124,7 @@ export const updateProjectSigningFn = createServerFn({ method: 'POST' })
       orgId,
       data.projectId,
       data.requireSignedUrls,
+      data.signedUrlTtlSeconds,
     )
     if (!signing) {
       throw new Error('Project not found')
@@ -157,6 +158,12 @@ export const updateProjectSettingsFn = createServerFn({ method: 'POST' })
       maxWidth: data.maxWidth,
       defaultFit: data.defaultFit,
       defaultDpr: data.defaultDpr,
+      watermarkEnabled: data.watermarkEnabled,
+      watermarkUrl: data.watermarkUrl,
+      watermarkPosition: data.watermarkPosition,
+      watermarkOpacity: data.watermarkOpacity,
+      watermarkScale: data.watermarkScale,
+      watermarkMargin: data.watermarkMargin,
     })
     if (!project) {
       throw new Error('Project not found')
@@ -168,5 +175,11 @@ export const updateProjectSettingsFn = createServerFn({ method: 'POST' })
       maxWidth: project.maxWidth,
       defaultFit: project.defaultFit,
       defaultDpr: project.defaultDpr,
+      watermarkEnabled: project.watermarkEnabled,
+      watermarkUrl: project.watermarkUrl,
+      watermarkPosition: project.watermarkPosition,
+      watermarkOpacity: project.watermarkOpacity,
+      watermarkScale: project.watermarkScale,
+      watermarkMargin: project.watermarkMargin,
     }
   })

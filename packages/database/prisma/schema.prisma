@@ -274,6 +274,14 @@ model Project {
   // baseline gate; signing adds hotlink/cache-busting protection on top.
   requireSignedUrls Boolean        @default(false)
   signingSecret     String?
+  signingKeyVersion Int            @default(1)
+  signedUrlTtlSeconds Int?
+  watermarkEnabled  Boolean        @default(false)
+  watermarkUrl      String?
+  watermarkPosition String         @default("southeast")
+  watermarkOpacity  Int            @default(70)
+  watermarkScale    Int            @default(20)
+  watermarkMargin   Int            @default(16)
   createdAt         DateTime       @default(now())
   requestLogs       RequestLog[]
   apiKeyScopes      ApiKeyScope[]

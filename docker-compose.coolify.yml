@@ -31,6 +31,18 @@ services:
     volumes:
       - keenpix_dragonfly:/data
 
+  maxio:
+    image: ghcr.io/coollabsio/maxio:latest
+    command: serve
+    restart: unless-stopped
+    environment:
+      - MAXIO_ACCESS_KEY=${SERVICE_USER_MAXIO}
+      - MAXIO_SECRET_KEY=${SERVICE_PASSWORD_64_MAXIO}
+      - MAXIO_REGION=auto
+      - MAXIO_DEFAULT_BUCKETS=${KEENPIX_CACHE_S3_BUCKET:-keenpix-cache}
+    volumes:
+      - keenpix_maxio:/data
+
   app:
     image: "${KEENPIX_APP_IMAGE:-ghcr.io/lord007tn/keenpix-app:latest}"
     restart: unless-stopped
@@ -46,6 +58,8 @@ services:
       postgres:
         condition: service_healthy
       dragonfly:
+        condition: service_started
+      maxio:
         condition: service_started
       transform:
         condition: service_healthy
@@ -102,13 +116,24 @@ services:
         condition: service_healthy
       dragonfly:
         condition: service_started
+      maxio:
+        condition: service_started
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_64_POSTGRES}@postgres:5432/${POSTGRES_DB:-keenpix}
       - KEENPIX_CACHE_DIR=/var/cache/keenpix
       - KEENPIX_CACHE_MAX_BYTES=${KEENPIX_CACHE_MAX_BYTES:-8589934592}
+      - KEENPIX_CACHE_REDIS_URL=redis://dragonfly:6379
+      - KEENPIX_CACHE_DRAGONFLY_MAX_BYTES=${KEENPIX_CACHE_DRAGONFLY_MAX_BYTES:-536870912}
+      - KEENPIX_CACHE_DELETE_AFTER_MS=${KEENPIX_CACHE_DELETE_AFTER_MS:-2592000000}
       - KEENPIX_CACHE_STALE_MS=${KEENPIX_CACHE_STALE_MS:-86400000}
       - KEENPIX_MEMORY_CACHE_MAX_BYTES=${KEENPIX_MEMORY_CACHE_MAX_BYTES:-268435456}
+      - KEENPIX_CACHE_S3_BUCKET=${KEENPIX_CACHE_S3_BUCKET:-keenpix-cache}
+      - KEENPIX_CACHE_S3_ENDPOINT=${KEENPIX_CACHE_S3_ENDPOINT:-http://maxio:9000}
+      - KEENPIX_CACHE_S3_REGION=${KEENPIX_CACHE_S3_REGION:-auto}
+      - KEENPIX_CACHE_S3_ACCESS_KEY_ID=${KEENPIX_CACHE_S3_ACCESS_KEY_ID:-${SERVICE_USER_MAXIO}}
+      - KEENPIX_CACHE_S3_SECRET_ACCESS_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY:-${SERVICE_PASSWORD_64_MAXIO}}
+      - KEENPIX_MAX_WATERMARK_BYTES=${KEENPIX_MAX_WATERMARK_BYTES:-5242880}
       - KEENPIX_MAX_ORIGIN_BYTES=${KEENPIX_MAX_ORIGIN_BYTES:-52428800}
       - KEENPIX_MAX_INPUT_PIXELS=${KEENPIX_MAX_INPUT_PIXELS:-50000000}
       - KEENPIX_MAX_DIMENSION=${KEENPIX_MAX_DIMENSION:-4096}
@@ -119,7 +144,7 @@ services:
     volumes:
       - keenpix_cache:/var/cache/keenpix
     healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--output", "/dev/null", "http://127.0.0.1:3002/health/live"]
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--output", "/dev/null", "http://127.0.0.1:3002/health/ready"]
       interval: 10s
       timeout: 5s
       retries: 6
@@ -130,7 +155,7 @@ services:
     restart: unless-stopped
     stop_grace_period: 30s
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -170,4 +195,5 @@ services:
 volumes:
   keenpix_pg18:
   keenpix_dragonfly:
+  keenpix_maxio:
   keenpix_cache:

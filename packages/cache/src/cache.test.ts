@@ -1,7 +1,7 @@
 import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { DiskCacheStore } from './disk-cache-store'
 import { createTransformCache } from './index'
 import { MemoryCacheStore } from './memory-cache-store'
@@ -74,6 +74,62 @@ describe('buildCacheKey', () => {
 describe('cacheControl', () => {
   it('is long-lived + immutable so a CDN can cache the response', () => {
     expect(cacheControl()).toBe('public, max-age=31536000, immutable')
+  })
+})
+
+describe('KeenpixTierCoordinator', () => {
+  it('reads lower tiers in order and promotes a hit into memory', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'keenpix-cache-'))
+    try {
+      const writer = createTransformCache({
+        cacheControl: 'public, max-age=60',
+        dir,
+        maxBytes: 1024,
+        memoryMaxBytes: 0,
+        staleMs: 60_000,
+      })
+      await writer.write('key', 'webp', Buffer.from('image-bytes'), 50)
+
+      const reader = createTransformCache({
+        cacheControl: 'public, max-age=60',
+        dir,
+        maxBytes: 1024,
+        memoryMaxBytes: 1024,
+        staleMs: 60_000,
+      })
+      expect(reader.tierNames).toEqual(['memory', 'disk'])
+      expect(await reader.read('key', 'webp')).toMatchObject({
+        originalBytes: 50,
+        tier: 'disk',
+      })
+      expect(await reader.read('key', 'webp')).toMatchObject({ tier: 'memory' })
+    } finally {
+      await rm(dir, { force: true, recursive: true })
+    }
+  })
+
+  it('deletes an entry from the whole chain after its terminal TTL', async () => {
+    vi.useFakeTimers()
+    const dir = await mkdtemp(path.join(tmpdir(), 'keenpix-cache-'))
+    try {
+      vi.setSystemTime(new Date('2026-08-13T12:00:00Z'))
+      const coordinator = createTransformCache({
+        cacheControl: 'public, max-age=60',
+        deleteAfterMs: 1000,
+        dir,
+        maxBytes: 1024,
+        memoryMaxBytes: 1024,
+        staleMs: 500,
+      })
+      await coordinator.write('key', 'webp', Buffer.from('image-bytes'), 50)
+      vi.advanceTimersByTime(1001)
+
+      expect(await coordinator.read('key', 'webp')).toBeNull()
+      expect(await new DiskCacheStore(dir, 1024).get('key', 'webp')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+      await rm(dir, { force: true, recursive: true })
+    }
   })
 })
 

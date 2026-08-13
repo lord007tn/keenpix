@@ -2,7 +2,7 @@
 
 ![Keenpix brand image](./apps/app/public/brand/keenpix-og-card.png)
 
-Keenpix is a self-hosted image optimization layer for teams that want the speed of an image CDN without handing the pipeline to another service. Point it at an allowlisted origin, request one URL, and Keenpix fetches the image, transforms it with [sharp](https://sharp.pixelplumbing.com/), caches the variant to disk, records analytics, and serves a CDN-ready response.
+Keenpix is a self-hosted image optimization layer for teams that want the speed of an image CDN without handing the pipeline to another service. Point it at an allowlisted origin, request one URL, and Keenpix fetches the image, transforms it with [sharp](https://sharp.pixelplumbing.com/), caches the variant through memory, Dragonfly, and R2/MaxIO tiers, records analytics, and serves a CDN-ready response.
 
 It is built for operators who want the important parts kept visible: project allowlists, request logs, disk cache behavior, and deployment configuration all live in your own stack.
 
@@ -14,6 +14,7 @@ Don't want to run it yourself? The same engine is available as a managed cloud a
 - **No public API keys** - access is gated by each project's domain allowlist. An empty allowlist fails closed with 403, so a fresh project is never an open proxy.
 - **Internal API keys** - trusted backend systems can manage projects, domains, and pipeline settings through authenticated JSON endpoints.
 - **Projects and origins** - each project owns its source host rules, settings, request logs, and analytics.
+- **Delivery controls** - optional expiring/versioned HMAC URLs, automatic Client Hints, and project-level watermark overlays.
 - **Built-in analytics** - requests, bandwidth saved, cache hit rate, output formats, latency, top images, and source domains come from Postgres rollups fed by the request log; optional Cloudflare edge analytics show the cache layer in front.
 - **Self-host dashboard** - seeded super admin, staff invitations, project settings, API keys, Cloudflare edge analytics, and operational views. Transactional email is configured via `EMAIL_PROVIDER` (Postmark / Resend / SMTP) in the environment.
 - **Open-internet hardening** - allowlist checks, private/loopback/link-local/CGNAT blocking, IPv4-mapped IPv6 handling, DNS rebinding protection, response-size limits, decompression-bomb limits, and bounded worker concurrency.
@@ -64,7 +65,7 @@ Use [docker-compose.coolify.yml](./docker-compose.coolify.yml) for a Coolify ser
 4. Optionally change `KEENPIX_SUPER_ADMIN_EMAIL` from the default `admin@example.com`.
 5. Deploy, then sign in with `KEENPIX_SUPER_ADMIN_EMAIL` and the generated `SERVICE_PASSWORD_64_ADMIN` value shown in Coolify's environment variables.
 
-The Coolify stack uses the four published Keenpix images, keeps Postgres, Dragonfly, transform, and worker networking private, persists database/cache volumes, runs migrations and seed on app startup, and exposes the app and docs through Coolify's proxy. Coolify generates Better Auth, worker, Postgres, admin, and Workbench credentials when they are not supplied.
+The Coolify stack uses the four published Keenpix images, keeps Postgres, Dragonfly, MaxIO, transform, and worker networking private, persists database/cache volumes, runs migrations and seed on app startup, and exposes the app and docs through Coolify's proxy. Coolify generates Better Auth, worker, Postgres, MaxIO, admin, and Workbench credentials when they are not supplied.
 
 If an earlier Coolify deploy failed with a Postgres 18 message about existing data in `/var/lib/postgresql/data`, remove the failed `keenpix-pg` volume from that Coolify resource or recreate the resource before deploying this compose. The Coolify compose now uses a fresh `keenpix_pg18` volume mounted at `/var/lib/postgresql`, which is the Postgres 18-compatible layout.
 
@@ -129,6 +130,11 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_CACHE_MAX_BYTES` | – | LRU eviction cap. The app default is 2 GB; the Docker/Coolify compose files default to 8 GB for CDN-fronted origin-shield use. |
 | `KEENPIX_CACHE_STALE_MS` | – | Serve cached variants immediately after this age and refresh them in the background; `0` disables internal stale refresh. Default 24h. |
 | `KEENPIX_MEMORY_CACHE_MAX_BYTES` | – | In-process hot variant LRU cap; set `0` to disable. The app default is 64 MB; the Docker/Coolify compose files default to 256 MB. |
+| `KEENPIX_CACHE_REDIS_URL` | – | Dragonfly transformed-variant tier; Compose supplies `redis://dragonfly:6379`. |
+| `KEENPIX_CACHE_DRAGONFLY_MAX_BYTES` | – | Dragonfly variant LRU budget (default 512 MB). |
+| `KEENPIX_CACHE_DELETE_AFTER_MS` | – | Terminal variant lifetime across all cache tiers (default 30 days; `0` disables). |
+| `KEENPIX_CACHE_S3_*` | – | Cloudflare R2 or S3-compatible durable cache. Compose configures MaxIO when not overridden. |
+| `KEENPIX_MAX_WATERMARK_BYTES` | – | Maximum fetched project watermark asset (default 5 MB). |
 | `KEENPIX_MAX_ORIGIN_BYTES` | – | Reject origin responses larger than this (default 50 MB). |
 | `KEENPIX_MAX_INPUT_PIXELS` | – | Decompression-bomb ceiling (default ~50 MP). |
 | `KEENPIX_MAX_DIMENSION` | – | Longest output side when a request omits `w`/`h` (default 4096). |
@@ -137,7 +143,7 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_WORKBENCH_USERNAME` / `KEENPIX_WORKBENCH_PASSWORD` | – | Optional basic auth for the worker's `/workbench` BullMQ dashboard. Both must be set together; production presets generate them. |
 | `KEENPIX_WORKER_SECRET` | ✅ (prod) | Independent 32+ character secret authenticating worker callbacks to the app. |
 | `KEENPIX_WORKER_CONCURRENCY` | – | Concurrent durable prewarm jobs per worker process (default 4). |
-| `KEENPIX_WORKER_PORT` | – | Internal worker ops port (default 3001). Compose probes `/health/live` without publishing it publicly. |
+| `KEENPIX_WORKER_PORT` | – | Internal worker ops port (default 3001). Compose probes `/health/ready` without publishing it publicly. |
 | `KEENPIX_MEM_LIMIT` / `KEENPIX_CPU_LIMIT` / `KEENPIX_MEM_RESERVATION` | – | Opt-in Docker Compose resource caps for the app container. Default `0` = no limit. When set, Docker enforces them and the Operations page CPU/RAM gauges read the cap as the real ceiling. A too-low memory cap can get the app OOM-killed. |
 | `KEENPIX_PG_MEM_LIMIT` / `KEENPIX_PG_CPU_LIMIT` / `KEENPIX_PG_MEM_RESERVATION` | – | Same opt-in resource caps for the bundled Postgres container. Default `0` = no limit. |
 
@@ -165,12 +171,12 @@ GET /img/<origin-url>?project=<id>&w=&h=&q=&fmt=&fit=&dpr=&blur=&...
 |---|---|
 | `project` | Project id (copy it from **Settings → Project ID**). Its allowlist is the gate. |
 | path source | Source image URL after `/img/` — its host must be on the project allowlist. |
-| `w` / `h`, `resize` / `s` | Target width/height (1–5000). `resize`/`s` accept `WIDTHxHEIGHT`, `WIDTH`, or `xHEIGHT`. |
+| `w` / `h`, `resize` / `s` | Target width/height (1–5000). `w=auto` uses image Client Hints; `resize`/`s` accept `WIDTHxHEIGHT`, `WIDTH`, or `xHEIGHT`. |
 | `q` | Quality 30–100 (default 75). |
 | `fmt` | `auto` (Accept-negotiated), `avif`, `webp`, `jpeg`, `png`, `gif`, `heif`, `tiff`, `svg`. |
 | `fit` | `cover` / `contain` / `fill` / `inside` / `outside`. |
 | `position` / `pos` / `gravity` | Crop anchor for `cover`/`contain`: edges, corners, compass gravity, `entropy`, or `attention`. |
-| `dpr` | Device pixel ratio 1–3. |
+| `dpr` | Device pixel ratio 1–3, or `auto` for `Sec-CH-DPR`. |
 | `enlarge` | Allows upscaling when set to `1`/`true`; omitted requests do not upscale. |
 | `kernel` | Resize kernel: `nearest`, `linear`, `cubic`, `mitchell`, `lanczos2`, `lanczos3`, `mks2013`, `mks2021`. |
 | `background` / `bg`, `flatten` | Fill color and alpha flattening controls. |
@@ -182,9 +188,19 @@ GET /img/<origin-url>?project=<id>&w=&h=&q=&fmt=&fit=&dpr=&blur=&...
 
 Simple source URLs can be written directly in the path. If the source URL contains its own `?` or `#`, URL-encode the source before appending Keenpix transform parameters.
 
-Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`, so a CDN can cache each image variant once you configure it to cache `/img/*` with the full query string. The source URL lives in the path so Cloudflare and other CDNs can still see the source file extension; use omitted `fmt` / `fmt=auto` only when your CDN can cache separate `Accept` variants, and use explicit `fmt` values when you intentionally want a fixed output format.
+Responses set immutable cache control, advertise `Sec-CH-DPR`, `Sec-CH-Width`,
+and `Sec-CH-Viewport-Width`, and vary by the effective negotiation headers. A CDN
+can cache each image variant once you configure it to cache `/img/*` with the full
+query string. The source URL lives in the path so Cloudflare and other CDNs can
+still see the source file extension; use omitted `fmt` / `fmt=auto` only when your
+CDN can cache separate `Accept` variants, and use explicit `fmt` values when you
+intentionally want a fixed output format.
 
-Keenpix also supports internal stale-while-revalidate for the disk cache. After `KEENPIX_CACHE_STALE_MS`, a cached variant is still served immediately and a refresh starts in the background. This keeps user-facing p95 low while allowing long-lived variants to be refreshed from the origin.
+Keenpix also supports internal stale-while-revalidate across its ordered cache
+coordinator. Production reads memory → Dragonfly → R2/MaxIO, promotes lower hits,
+writes durable tiers first, and deletes variants from the chain after
+`KEENPIX_CACHE_DELETE_AFTER_MS`. After `KEENPIX_CACHE_STALE_MS`, a cached variant
+is still served immediately and a refresh starts in the background.
 
 For good cache hit rates, keep frontend widths normalized. Instead of generating arbitrary widths from every viewport value, choose a small shared ladder such as `320`, `480`, `640`, `768`, `960`, and `1280`, then reuse those values across your CMS and frontend. Each unique `src + project + w + h + q + fmt + fit + dpr + blur` combination is a separate variant.
 

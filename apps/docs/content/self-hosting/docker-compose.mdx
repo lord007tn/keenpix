@@ -26,6 +26,11 @@ KEENPIX_SUPER_ADMIN_PASSWORD=replace-with-a-long-random-password
 
 Generate secrets with `openssl rand -hex 32`. Never reuse the auth secret as the worker secret.
 
+MaxIO is private to the Compose network and has internal fallback credentials so
+the cache works on the first boot. Set `KEENPIX_CACHE_S3_ACCESS_KEY_ID` and
+`KEENPIX_CACHE_S3_SECRET_ACCESS_KEY` when the Docker network is shared with
+untrusted workloads, or set the complete S3 block to use Cloudflare R2.
+
 ## Start and verify
 
 ```bash
@@ -37,7 +42,9 @@ docker compose logs -f app transform worker
 
 The dashboard is available at `http://localhost:3000`; docs default to `http://localhost:3003`. Set `KEENPIX_PORT` and `KEENPIX_DOCS_PORT` to change host ports.
 
-The app waits for Postgres and transform readiness. The worker waits for transform and Dragonfly. Docker restarts failed services with `unless-stopped`.
+The app waits for Postgres and transform readiness. The worker waits for transform
+and Dragonfly. The transform service waits for Dragonfly and MaxIO. Docker
+restarts failed services with `unless-stopped`.
 
 ## Images
 
@@ -56,9 +63,13 @@ Pin all four to the same `vX.Y.Z` tag for production. Do not mix application ver
 | --- | --- |
 | `keenpix_pg` | Postgres control-plane data |
 | `keenpix_dragonfly` | BullMQ jobs and Dragonfly snapshots |
+| `keenpix_maxio` | Durable S3-compatible transformed variants |
 | `keenpix_cache` | Transformed image disk cache |
 
-Postgres must be backed up. The image cache can be rebuilt. Queue data is operationally useful but is not the system of record.
+Postgres must be backed up. MaxIO and the image cache can be rebuilt. Queue data
+is operationally useful but is not the system of record. To replace MaxIO with
+Cloudflare R2, set the five `KEENPIX_CACHE_S3_*` variables; no Compose topology
+change is required.
 
 ## Upgrade
 

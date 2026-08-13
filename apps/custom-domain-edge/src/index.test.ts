@@ -76,12 +76,16 @@ describe('custom-domain edge Worker', () => {
           accept: 'image/avif',
           authorization: 'Bearer customer-secret',
           cookie: 'session=customer-session',
+          'sec-ch-dpr': '2',
+          'sec-ch-width': '1280',
         },
       }),
       env,
     )
 
     expect(result.headers.get('accept')).toBe('image/avif')
+    expect(result.headers.get('sec-ch-dpr')).toBe('2')
+    expect(result.headers.get('sec-ch-width')).toBe('1280')
     expect(result.headers.has('authorization')).toBe(false)
     expect(result.headers.has('cookie')).toBe(false)
   })

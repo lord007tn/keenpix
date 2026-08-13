@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createKeenpixClient, KeenpixApiError } from './index'
+import { signTransformUrl } from './signing'
 
 describe('createKeenpixClient', () => {
   it('normalizes the base URL and authenticates versioned SDK requests', async () => {
@@ -32,5 +33,21 @@ describe('createKeenpixClient', () => {
     await expect(client.listProjects()).rejects.toEqual(
       new KeenpixApiError(403, { error: 'Denied' }),
     )
+  })
+})
+
+describe('signTransformUrl', () => {
+  it('signs an expiring key-versioned transform URL', () => {
+    const signed = new URL(
+      signTransformUrl(
+        'https://images.example.com/img?url=https%3A%2F%2Fcdn.example.com%2Fa.jpg&w=auto',
+        'secret',
+        { expiresAt: Date.now() + 300_000, keyVersion: 2 },
+      ),
+    )
+    expect(signed.searchParams.get('kid')).toBe('2')
+    expect(signed.searchParams.get('iat')).toBeTruthy()
+    expect(signed.searchParams.get('exp')).toBeTruthy()
+    expect(signed.searchParams.get('sig')).toBeTruthy()
   })
 })

@@ -86,10 +86,19 @@ export async function getProjectConfiguration(
       allowedOrigins: project.allowedOrigins,
       imageBaseUrl: `${deliveryBaseUrl}/img`,
       transformUrlTemplate: `${deliveryBaseUrl}/img/<source-url>${projectQuery}`,
+      watermark: {
+        enabled: project.watermarkEnabled,
+        margin: project.watermarkMargin,
+        opacity: project.watermarkOpacity,
+        position: project.watermarkPosition,
+        scale: project.watermarkScale,
+        url: project.watermarkUrl,
+      },
       defaults: {
         autoFormat: project.autoFormat,
         defaultQuality: project.defaultQuality,
         stripMetadata: project.stripMetadata,
+        watermarkEnabled: project.watermarkEnabled,
       },
       supportedParameters: [
         ...(cloud ? [] : ['project']),

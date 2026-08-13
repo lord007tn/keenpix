@@ -24,8 +24,9 @@ have seen abusive traffic. Signing works identically on self-host and cloud.
 
 1. Open **Settings → Security → Signed URLs** and flip **Require signed URLs**. A signing secret
    is generated for the project (owners/admins can view, copy, and rotate it).
-2. Add the signature to every transform URL your app generates (below).
-3. Unsigned or mis-signed requests now return `403`.
+2. Note the displayed key version and optionally configure a maximum URL lifetime.
+3. Add the signature to every transform URL your app generates (below).
+4. Unsigned, expired, or mis-signed requests now return `403`.
 
 ## How to sign a URL
 
@@ -41,34 +42,29 @@ The signature is **HMAC-SHA256, base64url-encoded (no padding)**, over this cano
 
 Append the digest as `sig=<signature>`.
 
-### Node.js
+### Recommended: `@keenpix/sdk`
 
 ```ts
-import { createHmac } from 'node:crypto'
+import { signTransformUrl } from '@keenpix/sdk/signing'
 
-function signKeenpixUrl(
-  base: string, // e.g. https://keenpix.com
-  secret: string, // Settings → Security → Signed URLs
-  src: string, // https://cdn.example.com/photo.jpg
-  params: Record<string, string>, // { project: 'p_123', w: '800', fmt: 'webp' }
-) {
-  const sorted = Object.entries(params)
-    .map(([key, value]) => `${key}=${value}`)
-    .sort()
-    .join('&')
-  const signature = createHmac('sha256', secret)
-    .update(`${src}\n${sorted}`)
-    .digest('base64url')
-  const query = new URLSearchParams({ ...params, sig: signature })
-  return `${base}/img/${src}?${query}`
-}
+const signed = signTransformUrl(
+  'https://images.example.com/img?url=https%3A%2F%2Fcdn.example.com%2Fphoto.jpg&w=800',
+  process.env.KEENPIX_SIGNING_SECRET!,
+  {
+    expiresAt: Date.now() + 5 * 60 * 1000,
+    keyVersion: 3,
+  },
+)
 ```
 
 Sign on your server (or at build time) — the secret must never ship to the browser.
+For path-form URLs, pass the exact source as `src` in the options. Expiring URLs
+include signed `iat` and `exp` Unix timestamps. The configured maximum lifetime is
+checked as `exp - iat`, with a small clock-skew allowance.
 
 ## Rotating the secret
 
-**Settings → Security → Signed URLs → Rotate** generates a new secret and immediately invalidates
+**Settings → Security → Signed URLs → Rotate** generates a new secret, increments `kid`, and immediately invalidates
 every URL signed with the old one. Rotate if the secret leaks, then redeploy your URL generation
 with the new value. Turning signing off keeps the secret stored, so re-enabling doesn't break
 existing signed integrations.

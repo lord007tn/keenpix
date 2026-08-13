@@ -19,6 +19,16 @@ export const env = z
       .int()
       .positive()
       .default(2 * 1024 * 1024 * 1024),
+    KEENPIX_CACHE_DELETE_AFTER_MS: z.coerce
+      .number()
+      .int()
+      .nonnegative()
+      .default(30 * 24 * 60 * 60 * 1000),
+    KEENPIX_CACHE_DRAGONFLY_MAX_BYTES: z.coerce
+      .number()
+      .int()
+      .nonnegative()
+      .default(512 * 1024 * 1024),
     KEENPIX_CACHE_REDIS_URL: optionalUrl,
     KEENPIX_CACHE_S3_ACCESS_KEY_ID: z.string().min(1).optional(),
     KEENPIX_CACHE_S3_BUCKET: z.string().min(1).optional(),
@@ -41,6 +51,11 @@ export const env = z
       .int()
       .positive()
       .default(50 * 1024 * 1024),
+    KEENPIX_MAX_WATERMARK_BYTES: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(5 * 1024 * 1024),
     KEENPIX_MEMORY_CACHE_MAX_BYTES: z.coerce
       .number()
       .int()

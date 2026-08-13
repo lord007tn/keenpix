@@ -21,6 +21,7 @@ import { applyThreshold } from './threshold'
 import { applyTint } from './tint'
 import { applyTrim } from './trim'
 import type { TransformStep } from './types'
+import { applyWatermark } from './watermark'
 
 // libvips already parallelizes within a single pipeline; cap per-call worker
 // threads so N concurrent transforms don't spawn N×CPU threads and thrash.
@@ -29,6 +30,7 @@ sharp.concurrency(1)
 export interface TransformRuntimeLimits {
   maxDimension: number
   maxInputPixels: number
+  watermarkBytes?: Buffer
 }
 
 function getTransformSteps(
@@ -105,7 +107,6 @@ function getTransformSteps(
     steps.push(applySharpen)
   }
 
-  steps.push(applyMetadataPolicy, encodeFormat)
   return steps
 }
 
@@ -118,6 +119,11 @@ export async function transformImage(
   for (const step of getTransformSteps(opts, limits)) {
     pipeline = step(pipeline, opts)
   }
+  if (opts.watermark && limits.watermarkBytes) {
+    pipeline = await applyWatermark(pipeline, opts, limits.watermarkBytes)
+  }
+  pipeline = applyMetadataPolicy(pipeline, opts)
+  pipeline = encodeFormat(pipeline, opts)
   const { data, info } = await pipeline.toBuffer({ resolveWithObject: true })
   return {
     data,
