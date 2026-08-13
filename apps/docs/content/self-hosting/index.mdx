@@ -4,9 +4,9 @@ description: Deploy Keenpix with Docker in about a minute.
 icon: Container
 ---
 
-Keenpix runs as a single Node container (sharp needs Node, not an edge runtime). Put a
-CDN in front of `/img/*`, then configure that CDN to cache the endpoint's immutable
-image responses.
+Keenpix deploys as four focused Node applications plus Postgres and Dragonfly. The
+default Compose file exposes the control plane on port `3000` and the standalone docs
+site on `3003`; the transform and worker services remain private on the Compose network.
 
 Weighing self-host against the hosted option? See [self-hosted vs managed image optimization](/blog/self-host-vs-managed-image-optimization).
 
@@ -18,13 +18,15 @@ cp .env.example .env
 # set a strong secret:
 #   BETTER_AUTH_SECRET=$(openssl rand -hex 32)
 # set POSTGRES_PASSWORD, KEENPIX_SUPER_ADMIN_EMAIL, and KEENPIX_SUPER_ADMIN_PASSWORD
-docker compose up -d --build
-# → http://localhost:3000
+docker compose pull
+docker compose up -d
+# dashboard → http://localhost:3000
+# docs      → http://localhost:3003
 ```
 
-`docker-compose.yml` ships the app plus Postgres. On boot the container runs
-`prisma migrate deploy`, seeds the default org and super admin user, then serves
-the dashboard and the transform endpoint as a non-root user.
+`docker-compose.yml` ships the app, transform data plane, BullMQ worker with Workbench,
+docs, Postgres, and Dragonfly. On boot the app runs `prisma migrate deploy`, optionally
+seeds the default organization and super admin, then starts as a non-root user.
 
 ## After deploy
 
@@ -41,13 +43,19 @@ the dashboard and the transform endpoint as a non-root user.
 ## Architecture
 
 ```text
-Browser/CDN ──▶ Keenpix container (Node + sharp) ──▶ your image origin
-                      │
-                      └── disk cache (volume)   +   Postgres (projects, request logs)
+Browser/CDN ──▶ app:3000 ──▶ transform:3002 ──▶ customer origin
+                    │              │
+                    │              └── memory + disk cache volume
+                    ├── Postgres
+                    └── Dragonfly ──▶ worker:3001
+
+Operator ──▶ docs:3003
 ```
 
-Scale horizontally behind a load balancer; the disk cache is per-instance, and CDN cache
-rules plus `immutable` responses keep origin traffic low. See
+Scale the transform and worker independently. For multiple transform replicas, configure
+a shared S3-compatible cache such as R2 or MaxIO. See
+[Docker Compose](/docs/self-hosting/docker-compose),
+[Coolify](/docs/self-hosting/coolify),
 [CDN setup](/docs/self-hosting/cdn) for Cloudflare, Nginx, and Caddy caching rules,
 [Deployment presets](/docs/self-hosting/presets) for ready-made `.env` files, and
 [Configuration](/docs/self-hosting/configuration) for every environment variable.

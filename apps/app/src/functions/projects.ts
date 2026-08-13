@@ -35,8 +35,8 @@ export const listProjectsFn = createServerFn({ method: 'GET' })
   .handler(({ context }) => listProjects(requireActiveOrg(context)))
 
 export const createProjectFn = createServerFn({ method: 'POST' })
-  .inputValidator(createProjectSchema)
   .middleware([authMiddleware])
+  .inputValidator(createProjectSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireOrgAdmin(context)
     await assertCanCreateProject(orgId)
@@ -47,8 +47,8 @@ export const createProjectFn = createServerFn({ method: 'POST' })
   })
 
 export const addAllowedHostFn = createServerFn({ method: 'POST' })
-  .inputValidator(allowedHostSchema)
   .middleware([authMiddleware])
+  .inputValidator(allowedHostSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireOrgAdmin(context)
     await assertHasProductAccess(orgId)
@@ -60,8 +60,8 @@ export const addAllowedHostFn = createServerFn({ method: 'POST' })
   })
 
 export const removeAllowedHostFn = createServerFn({ method: 'POST' })
-  .inputValidator(allowedHostSchema)
   .middleware([authMiddleware])
+  .inputValidator(allowedHostSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireOrgAdmin(context)
     await assertHasProductAccess(orgId)
@@ -73,8 +73,8 @@ export const removeAllowedHostFn = createServerFn({ method: 'POST' })
   })
 
 export const updateProjectFn = createServerFn({ method: 'POST' })
-  .inputValidator(updateProjectSchema)
   .middleware([authMiddleware])
+  .inputValidator(updateProjectSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireOrgAdmin(context)
     await assertHasProductAccess(orgId)
@@ -89,8 +89,8 @@ export const updateProjectFn = createServerFn({ method: 'POST' })
   })
 
 export const deleteProjectFn = createServerFn({ method: 'POST' })
-  .inputValidator(deleteProjectSchema)
   .middleware([authMiddleware])
+  .inputValidator(deleteProjectSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireOrgAdmin(context)
     await assertHasProductAccess(orgId)
@@ -102,8 +102,8 @@ export const deleteProjectFn = createServerFn({ method: 'POST' })
   })
 
 export const getProjectSigningFn = createServerFn({ method: 'GET' })
-  .inputValidator(projectSigningReadSchema)
   .middleware([authMiddleware])
+  .inputValidator(projectSigningReadSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireOrgAdmin(context)
     await assertHasProductAccess(orgId)
@@ -115,8 +115,8 @@ export const getProjectSigningFn = createServerFn({ method: 'GET' })
   })
 
 export const updateProjectSigningFn = createServerFn({ method: 'POST' })
-  .inputValidator(projectSigningSchema)
   .middleware([authMiddleware])
+  .inputValidator(projectSigningSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireOrgAdmin(context)
     await assertHasProductAccess(orgId)
@@ -132,8 +132,8 @@ export const updateProjectSigningFn = createServerFn({ method: 'POST' })
   })
 
 export const rotateProjectSigningSecretFn = createServerFn({ method: 'POST' })
-  .inputValidator(projectSigningReadSchema)
   .middleware([authMiddleware])
+  .inputValidator(projectSigningReadSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireOrgAdmin(context)
     await assertHasProductAccess(orgId)
@@ -145,8 +145,8 @@ export const rotateProjectSigningSecretFn = createServerFn({ method: 'POST' })
   })
 
 export const updateProjectSettingsFn = createServerFn({ method: 'POST' })
-  .inputValidator(projectSettingsSchema)
   .middleware([authMiddleware])
+  .inputValidator(projectSettingsSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireOrgAdmin(context)
     await assertHasProductAccess(orgId)

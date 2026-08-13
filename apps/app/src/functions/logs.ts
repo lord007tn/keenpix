@@ -16,8 +16,8 @@ import { isCloud } from '@/server/deployment'
 const ADVANCED_LOG_LIMIT = 500
 
 export const listLogsFn = createServerFn({ method: 'GET' })
-  .inputValidator(logsQuerySchema)
   .middleware([authMiddleware])
+  .inputValidator(logsQuerySchema)
   .handler(async ({ data, context }) => {
     const orgId = requireActiveOrg(context)
     const cloud = isCloud()

@@ -4,7 +4,24 @@
   "description": "Server-side SDK for Keenpix project, domain, configuration, and prewarm APIs.",
   "type": "module",
   "license": "MIT",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "sideEffects": false,
+  "homepage": "https://keenpix.com/docs/reference/sdk-package",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lord007tn/keenpix.git",
+    "directory": "packages/sdk"
+  },
+  "keywords": [
+    "keenpix",
+    "image-optimization",
+    "image-cdn",
+    "sdk"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "files": [
     "dist",
     "LICENSE",
@@ -29,6 +46,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "publint": "publint",
+    "pack:check": "pnpm pack --dry-run",
+    "prepublishOnly": "pnpm build && pnpm test && pnpm publint",
     "clean": "git clean -xdf dist node_modules"
   },
   "dependencies": {

@@ -40,16 +40,6 @@ function relDelta(v: { prev: number; value: number }): number | null {
 }
 
 export const Route = createFileRoute('/app/dashboard/')({
-  beforeLoad: ({ context }) => {
-    if (context.cloud && !context.workspaceReady) {
-      throw redirect({ to: '/app/onboarding' })
-    }
-  },
-  head: () =>
-    appPageHead(
-      'Overview',
-      'Keenpix overview — edge delivery, request trends, recent activity, and instance operations at a glance.',
-    ),
   validateSearch: (
     search: Record<string, unknown>,
   ): {
@@ -63,6 +53,16 @@ export const Route = createFileRoute('/app/dashboard/')({
     project: typeof search.project === 'string' ? search.project : undefined,
     to: typeof search.to === 'string' ? search.to : undefined,
   }),
+  beforeLoad: ({ context }) => {
+    if (context.cloud && !context.workspaceReady) {
+      throw redirect({ to: '/app/onboarding' })
+    }
+  },
+  head: () =>
+    appPageHead(
+      'Overview',
+      'Keenpix overview — edge delivery, request trends, recent activity, and instance operations at a glance.',
+    ),
   component: DashboardPage,
 })
 

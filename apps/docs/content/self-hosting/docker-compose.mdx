@@ -1,0 +1,71 @@
+---
+title: Docker Compose
+description: Production-ready self-host deployment, generated secrets, images, ports, volumes, health checks, and upgrades.
+icon: Container
+---
+
+The root `docker-compose.yml` is the supported self-host stack. It uses published GHCR images by default, so self-hosters do not need Node, pnpm, or a source build toolchain.
+
+## Prepare the environment
+
+```bash
+git clone https://github.com/lord007tn/keenpix.git
+cd keenpix
+cp .env.example .env
+```
+
+Set at least:
+
+```bash
+POSTGRES_PASSWORD=replace-with-a-long-random-password
+BETTER_AUTH_SECRET=replace-with-64-random-hex-characters
+KEENPIX_WORKER_SECRET=replace-with-a-different-64-random-hex-value
+KEENPIX_SUPER_ADMIN_EMAIL=admin@example.com
+KEENPIX_SUPER_ADMIN_PASSWORD=replace-with-a-long-random-password
+```
+
+Generate secrets with `openssl rand -hex 32`. Never reuse the auth secret as the worker secret.
+
+## Start and verify
+
+```bash
+docker compose pull
+docker compose up -d
+docker compose ps
+docker compose logs -f app transform worker
+```
+
+The dashboard is available at `http://localhost:3000`; docs default to `http://localhost:3003`. Set `KEENPIX_PORT` and `KEENPIX_DOCS_PORT` to change host ports.
+
+The app waits for Postgres and transform readiness. The worker waits for transform and Dragonfly. Docker restarts failed services with `unless-stopped`.
+
+## Images
+
+| Variable | Default image |
+| --- | --- |
+| `KEENPIX_APP_IMAGE` | `ghcr.io/lord007tn/keenpix-app:latest` |
+| `KEENPIX_TRANSFORM_IMAGE` | `ghcr.io/lord007tn/keenpix-transform:latest` |
+| `KEENPIX_WORKER_IMAGE` | `ghcr.io/lord007tn/keenpix-worker:latest` |
+| `KEENPIX_DOCS_IMAGE` | `ghcr.io/lord007tn/keenpix-docs:latest` |
+
+Pin all four to the same `vX.Y.Z` tag for production. Do not mix application versions across one deployment.
+
+## Persistent volumes
+
+| Volume | Data |
+| --- | --- |
+| `keenpix_pg` | Postgres control-plane data |
+| `keenpix_dragonfly` | BullMQ jobs and Dragonfly snapshots |
+| `keenpix_cache` | Transformed image disk cache |
+
+Postgres must be backed up. The image cache can be rebuilt. Queue data is operationally useful but is not the system of record.
+
+## Upgrade
+
+```bash
+docker compose pull
+docker compose up -d --remove-orphans
+docker compose ps
+```
+
+The app entrypoint applies Prisma migrations before accepting traffic. Back up Postgres before upgrading, read release notes, and roll back by restoring both the prior image tags and a compatible database backup.

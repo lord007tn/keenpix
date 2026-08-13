@@ -22,6 +22,12 @@ import { getFieldError } from '@/utils/validation/form-errors'
 // Self-serve sign-up is a cloud-only funnel. Self-host stays invite-only
 // (operators add users from the admin surface), so redirect there off the cloud.
 export const Route = createFileRoute('/(auth)/signup')({
+  // `redirect` is a validated same-origin path to resume after email
+  // verification — set by invite acceptance so a brand-new invitee returns to
+  // the invite instead of hunting for the email again.
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+    redirect: safeRedirect(search.redirect),
+  }),
   beforeLoad: async () => {
     const { cloud, googleAuth } = await getPublicConfigFn()
     if (!cloud) {
@@ -29,12 +35,6 @@ export const Route = createFileRoute('/(auth)/signup')({
     }
     return { googleAuth }
   },
-  // `redirect` is a validated same-origin path to resume after email
-  // verification — set by invite acceptance so a brand-new invitee returns to
-  // the invite instead of hunting for the email again.
-  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
-    redirect: safeRedirect(search.redirect),
-  }),
   head: () =>
     noIndexPageHead(
       'Create your account',

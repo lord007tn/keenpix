@@ -1,0 +1,36 @@
+---
+title: System architecture
+description: How the Keenpix control plane, transform data plane, worker, docs site, and shared packages fit together.
+icon: Network
+---
+
+Keenpix is a pnpm and Turborepo monorepo with a deliberate split between **deployable applications** and **reusable packages**.
+
+```text
+Internet / CDN
+      │
+      ├── dashboard and management API ──▶ apps/app ──▶ Postgres
+      │                                      │
+      │                                      └── BullMQ ──▶ Dragonfly
+      │                                                        │
+      ├── /img/* and custom domains ──▶ apps/transform ◀──── apps/worker
+      │                                      │
+      │                                      ├── disk, Redis, or S3 cache
+      │                                      ├── ClickHouse analytics (optional)
+      │                                      └── customer image origins
+      │
+      └── documentation ──▶ apps/docs
+```
+
+The transform runtime is separate because image decoding is CPU- and memory-heavy and scales differently from dashboard traffic. The pure image behavior stays in `packages/transform`, so HTTP ownership does not duplicate transformation logic.
+
+## Design rules
+
+- `apps/*` are independently deployable runtimes with their own lifecycle and health checks.
+- `packages/*` are flat capability boundaries. Only framework integrations are nested under `packages/frameworks/*`.
+- `@keenpix/core` owns URL, loader, and responsive-image behavior. Every framework adapter extends it.
+- The app follows `route → function → action → data-access`; only data-access talks directly to Postgres.
+- Queue data and transformed-image cache data use separate configuration and eviction policies.
+- Node runtimes log through `packages/logger`, backed by evlog.
+
+Continue with [services](/docs/architecture/services), [package boundaries](/docs/architecture/packages), and [queues, cache, and analytics](/docs/architecture/queues-cache-analytics).

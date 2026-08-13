@@ -1,6 +1,6 @@
 ---
 title: Documentation
-description: Drop-in image optimization — managed cloud or self-hosted. One image endpoint, no SDK, no API key in your image URLs.
+description: Drop-in image optimization — managed cloud or self-hosted, with optional framework packages and a server SDK.
 icon: Sparkles
 ---
 
@@ -12,7 +12,7 @@ your origin, transforms it with [sharp](https://sharp.pixelplumbing.com) (resize
 crop, filter, and re-encode), optimizes SVG explicitly with `fmt=svg`, caches the
 result on disk, and serves it behind a long-lived, immutable `Cache-Control`.
 
-There's no SDK to install and no API key in your image URLs — **a request is just a URL**:
+Image delivery needs no runtime SDK and no API key in your image URLs — **a request is just a URL**. Optional `@keenpix/*` framework packages provide native loaders and components, while `@keenpix/sdk` automates trusted server-side management:
 
 ```html
 <img
@@ -33,6 +33,6 @@ There's no SDK to install and no API key in your image URLs — **a request is j
 ## Why Keenpix
 
 - **Drop-in.** Any framework that renders an `<img>` works — no rewrite required.
-- **Cloud or self-hosted.** Use the managed cloud at keenpix.com, or run the same engine as a single container on your own infrastructure; put a configured CDN in front of it.
+- **Cloud or self-hosted.** Use the managed cloud at keenpix.com, or run the app, transform data plane, worker, and docs images on your own infrastructure; put a configured CDN in front of `/img/*`.
 - **Keyless.** Access is gated by a per-project domain allowlist, not by secrets.
 - **Built-in analytics.** Every origin request is logged, and optional Cloudflare edge analytics show the cache layer in front.

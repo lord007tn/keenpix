@@ -1,5 +1,13 @@
 {
   "title": "Self-hosting",
   "icon": "Server",
-  "pages": ["index", "configuration", "presets", "cdn"]
+  "pages": [
+    "index",
+    "docker-compose",
+    "coolify",
+    "health-and-operations",
+    "configuration",
+    "presets",
+    "cdn"
+  ]
 }

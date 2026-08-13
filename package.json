@@ -23,7 +23,7 @@
     "format": "biome format --write .",
     "fix": "ultracite fix --max-diagnostics=200",
     "knip": "knip",
-    "doctor": "pnpm --filter @keenpix/app run doctor",
+    "doctor": "react-doctor apps/app --full --no-dead-code --no-score --fail-on error",
     "health": "pnpm lint && pnpm typecheck && pnpm test && pnpm knip && pnpm run doctor && pnpm build",
     "toolchain": "pnpm health",
     "db:generate": "pnpm --filter @keenpix/database generate",

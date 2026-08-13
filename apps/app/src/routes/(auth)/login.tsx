@@ -18,13 +18,13 @@ import { noIndexPageHead } from '@/shared/seo'
 import { getFieldError } from '@/utils/validation/form-errors'
 
 export const Route = createFileRoute('/(auth)/login')({
-  // `cloud` drives whether self-serve sign-up is offered (self-host is invite-only).
-  loader: () => getPublicConfigFn(),
   // `redirect` is a validated same-origin path to return to after sign-in (set
   // when a deep link / invite bounced through login); defaults to the dashboard.
   validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
     redirect: safeRedirect(search.redirect),
   }),
+  // `cloud` drives whether self-serve sign-up is offered (self-host is invite-only).
+  loader: () => getPublicConfigFn(),
   head: () =>
     noIndexPageHead(
       'Sign in',

@@ -1,0 +1,29 @@
+---
+title: Queues, cache, and analytics
+description: Dragonfly, BullMQ, unstorage cache tiers, MaxIO or R2, and ClickHouse responsibilities.
+icon: DatabaseZap
+---
+
+## Queue
+
+BullMQ uses `KEENPIX_QUEUE_URL`, normally `redis://dragonfly:6379`. The queue contains prewarm work, retry state, and job metadata. Job IDs are deterministic so repeated requests do not create duplicate work.
+
+Dragonfly is Redis-compatible and is the default queue backend in Compose. It snapshots its data volume every five minutes.
+
+## Image cache
+
+The transform cache has three possible tiers:
+
+1. An in-process memory LRU for hot variants.
+2. A durable local disk cache for a single transform replica.
+3. An optional shared unstorage backend using Redis or S3-compatible object storage.
+
+Use `KEENPIX_CACHE_REDIS_URL` only when you explicitly want Redis-backed transformed images. It is intentionally separate from `KEENPIX_QUEUE_URL`; image bytes and queue metadata should not share capacity or eviction behavior.
+
+For multiple transform replicas, prefer R2 or another S3-compatible service. The cloud Compose examples include MaxIO as a local S3-compatible fallback.
+
+## Analytics
+
+Transform events are buffered through `packages/analytics`. Postgres remains the control-plane source of truth. ClickHouse is optional and owns high-volume request analytics and long-history queries when configured.
+
+If ClickHouse is unavailable, transformation still works. Readiness only treats dependencies as fatal when the deployment has configured them as required.

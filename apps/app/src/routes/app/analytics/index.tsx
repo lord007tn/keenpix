@@ -97,16 +97,6 @@ function getDateParam(value: unknown) {
 }
 
 export const Route = createFileRoute('/app/analytics/')({
-  beforeLoad: ({ context }) => {
-    if (!context.workspaceReady) {
-      throw redirect({ to: '/app/onboarding' })
-    }
-  },
-  head: () =>
-    appPageHead(
-      'Analytics',
-      'Keenpix analytics for bandwidth savings, cache hit rate, formats, latency, and top image paths.',
-    ),
   validateSearch: (
     search: Record<string, unknown>,
   ): {
@@ -146,6 +136,16 @@ export const Route = createFileRoute('/app/analytics/')({
       to,
     }
   },
+  beforeLoad: ({ context }) => {
+    if (!context.workspaceReady) {
+      throw redirect({ to: '/app/onboarding' })
+    }
+  },
+  head: () =>
+    appPageHead(
+      'Analytics',
+      'Keenpix analytics for bandwidth savings, cache hit rate, formats, latency, and top image paths.',
+    ),
   component: AnalyticsPage,
 })
 

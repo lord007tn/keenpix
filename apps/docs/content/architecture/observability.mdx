@@ -1,0 +1,33 @@
+---
+title: Logging and observability
+description: evlog output, request context, disk retention, health probes, and operational signals.
+icon: Logs
+---
+
+All Node applications use `packages/logger`, which configures evlog once per process and attaches service, environment, version, request, project, and job context where available.
+
+## Terminal logging
+
+Structured logs always go to stdout and stderr, which is the correct source for Docker, Coolify, Kubernetes, and systemd log collection.
+
+```bash
+LOG_LEVEL=info
+```
+
+Supported levels are `fatal`, `error`, `warn`, `info`, `debug`, `trace`, and `silent`.
+
+## Optional disk logs
+
+Set `KEENPIX_LOG_DIR` to also write rotating NDJSON files:
+
+```bash
+KEENPIX_LOG_DIR=/app/data/logs
+```
+
+The file drain batches writes, retries transient failures, keeps up to 14 files, and rotates at 25 MB per file. Mount the directory to a persistent volume if you enable it.
+
+No HyperDX service is required. External log shipping can be added later by collecting container stdout or the NDJSON directory.
+
+## Operational signals
+
+Monitor transform readiness and latency, worker queue depth and oldest-job age, cache hit ratio, origin failures, process memory, and container restart count. Workbench is an operator tool, not a public dashboard; keep it behind its generated basic-auth credentials and a private network or access proxy.

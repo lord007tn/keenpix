@@ -18,8 +18,8 @@ import { isCloud } from '@/server/deployment'
 // A selected project already scopes the page, so the per-project breakdown only
 // appears in the org-wide "All projects" analytics view.
 export const getAnalyticsFn = createServerFn({ method: 'GET' })
-  .inputValidator(analyticsInputSchema)
   .middleware([authMiddleware])
+  .inputValidator(analyticsInputSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireActiveOrg(context)
     const cloud = isCloud()
@@ -35,8 +35,8 @@ export const getAnalyticsFn = createServerFn({ method: 'GET' })
 // rollups. Fetched on its own off the page's critical path so it never blocks the
 // analytics/overview render.
 export const getEdgeCacheStatsFn = createServerFn({ method: 'GET' })
-  .inputValidator(edgeCacheStatsSchema)
   .middleware([authMiddleware])
+  .inputValidator(edgeCacheStatsSchema)
   .handler(({ data, context }) => {
     const viewerIsAdmin = context.role === 'super_admin'
     const platform = Boolean(data.platform && viewerIsAdmin)
@@ -48,8 +48,8 @@ export const getEdgeCacheStatsFn = createServerFn({ method: 'GET' })
   })
 
 export const getAllowedHostStatsFn = createServerFn({ method: 'GET' })
-  .inputValidator(allowedHostStatsSchema)
   .middleware([authMiddleware])
+  .inputValidator(allowedHostStatsSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireActiveOrg(context)
     await assertHasWorkspaceAccess(orgId)

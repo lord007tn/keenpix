@@ -49,16 +49,6 @@ import { useProject } from '@/stores/project-context'
 const EMPTY_VALUES: string[] = []
 
 export const Route = createFileRoute('/app/logs/')({
-  beforeLoad: ({ context }) => {
-    if (!context.workspaceReady) {
-      throw redirect({ to: '/app/onboarding' })
-    }
-  },
-  head: () =>
-    appPageHead(
-      'Live logs',
-      'Live Keenpix request logs with status, format, cache state, latency, and response size filters.',
-    ),
   validateSearch: (
     search: Record<string, unknown>,
   ): {
@@ -97,7 +87,17 @@ export const Route = createFileRoute('/app/logs/')({
     }
   },
   loaderDeps: ({ search }) => search,
+  beforeLoad: ({ context }) => {
+    if (!context.workspaceReady) {
+      throw redirect({ to: '/app/onboarding' })
+    }
+  },
   loader: ({ deps }) => listLogsFn({ data: deps }),
+  head: () =>
+    appPageHead(
+      'Live logs',
+      'Live Keenpix request logs with status, format, cache state, latency, and response size filters.',
+    ),
   component: LogsPage,
 })
 
@@ -241,7 +241,7 @@ function LogsPage() {
         setStreamConnected(false)
       }
     }
-    source.addEventListener('logs', (event) => {
+    const onLogs = (event: Event) => {
       const rows = JSON.parse((event as MessageEvent).data) as LogRow[]
       if (rows.length === 0) {
         return
@@ -251,8 +251,12 @@ function LogsPage() {
         const next = rows.filter((row) => !known.has(row.id)).reverse()
         return [...next, ...current].slice(0, 500)
       })
-    })
-    return () => source.close()
+    }
+    source.addEventListener('logs', onLogs)
+    return () => {
+      source.removeEventListener('logs', onLogs)
+      source.close()
+    }
   }, [hasServerFilters, live, project, visibleRange])
 
   useEffect(() => {

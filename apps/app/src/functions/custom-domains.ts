@@ -17,29 +17,29 @@ import {
 } from '@/schemas/custom-domains'
 
 export const listCustomDomainsFn = createServerFn({ method: 'GET' })
-  .inputValidator(listCustomDomainsSchema)
   .middleware([authMiddleware])
+  .inputValidator(listCustomDomainsSchema)
   .handler(({ data, context }) =>
     listCustomDomains(requireActiveOrg(context), data.projectId),
   )
 
 export const createCustomDomainFn = createServerFn({ method: 'POST' })
-  .inputValidator(createCustomDomainSchema)
   .middleware([authMiddleware])
+  .inputValidator(createCustomDomainSchema)
   .handler(({ data, context }) =>
     createCustomDomain(requireOrgAdmin(context), data.projectId, data.hostname),
   )
 
 export const refreshCustomDomainFn = createServerFn({ method: 'POST' })
-  .inputValidator(mutateCustomDomainSchema)
   .middleware([authMiddleware])
+  .inputValidator(mutateCustomDomainSchema)
   .handler(({ data, context }) =>
     refreshCustomDomain(requireOrgAdmin(context), data.projectId, data.id),
   )
 
 export const deleteCustomDomainFn = createServerFn({ method: 'POST' })
-  .inputValidator(mutateCustomDomainSchema)
   .middleware([authMiddleware])
+  .inputValidator(mutateCustomDomainSchema)
   .handler(({ data, context }) =>
     deleteCustomDomain(requireOrgAdmin(context), data.projectId, data.id),
   )

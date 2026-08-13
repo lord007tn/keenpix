@@ -1,0 +1,34 @@
+---
+title: Package boundaries
+description: What belongs in each flat package and which packages are intended for npm consumers.
+icon: Package
+---
+
+## Runtime capabilities
+
+| Package | Owns |
+| --- | --- |
+| `packages/database` | Prisma schema, migrations, generated client, and seed |
+| `packages/auth` | Better Auth configuration primitives |
+| `packages/email` | Postmark, Resend, and SMTP transactional delivery |
+| `packages/clickhouse` | ClickHouse connection, schemas, and analytics queries |
+| `packages/bullmq` | Queue connections, names, job payloads, producers, and worker factories |
+| `packages/cache` | unstorage-backed memory, disk, Redis, S3/R2, and MaxIO cache behavior |
+| `packages/transform` | Parsing, Sharp/SVG transforms, origin fetching, SSRF protection, and signing |
+| `packages/contracts` | Versioned data exchanged between applications |
+| `packages/analytics` | Buffered transform event ingestion |
+| `packages/logger` | evlog initialization, context, redaction, stdout, and optional file drains |
+
+These packages are operational implementation boundaries. They are not generic dumping grounds and must not import from `apps/*`.
+
+## Public npm family
+
+- `@keenpix/sdk` is the trusted server-side management client.
+- `@keenpix/core` is the framework-neutral browser/delivery primitive.
+- Every package under `packages/frameworks/*` is an MIT-licensed adapter extending `@keenpix/core`.
+
+The server and private operational packages remain AGPL-3.0-only. Public integration packages are MIT so applications can adopt them without inheriting the server license.
+
+## Why frameworks are nested
+
+Framework adapters are one cohesive product family and are versioned together. Nesting only this family keeps the main `packages/*` namespace flat while making ownership and release grouping obvious.

@@ -255,6 +255,22 @@ services:
       - KEENPIX_WORKER_SECRET=${KEENPIX_WORKER_SECRET}
       - LOG_LEVEL=${LOG_LEVEL:-info}
 
+  docs:
+    image: "${KEENPIX_DOCS_IMAGE:-ghcr.io/lord007tn/keenpix-docs:latest}"
+    restart: unless-stopped
+    environment:
+      - SERVICE_URL_DOCS
+      - NODE_ENV=production
+      - PORT=3003
+    expose:
+      - "3003"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3003/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   # Hourly usage reporter → Polar meter (for overage billing). In Coolify you can
   # replace this with a native Scheduled Task hitting the same endpoint.
   usage-cron:

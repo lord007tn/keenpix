@@ -9,14 +9,14 @@ import { authClient } from '@/lib/auth/client'
 import { noIndexPageHead } from '@/shared/seo'
 
 export const Route = createFileRoute('/accept-invite')({
+  validateSearch: (search: Record<string, unknown>): { id?: string } => ({
+    id: typeof search.id === 'string' ? search.id : undefined,
+  }),
   head: () =>
     noIndexPageHead(
       'Accept invitation',
       'Accept your invitation to join a Keenpix organization.',
     ),
-  validateSearch: (search: Record<string, unknown>): { id?: string } => ({
-    id: typeof search.id === 'string' ? search.id : undefined,
-  }),
   component: AcceptInvitePage,
 })
 

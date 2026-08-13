@@ -1,0 +1,36 @@
+---
+title: Svelte framework family
+description: SSR-safe image attributes for Svelte and SvelteKit.
+icon: Braces
+---
+
+## Svelte
+
+```svelte
+<script lang="ts">
+  import { createSvelteKeenpix } from '@keenpix/svelte'
+
+  const keenpix = createSvelteKeenpix({
+    baseUrl: 'https://images.example.com',
+    projectId: 'website',
+  })
+</script>
+
+<img {...keenpix.imageProps({ alt: 'Hero', src: '/hero.jpg', widths: [640, 1280] })} />
+```
+
+## SvelteKit
+
+```ts
+// src/lib/keenpix.ts
+import { createSvelteKitKeenpix } from '@keenpix/sveltekit'
+
+export const keenpix = createSvelteKitKeenpix({
+  baseUrl: 'https://images.example.com',
+  projectId: 'website',
+})
+```
+
+Use the same `keenpix.imageProps()` call inside routes and components. `keenpix.loader()` is available when a library expects a URL loader.
+
+The adapters are compiler-independent and pure: there is no Svelte preprocessor or SvelteKit hook to install. Output is stable for SSR, prerendering, hydration, and client navigation.

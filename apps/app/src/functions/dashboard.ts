@@ -7,8 +7,8 @@ import { dashboardInputSchema } from '@/schemas/analytics'
 // Dashboard payload is assembled server-side so every surface uses the same
 // project scope: KPIs, chart series, project list, and per-project stats.
 export const getDashboardFn = createServerFn({ method: 'GET' })
-  .inputValidator(dashboardInputSchema)
   .middleware([authMiddleware])
+  .inputValidator(dashboardInputSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireActiveOrg(context)
     await assertHasWorkspaceAccess(orgId)

@@ -64,24 +64,24 @@ export const getCustomerAccountsFn = createServerFn({ method: 'GET' })
   })
 
 export const getCustomerAccountFn = createServerFn({ method: 'GET' })
-  .inputValidator(customerAccountSchema)
   .middleware([authMiddleware])
+  .inputValidator(customerAccountSchema)
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     return getCustomerAccountById(data.orgId)
   })
 
 export const getPlatformAnalyticsFn = createServerFn({ method: 'GET' })
-  .inputValidator(platformAnalyticsSchema)
   .middleware([authMiddleware])
+  .inputValidator(platformAnalyticsSchema)
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     return getPlatformAnalytics(data)
   })
 
 export const getFinanceDashboardFn = createServerFn({ method: 'GET' })
-  .inputValidator(platformAnalyticsSchema)
   .middleware([authMiddleware])
+  .inputValidator(platformAnalyticsSchema)
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     return getFinanceDashboard(data)
@@ -95,16 +95,16 @@ export const getFinanceSettingsFn = createServerFn({ method: 'GET' })
   })
 
 export const updateFinanceSettingsFn = createServerFn({ method: 'POST' })
-  .inputValidator(financeSettingsSchema)
   .middleware([authMiddleware])
+  .inputValidator(financeSettingsSchema)
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     return updateFinanceSettings(data)
   })
 
 export const updateComplimentaryPlanFn = createServerFn({ method: 'POST' })
-  .inputValidator(updateComplimentaryPlanSchema)
   .middleware([authMiddleware])
+  .inputValidator(updateComplimentaryPlanSchema)
   .handler(async ({ context, data }) => {
     requireSuperAdmin(context)
     const result = await updateCustomerComplimentaryPlan({
@@ -119,8 +119,8 @@ export const updateComplimentaryPlanFn = createServerFn({ method: 'POST' })
   })
 
 export const setOrgSuspensionFn = createServerFn({ method: 'POST' })
-  .inputValidator(suspendOrgSchema)
   .middleware([authMiddleware])
+  .inputValidator(suspendOrgSchema)
   .handler(async ({ context, data }) => {
     requireSuperAdmin(context)
     const result = await setOrgSuspension({
@@ -141,8 +141,8 @@ export const getPlatformConfigFn = createServerFn({ method: 'GET' })
   })
 
 export const getCustomerAnalyticsFn = createServerFn({ method: 'GET' })
-  .inputValidator(customerAnalyticsSchema)
   .middleware([authMiddleware])
+  .inputValidator(customerAnalyticsSchema)
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     return getCustomerUsageSeries(data.orgId, data)
@@ -156,8 +156,8 @@ export const getOperationsHealthFn = createServerFn({ method: 'GET' })
   })
 
 export const runCacheMaintenanceFn = createServerFn({ method: 'POST' })
-  .inputValidator(cacheMaintenanceSchema)
   .middleware([authMiddleware])
+  .inputValidator(cacheMaintenanceSchema)
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     requireSelfHost()
@@ -173,16 +173,16 @@ export const getOperationsConfigFn = createServerFn({ method: 'GET' })
   })
 
 export const getResourceTrendFn = createServerFn({ method: 'GET' })
-  .inputValidator(resourceTrendSchema)
   .middleware([authMiddleware])
+  .inputValidator(resourceTrendSchema)
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     return getResourceTrend(data.range)
   })
 
 export const updateOperationsConfigFn = createServerFn({ method: 'POST' })
-  .inputValidator(operationsConfigSchema)
   .middleware([authMiddleware])
+  .inputValidator(operationsConfigSchema)
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     requireSelfHost()
@@ -193,8 +193,8 @@ export const updateOperationsConfigFn = createServerFn({ method: 'POST' })
   })
 
 export const createInvitationFn = createServerFn({ method: 'POST' })
-  .inputValidator(createInvitationSchema)
   .middleware([authMiddleware])
+  .inputValidator(createInvitationSchema)
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     // Staff invitations are the SELF-HOST operator flow: they add a user to the
@@ -212,8 +212,8 @@ export const createInvitationFn = createServerFn({ method: 'POST' })
   })
 
 export const revokeInvitationFn = createServerFn({ method: 'POST' })
-  .inputValidator(revokeInvitationSchema)
   .middleware([authMiddleware])
+  .inputValidator(revokeInvitationSchema)
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     requireSelfHost()

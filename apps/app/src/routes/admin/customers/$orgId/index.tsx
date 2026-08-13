@@ -20,11 +20,6 @@ function getDateParam(value: unknown) {
 }
 
 export const Route = createFileRoute('/admin/customers/$orgId/')({
-  head: () =>
-    appPageHead(
-      'Customer',
-      'Manage a customer organization, plan, and access.',
-    ),
   validateSearch: (
     search: Record<string, unknown>,
   ): {
@@ -53,6 +48,11 @@ export const Route = createFileRoute('/admin/customers/$orgId/')({
       to: getDateParam(search.to) ?? dayjs().format('YYYY-MM-DD'),
     }
   },
+  head: () =>
+    appPageHead(
+      'Customer',
+      'Manage a customer organization, plan, and access.',
+    ),
   component: CustomerDetailPage,
 })
 

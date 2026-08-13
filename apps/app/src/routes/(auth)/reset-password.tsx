@@ -12,14 +12,14 @@ import { authClient } from '@/lib/auth/client'
 import { noIndexPageHead } from '@/shared/seo'
 
 export const Route = createFileRoute('/(auth)/reset-password')({
+  validateSearch: (search: Record<string, unknown>): { token?: string } => ({
+    token: typeof search.token === 'string' ? search.token : undefined,
+  }),
   head: () =>
     noIndexPageHead(
       'Set a new password',
       'Choose a new password for your Keenpix account.',
     ),
-  validateSearch: (search: Record<string, unknown>): { token?: string } => ({
-    token: typeof search.token === 'string' ? search.token : undefined,
-  }),
   component: ResetPasswordPage,
 })
 

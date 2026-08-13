@@ -22,8 +22,8 @@ function trackSocialSignup() {
 }
 
 export function AnalyticsConsent() {
-  const location = useLocation()
-  const previousPath = useRef(location.pathname)
+  const { pathname } = useLocation()
+  const previousPath = useRef(pathname)
   const providerAvailable = Boolean(
     clientEnv.VITE_GA_MEASUREMENT_ID || clientEnv.VITE_GTM_CONTAINER_ID,
   )
@@ -49,11 +49,11 @@ export function AnalyticsConsent() {
     if (!trackingEnabled) {
       return
     }
-    if (previousPath.current === location.pathname) {
+    if (previousPath.current === pathname) {
       return
     }
-    previousPath.current = location.pathname
-    let pagePath = location.pathname
+    previousPath.current = pathname
+    let pagePath = pathname
     if (pagePath.startsWith('/invite/')) {
       pagePath = '/invite/:token'
     } else if (pagePath.startsWith('/admin/customers/')) {
@@ -64,7 +64,7 @@ export function AnalyticsConsent() {
       page_path: pagePath,
       page_title: document.title,
     })
-  }, [location.pathname, trackingEnabled])
+  }, [pathname, trackingEnabled])
 
   useEffect(() => {
     if (!(providerAvailable && trackingEnabled)) {

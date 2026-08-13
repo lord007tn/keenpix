@@ -16,8 +16,6 @@ import { noIndexPageHead } from '@/shared/seo'
 // token at its API endpoint and redirects here — with an `error` query param
 // when the link is expired/invalid, and cleanly (auto-signed-in) on success.
 export const Route = createFileRoute('/(auth)/verify-email')({
-  head: () =>
-    noIndexPageHead('Verify your email', 'Confirm your Keenpix email address.'),
   validateSearch: (
     search: Record<string, unknown>,
   ): { error?: string; redirect?: string } => ({
@@ -25,6 +23,8 @@ export const Route = createFileRoute('/(auth)/verify-email')({
     // Same-origin path to resume after verification (e.g. an org invite).
     redirect: safeRedirect(search.redirect),
   }),
+  head: () =>
+    noIndexPageHead('Verify your email', 'Confirm your Keenpix email address.'),
   component: VerifyEmailPage,
 })
 

@@ -15,7 +15,7 @@
     "test": "vitest run",
     "smoke": "playwright test",
     "typecheck": "fumadocs-mdx && tsc --noEmit",
-    "doctor": "react-doctor --full --no-score --fail-on none",
+    "doctor": "react-doctor . --full --no-dead-code --no-score --fail-on error",
     "seo:drift": "node scripts/seo-drift.mjs",
     "db:backfill-cuid": "tsx ../../packages/database/prisma/backfill-rollup-cuid.ts",
     "db:backfill-project-edge": "tsx scripts/backfill-project-edge-from-zone.ts",

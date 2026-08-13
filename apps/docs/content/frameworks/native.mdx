@@ -1,0 +1,45 @@
+---
+title: Expo and React Native
+description: Keenpix network sources, cache policy, responsive alternatives, and accessibility props for native applications.
+icon: Smartphone
+---
+
+## Expo Image
+
+```tsx
+import { Image } from 'expo-image'
+import { createExpoImageProps } from '@keenpix/expo'
+
+const props = createExpoImageProps(config, {
+  alt: 'Hero',
+  height: 720,
+  src: '/hero.jpg',
+  width: 1280,
+})
+
+export function Hero() {
+  return <Image {...props} contentFit="cover" />
+}
+```
+
+Use `createExpoImageSource()` for one source or `createExpoImageSources()` for dimensioned alternatives and responsive web sources. The adapter supports Expo Image cache policy and content-fit conventions.
+
+## React Native Image
+
+```tsx
+import { Image } from 'react-native'
+import { createReactNativeImageProps } from '@keenpix/react-native'
+
+export function Hero() {
+  return <Image {...createReactNativeImageProps(config, {
+    alt: 'Hero',
+    height: 720,
+    src: '/hero.jpg',
+    width: 1280,
+  })} />
+}
+```
+
+Use `createReactNativeImageSource()` and `createReactNativeImageSources()` when composing source arrays yourself. The result uses native network source objects, cache settings, accessibility labels, and explicit dimensions rather than browser-only `srcset`.
+
+Do not place management API keys or transform signing secrets in a mobile bundle. Public `baseUrl` and `projectId` are sufficient for normal image delivery.

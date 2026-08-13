@@ -1,79 +1,51 @@
 ---
 title: Framework integrations
-description: Keenpix is just a URL, so it drops into any framework that renders an image.
+description: Official @keenpix packages for web frameworks, meta-frameworks, static generators, and native apps.
 icon: Boxes
 ---
 
-Keenpix has **no SDK**. Integrating it means producing the right URL and putting it in an
-`<img>` (or your framework's image component). There are two flavours:
+Keenpix image delivery works with plain URLs, but the official MIT-licensed package family gives each framework its native integration shape. All adapters extend `@keenpix/core`, so URL construction, source normalization, proportional responsive dimensions, signing payloads, and transform parameters stay consistent.
 
-1. **Pluggable loaders** — frameworks with a built-in image component you can point at a
-   custom backend: [Next.js](/docs/frameworks/nextjs) and [Nuxt](/docs/frameworks/nuxt).
-2. **URL builder + native `<img>`** — everywhere else. A tiny helper builds the URL and
-   you render a normal image with `srcset` for responsiveness.
+```bash
+pnpm add @keenpix/react
+# or npm install @keenpix/react
+```
 
-## The universal pattern
-
-Drop this helper anywhere (it's framework-agnostic — plain TypeScript):
+Every adapter takes the same public delivery configuration:
 
 ```ts
-// keenpix.ts
-const HOST = 'https://keenpix.example.com'
-const PROJECT = 'YOUR_PROJECT_ID'
-
-type Opts = { w?: number; h?: number; q?: number; fmt?: string; fit?: string; dpr?: number }
-
-export function keenpix(src: string, opts: Opts = {}): string {
-  const params = new URLSearchParams({ project: PROJECT })
-  for (const [k, v] of Object.entries(opts)) {
-    if (v != null) params.set(k, String(v))
-  }
-  return `${HOST}/img/${encodeURIComponent(src)}?${params.toString()}`
-}
-
-// A responsive srcset across common widths.
-export function keenpixSrcSet(src: string, widths = [640, 960, 1280, 1920], opts: Opts = {}) {
-  return widths.map((w) => `${keenpix(src, { ...opts, w })} ${w}w`).join(', ')
+const config = {
+  baseUrl: 'https://images.example.com',
+  projectId: 'website',
 }
 ```
 
-Then render a fully responsive, auto-format image with native HTML:
-
-```html
-<img
-  src="${keenpix('/hero.jpg', { w: 1280 })}"
-  srcset="${keenpixSrcSet('/hero.jpg', [640, 960, 1280, 1920])}"
-  sizes="100vw"
-  loading="lazy"
-  decoding="async"
-  alt="Hero"
-/>
-```
-
-Omitting `fmt` is the same as `fmt=auto`: Keenpix negotiates from the request's
-`Accept` header and returns AVIF, WebP, or JPEG. Add `fmt: 'webp'`, `fmt: 'avif'`, or
-`fmt: 'svg'` only when you want a fixed output format. SVG output is explicit; an SVG
-origin with `fmt=auto` is rasterized instead of returned as SVG.
-
-<Callout>
-  Tip: read `HOST` and `PROJECT` from environment variables so you can swap instances per
-  environment without touching component code.
-</Callout>
-
-## Pick your framework
+`baseUrl` and `projectId` are safe to expose in rendered HTML. Management API keys and signing secrets are server-only.
 
 <Cards>
-  <Card title="Next.js" href="/docs/frameworks/nextjs" description="Custom next/image loader" />
-  <Card title="Nuxt" href="/docs/frameworks/nuxt" description="@nuxt/image custom provider" />
-  <Card title="TanStack Start" href="/docs/frameworks/tanstack-start" description="URL builder + <img>" />
-  <Card title="React (Vite)" href="/docs/frameworks/react" description="A <KeenpixImage> component" />
-  <Card title="Vue" href="/docs/frameworks/vue" description="Bind :src to the helper" />
-  <Card title="SvelteKit" href="/docs/frameworks/sveltekit" description="Helper + <img>" />
-  <Card title="Astro" href="/docs/frameworks/astro" description="Remote images via <img>" />
-  <Card title="Remix" href="/docs/frameworks/remix" description="Helper + <img>" />
-  <Card title="Plain HTML" href="/docs/frameworks/html" description="Any backend, any language" />
+  <Card title="Complete package catalog" href="/docs/frameworks/catalog" description="All 29 packages, integration contracts, and support notes" />
+  <Card title="React family" href="/docs/frameworks/react-family" description="React, Next, Preact, Remix, Gatsby, TanStack, Redwood, Waku, and Docusaurus" />
+  <Card title="Vue family" href="/docs/frameworks/vue-family" description="Vue, Nuxt, and VitePress" />
+  <Card title="Svelte family" href="/docs/frameworks/svelte-family" description="Svelte and SvelteKit" />
+  <Card title="Angular family" href="/docs/frameworks/angular-family" description="Angular and Analog NgOptimizedImage loaders" />
+  <Card title="Native apps" href="/docs/frameworks/native" description="Expo Image and React Native Image sources" />
+  <Card title="Web and meta-frameworks" href="/docs/frameworks/web-and-meta-frameworks" description="Astro, Qwik, Solid, Lit, Fresh, Ember, Eleventy, Vite, and HTML" />
 </Cards>
 
-Don't see yours? If it can render an `<img>` tag, the [universal pattern](#the-universal-pattern)
-above already works — that includes Angular, Solid, Qwik, Gatsby, Laravel, Rails, Django,
-WordPress, and static-site generators.
+## Core primitives
+
+Use `@keenpix/core` when a framework has no dedicated adapter or when you are building an integration library:
+
+```ts
+import { createKeenpix, createImageAttributes } from '@keenpix/core'
+
+const keenpix = createKeenpix(config)
+const src = keenpix.url('/hero.jpg', { width: 1280, format: 'webp' })
+const attributes = createImageAttributes(config, {
+  alt: 'Hero',
+  src: '/hero.jpg',
+  widths: [640, 960, 1280],
+})
+```
+
+Transform URLs do not require the management SDK or an API key. Use [`@keenpix/sdk`](/docs/reference/sdk-package) only from trusted server code when automating projects, domains, configuration, or prewarming.

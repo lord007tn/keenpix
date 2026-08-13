@@ -3,6 +3,13 @@
   "icon": "Boxes",
   "pages": [
     "index",
+    "catalog",
+    "react-family",
+    "vue-family",
+    "svelte-family",
+    "angular-family",
+    "native",
+    "web-and-meta-frameworks",
     "nextjs",
     "nuxt",
     "tanstack-start",

@@ -70,17 +70,17 @@ const SECTION_META: Record<Section, { label: string; icon: LucideIcon }> = {
 // Settings is a single hub: per-project configuration (only when a project is
 // selected) plus instance-wide "global" configuration (super admins only).
 export const Route = createFileRoute('/app/settings/')({
-  head: () =>
-    appPageHead(
-      'Settings',
-      'Configure Keenpix project origins, image pipeline, allowed hosts, plus your plan and team.',
-    ),
   validateSearch: (
     search: Record<string, unknown>,
   ): { project?: string; section?: Section } => ({
     project: typeof search.project === 'string' ? search.project : undefined,
     section: isSection(search.section) ? search.section : undefined,
   }),
+  head: () =>
+    appPageHead(
+      'Settings',
+      'Configure Keenpix project origins, image pipeline, allowed hosts, plus your plan and team.',
+    ),
   component: SettingsPage,
 })
 

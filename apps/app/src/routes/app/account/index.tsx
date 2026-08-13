@@ -55,14 +55,14 @@ const SECTION_META: Record<Section, { label: string; icon: LucideIcon }> = {
 }
 
 export const Route = createFileRoute('/app/account/')({
+  validateSearch: (search: Record<string, unknown>): { section?: Section } => ({
+    section: isSection(search.section) ? search.section : undefined,
+  }),
   head: () =>
     appPageHead(
       'Account',
       'Manage your Keenpix profile, sign-in email and password, active sessions, and personal preferences.',
     ),
-  validateSearch: (search: Record<string, unknown>): { section?: Section } => ({
-    section: isSection(search.section) ? search.section : undefined,
-  }),
   component: AccountPage,
 })
 

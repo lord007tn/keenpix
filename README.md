@@ -50,7 +50,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-The app comes up on **http://localhost:3000** by default. Set `KEENPIX_PORT` to publish a different host port, `BETTER_AUTH_URL` to your public base URL, or `KEENPIX_IMAGE` to a pinned image tag/digest. Compose runs Postgres, Dragonfly, the app, and its BullMQ worker; applies migrations on boot; seeds the default org and super admin user; and exposes `/api/health` for the app container healthcheck. The private worker ops server provides `/health/live`, `/health/ready`, `/health/details`, and a BullMQ dashboard at `/workbench` on port 3001. Dragonfly is configured with its BullMQ-required Lua compatibility flag and five-minute snapshots. Self-host is the default (`KEENPIX_MODE` unset), so `/` shows a private self-host splash with links into `/app` and `/docs`; the dashboard, API, and docs are served, while public marketing and LLM export routes are not.
+The app comes up on **http://localhost:3000** and the standalone docs site on **http://localhost:3003** by default. Set `KEENPIX_PORT` or `KEENPIX_DOCS_PORT` to change the host ports, and pin `KEENPIX_APP_IMAGE`, `KEENPIX_TRANSFORM_IMAGE`, `KEENPIX_WORKER_IMAGE`, and `KEENPIX_DOCS_IMAGE` to one release tag for controlled rollouts. Compose runs Postgres, Dragonfly, the control plane, transform data plane, BullMQ worker, and docs; applies migrations on app boot; seeds the default org and super admin user; and health-checks every runtime. The private worker ops server provides `/health/live`, `/health/ready`, `/health/details`, and a BullMQ dashboard at `/workbench` on port 3001. Dragonfly is configured with its BullMQ-required Lua compatibility flag and five-minute snapshots.
 
 The Docker image entrypoint accepts `start` (default), `migrate`, and `seed`. For normal installs, leave the default `start`; it applies migrations, seeds bootstrap data, then starts the app. Set `KEENPIX_RUN_MIGRATIONS=false` or `KEENPIX_RUN_SEED=false` only when an external deployment workflow owns those steps.
 
@@ -64,7 +64,7 @@ Use [docker-compose.coolify.yml](./docker-compose.coolify.yml) for a Coolify ser
 4. Optionally change `KEENPIX_SUPER_ADMIN_EMAIL` from the default `admin@example.com`.
 5. Deploy, then sign in with `KEENPIX_SUPER_ADMIN_EMAIL` and the generated `SERVICE_PASSWORD_64_ADMIN` value shown in Coolify's environment variables.
 
-The Coolify stack defaults to `ghcr.io/lord007tn/keenpix:latest`, keeps Postgres private, persists database/cache volumes, runs migrations and seed on app startup, and exposes the app through Coolify's proxy on container port `3000`. Set `KEENPIX_IMAGE` to pin a specific tag or digest when you want controlled rollouts.
+The Coolify stack uses the four published Keenpix images, keeps Postgres, Dragonfly, transform, and worker networking private, persists database/cache volumes, runs migrations and seed on app startup, and exposes the app and docs through Coolify's proxy. Coolify generates Better Auth, worker, Postgres, admin, and Workbench credentials when they are not supplied.
 
 If an earlier Coolify deploy failed with a Postgres 18 message about existing data in `/var/lib/postgresql/data`, remove the failed `keenpix-pg` volume from that Coolify resource or recreate the resource before deploying this compose. The Coolify compose now uses a fresh `keenpix_pg18` volume mounted at `/var/lib/postgresql`, which is the Postgres 18-compatible layout.
 
@@ -387,7 +387,7 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-See [RELEASE.md](./RELEASE.md) for the full maintainer checklist. The compose file defaults to `ghcr.io/lord007tn/keenpix:latest`; override with `KEENPIX_IMAGE` to pin a tag or digest.
+See [RELEASE.md](./RELEASE.md) for the full maintainer checklist. Compose defaults to the `keenpix-app`, `keenpix-transform`, `keenpix-worker`, and `keenpix-docs` GHCR images; pin all four to the same tag or digest.
 
 ---
 
