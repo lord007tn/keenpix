@@ -1,13 +1,29 @@
 {
   "name": "@keenpix/analog",
   "version": "0.1.0",
-  "description": "Keenpix image primitives for Analog.",
+  "description": "Keenpix NgOptimizedImage loader for Analog and Angular.",
+  "keywords": [
+    "keenpix",
+    "image",
+    "analogjs",
+    "angular"
+  ],
+  "homepage": "https://keenpix.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lord007tn/keenpix.git",
+    "directory": "packages/frameworks/analog"
+  },
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -20,21 +36,30 @@
   },
   "scripts": {
     "build": "tsdown src/index.ts --dts",
-    "typecheck": "tsc --noEmit"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "publint": "publint",
+    "pack:check": "pnpm pack --dry-run"
   },
   "dependencies": {
     "@keenpix/core": "workspace:^"
   },
   "peerDependencies": {
+    "@angular/common": ">=16",
     "@analogjs/platform": ">=1"
   },
   "peerDependenciesMeta": {
+    "@angular/common": {
+      "optional": true
+    },
     "@analogjs/platform": {
       "optional": true
     }
   },
   "devDependencies": {
+    "publint": "^0.3.15",
     "tsdown": "0.22.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }

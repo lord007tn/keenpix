@@ -1,13 +1,17 @@
 {
   "name": "@keenpix/expo",
   "version": "0.1.0",
-  "description": "Keenpix image sources for Expo.",
+  "description": "Keenpix image sources and props for Expo Image.",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -20,21 +24,30 @@
   },
   "scripts": {
     "build": "tsdown src/index.ts --dts",
-    "typecheck": "tsc --noEmit"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "publint": "publint",
+    "pack:check": "pnpm run build && pnpm run publint && pnpm pack --dry-run"
   },
   "dependencies": {
     "@keenpix/core": "workspace:^"
   },
   "peerDependencies": {
-    "expo": ">=50"
+    "expo": ">=50",
+    "expo-image": ">=1"
   },
   "peerDependenciesMeta": {
     "expo": {
       "optional": true
+    },
+    "expo-image": {
+      "optional": true
     }
   },
   "devDependencies": {
+    "publint": "^0.3.15",
     "tsdown": "0.22.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }

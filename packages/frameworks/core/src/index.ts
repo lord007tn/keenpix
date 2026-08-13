@@ -76,6 +76,7 @@ const TRANSFORM_PARAMS = {
 } as const
 
 const TRAILING_SLASHES = /\/+$/
+const LEADING_SLASHES = /^\/+/
 
 function setTransformParams(
   searchParams: URLSearchParams,
@@ -99,7 +100,8 @@ export function buildImageUrl(
   const projectPath =
     config.projectInPath && config.projectId ? `/p/${config.projectId}` : ''
   const sourceMode = config.sourceMode ?? 'path'
-  const sourcePath = sourceMode === 'path' ? `/${src}` : ''
+  const sourcePath =
+    sourceMode === 'path' ? `/${src.replace(LEADING_SLASHES, '')}` : ''
   const url = new URL(`${baseUrl}${projectPath}/img${sourcePath}`)
 
   if (sourceMode === 'query') {
@@ -164,7 +166,24 @@ export function createImageAttributes(
       width: resolvedWidth,
     }),
     srcSet: widths?.length
-      ? buildSrcSet(config, src, widths, { ...transform, height })
+      ? [...new Set(widths)]
+          .filter(
+            (candidateWidth) =>
+              Number.isInteger(candidateWidth) && candidateWidth > 0,
+          )
+          .sort((a, b) => a - b)
+          .map((candidateWidth) => {
+            const candidateHeight =
+              height && resolvedWidth
+                ? Math.round((candidateWidth * height) / resolvedWidth)
+                : height
+            return `${buildImageUrl(config, src, {
+              ...transform,
+              height: candidateHeight,
+              width: candidateWidth,
+            })} ${candidateWidth}w`
+          })
+          .join(', ')
       : undefined,
     width,
   }

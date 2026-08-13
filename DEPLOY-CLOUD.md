@@ -75,7 +75,7 @@ portable reference stack; the live Coolify resource uses the volume-compatible
    originless fallback such as `fallback.keenpix.com` (the Worker handles the
    request before that placeholder origin). Deploy `apps/custom-domain-edge`
    as `keenpix-custom-domain-edge`, set its `EDGE_SECRET`, and keep
-   `APP_ORIGIN=https://keenpix.com`. Create `customers.keenpix.com` as the CNAME
+   `TRANSFORM_ORIGIN=https://transform.keenpix.com`. Create `customers.keenpix.com` as the CNAME
    target customers use. The application token needs **Zone → SSL and
    Certificates → Edit** and **Zone → Workers Routes → Edit**; a separate deploy
    identity needs **Account → Workers Scripts → Edit**. Set

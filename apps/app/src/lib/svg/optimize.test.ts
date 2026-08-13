@@ -1,6 +1,5 @@
+import { optimizeSvgImage, TransformError } from '@keenpix/transform'
 import { describe, expect, it } from 'vitest'
-import { TransformError } from '@/errors/transform'
-import { optimizeSvgImage } from './optimize'
 
 describe('optimizeSvgImage', () => {
   it('optimizes SVGs and removes active content', () => {

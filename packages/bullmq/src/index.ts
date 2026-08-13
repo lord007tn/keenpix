@@ -1,3 +1,4 @@
+export { PREWARM_CONTRACT_VERSION } from '@keenpix/contracts/transform'
 export {
   createQueueProducerConnection,
   createQueueWorkerConnection,

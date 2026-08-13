@@ -1,13 +1,17 @@
 {
   "name": "@keenpix/gatsby",
   "version": "0.1.0",
-  "description": "Keenpix image loaders for Gatsby.",
+  "description": "Keenpix image data for Gatsby's dynamic GatsbyImage component.",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -20,21 +24,30 @@
   },
   "scripts": {
     "build": "tsdown src/index.ts --dts",
-    "typecheck": "tsc --noEmit"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "publint": "publint",
+    "pack:check": "pnpm run build && pnpm run publint && pnpm pack --dry-run"
   },
   "dependencies": {
     "@keenpix/core": "workspace:^"
   },
   "peerDependencies": {
-    "gatsby": ">=5"
+    "gatsby": ">=5",
+    "gatsby-plugin-image": ">=3"
   },
   "peerDependenciesMeta": {
     "gatsby": {
       "optional": true
+    },
+    "gatsby-plugin-image": {
+      "optional": true
     }
   },
   "devDependencies": {
+    "publint": "^0.3.15",
     "tsdown": "0.22.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }

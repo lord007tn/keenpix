@@ -1,4 +1,4 @@
-import type { OutputFormat } from './transform'
+import type { OutputFormat } from '@keenpix/transform'
 
 export type ProjectFit = 'cover' | 'contain' | 'fill' | 'inside' | 'outside'
 

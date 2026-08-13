@@ -1,10 +1,11 @@
+import {
+  getContentType,
+  getPublicTransformErrorMessage,
+  getTransformErrorStatus,
+} from '@keenpix/transform'
 import { resolveCustomDomainProject } from '@/actions/custom-domains'
 import { optimizeProjectImage } from '@/actions/transform'
 import { env } from '@/env/server'
-import {
-  getPublicTransformErrorMessage,
-  getTransformErrorStatus,
-} from '@/errors/transform'
 import {
   EDGE_PROJECT_HEADER,
   getTrustedEdgeRequest,
@@ -12,7 +13,6 @@ import {
 } from '@/helpers/custom-domains/edge-request'
 import { cacheControl } from '@/lib/cache/cache'
 import { getAppUrl, isCloud } from '@/server/deployment'
-import { getContentType } from '@/shared/transform'
 
 const LEADING_SLASHES_RE = /^\/+/
 const CLOUD_DELIVERY_ORIGIN = 'https://cdn.keenpix.com'
@@ -23,6 +23,18 @@ export async function handleTransformRequest(
   request: Request,
   pathSource?: string,
 ) {
+  if (env.KEENPIX_TRANSFORM_URL && !isCloud()) {
+    const incoming = new URL(request.url)
+    const target = new URL(
+      `${incoming.pathname}${incoming.search}`,
+      env.KEENPIX_TRANSFORM_URL,
+    )
+    return fetch(target, {
+      headers: request.headers,
+      method: request.method,
+      redirect: 'manual',
+    })
+  }
   const startedAt = performance.now()
   const requestUrl = new URL(request.url)
   const searchParams = requestUrl.searchParams

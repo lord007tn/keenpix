@@ -7,14 +7,12 @@ on:
       - "v*"
     paths-ignore:
       - "*.md"
-      - "apps/docs/**"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE.md"
   pull_request:
     branches: [master]
     paths-ignore:
       - "*.md"
-      - "apps/docs/**"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE.md"
 
@@ -29,8 +27,20 @@ concurrency:
 
 jobs:
   image:
-    name: Build self-host image
+    name: Build ${{ matrix.image }} image
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: app
+            dockerfile: apps/app/Dockerfile
+          - image: transform
+            dockerfile: apps/transform/Dockerfile
+          - image: worker
+            dockerfile: apps/worker/Dockerfile
+          - image: docs
+            dockerfile: apps/docs/Dockerfile
     steps:
       - uses: actions/checkout@v6
 
@@ -58,7 +68,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/${{ github.repository }}-${{ matrix.image }}
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}},prefix=v
@@ -69,13 +79,13 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: ./apps/app/Dockerfile
+          file: ./${{ matrix.dockerfile }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VERSION=${{ steps.meta.outputs.version }}
           cache-from: |
-            type=gha,scope=keenpix-image
+            type=gha,scope=keenpix-${{ matrix.image }}
           cache-to: |
-            type=gha,mode=max,scope=keenpix-image,ignore-error=true
+            type=gha,mode=max,scope=keenpix-${{ matrix.image }},ignore-error=true

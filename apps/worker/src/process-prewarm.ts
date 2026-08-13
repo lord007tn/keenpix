@@ -1,22 +1,23 @@
 import type { PrewarmTransformJob } from '@keenpix/bullmq'
 
 export function createPrewarmProcessor({
-  appUrl,
+  transformUrl,
   secret,
   timeoutMs,
 }: {
-  appUrl: string
+  transformUrl: string
   secret: string
   timeoutMs: number
 }) {
   return async (data: PrewarmTransformJob) => {
     const response = await fetch(
-      new URL('/api/internal/transforms/prewarm', appUrl),
+      new URL('/v1/transforms/prewarm', transformUrl),
       {
         body: JSON.stringify(data),
         headers: {
           authorization: `Bearer ${secret}`,
           'content-type': 'application/json',
+          'x-correlation-id': data.correlationId,
         },
         method: 'POST',
         signal: AbortSignal.timeout(timeoutMs),

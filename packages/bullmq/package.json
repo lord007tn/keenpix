@@ -33,6 +33,7 @@
     "clean": "git clean -xdf dist node_modules"
   },
   "dependencies": {
+    "@keenpix/contracts": "workspace:*",
     "bullmq": "^6.0.7",
     "ioredis": "^6.0.0"
   },

@@ -1,9 +1,5 @@
-export const PREWARM_QUEUE_NAME = 'keenpix-prewarm'
-export const PREWARM_JOB_NAME = 'transform'
+import type { PrewarmTransformContract } from '@keenpix/contracts/transform'
 
-export interface PrewarmTransformJob {
-  accept: string
-  params: Record<string, string>
-  projectId: string
-  src: string
-}
+export const PREWARM_QUEUE_NAME = 'keenpix-prewarm-v1'
+export const PREWARM_JOB_NAME = 'transform.v1'
+export type PrewarmTransformJob = PrewarmTransformContract

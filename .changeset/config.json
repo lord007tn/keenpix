@@ -24,7 +24,6 @@
       "@keenpix/react-native",
       "@keenpix/redwood",
       "@keenpix/remix",
-      "@keenpix/sdk",
       "@keenpix/solid",
       "@keenpix/solid-start",
       "@keenpix/svelte",
@@ -36,7 +35,7 @@
       "@keenpix/waku"
     ]
   ],
-  "access": "restricted",
+  "access": "public",
   "baseBranch": "master",
   "updateInternalDependencies": "patch",
   "ignore": []

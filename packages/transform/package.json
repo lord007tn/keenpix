@@ -1,0 +1,29 @@
+{
+  "name": "@keenpix/transform",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "exports": {
+    ".": "./src/index.ts",
+    "./sharp": "./src/sharp/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "git clean -xdf node_modules"
+  },
+  "dependencies": {
+    "@keenpix/core": "workspace:*",
+    "got": "^15.0.5",
+    "lru-cache": "^11.5.1",
+    "sharp": "^0.34.5",
+    "svgo": "^4.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -2,20 +2,39 @@
   "name": "@keenpix/docs",
   "version": "0.3.0",
   "private": true,
-  "description": "Keenpix product documentation content and MDX build boundary.",
+  "description": "Standalone Keenpix documentation application.",
   "type": "module",
   "license": "AGPL-3.0-only",
   "scripts": {
-    "build": "fumadocs-mdx",
+    "dev": "fumadocs-mdx && vite dev --port 3003",
+    "build": "fumadocs-mdx && vite build",
+    "start": "node .output/server/index.mjs",
     "typecheck": "fumadocs-mdx && tsc --noEmit",
-    "clean": "git clean -xdf .source node_modules"
+    "test": "vitest run --passWithNoTests",
+    "clean": "git clean -xdf .source .output node_modules"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.2.1",
+    "@tanstack/react-router": "^1.167.4",
+    "@tanstack/react-start": "^1.166.15",
+    "@vitejs/plugin-react": "^5.2.0",
+    "fumadocs-core": "16.9.3",
     "fumadocs-mdx": "15.0.10",
+    "fumadocs-ui": "16.9.3",
+    "nitro": "latest",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwindcss": "^4.2.1",
+    "vite": "^7.3.1",
+    "vite-tsconfig-paths": "^5.1.4",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/mdx": "^2.0.13",
     "@types/node": "^22.19.15",
-    "typescript": "^5.9.3"
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }

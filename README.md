@@ -403,24 +403,31 @@ The repository is a pnpm/Turborepo monorepo. Product runtimes live in `apps/`; r
 
 ```text
 apps/
-  app/                 TanStack app, API, and image transform runtime
-  docs/                product docs content and repository architecture notes
+  app/                 TanStack control plane, dashboard, and public API
+  docs/                standalone TanStack Start and Fumadocs application
+  transform/           independently scaled image transformation data plane
   worker/              independently scaled BullMQ prewarm consumer
   custom-domain-edge/  independently deployed Cloudflare Worker
 packages/
+  analytics/           buffered transform analytics collection
   auth/                shared Better Auth configuration primitives
   bullmq/              BullMQ connections, queues, jobs, and worker factories
+  cache/               unstorage-backed disk, memory, S3, and Redis caching
   clickhouse/          ClickHouse client, configuration, queries, and schema
+  contracts/           versioned cross-service request and job contracts
   database/            Prisma schema, migrations, generated client, and seed
   email/               provider-neutral transactional email delivery
   logger/              shared evlog terminal and optional disk logging
   sdk/                 publishable server-side management SDK
+  transform/           reusable Sharp, SVG, origin, signing, and SSRF logic
   frameworks/
     core/              framework-neutral URL and responsive-image behavior
     react, next, vue, nuxt, svelte, sveltekit, astro, remix, ...
 ```
 
-Inside `apps/app`, the one-way server layers remain **route → function → action → data-access**. The transform endpoint is an app route calling the Sharp/SSRF/cache actions directly, and normal cache-miss transforms execute within that request lifecycle. Durable SDK prewarm work has its own scaling and deployment lifecycle, so its consumer lives in `apps/worker` while every BullMQ connection, queue, job contract, and worker factory lives in `packages/bullmq`. Transactional delivery lives in `packages/email`, and both runtimes share evlog through `packages/logger`. The custom-domain edge Worker remains separate for the same lifecycle reason.
+Inside `apps/app`, the one-way server layers remain **route → function → action → data-access**. Image delivery runs in `apps/transform`, which owns the HTTP data-plane lifecycle while delegating reusable Sharp, SSRF, origin, signing, SVG, cache, and analytics behavior to flat packages. The control plane proxies self-hosted transform requests during the migration, while the custom-domain edge Worker targets the transform origin directly. Durable SDK prewarm work has its own scaling lifecycle in `apps/worker`; every BullMQ connection, queue, job contract, and worker factory lives in `packages/bullmq`. Transactional delivery lives in `packages/email`, and all Node runtimes share evlog through `packages/logger`.
+
+The app, transform service, worker, and docs site each have an independent Docker image. Dragonfly backs BullMQ, while image caching is configured separately so queue storage and transformed-image storage cannot accidentally share an eviction policy.
 
 Every framework adapter extends `@keenpix/core` rather than reimplementing URL construction, responsive attributes, or request signing. The initial family covers HTML, React, Next.js, Vue, Nuxt, Svelte, SvelteKit, Astro, Remix, TanStack Start, Angular, Analog, Solid, SolidStart, Qwik, Preact, Gatsby, Expo, React Native, Docusaurus, VitePress, Vite, Lit, Eleventy, Ember, Fresh, Redwood, and Waku.
 

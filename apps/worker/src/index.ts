@@ -35,7 +35,7 @@ queueConnection.on('error', (error) => {
   logger.error({ error }, 'workbench queue connection error')
 })
 const processPrewarm = createPrewarmProcessor({
-  appUrl: env.KEENPIX_APP_URL,
+  transformUrl: env.KEENPIX_TRANSFORM_URL,
   secret: env.KEENPIX_WORKER_SECRET,
   timeoutMs: env.KEENPIX_WORKER_TIMEOUT_MS,
 })
@@ -45,6 +45,7 @@ const worker = createPrewarmWorker(
   (job) =>
     runWithLogContext(
       {
+        correlationId: job.data.correlationId,
         jobId: job.id,
         jobName: job.name,
         queue: job.queueName,

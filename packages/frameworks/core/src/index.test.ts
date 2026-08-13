@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buildImageUrl, buildSrcSet, canonicalSignaturePayload } from './index'
+import {
+  buildImageUrl,
+  buildSrcSet,
+  canonicalSignaturePayload,
+  createImageAttributes,
+} from './index'
 
 const config = {
   baseUrl: 'https://keenpix.example.com/',
@@ -34,6 +39,12 @@ describe('buildImageUrl', () => {
       'https://cdn.keenpix.com/p/project_1/img/https://cdn.example.com/hero.jpg?w=640',
     )
   })
+
+  it('normalizes a leading source slash in path mode', () => {
+    expect(buildImageUrl(config, '/uploads/hero.jpg')).toBe(
+      'https://keenpix.example.com/img/uploads/hero.jpg?project=project_1',
+    )
+  })
 })
 
 it('builds sorted, unique width candidates', () => {
@@ -41,6 +52,20 @@ it('builds sorted, unique width candidates', () => {
     buildSrcSet(config, 'https://cdn.example.com/a.jpg', [1280, 640, 640]),
   ).toBe(
     'https://keenpix.example.com/img/https://cdn.example.com/a.jpg?project=project_1&w=640 640w, https://keenpix.example.com/img/https://cdn.example.com/a.jpg?project=project_1&w=1280 1280w',
+  )
+})
+
+it('preserves the display aspect ratio across responsive candidates', () => {
+  expect(
+    createImageAttributes(config, {
+      alt: 'Hero',
+      height: 600,
+      src: 'https://cdn.example.com/a.jpg',
+      width: 1200,
+      widths: [400, 800],
+    }).srcSet,
+  ).toBe(
+    'https://keenpix.example.com/img/https://cdn.example.com/a.jpg?project=project_1&h=200&w=400 400w, https://keenpix.example.com/img/https://cdn.example.com/a.jpg?project=project_1&h=400&w=800 800w',
   )
 })
 

@@ -65,7 +65,6 @@ import { Route as OgBlogSplatRouteImport } from './routes/og/blog/$'
 import { Route as ApiSdkSplatRouteImport } from './routes/api/sdk/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AdminCustomersOrgIdIndexRouteImport } from './routes/admin/customers/$orgId/index'
-import { Route as ApiInternalTransformsPrewarmRouteImport } from './routes/api/internal/transforms/prewarm'
 import { Route as ApiInternalLogsStreamRouteImport } from './routes/api/internal/logs/stream'
 import { Route as ApiInternalBillingReportUsageRouteImport } from './routes/api/internal/billing/report-usage'
 import { Route as ApiAuthPolarSandboxWebhooksRouteImport } from './routes/api/auth/polar/sandbox-webhooks'
@@ -353,12 +352,6 @@ const AdminCustomersOrgIdIndexRoute =
     path: '/customers/$orgId/',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const ApiInternalTransformsPrewarmRoute =
-  ApiInternalTransformsPrewarmRouteImport.update({
-    id: '/api/internal/transforms/prewarm',
-    path: '/api/internal/transforms/prewarm',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiInternalLogsStreamRoute = ApiInternalLogsStreamRouteImport.update({
   id: '/api/internal/logs/stream',
   path: '/api/internal/logs/stream',
@@ -436,7 +429,6 @@ export interface FileRoutesByFullPath {
   '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
   '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
-  '/api/internal/transforms/prewarm': typeof ApiInternalTransformsPrewarmRoute
   '/admin/customers/$orgId/': typeof AdminCustomersOrgIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -496,7 +488,6 @@ export interface FileRoutesByTo {
   '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
   '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
-  '/api/internal/transforms/prewarm': typeof ApiInternalTransformsPrewarmRoute
   '/admin/customers/$orgId': typeof AdminCustomersOrgIdIndexRoute
 }
 export interface FileRoutesById {
@@ -559,7 +550,6 @@ export interface FileRoutesById {
   '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
   '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
-  '/api/internal/transforms/prewarm': typeof ApiInternalTransformsPrewarmRoute
   '/admin/customers/$orgId/': typeof AdminCustomersOrgIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -623,7 +613,6 @@ export interface FileRouteTypes {
     | '/api/auth/polar/sandbox-webhooks'
     | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
-    | '/api/internal/transforms/prewarm'
     | '/admin/customers/$orgId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -683,7 +672,6 @@ export interface FileRouteTypes {
     | '/api/auth/polar/sandbox-webhooks'
     | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
-    | '/api/internal/transforms/prewarm'
     | '/admin/customers/$orgId'
   id:
     | '__root__'
@@ -745,7 +733,6 @@ export interface FileRouteTypes {
     | '/api/auth/polar/sandbox-webhooks'
     | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
-    | '/api/internal/transforms/prewarm'
     | '/admin/customers/$orgId/'
   fileRoutesById: FileRoutesById
 }
@@ -793,7 +780,6 @@ export interface RootRouteChildren {
   ApiAuthPolarSandboxWebhooksRoute: typeof ApiAuthPolarSandboxWebhooksRoute
   ApiInternalBillingReportUsageRoute: typeof ApiInternalBillingReportUsageRoute
   ApiInternalLogsStreamRoute: typeof ApiInternalLogsStreamRoute
-  ApiInternalTransformsPrewarmRoute: typeof ApiInternalTransformsPrewarmRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1190,13 +1176,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCustomersOrgIdIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/api/internal/transforms/prewarm': {
-      id: '/api/internal/transforms/prewarm'
-      path: '/api/internal/transforms/prewarm'
-      fullPath: '/api/internal/transforms/prewarm'
-      preLoaderRoute: typeof ApiInternalTransformsPrewarmRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/internal/logs/stream': {
       id: '/api/internal/logs/stream'
       path: '/api/internal/logs/stream'
@@ -1317,7 +1296,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthPolarSandboxWebhooksRoute: ApiAuthPolarSandboxWebhooksRoute,
   ApiInternalBillingReportUsageRoute: ApiInternalBillingReportUsageRoute,
   ApiInternalLogsStreamRoute: ApiInternalLogsStreamRoute,
-  ApiInternalTransformsPrewarmRoute: ApiInternalTransformsPrewarmRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

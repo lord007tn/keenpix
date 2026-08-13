@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest'
-import { TransformError } from '@/errors/transform'
 import {
   assertAllowedOrigin,
   assertSafeOrigin,
   isPrivateIp,
-} from './safe-origin'
+  TransformError,
+} from '@keenpix/transform'
+import { describe, expect, it } from 'vitest'
 
 describe('isPrivateIp', () => {
   it('flags loopback, private, link-local, CGNAT and multicast/reserved', () => {

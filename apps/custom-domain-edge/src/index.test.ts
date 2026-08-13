@@ -6,21 +6,21 @@ import worker, {
 } from './index'
 
 const env = {
-  APP_ORIGIN: 'https://keenpix.com',
   EDGE_ANALYTICS: { writeDataPoint: () => undefined },
   EDGE_SECRET: 'a-secure-edge-secret-that-is-long-enough',
   FIRST_PARTY_HOSTNAME: 'cdn.keenpix.com',
-}
+  TRANSFORM_ORIGIN: 'https://transform.keenpix.com',
+} as const
 
 describe('custom-domain edge Worker', () => {
-  it('routes a customer hostname to the fixed app origin', () => {
+  it('routes a customer hostname to the fixed transform origin', () => {
     const result = createOriginRequest(
       new Request('https://images.customer.com/img/source?q=80'),
       env,
     )
 
     expect(result.url).toBe(
-      'https://keenpix.com/img/source?q=80&__keenpix_edge_host=images.customer.com',
+      'https://transform.keenpix.com/img/source?q=80&__keenpix_edge_host=images.customer.com',
     )
     expect(result.headers.get('x-keenpix-custom-host')).toBe(
       'images.customer.com',
@@ -35,7 +35,7 @@ describe('custom-domain edge Worker', () => {
     )
 
     expect(result.url).toBe(
-      'https://keenpix.com/img/source?q=80&__keenpix_edge_host=cdn.keenpix.com&project=project_123',
+      'https://transform.keenpix.com/img/source?q=80&__keenpix_edge_host=cdn.keenpix.com&project=project_123',
     )
     expect(result.headers.get('x-keenpix-edge-project')).toBe('project_123')
     expect(
@@ -69,7 +69,7 @@ describe('custom-domain edge Worker', () => {
     expect(result.headers.get('x-keenpix-edge-secret')).toBe(env.EDGE_SECRET)
   })
 
-  it('does not forward customer credentials or cookies to the app origin', () => {
+  it('does not forward customer credentials or cookies to the transform origin', () => {
     const result = createOriginRequest(
       new Request('https://images.customer.com/img/source', {
         headers: {

@@ -73,7 +73,7 @@ services:
       - keenpix_maxio:/data
 
   app:
-    image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
+    image: "${KEENPIX_APP_IMAGE:-ghcr.io/lord007tn/keenpix-app:latest}"
     build:
       context: .
       dockerfile: apps/app/Dockerfile
@@ -95,6 +95,8 @@ services:
         condition: service_started
       maxio:
         condition: service_started
+      transform:
+        condition: service_healthy
     environment:
       - SERVICE_URL_APP
       - NODE_ENV=production
@@ -105,6 +107,7 @@ services:
       - BETTER_AUTH_SECRET=${SERVICE_HEX_64_KEENPIX}
       - BETTER_AUTH_URL=${SERVICE_URL_APP}
       - KEENPIX_APP_URL=${SERVICE_URL_APP}
+      - KEENPIX_TRANSFORM_URL=http://transform:3002
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - VITE_GTM_CONTAINER_ID=${VITE_GTM_CONTAINER_ID:-}
@@ -173,8 +176,6 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
     expose:
       - "3000"
-    volumes:
-      - keenpix_cache:/var/cache/keenpix
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "--output", "/dev/null", "http://127.0.0.1:3000/api/health"]
       interval: 10s
@@ -182,16 +183,54 @@ services:
       retries: 6
       start_period: 60s
 
-  worker:
-    image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
+  transform:
+    image: "${KEENPIX_TRANSFORM_IMAGE:-ghcr.io/lord007tn/keenpix-transform:latest}"
     build:
       context: .
-      dockerfile: apps/app/Dockerfile
-      args:
-        VITE_KEENPIX_PUBLIC_URL: ${SERVICE_URL_APP}
-        VITE_GTM_CONTAINER_ID: ${VITE_GTM_CONTAINER_ID:-}
-        VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:-}
-    command: ["worker"]
+      dockerfile: apps/transform/Dockerfile
+    restart: unless-stopped
+    stop_grace_period: ${KEENPIX_SHUTDOWN_GRACE:-30s}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      dragonfly:
+        condition: service_started
+      maxio:
+        condition: service_started
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_64_POSTGRES}@postgres:5432/${POSTGRES_DB:-keenpix}
+      - KEENPIX_MODE=cloud
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - CLICKHOUSE_DATABASE=${CLICKHOUSE_DATABASE:-keenpix}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - KEENPIX_CACHE_S3_BUCKET=${KEENPIX_CACHE_S3_BUCKET:-keenpix-cache}
+      - KEENPIX_CACHE_S3_ENDPOINT=${KEENPIX_CACHE_S3_ENDPOINT:-http://maxio:9000}
+      - KEENPIX_CACHE_S3_REGION=${KEENPIX_CACHE_S3_REGION:-auto}
+      - KEENPIX_CACHE_S3_ACCESS_KEY_ID=${KEENPIX_CACHE_S3_ACCESS_KEY_ID}
+      - KEENPIX_CACHE_S3_SECRET_ACCESS_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY}
+      - KEENPIX_CACHE_DIR=/var/cache/keenpix
+      - KEENPIX_TRANSFORM_PORT=3002
+      - KEENPIX_WORKER_SECRET=${KEENPIX_WORKER_SECRET}
+      - CLOUDFLARE_SAAS_EDGE_SECRET=${CLOUDFLARE_SAAS_EDGE_SECRET:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - keenpix_cache:/var/cache/keenpix
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--output", "/dev/null", "http://127.0.0.1:3002/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  worker:
+    image: "${KEENPIX_WORKER_IMAGE:-ghcr.io/lord007tn/keenpix-worker:latest}"
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
     restart: unless-stopped
     stop_grace_period: 30s
     healthcheck:
@@ -201,13 +240,13 @@ services:
       retries: 5
       start_period: 15s
     depends_on:
-      app:
+      transform:
         condition: service_healthy
       dragonfly:
         condition: service_started
     environment:
       - NODE_ENV=production
-      - KEENPIX_APP_URL=http://app:3000
+      - KEENPIX_TRANSFORM_URL=http://transform:3002
       - KEENPIX_QUEUE_URL=redis://dragonfly:6379
       - KEENPIX_WORKBENCH_PASSWORD=${KEENPIX_WORKBENCH_PASSWORD:-${SERVICE_PASSWORD_64_WORKBENCH}}
       - KEENPIX_WORKBENCH_USERNAME=${KEENPIX_WORKBENCH_USERNAME:-${SERVICE_USER_WORKBENCH}}

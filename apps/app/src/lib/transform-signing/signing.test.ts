@@ -1,6 +1,9 @@
 import { canonicalSignaturePayload } from '@keenpix/core'
+import {
+  signTransformRequest,
+  verifyTransformSignature,
+} from '@keenpix/transform'
 import { describe, expect, it } from 'vitest'
-import { signTransformRequest, verifyTransformSignature } from './signing'
 
 const SECRET = 'test-secret'
 const SRC = 'https://cdn.example.com/photo.jpg'

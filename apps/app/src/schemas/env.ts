@@ -21,6 +21,9 @@ export const serverEnvSchema = {
   // rotating NDJSON files on a persistent volume.
   KEENPIX_LOG_DIR: z.string().min(1).optional(),
   KEENPIX_APP_URL: optionalUrlSchema,
+  // Image data-plane service. Production deployments route /img directly to it;
+  // this URL also lets the app proxy legacy /img requests during migration.
+  KEENPIX_TRANSFORM_URL: optionalUrlSchema,
   // The single deployment switch. `cloud` enables the multi-tenant hosted product
   // (self-signup, billing, quotas, shared cache, marketing site); `selfhost` is
   // the default so every existing deployment stays single-tenant. Self-host is

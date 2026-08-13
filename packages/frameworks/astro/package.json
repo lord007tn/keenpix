@@ -1,17 +1,37 @@
 {
   "name": "@keenpix/astro",
   "version": "0.1.0",
-  "description": "Keenpix image attributes for Astro.",
+  "description": "Keenpix external image service and attributes for Astro.",
+  "keywords": [
+    "keenpix",
+    "image",
+    "astro",
+    "image-service"
+  ],
+  "homepage": "https://keenpix.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lord007tn/keenpix.git",
+    "directory": "packages/frameworks/astro"
+  },
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
+    },
+    "./service": {
+      "types": "./dist/service.d.mts",
+      "import": "./dist/service.mjs"
     }
   },
   "publishConfig": {
@@ -19,8 +39,11 @@
     "provenance": true
   },
   "scripts": {
-    "build": "tsdown src/index.ts --dts",
-    "typecheck": "tsc --noEmit"
+    "build": "tsdown src/index.ts src/service.ts --dts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "publint": "publint",
+    "pack:check": "pnpm pack --dry-run"
   },
   "dependencies": {
     "@keenpix/core": "workspace:^"
@@ -34,7 +57,9 @@
     }
   },
   "devDependencies": {
+    "publint": "^0.3.15",
     "tsdown": "0.22.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }

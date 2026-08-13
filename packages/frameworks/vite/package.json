@@ -1,17 +1,37 @@
 {
   "name": "@keenpix/vite",
   "version": "0.1.0",
-  "description": "Keenpix image primitives for Vite applications.",
+  "description": "Keenpix configuration and virtual-module plugin for Vite.",
+  "keywords": [
+    "keenpix",
+    "image",
+    "vite",
+    "vite-plugin"
+  ],
+  "homepage": "https://keenpix.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lord007tn/keenpix.git",
+    "directory": "packages/frameworks/vite"
+  },
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "client.d.ts",
+    "README.md",
+    "LICENSE"
   ],
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
+    },
+    "./client": {
+      "types": "./client.d.ts"
     }
   },
   "publishConfig": {
@@ -20,7 +40,10 @@
   },
   "scripts": {
     "build": "tsdown src/index.ts --dts",
-    "typecheck": "tsc --noEmit"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "publint": "publint",
+    "pack:check": "pnpm pack --dry-run"
   },
   "dependencies": {
     "@keenpix/core": "workspace:^"
@@ -34,7 +57,9 @@
     }
   },
   "devDependencies": {
+    "publint": "^0.3.15",
     "tsdown": "0.22.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }

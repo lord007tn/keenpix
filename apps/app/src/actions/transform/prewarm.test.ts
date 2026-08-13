@@ -31,11 +31,14 @@ describe('prewarmProjectImages', () => {
     expect(enqueuePrewarmJobs).toHaveBeenCalledOnce()
     const jobs = enqueuePrewarmJobs.mock.calls[0][0]
     expect(jobs).toHaveLength(200)
-    expect(jobs[0]).toEqual({
+    expect(jobs[0]).toMatchObject({
       accept: 'image/avif,image/webp,image/*',
       params: { fmt: 'auto', project: 'project_1', w: '640' },
       projectId: 'project_1',
       src: 'https://images.example.com/0.jpg',
+      version: 1,
     })
+    expect(jobs[0].correlationId).toBe(result.correlationId)
+    expect(jobs[0].requestedAt).toEqual(expect.any(String))
   })
 })

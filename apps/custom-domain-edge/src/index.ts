@@ -1,15 +1,4 @@
-interface Env {
-  APP_ORIGIN: string
-  EDGE_ANALYTICS: {
-    writeDataPoint(point: {
-      blobs: string[]
-      doubles: number[]
-      indexes: string[]
-    }): void
-  }
-  EDGE_SECRET: string
-  FIRST_PARTY_HOSTNAME: string
-}
+type WorkerEnv = Cloudflare.Env & { EDGE_SECRET: string }
 
 const EDGE_HOST_HEADER = 'x-keenpix-custom-host'
 const EDGE_SECRET_HEADER = 'x-keenpix-edge-secret'
@@ -45,7 +34,7 @@ export function classifyDelivery(
   return keenpixCacheStatus === 'hit' ? 'cache' : 'optimized'
 }
 
-export function createOriginRequest(request: Request, env: Env) {
+export function createOriginRequest(request: Request, env: WorkerEnv) {
   const incoming = new URL(request.url)
   const hostname = incoming.hostname.toLowerCase()
   const firstPartyDelivery = getFirstPartyDelivery(
@@ -54,7 +43,7 @@ export function createOriginRequest(request: Request, env: Env) {
   )
   const target = new URL(
     `${firstPartyDelivery?.originPathname ?? incoming.pathname}${incoming.search}`,
-    env.APP_ORIGIN,
+    env.TRANSFORM_ORIGIN,
   )
   target.searchParams.set(CACHE_HOST_PARAM, hostname)
   if (firstPartyDelivery) {
@@ -82,8 +71,8 @@ export function createOriginRequest(request: Request, env: Env) {
 }
 
 export default {
-  async fetch(request: Request, env: Env) {
-    if (!(env.EDGE_SECRET && env.APP_ORIGIN)) {
+  async fetch(request: Request, env: WorkerEnv) {
+    if (!(env.EDGE_SECRET && env.TRANSFORM_ORIGIN)) {
       return new Response('Edge configuration is incomplete.', { status: 503 })
     }
     if (!(request.method === 'GET' || request.method === 'HEAD')) {

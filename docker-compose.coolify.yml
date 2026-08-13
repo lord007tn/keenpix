@@ -32,7 +32,7 @@ services:
       - keenpix_dragonfly:/data
 
   app:
-    image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
+    image: "${KEENPIX_APP_IMAGE:-ghcr.io/lord007tn/keenpix-app:latest}"
     restart: unless-stopped
     # Give the HTTP server room to drain active requests before Docker SIGKILLs.
     stop_grace_period: ${KEENPIX_SHUTDOWN_GRACE:-30s}
@@ -47,6 +47,8 @@ services:
         condition: service_healthy
       dragonfly:
         condition: service_started
+      transform:
+        condition: service_healthy
     environment:
       - SERVICE_URL_APP
       - NODE_ENV=production
@@ -56,21 +58,14 @@ services:
       - BETTER_AUTH_SECRET=${SERVICE_HEX_64_KEENPIX}
       - BETTER_AUTH_URL=${SERVICE_URL_APP}
       - KEENPIX_APP_URL=${SERVICE_URL_APP}
+      - KEENPIX_TRANSFORM_URL=http://transform:3002
       - KEENPIX_SUPER_ADMIN_EMAIL=${KEENPIX_SUPER_ADMIN_EMAIL:-admin@example.com}
       - KEENPIX_SUPER_ADMIN_PASSWORD=${SERVICE_PASSWORD_64_ADMIN}
       - KEENPIX_RUN_MIGRATIONS=${KEENPIX_RUN_MIGRATIONS:-true}
       - KEENPIX_RUN_SEED=${KEENPIX_RUN_SEED:-true}
-      - KEENPIX_CACHE_DIR=/var/cache/keenpix
-      - KEENPIX_CACHE_MAX_BYTES=${KEENPIX_CACHE_MAX_BYTES:-8589934592}
-      - KEENPIX_CACHE_STALE_MS=${KEENPIX_CACHE_STALE_MS:-86400000}
-      - KEENPIX_MEMORY_CACHE_MAX_BYTES=${KEENPIX_MEMORY_CACHE_MAX_BYTES:-268435456}
       - KEENPIX_QUEUE_URL=redis://dragonfly:6379
       - KEENPIX_WORKER_CONCURRENCY=${KEENPIX_WORKER_CONCURRENCY:-4}
       - KEENPIX_WORKER_SECRET=${SERVICE_HEX_64_KEENPIX_WORKER}
-      - KEENPIX_MAX_ORIGIN_BYTES=${KEENPIX_MAX_ORIGIN_BYTES:-52428800}
-      - KEENPIX_MAX_INPUT_PIXELS=${KEENPIX_MAX_INPUT_PIXELS:-50000000}
-      - KEENPIX_MAX_DIMENSION=${KEENPIX_MAX_DIMENSION:-4096}
-      - KEENPIX_ORIGIN_TIMEOUT_MS=${KEENPIX_ORIGIN_TIMEOUT_MS:-10000}
       # Seconds srvx waits for in-flight HTTP requests to finish on SIGTERM before
       # force-closing. Keep ≤ stop_grace_period so slow transforms can complete.
       - SERVER_SHUTDOWN_TIMEOUT=${SERVER_SHUTDOWN_TIMEOUT:-25}
@@ -91,8 +86,6 @@ services:
       - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Keenpix}
     expose:
       - "3000"
-    volumes:
-      - keenpix_cache:/var/cache/keenpix
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--output", "/dev/null", "http://127.0.0.1:3000/api/health"]
       interval: 10s
@@ -100,9 +93,40 @@ services:
       retries: 6
       start_period: 60s
 
+  transform:
+    image: "${KEENPIX_TRANSFORM_IMAGE:-ghcr.io/lord007tn/keenpix-transform:latest}"
+    restart: unless-stopped
+    stop_grace_period: ${KEENPIX_SHUTDOWN_GRACE:-30s}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dragonfly:
+        condition: service_started
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_64_POSTGRES}@postgres:5432/${POSTGRES_DB:-keenpix}
+      - KEENPIX_CACHE_DIR=/var/cache/keenpix
+      - KEENPIX_CACHE_MAX_BYTES=${KEENPIX_CACHE_MAX_BYTES:-8589934592}
+      - KEENPIX_CACHE_STALE_MS=${KEENPIX_CACHE_STALE_MS:-86400000}
+      - KEENPIX_MEMORY_CACHE_MAX_BYTES=${KEENPIX_MEMORY_CACHE_MAX_BYTES:-268435456}
+      - KEENPIX_MAX_ORIGIN_BYTES=${KEENPIX_MAX_ORIGIN_BYTES:-52428800}
+      - KEENPIX_MAX_INPUT_PIXELS=${KEENPIX_MAX_INPUT_PIXELS:-50000000}
+      - KEENPIX_MAX_DIMENSION=${KEENPIX_MAX_DIMENSION:-4096}
+      - KEENPIX_ORIGIN_TIMEOUT_MS=${KEENPIX_ORIGIN_TIMEOUT_MS:-10000}
+      - KEENPIX_TRANSFORM_PORT=3002
+      - KEENPIX_WORKER_SECRET=${SERVICE_HEX_64_KEENPIX_WORKER}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - keenpix_cache:/var/cache/keenpix
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--output", "/dev/null", "http://127.0.0.1:3002/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
   worker:
-    image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
-    command: ["worker"]
+    image: "${KEENPIX_WORKER_IMAGE:-ghcr.io/lord007tn/keenpix-worker:latest}"
     restart: unless-stopped
     stop_grace_period: 30s
     healthcheck:
@@ -112,13 +136,13 @@ services:
       retries: 5
       start_period: 15s
     depends_on:
-      app:
+      transform:
         condition: service_healthy
       dragonfly:
         condition: service_started
     environment:
       - NODE_ENV=production
-      - KEENPIX_APP_URL=http://app:3000
+      - KEENPIX_TRANSFORM_URL=http://transform:3002
       - KEENPIX_QUEUE_URL=redis://dragonfly:6379
       - KEENPIX_WORKBENCH_PASSWORD=${KEENPIX_WORKBENCH_PASSWORD:-${SERVICE_PASSWORD_64_WORKBENCH}}
       - KEENPIX_WORKBENCH_USERNAME=${KEENPIX_WORKBENCH_USERNAME:-${SERVICE_USER_WORKBENCH}}

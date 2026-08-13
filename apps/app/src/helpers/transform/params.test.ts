@@ -1,5 +1,5 @@
+import { parseTransformParams } from '@keenpix/transform'
 import { describe, expect, it } from 'vitest'
-import { parseTransformParams } from './params'
 
 function parse(query: string) {
   return parseTransformParams(new URLSearchParams(query), '', {

@@ -2,15 +2,15 @@
   "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
   "name": "keenpix-custom-domain-edge",
   "main": "src/index.ts",
-  "compatibility_date": "2026-07-17",
+  "compatibility_date": "2026-08-13",
   "workers_dev": false,
   // Cloudflare for SaaS custom hostnames are matched by one wildcard route.
   // Keep the more-specific no-Worker routes for keenpix.com, www.keenpix.com,
   // and fallback.keenpix.com in the zone so the app origin cannot loop.
   "routes": [{ "pattern": "*/*", "zone_name": "keenpix.com" }],
   "vars": {
-    "APP_ORIGIN": "https://keenpix.com",
-    "FIRST_PARTY_HOSTNAME": "cdn.keenpix.com"
+    "FIRST_PARTY_HOSTNAME": "cdn.keenpix.com",
+    "TRANSFORM_ORIGIN": "https://transform.keenpix.com"
   },
   "analytics_engine_datasets": [
     {

@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const env = z
   .object({
-    KEENPIX_APP_URL: z.url(),
+    KEENPIX_TRANSFORM_URL: z.url(),
     KEENPIX_LOG_DIR: z.string().min(1).optional(),
     KEENPIX_QUEUE_URL: z.url().default('redis://127.0.0.1:6379'),
     KEENPIX_WORKBENCH_PASSWORD: z.string().min(1).optional(),

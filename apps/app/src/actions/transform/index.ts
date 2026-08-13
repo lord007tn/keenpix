@@ -1,17 +1,29 @@
+import { randomUUID } from 'node:crypto'
+import {
+  PREWARM_CONTRACT_VERSION,
+  type PrewarmTransformJob,
+} from '@keenpix/bullmq'
+import {
+  assertAllowedOrigin,
+  assertSafeOrigin,
+  fetchOriginImage,
+  getTransformErrorStatus,
+  type OutputFormat,
+  optimizeSvgImage,
+  parseTransformParams,
+  TransformError,
+  type TransformOptions,
+  transformImage,
+  verifyTransformSignature,
+} from '@keenpix/transform'
+import dayjs from 'dayjs'
 import { getProjectById } from '@/data-access/projects'
-import { getTransformErrorStatus, TransformError } from '@/errors/transform'
-import { parseTransformParams } from '@/helpers/transform/params'
+import { env } from '@/env/server'
 import { enqueuePrewarmJobs } from '@/integrations/bullmq/prewarm'
 import { enqueueRequestLog } from '@/lib/analytics-buffer/buffer'
 import { orgEntitledForServing } from '@/lib/billing/service-gate'
 import { buildCacheKey, readCacheEntry, writeCache } from '@/lib/cache/cache'
 import { errorContext, logger } from '@/lib/logger/logger'
-import { fetchOriginImage } from '@/lib/origin/fetch-image'
-import { assertAllowedOrigin, assertSafeOrigin } from '@/lib/origin/safe-origin'
-import { transformImage } from '@/lib/sharp/transform'
-import { optimizeSvgImage } from '@/lib/svg/optimize'
-import { verifyTransformSignature } from '@/lib/transform-signing/signing'
-import type { OutputFormat, TransformOptions } from '@/shared/transform'
 
 export interface OptimizeProjectImageInput {
   accept: string
@@ -133,7 +145,10 @@ function startTransformRefresh(input: CachedTransformInput) {
   const work = (async () => {
     const { allowedOrigins, cacheKey, format, src, transformOptions } = input
     const origin = await assertSafeOrigin(src, allowedOrigins)
-    const originBytes = await fetchOriginImage(origin, allowedOrigins)
+    const originBytes = await fetchOriginImage(origin, allowedOrigins, {
+      maxBytes: env.KEENPIX_MAX_ORIGIN_BYTES,
+      timeoutMs: env.KEENPIX_ORIGIN_TIMEOUT_MS,
+    })
     const bytesIn = originBytes.byteLength
 
     let output: Buffer
@@ -141,7 +156,12 @@ function startTransformRefresh(input: CachedTransformInput) {
       output =
         format === 'svg'
           ? optimizeSvgImage(originBytes)
-          : (await transformImage(originBytes, transformOptions)).data
+          : (
+              await transformImage(originBytes, transformOptions, {
+                maxDimension: env.KEENPIX_MAX_DIMENSION,
+                maxInputPixels: env.KEENPIX_MAX_INPUT_PIXELS,
+              })
+            ).data
     } catch (error) {
       if (error instanceof TransformError) {
         throw error
@@ -293,9 +313,11 @@ export async function prewarmProjectImages({
   sources,
   widths,
 }: PrewarmProjectImagesInput) {
+  const correlationId = randomUUID()
+  const requestedAt = dayjs().toISOString()
   const jobs = sources.flatMap((src) =>
     widths.flatMap((width) =>
-      formats.map((format) => {
+      formats.map((format): PrewarmTransformJob => {
         const searchParams = new URLSearchParams({
           fmt: format,
           project: projectId,
@@ -312,13 +334,16 @@ export async function prewarmProjectImages({
         }
         return {
           accept: format === 'auto' ? 'image/avif,image/webp,image/*' : '',
+          correlationId,
           params: Object.fromEntries(searchParams),
           projectId,
+          requestedAt,
           src,
+          version: PREWARM_CONTRACT_VERSION,
         }
       }),
     ),
   )
   await enqueuePrewarmJobs(jobs)
-  return { variantCount: jobs.length }
+  return { correlationId, variantCount: jobs.length }
 }

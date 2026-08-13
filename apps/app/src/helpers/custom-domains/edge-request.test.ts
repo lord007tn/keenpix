@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest'
 import {
   signTransformRequest,
   verifyTransformSignature,
-} from '@/lib/transform-signing/signing'
+} from '@keenpix/transform'
+import { describe, expect, it } from 'vitest'
 import {
   EDGE_PROJECT_HEADER,
   getTrustedCustomDomainHostname,

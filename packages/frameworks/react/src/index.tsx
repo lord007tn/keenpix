@@ -75,3 +75,11 @@ export function KeenpixImage({ config, ...input }: KeenpixImageProps) {
     />
   )
 }
+
+export function createKeenpixImage(config: KeenpixConfig) {
+  return function ConfiguredKeenpixImage(
+    props: Omit<KeenpixImageProps, 'config'>,
+  ) {
+    return <KeenpixImage {...props} config={config} />
+  }
+}

@@ -1,3 +1,4 @@
+import { generateSigningSecret } from '@keenpix/transform'
 import type { z } from 'zod'
 import { listCustomDomainsForProjectDeletion } from '@/data-access/custom-domains'
 import {
@@ -13,7 +14,6 @@ import {
   updateProjectSigning as updateProjectSigningInDb,
 } from '@/data-access/projects'
 import { deleteCloudflareCustomHostname } from '@/integrations/cloudflare/custom-hostnames'
-import { generateSigningSecret } from '@/lib/transform-signing/signing'
 import type {
   internalCreateProjectSchema,
   internalProjectSettingsPatchSchema,

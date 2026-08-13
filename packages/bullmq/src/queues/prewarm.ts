@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { Queue } from 'bullmq'
 import type IORedis from 'ioredis'
 import {
@@ -22,7 +23,24 @@ export function addPrewarmJobs(
   queue: Queue<PrewarmTransformJob>,
   jobs: PrewarmTransformJob[],
 ) {
-  return queue.addBulk(jobs.map((data) => ({ data, name: PREWARM_JOB_NAME })))
+  return queue.addBulk(
+    jobs.map((data) => ({
+      data,
+      name: PREWARM_JOB_NAME,
+      opts: {
+        jobId: createHash('sha256')
+          .update(
+            JSON.stringify({
+              params: data.params,
+              projectId: data.projectId,
+              src: data.src,
+              version: data.version,
+            }),
+          )
+          .digest('hex'),
+      },
+    })),
+  )
 }
 
 export async function getPrewarmQueueStats(queue: Queue<PrewarmTransformJob>) {

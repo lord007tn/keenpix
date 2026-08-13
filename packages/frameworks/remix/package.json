@@ -6,8 +6,12 @@
   "license": "MIT",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -20,13 +24,30 @@
   },
   "scripts": {
     "build": "tsdown src/index.ts --dts",
-    "typecheck": "tsc --noEmit"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "publint": "publint",
+    "pack:check": "pnpm run build && pnpm run publint && pnpm pack --dry-run"
   },
   "dependencies": {
     "@keenpix/core": "workspace:^"
   },
+  "peerDependencies": {
+    "@remix-run/react": ">=2",
+    "react-router": ">=7"
+  },
+  "peerDependenciesMeta": {
+    "@remix-run/react": {
+      "optional": true
+    },
+    "react-router": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "publint": "^0.3.15",
     "tsdown": "0.22.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }
