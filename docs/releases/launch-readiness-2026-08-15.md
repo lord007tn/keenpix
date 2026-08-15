@@ -47,8 +47,7 @@ credential rotation, public-history remediation, and brand X setup are complete.
 
 ## Live production validation
 
-Observed on August 15, 2026 after deploying commit `360b882` (the rewritten
-equivalent of the original deployment commit after the credential-history scrub):
+Observed on August 15, 2026 after deploying current commit `59c8ab2`:
 
 - `https://keenpix.com/api/health`, `/robots.txt`, and `/sitemap.xml` return
   `200`. The sitemap exposes 69 canonical URLs, five Arabic pages, and ten
@@ -56,6 +55,15 @@ equivalent of the original deployment commit after the credential-history scrub)
 - English and Arabic blog indexes and articles return `200`. Arabic documents
   render with `lang="ar"` and `dir="rtl"`; English documents retain
   `lang="en"` and `dir="ltr"`.
+- All 47 unique advertised Open Graph, Twitter, and article images returned
+  decodable images under fresh cache-busting. The five formerly failing English
+  generator routes and representative Arabic routes returned uncached
+  `200 image/png` responses after the deployment.
+- The managed-cloud quickstart now uses the canonical
+  `cdn.keenpix.com/p/YOUR_ID` path with an encoded source URL. The frameworks
+  overview links directly to its slashless anchor, and the five materially
+  revised blog/docs pages expose accurate `2026-08-15` sitemap modification
+  dates.
 - HTTP, `www`, and public trailing-slash variants use one-hop permanent `308`
   redirects. Query strings survive normalization.
 - Global, docs, and blog missing routes return a real `404`, a dedicated
