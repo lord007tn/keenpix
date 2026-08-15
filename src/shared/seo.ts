@@ -5,12 +5,7 @@ import {
   STANDARD_PLAN_PRICES,
 } from '@/lib/billing/plans'
 import { getAppUrl, getRepositoryUrl } from '@/server/deployment'
-import {
-  FOUNDER,
-  getAuthor,
-  SOCIAL_X_URL,
-  SUPPORT_EMAIL,
-} from '@/shared/authors'
+import { FOUNDER, getAuthor, SUPPORT_EMAIL } from '@/shared/authors'
 
 export const SITE_NAME = 'Keenpix'
 export const SITE_TITLE = 'Image optimization CDN with honest pricing | Keenpix'
@@ -24,8 +19,9 @@ export const PRICING_DESCRIPTION =
   'Keenpix starts at $9/month for 100 GB of managed image delivery, with unlimited transforms and teammates, a 14-day trial, and published overage.'
 export const BRAND_IMAGE_PATH = '/brand/keenpix-og-card.png'
 const BRAND_ICON_PATH = '/android-chrome-512x512.png'
-// Twitter attribution handle reused across the card meta tags.
-const TWITTER_HANDLE = '@raedbahriworld'
+// The founder is the current editorial author. Do not claim this personal
+// profile as Keenpix's official brand account before that account exists.
+const TWITTER_CREATOR_HANDLE = '@raedbahriworld'
 export const APP_VERSION = import.meta.env.VITE_APP_VERSION
 
 function pageTitle(title: string) {
@@ -41,6 +37,7 @@ export function seo({
   keywords,
   image,
   imageAlt,
+  locale = 'en_US',
   url,
   type = 'website',
 }: {
@@ -49,6 +46,7 @@ export function seo({
   keywords?: string
   image?: string
   imageAlt?: string
+  locale?: 'ar_AR' | 'en_US'
   url?: string
   type?: 'website' | 'article'
 }) {
@@ -75,6 +73,7 @@ export function seo({
     },
     ...(keywords ? [{ name: 'keywords', content: keywords }] : []),
     { property: 'og:type', content: type },
+    { property: 'og:locale', content: locale },
     { property: 'og:title', content: title },
     { property: 'og:description', content: description },
     ...(url ? [{ property: 'og:url', content: url }] : []),
@@ -88,8 +87,7 @@ export function seo({
         imageAlt ?? `${SITE_NAME} — optimized images, minus the surprise bill`,
     },
     { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:site', content: TWITTER_HANDLE },
-    { name: 'twitter:creator', content: TWITTER_HANDLE },
+    { name: 'twitter:creator', content: TWITTER_CREATOR_HANDLE },
     { name: 'twitter:title', content: title },
     { name: 'twitter:description', content: description },
     { name: 'twitter:image', content: imageUrl },
@@ -186,9 +184,9 @@ export function organizationJsonLd() {
     },
     logo: absoluteUrl(BRAND_ICON_PATH),
     name: SITE_NAME,
-    // Repo + official social profile give the Knowledge Graph corroborating
-    // signals to resolve and cite the Keenpix entity.
-    sameAs: [getRepositoryUrl(), SOCIAL_X_URL],
+    // Keep this limited to properties that belong to Keenpix. The founder's
+    // personal X profile remains linked from the founder Person node above.
+    sameAs: [getRepositoryUrl()],
     url: absoluteUrl('/'),
   }
 }
@@ -255,7 +253,9 @@ export function authorProfileJsonLd() {
   }
 }
 
-export function pricingPageJsonLd(pricing: PlanPricing = catalogPricing()) {
+export function pricingPageJsonLd(
+  pricing: PlanPricing = catalogPricing('standard'),
+) {
   const catalogId = `${absoluteUrl('/pricing')}#offers`
   return {
     '@context': 'https://schema.org',
@@ -332,7 +332,9 @@ export function blogListingJsonLd(
     title: string
     url: string
   }>,
+  language: 'ar' | 'en' = 'en',
 ) {
+  const arabic = language === 'ar'
   return {
     '@context': 'https://schema.org',
     '@type': 'Blog',
@@ -344,12 +346,13 @@ export function blogListingJsonLd(
       headline: post.title,
       url: post.url,
     })),
-    description:
-      'Guides on image optimization, transparent bandwidth pricing, and how Keenpix compares to Cloudinary, imgix, and ImageKit.',
-    inLanguage: 'en',
-    name: `${SITE_NAME} Blog`,
+    description: arabic
+      ? 'أدلة عملية عن تحسين الصور، صيغ AVIF وWebP، وتشغيل Keenpix على البنية التي تختارها.'
+      : 'Guides on image optimization, transparent bandwidth pricing, and how Keenpix compares to Cloudinary, imgix, and ImageKit.',
+    inLanguage: language,
+    name: arabic ? `مدونة ${SITE_NAME}` : `${SITE_NAME} Blog`,
     publisher: { '@id': ORGANIZATION_ID },
-    url: absoluteUrl('/blog'),
+    url: absoluteUrl(arabic ? '/blog/ar' : '/blog'),
   }
 }
 
@@ -370,14 +373,15 @@ export function faqPageJsonLd(
   }
 }
 
-// BlogPosting + breadcrumb graph for a single article. Dated and attributed
-// (unlike docs' TechArticle) so search engines can surface it as blog content.
+// BlogPosting + breadcrumb graph for a single article. Dated and attributed so
+// search engines can surface it as blog content, unlike undated docs WebPages.
 export function blogPostingJsonLd({
   author,
   datePublished,
   dateModified,
   description,
   image,
+  language = 'en',
   path,
   title,
   url,
@@ -387,6 +391,7 @@ export function blogPostingJsonLd({
   dateModified?: string
   description: string
   image: string
+  language?: 'ar' | 'en'
   path: Array<{ name: string; url: string }>
   title: string
   url: string
@@ -420,7 +425,7 @@ export function blogPostingJsonLd({
       description,
       headline: title,
       image,
-      inLanguage: 'en',
+      inLanguage: language,
       mainEntityOfPage: url,
       publisher: {
         '@type': 'Organization',
@@ -461,7 +466,7 @@ export function docsJsonLd({
   return [
     {
       '@context': 'https://schema.org',
-      '@type': 'TechArticle',
+      '@type': 'WebPage',
       about: SITE_NAME,
       author: {
         '@type': 'Organization',
@@ -471,7 +476,6 @@ export function docsJsonLd({
       // never stamp a fake freshness signal on undated reference pages.
       ...(dateModified ? { dateModified } : {}),
       description,
-      headline: title,
       image: absoluteUrl(BRAND_IMAGE_PATH),
       inLanguage: 'en',
       isPartOf: {
@@ -481,7 +485,7 @@ export function docsJsonLd({
       },
       keywords:
         'self-hosted image optimization, image CDN, sharp, Postgres, TanStack Start, open source image optimizer',
-      mainEntityOfPage: url,
+      name: title,
       publisher: {
         '@type': 'Organization',
         logo: {

@@ -4,7 +4,7 @@ import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { ModeToggle } from '@/components/theme/mode-toggle'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authClient } from '@/lib/auth/client'
@@ -52,7 +52,9 @@ function ForgotPasswordPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           <KeenpixLogo className="mb-2" />
-          <CardTitle>Reset your password</CardTitle>
+          <h1 className="font-heading font-medium text-base leading-normal">
+            Reset your password
+          </h1>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {sent ? (

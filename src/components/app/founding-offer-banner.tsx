@@ -43,7 +43,10 @@ export function FoundingOfferBanner({
               {offer.claimed}/{offer.limit}
             </span>
           </div>
-          <Progress value={(offer.claimed / offer.limit) * 100} />
+          <Progress
+            aria-label={`${offer.claimed} of ${offer.limit} founding-pricing spots claimed`}
+            value={(offer.claimed / offer.limit) * 100}
+          />
         </div>
       </div>
     </div>

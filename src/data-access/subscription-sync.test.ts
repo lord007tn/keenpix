@@ -183,4 +183,30 @@ describe('webhook out-of-order guard', () => {
     expect(subUpsert).toHaveBeenCalledOnce()
     expect(customerUpsert).toHaveBeenCalledOnce()
   })
+
+  it('starts paid metering after the mixed trial-conversion hour', async () => {
+    subFindUnique.mockResolvedValue({
+      becamePayingAt: null,
+      polarSubscriptionId: 'sub_1',
+      status: 'trialing',
+      polarModifiedAt: OLDER,
+    })
+
+    await upsertSubscriptionWithCustomer(
+      snapshot({
+        status: 'active',
+        polarModifiedAt: new Date('2026-07-10T11:17:00Z'),
+      }),
+      'cus_1',
+    )
+
+    expect(customerUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: {
+          lastUsageReportAt: new Date('2026-07-10T12:00:00Z'),
+          polarCustomerId: 'cus_1',
+        },
+      }),
+    )
+  })
 })

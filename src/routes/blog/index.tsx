@@ -9,7 +9,10 @@ import { absoluteUrl, blogListingJsonLd, seo } from '@/shared/seo'
 const listBlogPostsFn = createServerFn({ method: 'GET' }).handler(() => {
   const posts = listBlogPosts()
   const selfHost = !isCloud()
+  const canonicalUrl = absoluteUrl('/blog')
   return {
+    arabicUrl: absoluteUrl('/blog/ar'),
+    canonicalUrl,
     posts,
     selfHost,
     // Blog collection JSON-LD (absolute post URLs); suppressed on self-host,
@@ -23,6 +26,7 @@ const listBlogPostsFn = createServerFn({ method: 'GET' }).handler(() => {
             title: post.title,
             url: absoluteUrl(post.url),
           })),
+          'en',
         ),
   }
 })
@@ -30,9 +34,15 @@ const listBlogPostsFn = createServerFn({ method: 'GET' }).handler(() => {
 export const Route = createFileRoute('/blog/')({
   loader: () => listBlogPostsFn(),
   head: ({ loaderData }) => {
-    const canonicalUrl = absoluteUrl('/blog')
+    const canonicalUrl = loaderData?.canonicalUrl ?? absoluteUrl('/blog')
+    const arabicUrl = loaderData?.arabicUrl ?? absoluteUrl('/blog/ar')
     return {
-      links: [{ rel: 'canonical', href: canonicalUrl }],
+      links: [
+        { rel: 'canonical', href: canonicalUrl },
+        { rel: 'alternate', hrefLang: 'en', href: canonicalUrl },
+        { rel: 'alternate', hrefLang: 'ar', href: arabicUrl },
+        { rel: 'alternate', hrefLang: 'x-default', href: canonicalUrl },
+      ],
       meta: [
         ...seo({
           title: 'Blog - Keenpix',
@@ -54,7 +64,7 @@ function BlogIndexPage() {
   return (
     <>
       {jsonLd ? <JsonLd data={jsonLd} /> : null}
-      <BlogIndex posts={posts} />
+      <BlogIndex language="en" posts={posts} />
     </>
   )
 }

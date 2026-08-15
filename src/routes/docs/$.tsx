@@ -13,6 +13,7 @@ import { RootProvider } from 'fumadocs-ui/provider/tanstack'
 import { Suspense } from 'react'
 import { JsonLd } from '@/components/app/json-ld'
 import { getMDXComponents } from '@/components/mdx'
+import { DocsMainContainer } from '@/features/docs/docs-main-container'
 import { docsSlugsSchema } from '@/schemas/docs'
 import { getAppUrl, isCloud } from '@/server/deployment'
 import { source } from '@/shared/docs-source'
@@ -38,6 +39,10 @@ interface DocsLoaderData {
 }
 
 export const Route = createFileRoute('/docs/$')({
+  // The Fumadocs client loader and renderer depend on each other. Keeping them
+  // in one route-only chunk prevents the docs UI from leaking into every
+  // public page through the router's shared loader/reference bundle.
+  codeSplitGroupings: [['loader', 'component']],
   loader: async ({ params }) => {
     const slugs = params._splat?.split('/').filter(Boolean) ?? []
     const data = (await serverLoader({ data: slugs })) as DocsLoaderData
@@ -69,7 +74,7 @@ export const Route = createFileRoute('/docs/$')({
           description,
           image: ogImage,
           url: canonicalUrl,
-          type: 'article',
+          type: 'website',
         }),
         ...(loaderData?.selfHost
           ? [{ name: 'robots', content: 'noindex,nofollow' }]
@@ -130,7 +135,7 @@ const serverLoader = createServerFn({ method: 'GET' })
 const clientLoader = browserCollections.docs.createClientLoader({
   component({ toc, frontmatter, default: MDX }) {
     return (
-      <DocsPage toc={toc}>
+      <DocsPage slots={{ container: DocsMainContainer }} toc={toc}>
         <DocsTitle>{frontmatter.title}</DocsTitle>
         <DocsDescription>{frontmatter.description}</DocsDescription>
         <DocsBody>

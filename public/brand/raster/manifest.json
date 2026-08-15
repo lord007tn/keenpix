@@ -114,6 +114,12 @@
     "height": 630
   },
   {
+    "source": "keenpix-x-header.svg",
+    "file": "public/brand/raster/social/keenpix-x-header.png",
+    "width": 1500,
+    "height": 500
+  },
+  {
     "source": "keenpix-og-card.svg",
     "file": "public/brand/raster/social/keenpix-og-card.jpg",
     "width": 1200,

@@ -159,7 +159,7 @@ function MobileNav() {
 export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
   // Loader provides live pricing; fall back to the catalog so the page always
   // renders real numbers (and to satisfy the self-host-typed null).
-  const prices = pricing ?? catalogPricing()
+  const prices = pricing ?? catalogPricing('standard')
   const fromCents = Math.min(
     ...PLAN_CARD_ORDER.map((planId) => prices.plans[planId].month.amountCents),
   )
@@ -577,6 +577,15 @@ Vary: Accept`}</CodeBlock>
                 >
                   Deploy with Docker
                   <ArrowRightIcon data-icon="inline-end" />
+                </a>
+                <a
+                  className={buttonVariants({
+                    className: 'min-h-12 touch-manipulation px-4',
+                    variant: 'outline',
+                  })}
+                  href="/self-hosted-image-cdn"
+                >
+                  Self-hosting overview
                 </a>
                 <a
                   className={buttonVariants({

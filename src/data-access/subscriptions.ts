@@ -1,3 +1,5 @@
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import { prisma } from '@/db'
 import type { Prisma } from '@/generated/prisma/client'
 import { getPlan, type Plan } from '@/lib/billing/plans'
@@ -12,6 +14,8 @@ const ENTITLED = new Set(['active', 'trialing'])
 // live customer's images dark instantly — Polar retries payment for days, and
 // `revoked` is the definitive cutoff. This is the grace window.
 const SERVING = new Set(['active', 'trialing', 'past_due', 'unpaid'])
+
+dayjs.extend(utc)
 
 export function getOrgSubscription(orgId: string) {
   return prisma.subscription.findUnique({ where: { orgId } })
@@ -103,6 +107,7 @@ type Tx = Prisma.TransactionClient
 // whether the snapshot was applied.
 export interface SubscriptionSyncResult {
   applied: boolean
+  becamePayingAt: Date | null
   previousStatus: string | null
 }
 
@@ -123,20 +128,30 @@ async function applySubscriptionSync(
   const previousStatus = existing?.status ?? null
   if (existing && existing.polarSubscriptionId === input.polarSubscriptionId) {
     if (existing.status === 'revoked' && input.status !== 'revoked') {
-      return { applied: false, previousStatus }
+      return {
+        applied: false,
+        becamePayingAt: existing.becamePayingAt,
+        previousStatus,
+      }
     }
     if (
       existing.polarModifiedAt &&
       input.polarModifiedAt &&
       input.polarModifiedAt < existing.polarModifiedAt
     ) {
-      return { applied: false, previousStatus }
+      return {
+        applied: false,
+        becamePayingAt: existing.becamePayingAt,
+        previousStatus,
+      }
     }
   }
   const becamePayingAt =
     existing?.becamePayingAt ??
     (input.status === 'active'
-      ? (input.currentPeriodStart ?? new Date())
+      ? ((previousStatus === 'trialing'
+          ? input.polarModifiedAt
+          : input.currentPeriodStart) ?? new Date())
       : null)
   const providerSnapshot = {
     ...input,
@@ -157,7 +172,7 @@ async function applySubscriptionSync(
       },
     })
   }
-  return { applied: true, previousStatus }
+  return { applied: true, becamePayingAt, previousStatus }
 }
 
 // Webhook-facing upserts — keep the local snapshot in sync with Polar so the hot
@@ -182,9 +197,29 @@ export function upsertSubscriptionWithCustomer(
     if (!result.applied) {
       return result
     }
+    let paidUsageWatermark: Date | undefined
+    if (
+      result.previousStatus === 'trialing' &&
+      input.status === 'active' &&
+      result.becamePayingAt
+    ) {
+      const paidAt = dayjs.utc(result.becamePayingAt)
+      const paidHour = paidAt.startOf('hour')
+      // Hourly rollups cannot split trial and paid bytes inside one bucket. If
+      // conversion is mid-hour, leave that mixed hour free and begin with the
+      // next complete bucket rather than charging any trial delivery.
+      paidUsageWatermark = (
+        paidAt.isSame(paidHour) ? paidHour : paidHour.add(1, 'hour')
+      ).toDate()
+    }
     await tx.billingCustomer.upsert({
       where: { orgId: input.orgId },
-      update: { polarCustomerId },
+      update: {
+        polarCustomerId,
+        ...(paidUsageWatermark
+          ? { lastUsageReportAt: paidUsageWatermark }
+          : {}),
+      },
       // Start the usage watermark at creation time. Without this, the first cron
       // run sees lastUsageReportAt = null and deliveredBytesSince(orgId, null)
       // sums ALL-time delivered bytes — over-billing any org that served traffic

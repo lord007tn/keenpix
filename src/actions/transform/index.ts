@@ -259,9 +259,9 @@ export async function optimizeProjectImage({
     throw error
   } finally {
     if (recordLog) {
-      // Telemetry, not part of the response path: enqueues in memory and the
-      // analytics buffer batch-writes Postgres + ClickHouse off the hot path.
-      enqueueRequestLog({
+      // Managed 2xx delivery is acknowledged only after its billable rollup is
+      // durable. Self-hosted and failed-request telemetry stays buffered.
+      await enqueueRequestLog({
         orgId: project.orgId,
         projectId: project.id,
         path: logPath(src),

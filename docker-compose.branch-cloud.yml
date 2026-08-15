@@ -43,7 +43,7 @@ services:
       start_period: 30s
 
   maxio:
-    image: ghcr.io/coollabsio/maxio:latest
+    image: ghcr.io/coollabsio/maxio@sha256:2e7fc2a32d66fb31c44ce366e8a289218d3c38fcbe25bd6fa575b4df7c0e0272
     command: serve
     restart: unless-stopped
     environment:
@@ -68,7 +68,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_KEENPIX_PUBLIC_URL: ${VITE_KEENPIX_PUBLIC_URL:-http://localhost:3000}
+        VITE_KEENPIX_PUBLIC_URL: ${KEENPIX_APP_URL:?set KEENPIX_APP_URL}
         VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:-}
         VERSION: ${SOURCE_COMMIT:-branch-cloud}
     restart: unless-stopped
@@ -88,18 +88,19 @@ services:
       mailpit:
         condition: service_started
     environment:
-      SERVICE_URL_APP_3000: ${KEENPIX_APP_URL:-http://localhost:3000}
-      SERVICE_URL_APP: ${KEENPIX_APP_URL:-http://localhost:3000}
+      SERVICE_URL_APP_3000: ${KEENPIX_APP_URL:?set KEENPIX_APP_URL}
+      SERVICE_URL_APP: ${KEENPIX_APP_URL:?set KEENPIX_APP_URL}
       NODE_ENV: production
       PORT: "3000"
       KEENPIX_MODE: cloud
+      KEENPIX_DEPLOYMENT_ENV: ${KEENPIX_DEPLOYMENT_ENV:?set KEENPIX_DEPLOYMENT_ENV to production or staging}
       DATABASE_URL: postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_64_POSTGRES}@${KEENPIX_POSTGRES_HOST:-postgres}:5432/${POSTGRES_DB:-keenpix_branch}
       BETTER_AUTH_SECRET: ${SERVICE_HEX_64_KEENPIX}
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
-      KEENPIX_APP_URL: ${KEENPIX_APP_URL:-http://localhost:3000}
+      BETTER_AUTH_URL: ${KEENPIX_APP_URL:?set KEENPIX_APP_URL}
+      KEENPIX_APP_URL: ${KEENPIX_APP_URL:?set KEENPIX_APP_URL}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      VITE_KEENPIX_PUBLIC_URL: ${VITE_KEENPIX_PUBLIC_URL:-http://localhost:3000}
+      VITE_KEENPIX_PUBLIC_URL: ${KEENPIX_APP_URL:?set KEENPIX_APP_URL}
       VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:-}
       KEENPIX_SUPER_ADMIN_EMAIL: ${KEENPIX_SUPER_ADMIN_EMAIL}
       KEENPIX_SUPER_ADMIN_PASSWORD: ${KEENPIX_SUPER_ADMIN_PASSWORD}
@@ -119,7 +120,7 @@ services:
       # force-closing. Keep ≤ stop_grace_period so slow transforms can complete.
       SERVER_SHUTDOWN_TIMEOUT: "${SERVER_SHUTDOWN_TIMEOUT:-25}"
       POLAR_TOKEN: ${POLAR_TOKEN}
-      POLAR_SERVER: ${POLAR_SERVER:-production}
+      POLAR_SERVER: ${POLAR_SERVER:?set POLAR_SERVER to sandbox or production}
       POLAR_WEBHOOK_SECRET: ${POLAR_WEBHOOK_SECRET}
       POLAR_SANDBOX_WEBHOOK_SECRET: ${POLAR_SANDBOX_WEBHOOK_SECRET:-}
       POLAR_SUCCESS_URL: ${POLAR_SUCCESS_URL:-/app/dashboard}
@@ -130,10 +131,10 @@ services:
       POSTMARK_API_KEY: ${POSTMARK_API_KEY}
       POSTMARK_FROM: ${POSTMARK_FROM}
       POSTMARK_MESSAGE_STREAM: ${POSTMARK_MESSAGE_STREAM:-outbound}
-      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
-      CLOUDFLARE_ACCOUNT_API_TOKEN: ${CLOUDFLARE_ACCOUNT_API_TOKEN:-}
-      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
-      CLOUDFLARE_ZONE_ID: ${CLOUDFLARE_ZONE_ID:-}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:?set Cloudflare zone Analytics Read token}
+      CLOUDFLARE_ACCOUNT_API_TOKEN: ${CLOUDFLARE_ACCOUNT_API_TOKEN:?set Cloudflare Account Analytics Read token}
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:?set Cloudflare account ID}
+      CLOUDFLARE_ZONE_ID: ${CLOUDFLARE_ZONE_ID:?set Cloudflare zone ID}
       CLOUDFLARE_HOST: ${CLOUDFLARE_HOST:-}
       CLOUDFLARE_SAAS_API_TOKEN: ${CLOUDFLARE_SAAS_API_TOKEN:-}
       CLOUDFLARE_SAAS_ZONE_ID: ${CLOUDFLARE_SAAS_ZONE_ID:-}
@@ -161,7 +162,7 @@ services:
       start_period: 60s
 
   usage-cron:
-    image: curlimages/curl:latest
+    image: curlimages/curl@sha256:7c12af72ceb38b7432ab85e1a265cff6ae58e06f95539d539b654f2cfa64bb13
     restart: unless-stopped
     depends_on:
       app:
@@ -174,10 +175,20 @@ services:
             sleep 10;
           done;
           echo "usage report started: $$(date -u +%Y-%m-%dT%H:%M:%SZ)";
-          curl -fsS --retry 3 --retry-all-errors --retry-delay 5 -X POST -H "Authorization: Bearer ${CRON_SECRET}" http://app:3000/api/internal/billing/report-usage || true;
-          printf '\n';
+          if curl -fsS --retry 3 --retry-all-errors --retry-delay 5 -X POST -H "Authorization: Bearer ${CRON_SECRET}" http://app:3000/api/internal/billing/report-usage; then
+            date +%s > /tmp/keenpix-usage-last-success;
+            printf '\n';
+          else
+            echo "Keenpix usage report failed" >&2;
+          fi;
           sleep 3600;
         done
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/keenpix-usage-last-success && now=$$(date +%s) && last=$$(cat /tmp/keenpix-usage-last-success) && test $$((now-last)) -lt 7500"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 180s
 
   # Daily compressed pg_dump into its own volume, pruned after
   # KEENPIX_BACKUP_KEEP_DAYS. Postgres is the money-critical source of truth

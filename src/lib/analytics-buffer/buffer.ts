@@ -1,39 +1,81 @@
 import cuid from 'cuid'
 import {
+  drainAnalyticsOutboxBatch,
+  persistAnalyticsOutboxEvent,
+} from '@/data-access/analytics-outbox'
+import {
   aggregateRollupIncrements,
   applyRollupIncrement,
 } from '@/data-access/analytics-rollups'
-import type { NewRequestLog } from '@/data-access/request-logs'
+import type { NewRequestLog, RequestLogEvent } from '@/data-access/request-logs'
 import { prisma } from '@/db'
 import { recordRequestEvents } from '@/lib/clickhouse/events'
 import { errorContext, logger } from '@/lib/logger/logger'
+import { isCloud } from '@/server/deployment'
 
-// Buffered analytics writer for the public /img hot path. The previous design
+// Analytics writer for the public /img hot path. Self-hosted request logs are
+// buffered; successful managed deliveries first commit a lightweight durable
+// outbox row before the response leaves the action. A background transaction
+// then batches those rows into RequestLog and hourly rollups. The previous design
 // ran a Postgres transaction (RequestLog insert + a CONTENDED rollup upsert) per
-// request — an unauthenticated-DB-load vector and a throughput ceiling. Requests
-// now enqueue in memory and a flusher writes batches: one createMany for the
-// rows, one upsert per DISTINCT rollup bucket per flush (a thousand requests to
-// the same image collapse into a single upsert), one ClickHouse batch insert.
-// Analytics stays off the serving path. A flush is one atomic Postgres
-// transaction, retried briefly for transient failures, so RequestLog and the
-// hourly rollups cannot diverge. Logs/rollups lag up to ~2s, within the live-log
-// poll interval; complete-hour billing reads those same rollups.
+// request — an unauthenticated contended-row load and throughput ceiling. Both
+// paths now batch rollup writes: one createMany plus one upsert per distinct
+// bucket. Self-host logs lag up to ~2s. Managed 2xx responses fail closed only
+// when their cheap outbox insert cannot be persisted; a process exit cannot
+// erase already-acknowledged billable bytes.
 
 const MAX_BUFFER = 500
 const FLUSH_INTERVAL_MS = 2000
+const MAX_DURABLE_DRAIN_BATCHES = 200
 
-export type BufferedRequestLog = NewRequestLog & { id: string; ts: Date }
+export type BufferedRequestLog = RequestLogEvent
 
 let buffer: BufferedRequestLog[] = []
 let timer: NodeJS.Timeout | null = null
 let flushing: Promise<void> | null = null
+let durableTimer: NodeJS.Timeout | null = null
+let durableFlushing: Promise<void> | null = null
 
-export function enqueueRequestLog(log: NewRequestLog): void {
-  buffer.push({ ...log, id: cuid(), ts: new Date() })
+async function persistManagedDelivery(event: RequestLogEvent) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      await persistAnalyticsOutboxEvent(event)
+      if (!durableTimer) {
+        const t = setTimeout(() => {
+          durableTimer = null
+          flushDurableRequestLogs().catch((error) => {
+            logger.error(errorContext(error), 'analytics outbox flush failed')
+          })
+        }, FLUSH_INTERVAL_MS)
+        t.unref?.()
+        durableTimer = t
+      }
+      return
+    } catch (error) {
+      if (attempt === 3) {
+        throw error
+      }
+      logger.warn(
+        { ...errorContext(error), attempt },
+        'analytics outbox insert failed; retrying',
+      )
+      await new Promise((resolve) =>
+        setTimeout(resolve, attempt === 1 ? 100 : 500),
+      )
+    }
+  }
+}
+
+export function enqueueRequestLog(log: NewRequestLog) {
+  const event = { ...log, id: cuid(), ts: new Date() }
+  if (isCloud() && log.status >= 200 && log.status < 300) {
+    return persistManagedDelivery(event)
+  }
+  buffer.push(event)
   if (buffer.length >= MAX_BUFFER) {
     // Fire-and-forget: flushRequestLogs never rejects (it logs and drops).
     flushRequestLogs()
-    return
+    return Promise.resolve()
   }
   if (!timer) {
     const t = setTimeout(() => {
@@ -43,6 +85,51 @@ export function enqueueRequestLog(log: NewRequestLog): void {
     t.unref?.()
     timer = t
   }
+  return Promise.resolve()
+}
+
+// Moves durable managed events into request logs and rollups under a global DB
+// lock. The billing cron awaits this before reading complete-hour totals. A
+// bounded drain prevents continuous traffic from monopolizing one process.
+export function flushDurableRequestLogs(input?: {
+  requireComplete?: boolean
+  through?: Date
+}): Promise<void> {
+  if (durableFlushing) {
+    // A billing caller cannot inherit the weaker guarantee of a background
+    // drain that may legitimately return while another replica is busy. Join
+    // it, then start a fresh cutoff-complete pass.
+    return input?.requireComplete
+      ? durableFlushing.then(() => flushDurableRequestLogs(input))
+      : durableFlushing
+  }
+  const through = input?.through ?? new Date()
+  durableFlushing = (async () => {
+    for (
+      let batchNumber = 0;
+      batchNumber < MAX_DURABLE_DRAIN_BATCHES;
+      batchNumber += 1
+    ) {
+      const result = await drainAnalyticsOutboxBatch(through)
+      if (result.status === 'busy') {
+        if (input?.requireComplete) {
+          throw new Error('Analytics outbox is being drained by another job.')
+        }
+        return
+      }
+      if (result.status === 'empty') {
+        return
+      }
+      recordRequestEvents(result.events)
+      if (result.remaining === 0) {
+        return
+      }
+    }
+    throw new Error('Analytics outbox backlog exceeds the bounded drain limit.')
+  })().finally(() => {
+    durableFlushing = null
+  })
+  return durableFlushing
 }
 
 async function writeBatch(batch: BufferedRequestLog[]): Promise<void> {

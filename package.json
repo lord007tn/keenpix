@@ -74,6 +74,7 @@
     "@better-auth/api-key": "1.6.11",
     "@clickhouse/client": "^1.23.0",
     "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource-variable/noto-sans-arabic": "^5.2.8",
     "@polar-sh/better-auth": "^1.8.4",
     "@polar-sh/sdk": "^0.48.1",
     "@prisma/adapter-pg": "^7.8.0",

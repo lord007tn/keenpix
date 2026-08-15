@@ -10,6 +10,8 @@ const EMAIL_KEYS = [
   'RESEND_FROM',
   'SMTP_HOST',
   'SMTP_FROM_EMAIL',
+  'SMTP_USER',
+  'SMTP_PASSWORD',
 ]
 
 // createEnv logs to console.error before throwing on invalid env; silence it so
@@ -70,5 +72,26 @@ describe('email provider env validation', () => {
       SMTP_FROM_EMAIL: 'keenpix@example.com',
     })
     expect(env.EMAIL_PROVIDER).toBe('smtp')
+  })
+
+  it('requires SMTP username and password together', async () => {
+    vi.spyOn(console, 'error').mockImplementation(silence)
+    await expect(
+      loadEnv({
+        EMAIL_PROVIDER: 'smtp',
+        SMTP_HOST: 'smtp.example.com',
+        SMTP_FROM_EMAIL: 'keenpix@example.com',
+        SMTP_USER: 'keenpix',
+      }),
+    ).rejects.toThrow()
+
+    const env = await loadEnv({
+      EMAIL_PROVIDER: 'smtp',
+      SMTP_HOST: 'smtp.example.com',
+      SMTP_FROM_EMAIL: 'keenpix@example.com',
+      SMTP_USER: 'keenpix',
+      SMTP_PASSWORD: 'secret',
+    })
+    expect(env.SMTP_USER).toBe('keenpix')
   })
 })

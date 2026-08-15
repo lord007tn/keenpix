@@ -23,6 +23,9 @@ export const serverEnvSchema = {
   // the default so every existing deployment stays single-tenant. Self-host is
   // just `!isCloud()` — there is no separate KEENPIX_SELF_HOST flag.
   KEENPIX_MODE: z.enum(['selfhost', 'cloud']).default('selfhost'),
+  // Explicit cloud environment boundary. Cloud deployments must opt into
+  // production or staging so Polar can never be selected by an implicit default.
+  KEENPIX_DEPLOYMENT_ENV: z.enum(['production', 'staging']).optional(),
   KEENPIX_CACHE_DIR: z.string().min(1).default('./.keenpix-cache'),
   // Optional shared object-storage cache tier (Cloudflare R2 / any S3). When all
   // are set AND KEENPIX_MODE=cloud, the durable cache moves off local disk to a

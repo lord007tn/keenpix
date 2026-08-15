@@ -1,4 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  signTransformRequest,
+  verifyTransformSignature,
+} from '@/lib/transform-signing/signing'
+import { createOriginRequest } from '../../workers/custom-domain-edge/src/index'
 
 const resolveCustomDomainProject = vi.hoisted(() => vi.fn())
 const optimizeProjectImage = vi.hoisted(() => vi.fn())
@@ -80,6 +85,40 @@ describe('transform request routing', () => {
     expect(response.headers.get('x-keenpix-edge-project')).toBe('project_123')
     expect(optimizeProjectImage).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: 'project_123' }),
+    )
+  })
+
+  it('verifies the canonical managed URL after the Worker injects its project', async () => {
+    const secret = 'managed-signing-secret'
+    const signingParams = new URLSearchParams({
+      project: 'project_123',
+      w: '800',
+    })
+    const publicParams = new URLSearchParams({ w: '800' })
+    publicParams.set('sig', signTransformRequest(secret, source, signingParams))
+    const originRequest = createOriginRequest(
+      new Request(
+        `https://cdn.keenpix.com/p/project_123/img/${encodedSource}?${publicParams}`,
+      ),
+      {
+        APP_ORIGIN: 'https://keenpix.com',
+        EDGE_ANALYTICS: { writeDataPoint: vi.fn() },
+        EDGE_SECRET: 'edge-secret',
+        FIRST_PARTY_HOSTNAME: 'cdn.keenpix.com',
+      },
+    )
+
+    expect(
+      await handleTransformRequest(originRequest, encodedSource),
+    ).toHaveProperty('status', 200)
+    const input = optimizeProjectImage.mock.calls[0]?.[0]
+    if (!input) {
+      throw new Error('Expected the transform action to be called.')
+    }
+    expect(input.projectId).toBe('project_123')
+    expect(input.searchParams.get('project')).toBe('project_123')
+    expect(verifyTransformSignature(secret, source, input.searchParams)).toBe(
+      true,
     )
   })
 

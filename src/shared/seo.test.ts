@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  blogListingJsonLd,
   blogPostingJsonLd,
+  docsJsonLd,
   homePageJsonLd,
+  organizationJsonLd,
   pricingPageJsonLd,
   seo,
   softwareApplicationJsonLd,
@@ -23,6 +26,47 @@ describe('SEO entity graphs', () => {
       name: 'twitter:image:alt',
       content: 'Diagram showing the article-specific image delivery workflow',
     })
+  })
+
+  it('attributes cards to the founder without claiming a brand X account', () => {
+    const meta = seo({ title: 'Article title' })
+
+    expect(meta).toContainEqual({
+      name: 'twitter:creator',
+      content: '@raedbahriworld',
+    })
+    expect(meta).not.toContainEqual(
+      expect.objectContaining({ name: 'twitter:site' }),
+    )
+    expect(organizationJsonLd().sameAs).not.toContain(
+      'https://x.com/raedbahriworld',
+    )
+    expect(organizationJsonLd().founder.sameAs).toContain(
+      'https://x.com/raedbahriworld',
+    )
+  })
+
+  it('emits the matching Open Graph and JSON-LD language for Arabic posts', () => {
+    expect(seo({ title: 'مقال تقني', locale: 'ar_AR' })).toContainEqual({
+      property: 'og:locale',
+      content: 'ar_AR',
+    })
+
+    const [article] = blogPostingJsonLd({
+      author: 'Raed Bahri',
+      datePublished: '2026-08-15',
+      description: 'شرح تقني',
+      image: 'https://keenpix.com/og/blog/ar/article.png',
+      language: 'ar',
+      path: [],
+      title: 'مقال تقني',
+      url: 'https://keenpix.com/blog/ar/article',
+    })
+
+    expect(article.inLanguage).toBe('ar')
+    expect(blogListingJsonLd([], 'ar').url).toBe(
+      'http://localhost:3000/blog/ar',
+    )
   })
 
   it('publishes the real social-image MIME type after removing version queries', () => {
@@ -68,6 +112,25 @@ describe('SEO entity graphs', () => {
         publisher: { '@id': 'http://localhost:3000/#organization' },
       }),
     )
+  })
+
+  it('describes undated documentation as a WebPage instead of an Article', () => {
+    const [page] = docsJsonLd({
+      description: 'Configure a self-hosted Keenpix deployment.',
+      path: [],
+      title: 'Self-hosting',
+      url: 'https://keenpix.com/docs/self-hosting',
+    })
+
+    expect(page).toEqual(
+      expect.objectContaining({
+        '@type': 'WebPage',
+        name: 'Self-hosting',
+        url: 'https://keenpix.com/docs/self-hosting',
+      }),
+    )
+    expect(page).not.toHaveProperty('datePublished')
+    expect(page).not.toHaveProperty('headline')
   })
 
   it('reports the three monthly managed plans with a numeric count', () => {

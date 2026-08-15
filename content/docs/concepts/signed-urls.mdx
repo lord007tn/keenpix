@@ -1,6 +1,6 @@
 ---
 title: Signed URLs
-description: Optional HMAC signatures on transform URLs — hotlink and cache-busting protection on top of the allowlist.
+description: Optional HMAC signatures that prevent transform-query tampering and cache-busting on top of the allowlist.
 icon: KeyRound
 ---
 
@@ -16,8 +16,9 @@ becomes impossible.
 
 <Callout>
 Signing is opt-in per project. If your images are on your own site behind your own CDN, the
-allowlist alone is usually enough — turn signing on when you serve valuable/high-traffic assets or
-have seen abusive traffic. Signing works identically on self-host and cloud.
+allowlist alone is usually enough. Turn signing on when third parties can manufacture expensive
+variants or cache misses. A valid signed URL can still be copied and replayed from another site.
+Signing works identically on self-host and cloud.
 </Callout>
 
 ## Enable it
@@ -35,7 +36,7 @@ The signature is **HMAC-SHA256, base64url-encoded (no padding)**, over this cano
 <source-url> + "\n" + <sorted-query>
 ```
 
-- `<source-url>` is the raw source URL exactly as it appears in the path after `/img/`.
+- `<source-url>` is the original decoded source URL. Encode it when inserting it in the request path.
 - `<sorted-query>` is every query parameter **except `sig`** as `key=value` pairs, sorted
   lexicographically, joined with `&`. Sorting makes the signature independent of parameter order.
 
@@ -47,36 +48,75 @@ Append the digest as `sig=<signature>`.
 import { createHmac } from 'node:crypto'
 
 function signKeenpixUrl(
-  base: string, // e.g. https://keenpix.com
-  secret: string, // Settings → Security → Signed URLs
-  src: string, // https://cdn.example.com/photo.jpg
-  params: Record<string, string>, // { project: 'p_123', w: '800', fmt: 'webp' }
+  base: string,
+  delivery: 'self-host' | 'managed' | 'custom-domain',
+  projectId: string | undefined,
+  secret: string,
+  src: string,
+  params: URLSearchParams,
 ) {
-  const sorted = Object.entries(params)
+  const publicQuery = new URLSearchParams(params)
+  publicQuery.delete('project')
+  publicQuery.delete('sig')
+  const signedQuery = new URLSearchParams(publicQuery)
+
+  if (delivery !== 'custom-domain') {
+    if (!projectId) throw new Error('projectId is required')
+    signedQuery.set('project', projectId)
+    if (delivery === 'self-host') publicQuery.set('project', projectId)
+  }
+
+  const sorted = [...signedQuery.entries()]
     .map(([key, value]) => `${key}=${value}`)
     .sort()
     .join('&')
   const signature = createHmac('sha256', secret)
     .update(`${src}\n${sorted}`)
     .digest('base64url')
-  const query = new URLSearchParams({ ...params, sig: signature })
-  return `${base}/img/${src}?${query}`
+  publicQuery.set('sig', signature)
+  let prefix = base
+  if (delivery === 'managed') {
+    if (!projectId) throw new Error('projectId is required')
+    prefix = `${base}/p/${encodeURIComponent(projectId)}`
+  }
+  return `${prefix}/img/${encodeURIComponent(src)}?${publicQuery}`
 }
 ```
 
 Sign on your server (or at build time) — the secret must never ship to the browser.
 
+Call the helper with the URL shape you actually serve:
+
+```ts
+signKeenpixUrl('https://images.example.com', 'self-host', 'project_123', secret, src, params)
+signKeenpixUrl('https://cdn.keenpix.com', 'managed', 'project_123', secret, src, params)
+signKeenpixUrl('https://images.customer.com', 'custom-domain', undefined, secret, src, params)
+```
+
+The managed result is public as `/p/project_123/img/...` without `?project=`. Its edge Worker
+injects the path project into the query before origin verification, so the signing copy must still
+contain `project=project_123`. A custom hostname identifies its project separately and Keenpix
+removes any `project` query before verification, so do not include one in that signature.
+
 ## Rotating the secret
 
-**Settings → Security → Signed URLs → Rotate** generates a new secret and immediately invalidates
-every URL signed with the old one. Rotate if the secret leaks, then redeploy your URL generation
-with the new value. Turning signing off keeps the secret stored, so re-enabling doesn't break
-existing signed integrations.
+**Settings → Security → Signed URLs → Rotate** generates a new secret. Keenpix rejects the old
+secret as soon as the request reaches the origin. An outer CDN or browser can still serve an
+immutable response it already cached without revalidating the signature. Rotate if the secret
+leaks, redeploy URL generation, and purge signed URLs from outer caches. Browser caches may retain
+already-downloaded responses. Turning signing off keeps the secret stored, so re-enabling does not
+break existing signed integrations.
 
 ## Notes
 
-- The `project` parameter is part of the signed message — a signature is only valid for the exact
-  project, source URL, and transform combination it was computed for.
-- Cached variants are unaffected: signing gates the request, not the cache key, so the same
-  transform signed twice serves from cache.
+- Self-hosted URLs carry `project` publicly. Managed first-party URLs carry it in `/p/<project>`
+  and sign a query copy containing that same id. Custom-domain signatures omit `project` because
+  the verified hostname selects the project before signature checking.
+- Keenpix verifies the signature before reading its internal transform cache. `sig` is not part of
+  that internal key, so valid requests for the same transform can share a cached variant.
+- An outer CDN normally keys on the full URL, including `sig`. Never exclude `sig` from an edge
+  cache key unless the edge verifies it before cache lookup.
+- Signatures have no built-in expiration and do not prevent replay of an existing valid URL.
+- Signing is not source authentication, image confidentiality, referrer enforcement, or a domain
+  restriction.
 - SDK prewarm requests are authenticated with an API key and don't need signatures.

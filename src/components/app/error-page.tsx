@@ -8,7 +8,6 @@ import type { ReactNode } from 'react'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { ModeToggle } from '@/components/theme/mode-toggle'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { signOut } from '@/lib/auth/client'
 
 // Full-chrome shell for standalone (public) error pages: brand mark, theme
 // toggle, and centered messaging. App-shell error states render chrome-less
@@ -135,6 +134,9 @@ export function RouteError({ error }: ErrorComponentProps) {
 
   async function signOutAndRecover() {
     try {
+      // Authentication and Polar plugins are needed only after this private
+      // recovery action is chosen. Keep them out of the public error bundle.
+      const { signOut } = await import('@/lib/auth/client')
       await signOut()
     } finally {
       window.location.assign('/login')

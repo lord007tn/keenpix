@@ -27,4 +27,31 @@ describe('createSitemapXml', () => {
       '<loc>https://keenpix.com/search?q=avif&amp;format=webp</loc>',
     )
   })
+
+  it('emits escaped reciprocal language alternates', () => {
+    const sitemap = createSitemapXml([
+      {
+        alternates: [
+          { hreflang: 'en', url: 'https://keenpix.com/blog/cache?a=1&b=2' },
+          { hreflang: 'ar', url: 'https://keenpix.com/blog/ar/cache' },
+          {
+            hreflang: 'x-default',
+            url: 'https://keenpix.com/blog/cache',
+          },
+        ],
+        url: 'https://keenpix.com/blog/cache',
+      },
+    ])
+
+    expect(sitemap).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"')
+    expect(sitemap).toContain(
+      '<xhtml:link rel="alternate" hreflang="en" href="https://keenpix.com/blog/cache?a=1&amp;b=2" />',
+    )
+    expect(sitemap).toContain(
+      '<xhtml:link rel="alternate" hreflang="ar" href="https://keenpix.com/blog/ar/cache" />',
+    )
+    expect(sitemap).toContain(
+      '<xhtml:link rel="alternate" hreflang="x-default" href="https://keenpix.com/blog/cache" />',
+    )
+  })
 })

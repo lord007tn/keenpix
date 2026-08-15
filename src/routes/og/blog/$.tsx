@@ -1,3 +1,4 @@
+import arabicFontDataUrl from '@fontsource-variable/noto-sans-arabic/files/noto-sans-arabic-arabic-wght-normal.woff2?inline'
 import ImageResponse from '@takumi-rs/image-response'
 import { createFileRoute } from '@tanstack/react-router'
 import { blogSource } from '@/shared/blog-source'
@@ -26,8 +27,13 @@ export const Route = createFileRoute('/og/blog/$')({
         const slugs = path.split('/').filter(Boolean)
         const page = blogSource.getPage(slugs)
 
-        if (!page) {
+        if (!page || page.data.draft) {
           return new Response('Not found', { status: 404 })
+        }
+        const arabic = page.data.language === 'ar'
+        let blogLabel = arabic ? 'مدونة Keenpix' : 'Keenpix Blog'
+        if (page.data.competitor) {
+          blogLabel = `Keenpix vs ${page.data.competitor}`
         }
 
         let visualKind = 'pipeline'
@@ -52,6 +58,7 @@ export const Route = createFileRoute('/og/blog/$')({
               background: '#07111f',
               color: '#f8fafc',
               display: 'flex',
+              fontFamily: arabic ? 'Noto Sans Arabic' : undefined,
               height: '100%',
               justifyContent: 'center',
               padding: 72,
@@ -103,9 +110,7 @@ export const Route = createFileRoute('/og/blog/$')({
                 >
                   <div style={{ fontSize: 32, fontWeight: 700 }}>keenpix</div>
                   <div style={{ color: '#67e8f9', fontSize: 22 }}>
-                    {page.data.competitor
-                      ? `Keenpix vs ${page.data.competitor}`
-                      : 'Keenpix Blog'}
+                    {blogLabel}
                   </div>
                 </div>
               </div>
@@ -118,10 +123,12 @@ export const Route = createFileRoute('/og/blog/$')({
               >
                 <div
                   style={{
+                    direction: arabic ? 'rtl' : 'ltr',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 18,
                     maxWidth: 720,
+                    textAlign: arabic ? 'right' : 'left',
                   }}
                 >
                   <div
@@ -315,6 +322,19 @@ export const Route = createFileRoute('/og/blog/$')({
             // PNG, not WebP: several link unfurlers (LinkedIn, some Slack/Discord
             // scrapers) reject WebP og:image and show no preview.
             format: 'png',
+            fonts: arabic
+              ? [
+                  {
+                    data: () =>
+                      fetch(arabicFontDataUrl).then((response) =>
+                        response.arrayBuffer(),
+                      ),
+                    key: 'noto-sans-arabic-variable',
+                    name: 'Noto Sans Arabic',
+                    style: 'normal',
+                  },
+                ]
+              : undefined,
             headers: {
               'cache-control': 'public, immutable, max-age=31536000',
             },

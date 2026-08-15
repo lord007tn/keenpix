@@ -4,7 +4,7 @@ import { CodeBlock } from '@/components/app/code-block'
 import { buttonVariants } from '@/components/ui/button'
 import { SiteFooter, SiteHeader } from '@/features/blog/blog-chrome'
 
-// Rendered visibly in the FAQ section AND emitted as FAQPage JSON-LD by the
+// Rendered visibly in the FAQ section by the
 // /self-hosted-image-cdn route (Google requires the answers to be on the page).
 export const SELF_HOSTED_FAQ: Array<{ answer: string; question: string }> = [
   {
@@ -260,13 +260,29 @@ export function SelfHostedLandingPage({
             </p>
             <div className="mt-6 overflow-x-auto">
               <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+                <caption className="sr-only">
+                  Self-hosted image optimization feature comparison
+                </caption>
                 <thead>
                   <tr className="border-b">
-                    <th className="py-3 pr-4 font-medium text-muted-foreground" />
-                    <th className="py-3 pr-4 font-semibold">Keenpix</th>
-                    <th className="py-3 pr-4 font-semibold">imgproxy (OSS)</th>
-                    <th className="py-3 pr-4 font-semibold">Thumbor</th>
-                    <th className="py-3 font-semibold">ipx</th>
+                    <th
+                      className="py-3 pr-4 font-medium text-muted-foreground"
+                      scope="col"
+                    >
+                      <span className="sr-only">Feature</span>
+                    </th>
+                    <th className="py-3 pr-4 font-semibold" scope="col">
+                      Keenpix
+                    </th>
+                    <th className="py-3 pr-4 font-semibold" scope="col">
+                      imgproxy (OSS)
+                    </th>
+                    <th className="py-3 pr-4 font-semibold" scope="col">
+                      Thumbor
+                    </th>
+                    <th className="py-3 font-semibold" scope="col">
+                      ipx
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

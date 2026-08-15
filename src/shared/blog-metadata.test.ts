@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { globSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
@@ -10,6 +10,8 @@ const IMAGE_ALT = /^imageAlt:\s*(.+)$/m
 const COVER = /^cover:\s*(.+)$/m
 const COVER_ALT = /^coverAlt:\s*(.+)$/m
 const OG_IMAGE = /^ogImage:\s*(.+)$/m
+const LANGUAGE = /^language:\s*(.+)$/m
+const TRANSLATION_KEY = /^translationKey:\s*(.+)$/m
 const LEADING_SLASH = /^\//
 const QUERY_STRING = /\?.*$/
 const SURROUNDING_QUOTES = /^['"]|['"]$/g
@@ -19,9 +21,7 @@ describe('blog search metadata', () => {
   it('keeps every published title and description within snippet limits', () => {
     const directory = join(process.cwd(), 'content', 'blog')
 
-    for (const file of readdirSync(directory).filter((name) =>
-      name.endsWith('.mdx'),
-    )) {
+    for (const file of globSync('**/*.mdx', { cwd: directory })) {
       const content = readFileSync(join(directory, file), 'utf8')
       const title = content
         .match(TITLE)?.[1]
@@ -36,7 +36,7 @@ describe('blog search metadata', () => {
       const cover = content.match(COVER)?.[1]?.trim()
       const coverAlt = content.match(COVER_ALT)?.[1]?.trim()
       const ogImage = content.match(OG_IMAGE)?.[1]?.trim()
-      const slug = file.replace(MDX_EXTENSION, '')
+      const slug = file.replace(MDX_EXTENSION, '').replaceAll('\\', '/')
 
       expect(title, `${file} must have a title`).toBeTruthy()
       expect(description, `${file} must have a description`).toBeTruthy()
@@ -68,9 +68,7 @@ describe('blog search metadata', () => {
   it('keeps authored editorial assets optimized and correctly sized', async () => {
     const directory = join(process.cwd(), 'content', 'blog')
 
-    for (const file of readdirSync(directory).filter((name) =>
-      name.endsWith('.mdx'),
-    )) {
+    for (const file of globSync('**/*.mdx', { cwd: directory })) {
       const content = readFileSync(join(directory, file), 'utf8')
       const cover = content.match(COVER)?.[1]?.trim()
       const ogImage = content.match(OG_IMAGE)?.[1]?.trim()
@@ -104,6 +102,33 @@ describe('blog search metadata', () => {
       expect(statSync(ogImagePath).size, `${file} social size`).toBeLessThan(
         180_000,
       )
+    }
+  })
+
+  it('keeps translated posts reciprocal in English and Arabic', () => {
+    const directory = join(process.cwd(), 'content', 'blog')
+    const translations = new Map<string, string[]>()
+
+    for (const file of globSync('**/*.mdx', { cwd: directory })) {
+      const content = readFileSync(join(directory, file), 'utf8')
+      const translationKey = content.match(TRANSLATION_KEY)?.[1]?.trim()
+      const language = content.match(LANGUAGE)?.[1]?.trim() ?? 'en'
+      if (language === 'ar') {
+        expect(
+          translationKey,
+          `${file} must identify its English translation`,
+        ).toBeTruthy()
+      }
+      if (!translationKey) {
+        continue
+      }
+      const languages = translations.get(translationKey) ?? []
+      languages.push(language)
+      translations.set(translationKey, languages)
+    }
+
+    for (const [translationKey, languages] of translations) {
+      expect(languages.sort(), translationKey).toEqual(['ar', 'en'])
     }
   })
 })

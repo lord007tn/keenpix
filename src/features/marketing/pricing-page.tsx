@@ -13,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -44,7 +45,7 @@ function formatUsd(cents: number): string {
   return (cents / 100).toFixed(2).replace(TRAILING_ZEROS, '')
 }
 
-// Pricing-specific FAQ, rendered visibly AND emitted as FAQPage JSON-LD by the
+// Pricing-specific FAQ, rendered visibly by the
 // route. Every number derives from the plans catalog so it can't drift.
 export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
   {
@@ -59,12 +60,7 @@ export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'What happens when I use more than my included delivery?',
     answer:
-      'Delivery keeps working and additional gigabytes are billed at the rate shown for the plan you subscribed to. Founding customers retain $0.08/$0.06/$0.05 per GB on Basic/Pro/Business; standard pricing is $0.12/$0.09/$0.07. Polar charges accumulated usage at the end of the billing period.',
-  },
-  {
-    question: 'Who qualifies for founding pricing?',
-    answer:
-      'The first 25 organizations whose Polar subscription becomes actively paid qualify. A free trial does not claim a spot, complimentary access granted by an administrator never claims one, and each paying organization can claim only one. The remaining count shown on this page comes from that paid-customer ledger.',
+      'Delivery keeps working and additional gigabytes are billed at the rate shown for the plan you subscribed to: $0.12/$0.09/$0.07 per GB on Basic/Pro/Business. Polar charges accumulated usage at the end of the billing period.',
   },
   {
     question: 'Can overage take my images offline?',
@@ -176,7 +172,7 @@ const MATRIX: Array<{
 ]
 
 export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
-  const prices = pricing ?? catalogPricing()
+  const prices = pricing ?? catalogPricing('standard')
   const matrix = MATRIX.map((row) =>
     row.feature === 'Overage per GB'
       ? {
@@ -293,13 +289,18 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
             </p>
             <div className="mt-8 overflow-x-auto">
               <Table className="min-w-[720px]">
+                <TableCaption className="sr-only">
+                  Keenpix self-hosted and managed cloud plan comparison
+                </TableCaption>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-56" />
-                    <TableHead>Self-host (free)</TableHead>
-                    <TableHead>Basic</TableHead>
-                    <TableHead>Pro</TableHead>
-                    <TableHead>Business</TableHead>
+                    <TableHead className="w-56" scope="col">
+                      <span className="sr-only">Plan feature</span>
+                    </TableHead>
+                    <TableHead scope="col">Self-host (free)</TableHead>
+                    <TableHead scope="col">Basic</TableHead>
+                    <TableHead scope="col">Pro</TableHead>
+                    <TableHead scope="col">Business</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

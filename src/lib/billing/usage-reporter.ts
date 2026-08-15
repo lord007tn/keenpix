@@ -1,3 +1,5 @@
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import {
   deliveredBytesSince,
   listTrialingOrgIds,
@@ -9,6 +11,8 @@ import { env } from '@/env/server'
 import { errorContext, logger } from '@/lib/logger/logger'
 import { isCloud } from '@/server/deployment'
 
+dayjs.extend(utc)
+
 // Namespaced Postgres advisory-lock key (classid, objid) for the usage-metering
 // job, so at most ONE replica reports a window at a time even if the hourly cron
 // fans out or overlaps — otherwise the same window could be metered to Polar
@@ -17,6 +21,8 @@ const USAGE_LOCK_CLASS = 0x6b_70 // "kp"
 const USAGE_LOCK_OBJ = 1 // usage-report
 
 const GB = 1024 ** 3
+const MAX_WINDOWS_PER_ORG = 24
+const POLAR_TIMEOUT_MS = 15_000
 const POLAR_API = {
   sandbox: 'https://sandbox-api.polar.sh',
   production: 'https://api.polar.sh',
@@ -39,6 +45,7 @@ interface UsageEvent {
 async function ingestEvent(base: string, event: UsageEvent): Promise<void> {
   const res = await fetch(`${base}/v1/events/ingest`, {
     method: 'POST',
+    signal: AbortSignal.timeout(POLAR_TIMEOUT_MS),
     headers: {
       Authorization: `Bearer ${env.POLAR_TOKEN}`,
       'content-type': 'application/json',
@@ -46,10 +53,7 @@ async function ingestEvent(base: string, event: UsageEvent): Promise<void> {
     body: JSON.stringify({ events: [event] }),
   })
   if (!res.ok) {
-    const detail = await res.text().catch(() => '')
-    throw new Error(
-      `Polar usage ingest failed: ${res.status} ${detail.slice(0, 300)}`,
-    )
+    throw new Error(`Polar usage ingest failed (${res.status})`)
   }
 }
 
@@ -58,8 +62,9 @@ async function ingestEvent(base: string, event: UsageEvent): Promise<void> {
 // ingest. If every write shared one transaction, a later org's failure (or a
 // transaction timeout) would roll back watermarks whose external ingests already
 // succeeded — and the next run would meter those windows to Polar a second time.
-async function runReport(): Promise<UsageReportResult> {
+async function runReport(latestThroughDate: Date): Promise<UsageReportResult> {
   const base = POLAR_API[env.POLAR_SERVER ?? 'sandbox']
+  const latestThrough = dayjs.utc(latestThroughDate)
   const customers = await listUsageBillingCustomers()
   // Trial usage is free: skip the Polar ingest but still advance the watermark,
   // so a converted org is billed from conversion — never for its trial window.
@@ -68,24 +73,42 @@ async function runReport(): Promise<UsageReportResult> {
   let failed = 0
   for (const customer of customers) {
     try {
-      const { bytes, through } = await deliveredBytesSince(
-        customer.orgId,
-        customer.lastUsageReportAt,
-      )
-      if (bytes > 0 && !trialing.has(customer.orgId)) {
-        await ingestEvent(base, {
-          name: 'bandwidth_delivered',
-          customer_id: customer.polarCustomerId,
-          // Polar deduplicates events by external_id. Keep this stable for the
-          // org + closed usage window so a successful ingest followed by a
-          // failed watermark write cannot double-bill that same window.
-          external_id: `keenpix:bandwidth:${customer.orgId}:${through.toISOString()}`,
-          metadata: { gb: bytes / GB, org_id: customer.orgId },
-        })
-        ingested += 1
+      if (!customer.lastUsageReportAt) {
+        // Provider-linked rows are created with a watermark. A legacy/null row
+        // has no safe lower bound, so consume its history without billing rather
+        // than risk charging all-time usage on a changing retry window.
+        await markUsageReported(customer.orgId, latestThrough.toDate())
+        continue
       }
-      // Committed durably right here — a later org's failure can't unwind it.
-      await markUsageReported(customer.orgId, through)
+      let since = dayjs.utc(customer.lastUsageReportAt)
+      let windows = 0
+      while (since.isBefore(latestThrough) && windows < MAX_WINDOWS_PER_ORG) {
+        const through = since.startOf('hour').add(1, 'hour')
+        if (through.isAfter(latestThrough)) {
+          break
+        }
+        const delivered = await deliveredBytesSince(
+          customer.orgId,
+          since.toDate(),
+          through.toDate(),
+        )
+        if (delivered.bytes > 0 && !trialing.has(customer.orgId)) {
+          await ingestEvent(base, {
+            name: 'bandwidth_delivered',
+            customer_id: customer.polarCustomerId,
+            // Each event covers one immutable UTC-hour window. A successful
+            // ingest followed by a failed watermark write retries this exact id
+            // and quantity even when the retry runs in a later hour.
+            external_id: `keenpix:bandwidth:${customer.orgId}:${since.toISOString()}:${through.toISOString()}`,
+            metadata: { gb: delivered.bytes / GB, org_id: customer.orgId },
+          })
+          ingested += 1
+        }
+        // Committed per window. Later failures never unwind prior watermarks.
+        await markUsageReported(customer.orgId, through.toDate())
+        since = through
+        windows += 1
+      }
     } catch (error) {
       // This org's watermark did not advance, so its window is retried next run
       // exactly once; keep going so one broken customer never stalls the rest.
@@ -109,7 +132,9 @@ let inFlight: Promise<UsageReportResult> | null = null
 // per-org only after that org's successful ingest, so a failed or skipped run
 // re-reports just the un-advanced windows next time. A no-op in self-host or when
 // Polar isn't configured.
-export function reportUsage(): Promise<UsageReportResult> {
+export function reportUsage(
+  settlementThrough = getUsageSettlementThrough(),
+): Promise<UsageReportResult> {
   if (!(isCloud() && env.POLAR_TOKEN)) {
     return Promise.resolve({ failed: 0, ingested: 0, orgs: 0, skipped: true })
   }
@@ -130,7 +155,7 @@ export function reportUsage(): Promise<UsageReportResult> {
         if (!locks[0]?.locked) {
           return { failed: 0, ingested: 0, orgs: 0, skipped: true }
         }
-        return runReport()
+        return runReport(settlementThrough)
       },
       // Generous ceiling: the mutex must outlive the full run (many customers x
       // slow Polar). If it still expires, committed watermarks are unaffected —
@@ -141,4 +166,11 @@ export function reportUsage(): Promise<UsageReportResult> {
       inFlight = null
     })
   return inFlight
+}
+
+// Leave one complete UTC hour for durable analytics batches and Cloudflare
+// Analytics Engine ingestion to settle. Polar event ids are immutable per hour,
+// so the billing route uses this exact cutoff for both outbox drain and metering.
+export function getUsageSettlementThrough() {
+  return dayjs.utc().startOf('hour').subtract(1, 'hour').toDate()
 }

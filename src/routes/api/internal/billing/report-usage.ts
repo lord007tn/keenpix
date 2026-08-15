@@ -1,12 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { captureEdgeHistory } from '@/actions/analytics/edge-history'
+import { verifyUsageCaptureCoverage } from '@/actions/billing/verify-usage-coverage'
 import { env } from '@/env/server'
+import { flushDurableRequestLogs } from '@/lib/analytics-buffer/buffer'
 import { sendUsageAlerts } from '@/lib/billing/alerts'
 import {
   pruneLogRetention,
   shouldRunRetention,
 } from '@/lib/billing/log-retention'
-import { reportUsage } from '@/lib/billing/usage-reporter'
+import {
+  getUsageSettlementThrough,
+  reportUsage,
+} from '@/lib/billing/usage-reporter'
 import { errorContext, logger } from '@/lib/logger/logger'
 
 // Machine-triggered usage-metering job. A scheduler (e.g. Coolify cron) POSTs
@@ -28,7 +33,24 @@ export async function handleReportUsage(request: Request): Promise<Response> {
     // complete-hour rollups; if capture fails, do not advance billing
     // watermarks with an incomplete total. The next run safely retries.
     const edgeHistory = await captureEdgeHistory()
-    const result = await reportUsage()
+    if (!edgeHistory.configured) {
+      throw new Error(
+        'Cloudflare edge capture is required before managed usage metering.',
+      )
+    }
+    const settlementThrough = getUsageSettlementThrough()
+    if (!edgeHistory.projectCoverage) {
+      throw new Error('Cloudflare project-edge coverage is unavailable.')
+    }
+    await verifyUsageCaptureCoverage({
+      ...edgeHistory.projectCoverage,
+      through: settlementThrough,
+    })
+    await flushDurableRequestLogs({
+      requireComplete: true,
+      through: settlementThrough,
+    })
+    const result = await reportUsage(settlementThrough)
     // Alerting must never fail the metering job: metering is billing-critical,
     // the emails are advisory.
     const alertsPromise = sendUsageAlerts().catch((error) => {
@@ -46,7 +68,10 @@ export async function handleReportUsage(request: Request): Promise<Response> {
       alertsPromise,
       retentionPromise,
     ])
-    return Response.json({ ...result, alerts, edgeHistory, retention })
+    return Response.json(
+      { ...result, alerts, edgeHistory, retention },
+      { status: result.failed > 0 ? 502 : 200 },
+    )
   } catch (error) {
     logger.error(errorContext(error), 'usage report job failed')
     return new Response('Usage report failed', { status: 500 })

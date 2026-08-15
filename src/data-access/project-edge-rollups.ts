@@ -21,13 +21,23 @@ export async function upsertProjectEdgeRollups(
   if (groups.length === 0) {
     return 0
   }
-  const projects = await prisma.project.findMany({
-    where: { id: { in: [...new Set(groups.map((group) => group.projectId))] } },
-    select: { id: true, orgId: true },
-  })
+  const projectIds = [...new Set(groups.map((group) => group.projectId))]
+  const [projects, deletedProjects] = await Promise.all([
+    prisma.project.findMany({
+      where: { id: { in: projectIds } },
+      select: { id: true, orgId: true },
+    }),
+    prisma.projectBillingAttribution.findMany({
+      where: { projectId: { in: projectIds } },
+      select: { projectId: true, orgId: true },
+    }),
+  ])
   const orgByProject = new Map(
-    projects.map((project) => [project.id, project.orgId]),
+    deletedProjects.map((project) => [project.projectId, project.orgId]),
   )
+  for (const project of projects) {
+    orgByProject.set(project.id, project.orgId)
+  }
   const attributed = groups.filter((group) => orgByProject.has(group.projectId))
   if (attributed.length === 0) {
     return 0

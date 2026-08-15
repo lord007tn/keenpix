@@ -1,43 +1,45 @@
 ---
-title: Self-Hosted vs Managed Image Optimization | Keenpix
-description: Choose self-hosted or managed image optimization with a practical framework for cost, control, compliance, maintenance, and scaling your image stack.
+title: "Self-hosted vs managed image optimization: how to choose"
+description: Compare who owns the database, cache, delivery bill, upgrades, monitoring, and failure recovery in self-hosted and managed image optimization.
 date: "2026-06-24"
-updated: "2026-07-11"
+updated: "2026-08-15"
 author: Raed Bahri
 tags: [self-hosting, architecture, image-cdn]
-image: /og/blog/self-host-vs-managed-image-optimization.png?v=2026-07-11
+image: /og/blog/self-host-vs-managed-image-optimization.png?v=2026-08-15
 imageAlt: One image pipeline branching into self-hosted and managed cloud paths
 ---
 
-One of the nice things about Keenpix is that you do not have to choose between self-hosted and managed permanently — it is the same engine either way. But you do have to start somewhere, so here is a practical framework for deciding.
+The self-hosted and managed editions use the same transform grammar, but they are not the same operational decision. One puts Postgres, cache capacity, updates, and incidents on your team. The other puts the service boundary and delivery bill with Keenpix.
 
-## Choose self-host when…
+Start by deciding which team will own failures in the image path. Cost makes more sense after that responsibility is clear.
 
-- **You want zero per-GB cost.** The open-source engine is free under AGPL. You pay only for the infrastructure you already run.
-- **You have compliance or data-residency requirements.** Keeping the image pipeline inside your own VPC or region is straightforward when you own the deployment.
-- **You already operate infrastructure.** If you run Docker or a platform like Coolify, adding Keenpix (app + Postgres + cache) is a small lift.
-- **You want full control.** Put any edge cache in front of `/img/*`, tune limits, and own the whole path.
+## Self-hosting fits an infrastructure team
 
-The trade-off is operational: you run the database, the cache, and the upgrades.
+Run Keenpix yourself when your team needs to control where the application and database run, or modify the AGPL-3.0 code. Self-hosting alone does not guarantee residency or compliance: source requests, CDN traffic, email, backups, and logs may still leave the selected network or region. Document those paths separately. This model makes sense when Docker, PostgreSQL backups, TLS, monitoring, and capacity planning are already routine work.
 
-## Choose managed cloud when…
+There is no managed delivery charge in this model. There is still infrastructure cost. Cold transforms consume CPU, the disk cache needs space, Postgres needs backups, and the public endpoint needs abuse controls. Horizontal replicas also need an outer CDN because their local disk caches are separate; bundled self-host mode does not currently provide a shared object-storage cache.
 
-- **You want it working in minutes.** Point Keenpix at your origin, keep your URLs, done.
-- **You would rather not run Postgres and a cache tier.** We handle scaling, the shared edge cache, and maintenance.
-- **You want built-in analytics and logs** without standing up another vendor.
-- **Predictable, transparent pricing beats zero-but-operational.** Plans start at $9/mo for 100 GB delivered, transforms are free, and paid overage uses one published linear rate without interrupting delivery.
+The [Docker deployment guide](/blog/self-host-image-cdn-docker) covers a pinned release, health checks, cache boundaries, and the first database dump. Read it before estimating the operating cost from the container count alone.
 
-## You can move between them
+## Managed cloud fits a product team
 
-Because the managed cloud and the self-host build share one engine and one URL scheme, you are never locked in. Start on managed cloud to move fast, and migrate to self-host later for cost or compliance — without rewriting your image URLs. Or start self-hosted and hand the operational load to us when you would rather focus elsewhere.
+Use the managed service when the team wants to create projects and deliver images without operating the database and transform workers. This removes a deployment from your on-call list, but it introduces a provider dependency and a bandwidth bill.
 
-## The short version
+Check the current [pricing page](/pricing) against the successful bytes you expect the managed network to deliver. Cloudflare edge hits, Keenpix cache hits, and new transforms each count once; browser hits and customer-owned CDN hits do not reach the managed network. Include expected growth and any regions or origins that need special handling. Do not compare a cloud plan only with the price of one self-hosted VM. Include backups, monitoring, upgrades, and the time spent responding to failures on that VM.
 
-If cost-at-zero and control matter most and you are comfortable operating a small stack, **self-host**. If speed-to-value and predictable pricing matter most, **managed cloud**. Either way you get the same fast, secure, modern-format image pipeline — and the freedom to change your mind.
+## Moving later is possible, but plan the details
 
-Ready? [Get started on managed cloud](/login) or [read the self-hosting guide](/docs/self-hosting).
+Both editions understand the same core path and query parameters. A migration can still change the hostname, project identifier, signing secret, cache behavior, and DNS. Put the delivery hostname behind a configuration value from the beginning, and avoid scattering complete transform URLs through stored content.
+
+Test signed URLs and cache keys before switching traffic. A matching `?w=1200&fmt=webp` query does not prove that both deployments share the same project policy or signature.
+
+## A practical decision
+
+Choose self-hosting when infrastructure control is a requirement and the team already owns the work it creates. Choose managed cloud when the image pipeline is supporting infrastructure that the product team does not want to operate.
+
+If the answer is still unclear, run the same source set through both for a week. Measure delivered bytes, cold-transform latency, cache hits, operator time, and failure recovery. That record is more useful than a generic cost calculator.
 
 ## Keep reading
 
-- [How the Keenpix managed-delivery meter works](/blog/transparent-image-cdn-pricing) — including its cache boundary.
-- [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary), [imgix](/blog/keenpix-vs-imgix), and [ImageKit](/blog/keenpix-vs-imagekit) — how the managed option compares.
+- [How the Keenpix managed-delivery meter works](/blog/transparent-image-cdn-pricing), including its cache boundary.
+- [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary), [imgix](/blog/keenpix-vs-imgix), and [ImageKit](/blog/keenpix-vs-imagekit) compare the managed option.

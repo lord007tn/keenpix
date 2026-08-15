@@ -12,6 +12,7 @@ export async function sendResendMail(input: MailInput): Promise<void> {
   }
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
+    signal: AbortSignal.timeout(15_000),
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
@@ -25,9 +26,8 @@ export async function sendResendMail(input: MailInput): Promise<void> {
     }),
   })
   if (!res.ok) {
-    const detail = await res.text().catch(() => '')
-    throw new Error(
-      `Resend send failed (${res.status}): ${detail.slice(0, 300)}`,
-    )
+    // Provider bodies can echo recipient addresses. Keep PII out of logs while
+    // retaining the HTTP status operators need to investigate in Resend.
+    throw new Error(`Resend send failed (${res.status})`)
   }
 }

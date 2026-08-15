@@ -3,11 +3,13 @@ import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { STANDARD_PLAN_PRICES } from '@/lib/billing/plans'
 
 const PROVIDERS = [
   {
@@ -15,9 +17,9 @@ const PROVIDERS = [
     href: '/pricing',
     featured: true,
     values: [
-      '$9',
+      `$${STANDARD_PLAN_PRICES.basic.priceMonthlyUsd}`,
       '100 GB',
-      '$0.08 / GB',
+      `$${(STANDARD_PLAN_PRICES.basic.overagePerGbCents / 100).toFixed(2)} / GB`,
       'Unlimited',
       'Unlimited',
       'Included',
@@ -90,6 +92,9 @@ export function PricingComparison() {
         <div className="mt-3 overflow-hidden rounded-xl border bg-card shadow-sm sm:mt-10">
           <div className="overflow-x-auto">
             <Table className="min-w-[880px]">
+              <TableCaption className="sr-only">
+                Published image optimization plan comparison
+              </TableCaption>
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40">
                   <TableHead className="w-52">Published plan</TableHead>
@@ -162,6 +167,12 @@ export function PricingComparison() {
           its CDN separately. Taxes, annual discounts, enterprise contracts, and
           regional CDN charges are excluded.
         </p>
+        <a
+          className="mt-4 inline-flex font-medium text-primary text-sm underline-offset-4 hover:underline"
+          href="/blog/best-image-cdns-2026"
+        >
+          Read the full 10-provider image CDN comparison
+        </a>
       </div>
     </section>
   )

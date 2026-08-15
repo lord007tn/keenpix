@@ -19,19 +19,59 @@ export const Route = createFileRoute('/sitemap.xml')({
         // entries carry a real <lastmod> from their frontmatter date (already a
         // YYYY-MM-DD W3C datetime, so no timezone-shifting reformatting needed).
         const origin = getAppUrl()
+        const publishedBlogPages = blogSource
+          .getPages()
+          .filter((page) => !page.data.draft)
         const entries = [
-          ...SITEMAP_STATIC_PATHS.map((url) => ({ url: `${origin}${url}` })),
+          ...SITEMAP_STATIC_PATHS.map((url) => ({
+            ...(url === '/blog' || url === '/blog/ar'
+              ? {
+                  alternates: [
+                    { hreflang: 'en', url: `${origin}/blog` },
+                    { hreflang: 'ar', url: `${origin}/blog/ar` },
+                    { hreflang: 'x-default', url: `${origin}/blog` },
+                  ],
+                }
+              : {}),
+            url: `${origin}${url}`,
+          })),
           ...source.getPages().map((page) => ({
             url: `${origin}${page.url}`,
             lastmod: page.data.updated,
           })),
-          ...blogSource
-            .getPages()
-            .filter((page) => !page.data.draft)
-            .map((page) => ({
+          ...publishedBlogPages.map((page) => {
+            const translation = page.data.translationKey
+              ? publishedBlogPages.find(
+                  (candidate) =>
+                    candidate.data.translationKey ===
+                      page.data.translationKey &&
+                    candidate.data.language !== page.data.language,
+                )
+              : undefined
+            const englishPage = page.data.language === 'en' ? page : translation
+            return {
+              ...(translation && englishPage
+                ? {
+                    alternates: [
+                      {
+                        hreflang: page.data.language,
+                        url: `${origin}${page.url}`,
+                      },
+                      {
+                        hreflang: translation.data.language,
+                        url: `${origin}${translation.url}`,
+                      },
+                      {
+                        hreflang: 'x-default',
+                        url: `${origin}${englishPage.url}`,
+                      },
+                    ],
+                  }
+                : {}),
               url: `${origin}${page.url}`,
               lastmod: page.data.updated ?? page.data.date,
-            })),
+            }
+          }),
         ]
         const body = createSitemapXml(entries)
 

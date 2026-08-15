@@ -29,20 +29,26 @@ Set these in Coolify before deploying:
 
 ```dotenv
 KEENPIX_APP_URL=https://keenpix.com
-BETTER_AUTH_URL=https://keenpix.com
-VITE_KEENPIX_PUBLIC_URL=https://keenpix.com
+KEENPIX_DEPLOYMENT_ENV=production
 KEENPIX_SUPER_ADMIN_EMAIL=you@example.com
 POLAR_TOKEN=polar_oat_...
 POLAR_WEBHOOK_SECRET=whsec_...
 POLAR_SANDBOX_WEBHOOK_SECRET=whsec_...
 POLAR_SERVER=production
+CLOUDFLARE_API_TOKEN=...
+CLOUDFLARE_ACCOUNT_API_TOKEN=...
+CLOUDFLARE_ACCOUNT_ID=...
+CLOUDFLARE_ZONE_ID=...
 VITE_GA_MEASUREMENT_ID=G-C04VQED7GV
 GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=...
 ```
 
-The three public URL variables must resolve to the HTTPS apex domain so Better
-Auth callbacks, generated links, and the browser build all agree on one origin.
+`KEENPIX_APP_URL` supplies the service URL, Better Auth URL, generated-link URL,
+and browser build URL so they cannot drift across origins.
+Use `KEENPIX_DEPLOYMENT_ENV=staging` together with `POLAR_SERVER=sandbox` for an
+isolated staging deployment. The application rejects production Polar in staging
+and rejects localhost or non-HTTPS URLs in production cloud mode.
 
 `VITE_GA_MEASUREMENT_ID` and `VITE_GTM_CONTAINER_ID` are public configuration,
 not credentials. Mark configured values as available at both build time and
@@ -77,11 +83,15 @@ POSTMARK_FROM=no-reply@keenpix.com   # domain must be verified in Postmark
 (Resend works too: `EMAIL_PROVIDER=resend` + `RESEND_API_KEY`/`RESEND_FROM`.)
 Staging can keep the default `EMAIL_PROVIDER=smtp` → Mailpit.
 
-Optional Cloudflare edge analytics (separate from DNS/TLS and R2) requires a
-zone-scoped token with **Zone → Analytics → Read**:
+Cloudflare edge analytics is required in cloud mode because project-attributed
+delivery is part of the Polar meter. Use a zone-scoped token with **Zone →
+Analytics → Read** plus a separate account token with **Account → Account
+Analytics → Read**:
 
 ```dotenv
 CLOUDFLARE_API_TOKEN=...
+CLOUDFLARE_ACCOUNT_API_TOKEN=...
+CLOUDFLARE_ACCOUNT_ID=...
 CLOUDFLARE_ZONE_ID=...
 CLOUDFLARE_HOST=keenpix.com
 ```

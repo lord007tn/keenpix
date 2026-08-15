@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { getSessionFn } from '@/functions/auth'
 import { getPublicConfigFn } from '@/functions/config'
+import { QueryProvider } from '@/lib/tanstack-query/root-provider'
 import { appPageHead } from '@/shared/seo'
 
 const ADMIN_ROUTE_HEAD = appPageHead(
@@ -61,52 +62,57 @@ function AdminLayout() {
   })
 
   return (
-    <div className="flex min-h-svh bg-background">
-      <aside className="sticky top-0 hidden h-svh w-64 shrink-0 border-sidebar-border border-r md:block">
-        <AdminSidebar cloud={cloud} user={user} />
-      </aside>
+    <QueryProvider>
+      <div className="flex min-h-svh bg-background">
+        <aside className="sticky top-0 hidden h-svh w-64 shrink-0 border-sidebar-border border-r md:block">
+          <AdminSidebar cloud={cloud} user={user} />
+        </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b bg-background px-3 sm:px-4">
-          <Sheet onOpenChange={setMobileOpen} open={mobileOpen}>
-            <SheetTrigger
-              render={
-                <Button
-                  aria-label="Open navigation"
-                  className="md:hidden"
-                  size="icon"
-                  variant="ghost"
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b bg-background px-3 sm:px-4">
+            <Sheet onOpenChange={setMobileOpen} open={mobileOpen}>
+              <SheetTrigger
+                render={
+                  <Button
+                    aria-label="Open navigation"
+                    className="md:hidden"
+                    size="icon"
+                    variant="ghost"
+                  />
+                }
+              >
+                <MenuIcon />
+              </SheetTrigger>
+              <SheetContent
+                className="w-64 gap-0 p-0"
+                showCloseButton={false}
+                side="left"
+              >
+                <AdminSidebar
+                  cloud={cloud}
+                  onNavigate={() => setMobileOpen(false)}
+                  user={user}
                 />
-              }
-            >
-              <MenuIcon />
-            </SheetTrigger>
-            <SheetContent
-              className="w-64 gap-0 p-0"
-              showCloseButton={false}
-              side="left"
-            >
-              <AdminSidebar
-                cloud={cloud}
-                onNavigate={() => setMobileOpen(false)}
-                user={user}
-              />
-            </SheetContent>
-          </Sheet>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Operator</span>
-            <span className="text-muted-foreground/40">/</span>
-            <span className="font-medium">{section}</span>
-          </div>
-          <div className="flex-1" />
-          <ModeToggle />
-        </header>
+              </SheetContent>
+            </Sheet>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Operator</span>
+              <span className="text-muted-foreground/40">/</span>
+              <span className="font-medium">{section}</span>
+            </div>
+            <div className="flex-1" />
+            <ModeToggle />
+          </header>
 
-        <ImpersonationBanner user={user} />
-        <main className="flex flex-1 flex-col overflow-auto" id="main-content">
-          <Outlet />
-        </main>
+          <ImpersonationBanner user={user} />
+          <main
+            className="flex flex-1 flex-col overflow-auto"
+            id="main-content"
+          >
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+    </QueryProvider>
   )
 }

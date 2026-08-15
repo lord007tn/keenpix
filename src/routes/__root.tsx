@@ -1,9 +1,9 @@
 import interLatin from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url'
-import type { QueryClient } from '@tanstack/react-query'
 import {
-  createRootRouteWithContext,
+  createRootRoute,
   HeadContent,
   Scripts,
+  useRouterState,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
@@ -11,8 +11,8 @@ import { AnalyticsConsent } from '@/components/app/analytics-consent'
 import { NotFoundPage } from '@/components/app/error-page'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
-import { TooltipProvider } from '@/components/ui/tooltip'
 import Devtools from '@/devtools/devtools'
+import { getBlogLanguage } from '@/helpers/blog/locale'
 import {
   absoluteUrl,
   SITE_DESCRIPTION,
@@ -23,11 +23,7 @@ import {
 } from '@/shared/seo'
 import appCss from '../styles.css?url'
 
-interface RouterContext {
-  queryClient: QueryClient
-}
-
-export const Route = createRootRouteWithContext<RouterContext>()({
+export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
@@ -36,7 +32,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: 'msapplication-TileColor', content: '#07111f' },
       { name: 'msapplication-TileImage', content: '/mstile-150x150.png' },
       { property: 'og:site_name', content: SITE_NAME },
-      { property: 'og:locale', content: 'en_US' },
       ...seo({
         title: SITE_TITLE,
         description: SITE_DESCRIPTION,
@@ -92,8 +87,15 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootDocument({ children }: { children: ReactNode }) {
+  const language = useRouterState({
+    select: (state) => getBlogLanguage(state.location.pathname),
+  })
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      dir={language === 'ar' ? 'rtl' : 'ltr'}
+      lang={language}
+      suppressHydrationWarning
+    >
       <head>
         {/* Static theme-color pair — kept out of route meta because HeadContent
             dedupes meta by name and would otherwise collapse the two variants. */}
@@ -117,7 +119,7 @@ function RootDocument({ children }: { children: ReactNode }) {
           Skip to content
         </a>
         <ThemeProvider>
-          <TooltipProvider>{children}</TooltipProvider>
+          {children}
           <Toaster richColors />
         </ThemeProvider>
         <AnalyticsConsent />

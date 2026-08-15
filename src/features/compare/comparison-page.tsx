@@ -4,6 +4,7 @@ import { buttonVariants } from '@/components/ui/button'
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -127,6 +128,9 @@ export function ComparisonPage({
             </h2>
             <div className="mt-6 rounded-lg border">
               <Table className="min-w-2xl">
+                <TableCaption className="sr-only">
+                  Pricing comparison between {comparison.competitor} and Keenpix
+                </TableCaption>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-1/3 px-4">Scenario</TableHead>
@@ -167,6 +171,9 @@ export function ComparisonPage({
             </h2>
             <div className="mt-6 rounded-lg border">
               <Table className="min-w-2xl">
+                <TableCaption className="sr-only">
+                  Feature comparison between {comparison.competitor} and Keenpix
+                </TableCaption>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-1/3 px-4">Feature</TableHead>
