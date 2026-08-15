@@ -64,6 +64,15 @@ equivalent of the original deployment commit after the credential-history scrub)
 - Real managed image traffic returned `200`, the production usage cron completed
   with Cloudflare capture configured and no failures, and the deployment wrote a
   fresh PostgreSQL backup.
+- The authenticated Polar production organization exposes the three founding
+  products, three standard products, the private five-domain add-on, and one
+  managed-delivery meter. Its required setup checklist is 7/7; revenue,
+  subscriptions, orders, and available balance remain zero.
+- The separate Polar sandbox now has the same seven active private products,
+  three plan-credit benefits, and one `bandwidth_delivered` sum meter. The
+  previously missing five-domain add-on was created, while the temporary product
+  and meter used during verification were detached and archived. Polar confirms
+  that sandbox changes do not process payments.
 - Cloudflare Email Address Obfuscation is disabled by an active all-request
   configuration rule. Fresh uncached About, Support, and Privacy HTML contains
   native `mailto:` links and no `/cdn-cgi/l/email-protection` rewrites.
@@ -92,6 +101,9 @@ equivalent of the original deployment commit after the credential-history scrub)
 3. The official Keenpix X profile is live at `https://x.com/getkeenpix` with the
    brand avatar, header, website, and product description. No public post was
    created.
+4. Polar production and sandbox catalogs were inspected in their authenticated
+   dashboards. No payout, merchant-plan, balance, customer, subscription, or
+   production-finance mutation was made.
 
 The tracked post-deploy evidence record is
 `docs/releases/keenpix-live-audit-2026-08-15.md`. The full generated report is a
