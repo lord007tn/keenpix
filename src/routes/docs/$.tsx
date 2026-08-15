@@ -50,15 +50,30 @@ export const Route = createFileRoute('/docs/$')({
     return data
   },
   head: ({ loaderData }: { loaderData?: DocsLoaderData }) => {
+    if (!loaderData) {
+      return {
+        links: [{ rel: 'stylesheet', href: docsCss }],
+        meta: [
+          { title: 'Page not found - Keenpix' },
+          {
+            name: 'description',
+            content:
+              "The page you're looking for doesn't exist or may have moved.",
+          },
+          { name: 'robots', content: 'noindex,nofollow' },
+        ],
+      }
+    }
+
     const title =
-      loaderData?.title && loaderData.title !== SITE_NAME
+      loaderData.title && loaderData.title !== SITE_NAME
         ? `${loaderData.title} - Keenpix docs`
         : 'Keenpix docs'
     const description =
-      loaderData?.description ??
+      loaderData.description ??
       'Self-hosted image optimization, caching, analytics, and transform API documentation.'
-    const canonicalUrl = loaderData?.canonicalUrl ?? absoluteUrl('/docs')
-    const ogImage = loaderData?.ogImage ?? absoluteUrl(BRAND_IMAGE_PATH)
+    const canonicalUrl = loaderData.canonicalUrl
+    const ogImage = loaderData.ogImage ?? absoluteUrl(BRAND_IMAGE_PATH)
 
     return {
       links: [

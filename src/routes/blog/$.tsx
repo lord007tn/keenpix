@@ -56,19 +56,32 @@ export const Route = createFileRoute('/blog/$')({
     return data
   },
   head: ({ loaderData }: { loaderData?: BlogLoaderData }) => {
+    if (!loaderData) {
+      return {
+        links: [{ rel: 'stylesheet', href: docsCss }],
+        meta: [
+          { title: 'Page not found - Keenpix' },
+          {
+            name: 'description',
+            content:
+              "The page you're looking for doesn't exist or may have moved.",
+          },
+          { name: 'robots', content: 'noindex,nofollow' },
+        ],
+      }
+    }
+
     // The visible article title is already descriptive and several posts include
     // the brand. Reusing it avoids pushing useful words out of a 60-ish-character
     // search title with a redundant "Keenpix Blog" suffix.
-    const title = loaderData?.title ?? 'Keenpix Blog'
-    const description =
-      loaderData?.description ??
-      'Image optimization, pricing, and comparisons from the Keenpix team.'
-    const canonicalUrl = loaderData?.canonicalUrl ?? absoluteUrl('/blog')
-    const language = loaderData?.language ?? 'en'
+    const title = loaderData.title
+    const description = loaderData.description
+    const canonicalUrl = loaderData.canonicalUrl
+    const language = loaderData.language
     const englishUrl =
       language === 'en'
         ? canonicalUrl
-        : (loaderData?.translationUrl ?? absoluteUrl('/blog'))
+        : (loaderData.translationUrl ?? absoluteUrl('/blog'))
 
     return {
       links: [

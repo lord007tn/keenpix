@@ -24,64 +24,74 @@ import {
 import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { name: 'application-name', content: SITE_NAME },
-      { name: 'msapplication-TileColor', content: '#07111f' },
-      { name: 'msapplication-TileImage', content: '/mstile-150x150.png' },
-      { property: 'og:site_name', content: SITE_NAME },
-      ...seo({
-        title: SITE_TITLE,
-        description: SITE_DESCRIPTION,
-        keywords: SITE_KEYWORDS,
-        url: absoluteUrl('/'),
-      }),
-    ],
-    links: [
-      {
-        rel: 'preload',
-        href: interLatin,
-        as: 'font',
-        type: 'font/woff2',
-        crossOrigin: 'anonymous',
-      },
-      { rel: 'stylesheet', href: appCss },
-      {
-        rel: 'icon',
-        href: '/brand/keenpix-favicon.svg',
-        type: 'image/svg+xml',
-      },
-      {
-        rel: 'icon',
-        href: '/keenpix-favicon.ico',
-        sizes: '48x48',
-        type: 'image/x-icon',
-      },
-      {
-        rel: 'icon',
-        href: '/favicon-32x32.png',
-        type: 'image/png',
-        sizes: '32x32',
-      },
-      {
-        rel: 'icon',
-        href: '/favicon-16x16.png',
-        type: 'image/png',
-        sizes: '16x16',
-      },
-      {
-        rel: 'apple-touch-icon',
-        href: '/apple-touch-icon.png',
-        sizes: '180x180',
-      },
-      { rel: 'manifest', href: '/site.webmanifest' },
-      // NOTE: no /llms.txt alternate here — the llms routes are cloud-only, so
-      // the link is emitted by the (cloud-gated) home route instead of 404ing
-      // on every self-host page.
-    ],
-  }),
+  head: ({ matches }) => {
+    const notFound = matches.some(
+      (match) => match.status === 'notFound' || match.globalNotFound,
+    )
+    const description = notFound
+      ? "The page you're looking for doesn't exist or may have moved."
+      : SITE_DESCRIPTION
+
+    return {
+      meta: [
+        { charSet: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'application-name', content: SITE_NAME },
+        { name: 'msapplication-TileColor', content: '#07111f' },
+        { name: 'msapplication-TileImage', content: '/mstile-150x150.png' },
+        { property: 'og:site_name', content: SITE_NAME },
+        ...seo({
+          title: notFound ? 'Page not found - Keenpix' : SITE_TITLE,
+          description,
+          keywords: notFound ? undefined : SITE_KEYWORDS,
+          url: notFound ? undefined : absoluteUrl('/'),
+        }),
+        ...(notFound ? [{ name: 'robots', content: 'noindex,nofollow' }] : []),
+      ],
+      links: [
+        {
+          rel: 'preload',
+          href: interLatin,
+          as: 'font',
+          type: 'font/woff2',
+          crossOrigin: 'anonymous',
+        },
+        { rel: 'stylesheet', href: appCss },
+        {
+          rel: 'icon',
+          href: '/brand/keenpix-favicon.svg',
+          type: 'image/svg+xml',
+        },
+        {
+          rel: 'icon',
+          href: '/keenpix-favicon.ico',
+          sizes: '48x48',
+          type: 'image/x-icon',
+        },
+        {
+          rel: 'icon',
+          href: '/favicon-32x32.png',
+          type: 'image/png',
+          sizes: '32x32',
+        },
+        {
+          rel: 'icon',
+          href: '/favicon-16x16.png',
+          type: 'image/png',
+          sizes: '16x16',
+        },
+        {
+          rel: 'apple-touch-icon',
+          href: '/apple-touch-icon.png',
+          sizes: '180x180',
+        },
+        { rel: 'manifest', href: '/site.webmanifest' },
+        // NOTE: no /llms.txt alternate here — the llms routes are cloud-only, so
+        // the link is emitted by the (cloud-gated) home route instead of 404ing
+        // on every self-host page.
+      ],
+    }
+  },
   notFoundComponent: NotFoundPage,
   shellComponent: RootDocument,
 })
