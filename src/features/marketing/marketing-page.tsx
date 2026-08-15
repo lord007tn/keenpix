@@ -39,7 +39,7 @@ import {
 } from '@/features/marketing/plan-card-content'
 import { catalogPricing, PLANS, type PlanPricing } from '@/lib/billing/plans'
 import { cn } from '@/lib/cn/utils'
-import { SOCIAL_X_URL } from '@/shared/authors'
+import { BRAND_X_URL } from '@/shared/authors'
 import { MARKETING_FAQ } from '@/shared/marketing-faq'
 import { REPOSITORY_URL } from '@/shared/repository'
 import { AiExtensionsPreview } from './ai-extensions-preview'
@@ -742,7 +742,7 @@ open http://localhost:3000`}</CodeBlock>
             </a>
             <a
               className="hover:text-foreground"
-              href={SOCIAL_X_URL}
+              href={BRAND_X_URL}
               rel="noopener noreferrer"
               target="_blank"
             >

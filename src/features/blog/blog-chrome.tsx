@@ -3,7 +3,7 @@ import { ArrowRightIcon } from 'lucide-react'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
 import { ModeToggle } from '@/components/theme/mode-toggle'
 import { buttonVariants } from '@/components/ui/button'
-import { SOCIAL_X_URL } from '@/shared/authors'
+import { BRAND_X_URL } from '@/shared/authors'
 import { REPOSITORY_URL } from '@/shared/repository'
 
 // Page-agnostic marketing chrome shared by the blog surface. Links resolve to
@@ -157,7 +157,7 @@ export function SiteFooter() {
           </a>
           <a
             className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
-            href={SOCIAL_X_URL}
+            href={BRAND_X_URL}
             rel="noopener noreferrer"
             target="_blank"
           >

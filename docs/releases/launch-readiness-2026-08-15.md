@@ -1,7 +1,7 @@
 # Keenpix launch readiness — August 15, 2026
 
 Status: release deployed and live validation passed. Search Console resubmission,
-the historical key incident, and the brand X account remain open.
+credential rotation, public-history remediation, and brand X setup are complete.
 
 ## Local validation
 
@@ -42,12 +42,13 @@ the historical key incident, and the brand X account remain open.
   object embedding, and framing. Restrictive script/style policies remain
   deferred until nonce and report-only coverage includes hydration, analytics,
   auth, and checkout.
-- The founder's personal X profile is linked only to the founder Person entity;
-  Keenpix does not claim an official brand X account before one exists.
+- The founder's personal X profile is linked only to the founder Person entity.
+  Keenpix's official brand profile is `https://x.com/getkeenpix`.
 
 ## Live production validation
 
-Observed on August 15, 2026 after deploying commit `94d8332`:
+Observed on August 15, 2026 after deploying commit `360b882` (the rewritten
+equivalent of the original deployment commit after the credential-history scrub):
 
 - `https://keenpix.com/api/health`, `/robots.txt`, and `/sitemap.xml` return
   `200`. The sitemap exposes 69 canonical URLs, five Arabic pages, and ten
@@ -77,20 +78,20 @@ Observed on August 15, 2026 after deploying commit `94d8332`:
   position 34.7 for the current three-month window. Its indexing snapshot is
   dated August 7 and therefore predates this deployment: 41 URLs indexed and 19
   discovered but not yet crawled. The existing sitemap is successful and was
-  last read August 15, but still reports the previous 60 discovered URLs.
+  resubmitted on August 15 and now reports 69 discovered URLs.
 
-## Remaining external actions
+## Completed external actions
 
-1. Revoke or rotate the API key that appeared in the deleted public cutover
-   record, then remove it from public Git history and audit use. Working-tree
-   redaction does not invalidate an exposed credential.
-2. Resubmit `https://keenpix.com/sitemap.xml` in Search Console and request
-   indexing for the highest-priority English and Arabic pages. Monitor the
-   August 7 exclusions only after Google refreshes the report; the 18 redirect
-   examples inspected are intentional `www` and HTTP canonicalization targets.
-3. Create the Keenpix X brand account in the X mobile app. Desktop email signup
-   is unavailable for this flow, and account creation and public posting require
-   action-time approval.
+1. The exposed JoodCMS API key was replaced in production, verified through
+   successful authenticated traffic, and disabled. The credential-bearing file
+   was removed from every public branch and tag through an approved history
+   rewrite.
+2. `https://keenpix.com/sitemap.xml` was resubmitted successfully in Search
+   Console. Priority indexing was requested for three English articles. Google's
+   daily quota blocked the first Arabic request; retry it on August 16.
+3. The official Keenpix X profile is live at `https://x.com/getkeenpix` with the
+   brand avatar, header, website, and product description. No public post was
+   created.
 
 The tracked post-deploy evidence record is
 `docs/releases/keenpix-live-audit-2026-08-15.md`. The full generated report is a

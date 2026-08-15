@@ -5,7 +5,12 @@ import {
   STANDARD_PLAN_PRICES,
 } from '@/lib/billing/plans'
 import { getAppUrl, getRepositoryUrl } from '@/server/deployment'
-import { FOUNDER, getAuthor, SUPPORT_EMAIL } from '@/shared/authors'
+import {
+  BRAND_X_URL,
+  FOUNDER,
+  getAuthor,
+  SUPPORT_EMAIL,
+} from '@/shared/authors'
 
 export const SITE_NAME = 'Keenpix'
 export const SITE_TITLE = 'Image optimization CDN with honest pricing | Keenpix'
@@ -19,9 +24,8 @@ export const PRICING_DESCRIPTION =
   'Keenpix starts at $9/month for 100 GB of managed image delivery, with unlimited transforms and teammates, a 14-day trial, and published overage.'
 export const BRAND_IMAGE_PATH = '/brand/keenpix-og-card.png'
 const BRAND_ICON_PATH = '/android-chrome-512x512.png'
-// The founder is the current editorial author. Do not claim this personal
-// profile as Keenpix's official brand account before that account exists.
 const TWITTER_CREATOR_HANDLE = '@raedbahriworld'
+const TWITTER_SITE_HANDLE = '@getkeenpix'
 export const APP_VERSION = import.meta.env.VITE_APP_VERSION
 
 function pageTitle(title: string) {
@@ -88,6 +92,7 @@ export function seo({
     },
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:creator', content: TWITTER_CREATOR_HANDLE },
+    { name: 'twitter:site', content: TWITTER_SITE_HANDLE },
     { name: 'twitter:title', content: title },
     { name: 'twitter:description', content: description },
     { name: 'twitter:image', content: imageUrl },
@@ -186,7 +191,7 @@ export function organizationJsonLd() {
     name: SITE_NAME,
     // Keep this limited to properties that belong to Keenpix. The founder's
     // personal X profile remains linked from the founder Person node above.
-    sameAs: [getRepositoryUrl()],
+    sameAs: [getRepositoryUrl(), BRAND_X_URL],
     url: absoluteUrl('/'),
   }
 }

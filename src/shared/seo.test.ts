@@ -28,19 +28,18 @@ describe('SEO entity graphs', () => {
     })
   })
 
-  it('attributes cards to the founder without claiming a brand X account', () => {
+  it('attributes cards to the founder and the verified brand X account', () => {
     const meta = seo({ title: 'Article title' })
 
     expect(meta).toContainEqual({
       name: 'twitter:creator',
       content: '@raedbahriworld',
     })
-    expect(meta).not.toContainEqual(
-      expect.objectContaining({ name: 'twitter:site' }),
-    )
-    expect(organizationJsonLd().sameAs).not.toContain(
-      'https://x.com/raedbahriworld',
-    )
+    expect(meta).toContainEqual({
+      name: 'twitter:site',
+      content: '@getkeenpix',
+    })
+    expect(organizationJsonLd().sameAs).toContain('https://x.com/getkeenpix')
     expect(organizationJsonLd().founder.sameAs).toContain(
       'https://x.com/raedbahriworld',
     )

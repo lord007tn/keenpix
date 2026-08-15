@@ -14,6 +14,7 @@ interface Author {
 // Client-safe (no server/env imports) so footers, bylines, and the About page
 // can share them without dragging server/env code into the client bundle.
 export const SOCIAL_X_URL = 'https://x.com/raedbahriworld'
+export const BRAND_X_URL = 'https://x.com/getkeenpix'
 export const SUPPORT_EMAIL = 'fariq@keenpix.com'
 
 export const FOUNDER: Author = {

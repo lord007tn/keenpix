@@ -1,7 +1,9 @@
 # Keenpix live audit evidence — August 15, 2026
 
 This is the compact, reviewable record for the production audit performed after
-Coolify deployed commit `94d833254e394ea5ac561caadcd9f79048ef3bac`.
+Coolify deployed commit `360b88226812851dd3787c29ba1b160c4c271754`, the
+rewritten equivalent of the original deployment commit after the
+credential-history scrub.
 
 ## Production checks
 
