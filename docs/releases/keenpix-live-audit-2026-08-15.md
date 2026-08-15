@@ -1,15 +1,23 @@
 # Keenpix live audit evidence — August 15, 2026
 
-This is the compact, reviewable record for the production audit performed after
-Coolify deployed commit `360b88226812851dd3787c29ba1b160c4c271754`, the
-rewritten equivalent of the original deployment commit after the
-credential-history scrub.
+This is the compact, reviewable record for the production audit. The full
+SquirrelScan below followed the original history-rewritten deployment at
+`360b88226812851dd3787c29ba1b160c4c271754`; the final regression release was
+Coolify deployment `59c8ab26c5656b3e0707581cb73b1be47ff6575a`.
 
 ## Production checks
 
-- Coolify deployment: success in 5 minutes 2 seconds.
+- Final Coolify deployment: success in 5 minutes.
 - `https://keenpix.com/api/health`: `200` with healthy database, cache,
   ClickHouse, object storage, and transform queue checks.
+- All 69 sitemap pages returned `200` with matching canonicals after the final
+  deployment. All 47 unique advertised Open Graph, Twitter, and article images
+  returned decodable images under fresh cache-busting, including every English
+  and Arabic generated blog card.
+- The managed-cloud quickstart renders the canonical
+  `cdn.keenpix.com/p/YOUR_ID` path, the frameworks anchor no longer creates an
+  internal redirect, and the five corrected content records expose accurate
+  `2026-08-15` sitemap modification dates.
 - The homepage's external ImageKit, imgix, Bunny, GitHub, and X links render
   explicit `rel="noopener noreferrer"` attributes.
 
