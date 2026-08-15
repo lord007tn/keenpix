@@ -3,6 +3,7 @@ import { createServerFn } from '@tanstack/react-start'
 import browserCollections from 'collections/browser'
 import { RootProvider } from 'fumadocs-ui/provider/tanstack'
 import { Suspense } from 'react'
+import { NotFoundPage } from '@/components/app/error-page'
 import { JsonLd } from '@/components/app/json-ld'
 import { getMDXComponents } from '@/components/mdx'
 import { SiteFooter, SiteHeader } from '@/features/blog/blog-chrome'
@@ -49,6 +50,7 @@ export const Route = createFileRoute('/blog/$')({
   // The MDX client loader and article renderer are one route-local unit. Split
   // them together so Fumadocs stays out of the shared marketing bundle.
   codeSplitGroupings: [['loader', 'component']],
+  notFoundComponent: NotFoundPage,
   loader: async ({ params }) => {
     const slugs = params._splat?.split('/').filter(Boolean) ?? []
     const data = (await serverLoader({ data: slugs })) as BlogLoaderData

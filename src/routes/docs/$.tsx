@@ -11,6 +11,7 @@ import {
 } from 'fumadocs-ui/layouts/docs/page'
 import { RootProvider } from 'fumadocs-ui/provider/tanstack'
 import { Suspense } from 'react'
+import { NotFoundPage } from '@/components/app/error-page'
 import { JsonLd } from '@/components/app/json-ld'
 import { getMDXComponents } from '@/components/mdx'
 import { DocsMainContainer } from '@/features/docs/docs-main-container'
@@ -43,6 +44,7 @@ export const Route = createFileRoute('/docs/$')({
   // in one route-only chunk prevents the docs UI from leaking into every
   // public page through the router's shared loader/reference bundle.
   codeSplitGroupings: [['loader', 'component']],
+  notFoundComponent: NotFoundPage,
   loader: async ({ params }) => {
     const slugs = params._splat?.split('/').filter(Boolean) ?? []
     const data = (await serverLoader({ data: slugs })) as DocsLoaderData
