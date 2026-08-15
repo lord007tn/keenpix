@@ -23,7 +23,8 @@ added to the project's allowlist**, so your first transform works right away —
 key, no extra security step.
 
 <Callout title="Find your project id">
-  It's under **Settings → General → Project ID**. You pass it as `project=` in every URL.
+  It's under **Settings → General → Project ID**. Managed delivery puts it in the
+  canonical path: `https://cdn.keenpix.com/p/YOUR_ID`.
 </Callout>
 
 ## 3. Copy the transform URL
@@ -32,13 +33,17 @@ A request is just a URL — prefix your image with the cloud endpoint:
 
 ```html
 <img
-  src="https://keenpix.com/img/https://cdn.example.com/hero.jpg?project=YOUR_ID&w=800&fmt=webp"
+  src="https://cdn.keenpix.com/p/YOUR_ID/img/https%3A%2F%2Fcdn.example.com%2Fhero.jpg?w=800&fmt=webp"
   sizes="100vw"
   loading="lazy"
   decoding="async"
   alt="Hero"
 />
 ```
+
+Encode the complete source URL with `encodeURIComponent(source)` before appending it
+after `/img/`. This preserves `https://`, query parameters, and fragments as one source
+value and avoids the legacy `keenpix.com/img?...` redirect.
 
 Use `fmt=auto` to negotiate AVIF/WebP/JPEG from each browser's `Accept` header instead
 of pinning a format. The first request is a cache **MISS** (Keenpix fetches + transforms

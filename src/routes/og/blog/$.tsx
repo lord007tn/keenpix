@@ -58,11 +58,11 @@ export const Route = createFileRoute('/og/blog/$')({
               background: '#07111f',
               color: '#f8fafc',
               display: 'flex',
-              fontFamily: arabic ? 'Noto Sans Arabic' : undefined,
               height: '100%',
               justifyContent: 'center',
               padding: 72,
               width: '100%',
+              ...(arabic ? { fontFamily: 'Noto Sans Arabic' } : {}),
             }}
           >
             <div
@@ -322,19 +322,21 @@ export const Route = createFileRoute('/og/blog/$')({
             // PNG, not WebP: several link unfurlers (LinkedIn, some Slack/Discord
             // scrapers) reject WebP og:image and show no preview.
             format: 'png',
-            fonts: arabic
-              ? [
-                  {
-                    data: () =>
-                      fetch(arabicFontDataUrl).then((response) =>
-                        response.arrayBuffer(),
-                      ),
-                    key: 'noto-sans-arabic-variable',
-                    name: 'Noto Sans Arabic',
-                    style: 'normal',
-                  },
-                ]
-              : undefined,
+            ...(arabic
+              ? {
+                  fonts: [
+                    {
+                      data: () =>
+                        fetch(arabicFontDataUrl).then((response) =>
+                          response.arrayBuffer(),
+                        ),
+                      key: 'noto-sans-arabic-variable',
+                      name: 'Noto Sans Arabic',
+                      style: 'normal' as const,
+                    },
+                  ],
+                }
+              : {}),
             headers: {
               'cache-control': 'public, immutable, max-age=31536000',
             },
