@@ -115,7 +115,7 @@ export function PricingComparison({ pricing }: { pricing: PlanPricing }) {
                         href={provider.href}
                         rel={
                           provider.href.startsWith('http')
-                            ? 'noreferrer'
+                            ? 'noopener noreferrer'
                             : undefined
                         }
                         target={
