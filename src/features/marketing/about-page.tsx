@@ -115,7 +115,7 @@ export function AboutPage() {
               <a
                 className="mt-4 inline-flex items-center gap-1 font-medium text-primary text-sm hover:underline"
                 href={SOCIAL_X_URL}
-                rel="author noreferrer"
+                rel="author noopener noreferrer"
                 target="_blank"
               >
                 Follow on X
@@ -154,7 +154,7 @@ export function AboutPage() {
                   <a
                     className="text-foreground hover:underline"
                     href={REPOSITORY_URL}
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     target="_blank"
                   >
                     Open source on GitHub (AGPL)

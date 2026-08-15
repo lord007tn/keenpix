@@ -1,11 +1,11 @@
 # Keenpix launch readiness — August 15, 2026
 
-Status: local release candidate validated; production deployment and external
-account checks remain open.
+Status: release deployed and live validation passed. Search Console resubmission,
+the historical key incident, and the brand X account remain open.
 
 ## Local validation
 
-- `pnpm vitest run`: 99 files and 452 tests passed.
+- `pnpm vitest run`: 100 files and 454 tests passed.
 - `pnpm typecheck`: passed.
 - `pnpm check`: passed.
 - `git diff --check`: passed.
@@ -45,51 +45,53 @@ account checks remain open.
 - The founder's personal X profile is linked only to the founder Person entity;
   Keenpix does not claim an official brand X account before one exists.
 
-## Live production observation
+## Live production validation
 
-Observed on August 15, 2026 before deploying this release candidate:
+Observed on August 15, 2026 after deploying commit `dc0a72c`:
 
-- `https://keenpix.com/robots.txt` and `/sitemap.xml` return `200`.
-- The live sitemap contains 60 URLs, no Arabic blog listing, and no language
-  alternate links. This confirms the new sitemap is not deployed yet.
-- `https://keenpix.com/blog/ar` returns `404`, confirming the Arabic release is
-  not deployed yet.
-- `https://keenpix.com/blog/` returns a temporary `307` to `/blog`. Host and
-  scheme normalization is already a one-hop permanent `308`.
-- A fresh 66-page SquirrelScan scored the undeployed live site 70/C: 5,926
-  checks passed, 535 warned, and 91 failed. Its actionable docs schema,
-  landmark, table-label, pricing-drift, and CSP findings are fixed in this
-  release candidate. Cloudflare Email Address Obfuscation accounts for the
-  reported `/cdn-cgi/l/email-protection` link failures and the token-shaped docs
-  false positive; the repository contains ordinary public `mailto:` links and
-  placeholders, not that generated value.
+- `https://keenpix.com/api/health`, `/robots.txt`, and `/sitemap.xml` return
+  `200`. The sitemap exposes 69 canonical URLs, five Arabic pages, and ten
+  reciprocal English, Arabic, and `x-default` alternate sets.
+- English and Arabic blog indexes and articles return `200`. Arabic documents
+  render with `lang="ar"` and `dir="rtl"`; English documents retain
+  `lang="en"` and `dir="ltr"`.
+- HTTP, `www`, and public trailing-slash variants use one-hop permanent `308`
+  redirects. Query strings survive normalization.
+- Global, docs, and blog missing routes return a real `404`, a dedicated
+  not-found title, `noindex,nofollow`, no canonical, and an `X-Robots-Tag`
+  noindex directive.
+- Real managed image traffic returned `200`, the production usage cron completed
+  with Cloudflare capture configured and no failures, and the deployment wrote a
+  fresh PostgreSQL backup.
+- Cloudflare Email Address Obfuscation is disabled by an active all-request
+  configuration rule. Fresh uncached About, Support, and Privacy HTML contains
+  native `mailto:` links and no `/cdn-cgi/l/email-protection` rewrites.
+- The final 74-page SquirrelScan scored 76/C: 6,917 checks passed, 510 warned,
+  and 68 failed. Links now report zero errors. The remaining repeated hard
+  failures are a Fumadocs mobile table-of-contents progress SVG without an
+  accessible name; the scanner's secret-shaped documentation values are public
+  examples/placeholders, not credentials.
+- Search Console reports five clicks, 406 impressions, 1.2% CTR, and average
+  position 34.7 for the current three-month window. Its indexing snapshot is
+  dated August 7 and therefore predates this deployment: 41 URLs indexed and 19
+  discovered but not yet crawled. The existing sitemap is successful and was
+  last read August 15, but still reports the previous 60 discovered URLs.
 
-## Mandatory launch blockers
+## Remaining external actions
 
-1. Revoke or rotate the API key that appeared in the public cutover record.
-   The working tree is redacted, but the old value remains exposed in Git
-   history and any public remotes until those are remediated.
-2. Deploy the reviewed release candidate with an immutable Keenpix image and
-   run the database migrations.
-3. Configure and verify all production Cloudflare account/zone credentials,
-   Polar production credentials and webhook, the production email provider,
-   and cron health in Coolify. Do the equivalent validation against Polar
-   sandbox in the staging deployment.
-4. Change trailing-slash normalization at the proxy/platform layer from `307`
-   to a permanent redirect. Disable Cloudflare Email Address Obfuscation for the
-   intentionally public support address, then recheck `/blog/`, `/docs/`,
-   `/pricing/`, and email links.
-5. Verify the deployed sitemap, Arabic routes, canonical tags, `hreflang`,
-   robots directives, health endpoints, usage reporting, and a real transform.
-6. Submit the deployed sitemap in Google Search Console and monitor indexing,
-   queries, and page exclusions after Google recrawls it.
-7. Obtain explicit confirmation before creating a Keenpix X account, accepting
-   terms, publishing posts, or making payout/security mutations.
+1. Revoke or rotate the API key that appeared in the deleted public cutover
+   record, then remove it from public Git history and audit use. Working-tree
+   redaction does not invalidate an exposed credential.
+2. Resubmit `https://keenpix.com/sitemap.xml` in Search Console and request
+   indexing for the highest-priority English and Arabic pages. Monitor the
+   August 7 exclusions only after Google refreshes the report; the 18 redirect
+   examples inspected are intentional `www` and HTTP canonicalization targets.
+3. Create the Keenpix X brand account in the X mobile app. Desktop email signup
+   is unavailable for this flow, and account creation and public posting require
+   action-time approval.
 
-The live SquirrelScan baseline is stored at
-`output/keenpix-squirrelscan-live-2026-08-15.md`. Rerun it after deployment and
-compare the live result; do not credit release-candidate-only fixes until that
-post-deploy crawl passes.
+The post-deploy SquirrelScan evidence is stored at
+`output/keenpix-squirrelscan-live-final-2026-08-15.md`.
 
 ## Prepared assets
 

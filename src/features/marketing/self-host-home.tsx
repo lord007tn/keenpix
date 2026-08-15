@@ -37,7 +37,7 @@ export function SelfHostHome() {
         <a
           className="underline underline-offset-2"
           href="https://keenpix.com"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           target="_blank"
         >
           keenpix.com

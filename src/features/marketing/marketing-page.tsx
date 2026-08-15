@@ -597,7 +597,7 @@ Vary: Accept`}</CodeBlock>
                     variant: 'outline',
                   })}
                   href={REPOSITORY_URL}
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   target="_blank"
                 >
                   View on GitHub
@@ -735,7 +735,7 @@ open http://localhost:3000`}</CodeBlock>
             <a
               className="hover:text-foreground"
               href={REPOSITORY_URL}
-              rel="noreferrer"
+              rel="noopener noreferrer"
               target="_blank"
             >
               GitHub
@@ -743,7 +743,7 @@ open http://localhost:3000`}</CodeBlock>
             <a
               className="hover:text-foreground"
               href={SOCIAL_X_URL}
-              rel="noreferrer"
+              rel="noopener noreferrer"
               target="_blank"
             >
               X

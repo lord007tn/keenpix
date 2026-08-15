@@ -56,6 +56,16 @@ export function CompareHub() {
                 </Link>
               ))}
             </div>
+            <p className="mt-8 text-muted-foreground text-sm">
+              Prefer to operate the full stack yourself? See what the{' '}
+              <Link
+                className="font-medium text-primary underline-offset-4 hover:underline"
+                to="/self-hosted-image-cdn"
+              >
+                self-hosted image CDN
+              </Link>{' '}
+              includes and what remains your responsibility.
+            </p>
           </div>
         </section>
       </main>

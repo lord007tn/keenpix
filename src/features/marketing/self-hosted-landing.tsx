@@ -202,7 +202,7 @@ export function SelfHostedLandingPage({
               <a
                 className={buttonVariants()}
                 href={repositoryUrl}
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 target="_blank"
               >
                 Get the code on GitHub
@@ -514,7 +514,7 @@ docker compose up -d --build
               <a
                 className={buttonVariants()}
                 href={repositoryUrl}
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 target="_blank"
               >
                 GitHub

@@ -172,7 +172,11 @@ export function NavUser({
             <DropdownMenuItem
               render={
                 // biome-ignore lint/a11y/useAnchorContent: the icon + version label are merged into the anchor by Base UI's render prop
-                <a href={RELEASES_URL} rel="noreferrer" target="_blank" />
+                <a
+                  href={RELEASES_URL}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                />
               }
             >
               <TagIcon />

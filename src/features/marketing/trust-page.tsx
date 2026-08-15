@@ -144,7 +144,7 @@ export function TrustPage({ page }: { page: keyof typeof PAGES }) {
                   variant: 'outline',
                 })}
                 href={page === 'support' ? REPOSITORY_URL : RELEASES_URL}
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 target="_blank"
               >
                 {page === 'support' ? 'Open GitHub' : 'View releases'}

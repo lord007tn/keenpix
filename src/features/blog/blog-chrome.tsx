@@ -150,7 +150,7 @@ export function SiteFooter() {
           <a
             className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
             href={REPOSITORY_URL}
-            rel="noreferrer"
+            rel="noopener noreferrer"
             target="_blank"
           >
             GitHub
@@ -158,7 +158,7 @@ export function SiteFooter() {
           <a
             className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
             href={SOCIAL_X_URL}
-            rel="noreferrer"
+            rel="noopener noreferrer"
             target="_blank"
           >
             X

@@ -102,7 +102,7 @@ export function ComparisonPage({
                   <a
                     className="font-medium text-primary hover:underline"
                     href={source.url}
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     target="_blank"
                   >
                     {source.label}
