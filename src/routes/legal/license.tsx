@@ -20,12 +20,13 @@ export const Route = createFileRoute('/legal/license')({
 
 function LicensePage() {
   return (
-    <LegalLayout lastUpdated="July 6, 2026" title="License & Open Source">
+    <LegalLayout lastUpdated="August 5, 2026" title="License & Open Source">
       <p>
         Keenpix is open source. The same engine that powers the managed cloud is
-        published in our public repository and can be self-hosted for free.
-        There is no separate "open-core" fork — the cloud is this engine,
-        operated for you.
+        published in our public repository and can be self-hosted with no
+        Keenpix license fee. You remain responsible for infrastructure,
+        operations, and any third-party charges. There is no separate
+        "open-core" fork — the cloud is this engine, operated for you.
       </p>
 
       <h2>Engine license</h2>

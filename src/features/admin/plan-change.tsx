@@ -82,7 +82,7 @@ export function PlanChange({
     }
     if (bandwidthPct !== null && bandwidthPct >= 100) {
       warnings.push(
-        `30-day bandwidth is already ${bandwidthPct}% of the ${target.name} allowance. Complimentary access remains $0 and is never billed.`,
+        `30-day managed delivery is already ${bandwidthPct}% of the ${target.name} allowance. Complimentary access remains $0 and is never billed.`,
       )
     }
   }
@@ -142,7 +142,7 @@ export function PlanChange({
                     {STANDARD_PLAN_PRICES[plan.id].priceMonthlyUsd}/mo list
                   </span>
                   <span>
-                    {humanBytes(plan.includedBandwidthBytes)} bandwidth
+                    {humanBytes(plan.includedBandwidthBytes)} managed delivery
                   </span>
                   <span>{projectsLabel(plan.maxProjects)}</span>
                   <span>Unlimited team members</span>
@@ -180,7 +180,7 @@ export function PlanChange({
           <span className="font-medium text-sm">Effect preview</span>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground text-xs">
             <span>
-              Bandwidth: {humanBytes(usage.bandwidthBytes)} used of{' '}
+              Managed delivery: {humanBytes(usage.bandwidthBytes)} used of{' '}
               {humanBytes(target.includedBandwidthBytes)}
               {bandwidthPct === null ? '' : ` (${bandwidthPct}%)`}
             </span>

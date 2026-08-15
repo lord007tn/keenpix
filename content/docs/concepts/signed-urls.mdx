@@ -7,7 +7,7 @@ icon: KeyRound
 By default, Keenpix transform URLs need **no API key**: access is gated by each project's
 source-host allowlist. That model keeps secrets out of your frontend entirely — but because the
 URLs are public, a third party who knows your project id could request your images with
-ever-changing junk query params, forcing cache misses and burning your bandwidth.
+ever-changing junk query params, forcing cache misses and consuming your managed-delivery allowance.
 
 **Signed URLs** close that hole. When a project requires signatures, every `/img` request must
 carry a valid `sig=` parameter — an HMAC computed with the project's signing secret — or it gets a

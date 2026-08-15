@@ -2,32 +2,32 @@
 title: "ImageKit Bandwidth Pricing Explained: Limits and Overage"
 description: Learn how ImageKit bandwidth allowances and overage work, then compare their boundary with Keenpix managed-delivery pricing.
 date: "2026-07-02"
-updated: "2026-07-12"
+updated: "2026-08-05"
 author: Raed Bahri
 competitor: ImageKit
 tags: [comparison, pricing, image-cdn]
 image: /og/blog/keenpix-vs-imagekit.png?v=2026-07-11
-imageAlt: Abstract comparison of bandwidth plans and self-hosting paths
+imageAlt: Abstract comparison of ImageKit bandwidth plans and Keenpix managed-delivery pricing
 ---
 
 ImageKit publishes bandwidth-oriented plans rather than a pooled transformation-credit model. This guide explains its allowances, overage, and enforcement boundary. If you are choosing between products, use the sourced [Keenpix vs ImageKit decision guide](/compare/imagekit-alternative) for feature fit, migration steps, and cases where ImageKit is the better choice.
 
-## Same meter, lower rate
+## Similar units, different meter boundaries
 
-Both products publish bandwidth-oriented plans. Keenpix counts optimized bytes delivered through its managed Cloudflare edge and application once, while ImageKit counts optimized delivery through its own network.
+Both products publish delivery-oriented plans, but their boundaries are product-specific. Keenpix counts optimized bytes delivered through its managed Cloudflare edge or application once, while ImageKit counts optimized delivery through its own network.
 
 | | Keenpix | ImageKit |
 | --- | --- | --- |
 | Billing unit | Keenpix managed delivery (GB) | Bandwidth delivered (GB) |
 | Transformations | Unlimited, free | Included |
-| Overage rate | $0.05–0.08/GB | Higher per-GB |
+| Overage rate | Founding $0.05–0.08/GB; standard $0.07–0.12/GB | $0.45–0.50/GB |
 | Entry price | $9/mo | Comparable-to-higher |
 | Self-host option | Yes (open source, AGPL) | No |
 | Paid overage behavior | Always on, billed at period end | Confirm current account terms |
 
-*ImageKit pricing referenced as of July 2026; check [ImageKit's current plans](https://imagekit.io/plans) for the latest rates.*
+*ImageKit pricing re-verified August 5, 2026 against [ImageKit's current plans](https://imagekit.io/plans).*
 
-Keenpix publishes overage rates of $0.05–0.08/GB depending on tier. Paid delivery continues and accumulated usage is billed at the end of the period. Compare the full workload and contract rather than treating one overage number as a universal lowest-price claim.
+Keenpix charges $0.12/$0.09/$0.07 per delivered GB of overage on Basic/Pro/Business. Paid delivery continues and accumulated usage is billed at the end of the period. Compare the full workload and contract rather than treating one overage number as a universal lowest-price claim.
 
 ## Free transforms, honestly unlimited
 
@@ -45,11 +45,11 @@ ImageKit ships a media library and DAM-style features, and a mature global edge 
 
 ## Related comparisons
 
-- [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) — credits vs bandwidth pricing.
+- [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) — credits vs managed-delivery pricing.
 - [Keenpix vs imgix](/blog/keenpix-vs-imgix) — current credit packages vs managed-delivery billing.
 - [How the Keenpix managed-delivery meter works](/blog/transparent-image-cdn-pricing) — including its cache boundary.
 - [Keenpix pricing](/pricing) — current plans and meter boundary.
 
 ## Compare on your own traffic
 
-Point Keenpix at your existing origin, keep your URLs, and check the bandwidth meter against your current ImageKit bill. Or [self-host free](/docs/self-hosting) and pay nothing at all.
+Point Keenpix at your existing origin and check the managed-delivery meter against your current ImageKit bill. A migration still requires URL or hostname routing work. Or [self-host with no Keenpix license fee](/docs/self-hosting) while operating and paying for the infrastructure yourself.

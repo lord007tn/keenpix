@@ -54,7 +54,7 @@ export function ComparisonPage({
                 })}
                 href="/docs/self-hosting"
               >
-                Self-host free
+                Self-host
               </a>
             </div>
           </div>

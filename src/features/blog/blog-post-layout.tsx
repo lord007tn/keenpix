@@ -178,7 +178,7 @@ export function BlogPostCta({ language }: { language: 'ar' | 'en' }) {
             })}
             href="/docs/self-hosting"
           >
-            {arabic ? 'دليل التشغيل الذاتي' : 'Self-host free'}
+            {arabic ? 'دليل التشغيل الذاتي' : 'Self-host'}
           </a>
           <Link
             className={buttonVariants({

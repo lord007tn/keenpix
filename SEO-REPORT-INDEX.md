@@ -64,7 +64,6 @@ Framework and prompts © Daniel Agrici, CC BY 4.0 — github.com/AgriciDaniel/fl
 
 ## Top-level deliverables
 
-- `MIGRATION-PLAN-MASTER-TO-CLOUD.md`
 - `SEO-REMEDIATION-ROADMAP.md`
 - this command report index
 

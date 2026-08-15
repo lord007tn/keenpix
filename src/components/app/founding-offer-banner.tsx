@@ -31,9 +31,10 @@ export function FoundingOfferBanner({
             </span>
           </div>
           <p className="mt-2 max-w-2xl text-muted-foreground text-sm leading-relaxed">
-            The first {offer.limit} paying customers lock in today’s price for
-            12 months. Trials and complimentary admin grants do not consume a
-            spot. Standard prices will be $9, $29, and $69 per month.
+            The first {offer.limit} paying organizations receive today’s price
+            for at least 12 months. Trials and complimentary admin grants do not
+            consume a spot, and claimed spots never reopen after churn. Standard
+            prices will be $9, $29, and $69 per month.
           </p>
         </div>
         <div className="w-full shrink-0 sm:w-44">

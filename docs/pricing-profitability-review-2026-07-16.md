@@ -1,5 +1,16 @@
 # Pricing and profitability review — July 16, 2026
 
+> Historical baseline: this review predates the August 4 founding/standard
+> catalog split. Current planning keeps the first 25 paying organizations at the
+> $9/$19/$39 founding catalog and blends every later customer at $9/$29/$69,
+> using a 50% Basic / 35% Pro / 15% Business mix. Under the current assumptions,
+> modeled break-even is 18 paying customers. This is a planning estimate, not
+> observed accounting profit, and it excludes overage revenue, support labor,
+> refunds, disputes, tax, and request-density abuse. The dated analysis below is
+> retained to explain the original founding-price decision. Current managed
+> pricing is not per seat and team members are unlimited; seat limits shown in
+> historical tables below are not current plan terms.
+
 ## Executive decision
 
 Custom-domain allowances should be owned and billed by the **organization**,

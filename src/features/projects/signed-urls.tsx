@@ -22,7 +22,7 @@ import {
 
 // Opt-in HMAC URL signing on top of the allowlist. The allowlist gates which
 // ORIGINS keenpix will fetch; signing gates which REQUESTS it will serve — so a
-// third party can't burn the project's metered bandwidth with cache-busting
+// third party can't burn the project's metered managed delivery with cache-busting
 // query strings once this is on.
 export function SignedUrls({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient()

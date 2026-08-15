@@ -48,5 +48,6 @@ logs, and the KPIs to it.
   Origin-shield analytics are aggregated from hourly Postgres rollups, with raw logs
   kept for live/debug views. Managed edge hits are captured separately through trusted,
   project-attributed Cloudflare telemetry, persisted into hourly rollups, and included
-  once in managed-delivery billing.
+  once in managed-delivery billing. Optimizer `bytesSaved` remains a separate analytics
+  measure and is never added to delivered bytes.
 </Callout>

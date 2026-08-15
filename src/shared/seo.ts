@@ -12,7 +12,7 @@ export const SITE_TITLE = 'Image optimization CDN with honest pricing | Keenpix'
 // Kept ~155 chars so the trailing self-host differentiator survives Google's SERP
 // snippet truncation (~160). Social cards allow ~200, so they still get it whole.
 export const SITE_DESCRIPTION =
-  'Keenpix optimizes and delivers your images as AVIF/WebP from one URL — transparent bandwidth pricing, unlimited transforms, no lock-in. Or self-host free.'
+  'Keenpix optimizes and delivers your images as AVIF/WebP from one URL — transparent managed-delivery pricing, unlimited transforms, no lock-in. Or self-host with no Keenpix license fee.'
 export const SITE_KEYWORDS =
   'image optimization CDN, image CDN, Cloudinary alternative, imgix alternative, ImageKit alternative, WebP, AVIF, sharp image transforms, self-hosted image optimization, open-source image CDN, bandwidth pricing'
 export const PRICING_DESCRIPTION =

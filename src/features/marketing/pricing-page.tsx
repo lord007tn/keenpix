@@ -51,7 +51,7 @@ export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'What exactly am I billed for?',
     answer:
-      'One meter: optimized bytes delivered to end users through Keenpix managed cloud, whether Cloudflare serves an edge hit, Keenpix returns a cached variant, or Keenpix creates a new transform. Each successful response is counted once. Transformations, responsive variants, requests, and team members are unlimited, and Keenpix has no asset-storage charge. Browser or customer-owned CDN cache hits that never reach Keenpix are not counted.',
+      'One meter: optimized bytes delivered to end users through Keenpix managed cloud, whether Cloudflare serves an edge hit, Keenpix returns a cached variant, or Keenpix creates a new transform from the origin. Each successful response is counted once. Bandwidth saved is a separate analytics measure and is never added to delivered bytes. Transformations, responsive variants, requests, and team members are unlimited, and Keenpix has no asset-storage charge. Browser or customer-owned CDN cache hits that never reach Keenpix are not counted.',
   },
   {
     question: 'How does the free trial work?',
@@ -73,9 +73,9 @@ export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
       'Nothing breaks immediately. Keenpix keeps serving your images through a dunning grace window while Polar retries the payment, and you get an email right away. Delivery only stops if billing stays unresolved and the subscription ends.',
   },
   {
-    question: 'Is self-hosting really free?',
+    question: 'What does self-hosting cost?',
     answer:
-      'Yes. The entire engine — transform pipeline, dashboard, analytics, allowlists, signed URLs — is open source under AGPL-3.0 with no feature gates, no telemetry, and no CLA. You run it on your own infrastructure with one Docker Compose command and pay only for your own servers. The managed cloud exists for teams who would rather not operate it.',
+      'The entire engine — transform pipeline, dashboard, analytics, allowlists, and signed URLs — is open source under AGPL-3.0 with no Keenpix license fee, feature gates, telemetry, or CLA. You still pay for and operate your own servers, storage, database, backups, monitoring, and delivery network. The managed cloud exists for teams that would rather not own that work.',
   },
 ]
 
@@ -203,7 +203,8 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
               Edge hits, cache hits, and new transforms count once in one clear
               delivery meter. A single published overage rate keeps production
               online through the period. A {TRIAL.days}-day free trial that is
-              never billed. Or self-host the whole engine, free.
+              never billed. Or self-host the whole engine with no Keenpix
+              license fee while operating your own infrastructure.
             </p>
 
             <div className="mt-8 text-left">
@@ -281,7 +282,7 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
         <section className="border-b">
           <div className="mx-auto max-w-5xl px-6 py-14">
             <h2 className="font-semibold text-2xl tracking-tight">
-              Compare every tier — including free
+              Compare managed plans with self-hosting
             </h2>
             <p className="mt-2 max-w-2xl text-muted-foreground">
               Self-host is a real tier, not a demo: the same AGPL engine with
@@ -297,7 +298,9 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
                     <TableHead className="w-56" scope="col">
                       <span className="sr-only">Plan feature</span>
                     </TableHead>
-                    <TableHead scope="col">Self-host (free)</TableHead>
+                    <TableHead scope="col">
+                      Self-host (no license fee)
+                    </TableHead>
                     <TableHead scope="col">Basic</TableHead>
                     <TableHead scope="col">Pro</TableHead>
                     <TableHead scope="col">Business</TableHead>
@@ -306,7 +309,7 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
                 <TableBody>
                   <TableRow>
                     <TableCell className="font-medium">Price</TableCell>
-                    <TableCell>$0 · AGPL-3.0</TableCell>
+                    <TableCell>No Keenpix fee · infrastructure extra</TableCell>
                     {PLAN_CARD_ORDER.map((planId) => (
                       <TableCell key={planId}>
                         ${formatUsd(prices.plans[planId].month.amountCents)}/mo
@@ -338,7 +341,7 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
                 className="text-foreground underline"
                 href="/docs/self-hosting"
               >
-                Self-host Keenpix free
+                Self-host Keenpix
               </a>{' '}
               — or read{' '}
               <a className="text-foreground underline" href="/compare">

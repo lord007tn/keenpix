@@ -5,12 +5,12 @@ export const imagekitComparison = {
   competitor: 'ImageKit',
   title: 'ImageKit Alternative: Keenpix vs ImageKit (2026)',
   metaDescription:
-    'Keenpix vs ImageKit, July 2026: same $9 entry but 100 GB vs 40 GB, $0.08 vs $0.50/GB overage, AGPL self-hosting — and where ImageKit still wins.',
+    'Keenpix vs ImageKit, August 2026: same $9 entry but 100 GB vs 40 GB, phase-specific overage, AGPL self-hosting — and where ImageKit still wins.',
   heroHeadline: 'Keenpix vs ImageKit: a bandwidth-first alternative',
   heroSubhead:
-    'ImageKit and Keenpix both publish bandwidth-based pricing. Keenpix bundles more bandwidth at its entry tier and the upcoming v0.2.0 code is AGPL-3.0, while ImageKit offers a much broader media platform.',
+    'ImageKit publishes bandwidth pricing; Keenpix publishes a managed-delivery meter. Keenpix bundles more delivery at its entry tier and v0.2.1 is AGPL-3.0, while ImageKit offers a much broader media platform.',
   verdict:
-    "If you want an all-in-one media platform — upload widgets, a media library your marketing team can browse, video streaming, and a free tier under 20 GB/month — ImageKit is the better product. Keenpix deliberately does none of that. Pick Keenpix if your images already live on origins you control and you need optimization and delivery with predictable costs: the same $9 entry buys 100 GB instead of 40 GB, published overage runs $0.05–0.08/GB, and paid delivery stays online. The upcoming v0.2.0 code also provides an AGPL-3.0 self-host path. Keenpix is younger and solo-built — weigh that honestly against ImageKit's maturity.",
+    "If you want an all-in-one media platform — upload widgets, a media library your marketing team can browse, video streaming, and a free tier under 20 GB/month — ImageKit is the better product. Keenpix deliberately does none of that. Pick Keenpix if your images already live on origins you control and you need optimization and delivery with predictable costs: the same $9 entry buys 100 GB instead of 40 GB, overage is $0.07–0.12/GB, and paid delivery stays online. Published v0.2.1 also provides an AGPL-3.0 self-host path. Keenpix is younger and solo-built — weigh that honestly against ImageKit's maturity.",
   pricingRows: [
     {
       scenario: '20 GB delivered / month',
@@ -30,12 +30,12 @@ export const imagekitComparison = {
     {
       scenario: '400 GB delivered / month',
       competitor: '~$168 (Pro $89 + 175 GB × $0.45)',
-      keenpix: '$19 (Pro — included)',
+      keenpix: '$29 (Pro — included)',
     },
     {
       scenario: '1 TB delivered / month',
       competitor: '~$438 (Pro $89 + 775 GB × $0.45)',
-      keenpix: '$39 (Business — included)',
+      keenpix: '$69 (Business — included)',
     },
   ],
   featureRows: [
@@ -47,7 +47,7 @@ export const imagekitComparison = {
     {
       feature: 'Overage rate',
       competitor: '$0.45–0.50/GB',
-      keenpix: '$0.05–0.08/GB',
+      keenpix: '$0.07–0.12/GB',
     },
     {
       feature: 'Free tier',
@@ -77,12 +77,12 @@ export const imagekitComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No',
-      keenpix: 'Upcoming v0.2.0: AGPL-3.0 with Docker/Coolify files',
+      keenpix: 'v0.2.1: AGPL-3.0 with Docker/Coolify files',
     },
     {
       feature: 'Open source',
       competitor: 'No',
-      keenpix: 'v0.2.0 source: AGPL-3.0; prior releases keep their licenses',
+      keenpix: 'v0.2.1 source: AGPL-3.0; prior releases keep their licenses',
     },
     {
       feature: 'Storage / DAM',
@@ -118,17 +118,17 @@ export const imagekitComparison = {
   ],
   switchReasons: [
     {
-      title: '2.5x the bandwidth for the same $9',
+      title: '2.5x the managed delivery for the same $9',
       detail:
         'ImageKit Lite and Keenpix Basic both cost $9/month, but Lite includes 40 GB while Basic includes 100 GB of managed delivery. Both count optimized CDN delivery, including provider-cache hits.',
     },
     {
-      title: 'Overage at $0.08/GB, not $0.50/GB',
+      title: 'Published overage below ImageKit Lite',
       detail:
-        'Past your quota, ImageKit charges $0.45–0.50 per GB — roughly 50x the wholesale cost of bandwidth. Keenpix charges $0.08/GB on Basic, dropping to $0.05/GB on Business. A 60 GB overrun costs $30 on ImageKit Lite and $4.80 on Keenpix Basic.',
+        'Past your quota, ImageKit charges $0.45–0.50 per GB. Keenpix Basic charges $0.12/GB, so a 60 GB overrun is $7.20 instead of $30 on ImageKit Lite.',
     },
     {
-      title: 'A cap you set instead of a meter you fear',
+      title: 'Visible usage and a published overage rate',
       detail:
         'ImageKit documents a 20 GB free-plan delivery allowance and an account-level usage limit; confirm the current enforcement and notification behavior for your account. Keenpix paid plans keep serving at the published overage rate and surface projected charges in billing.',
     },
@@ -140,7 +140,7 @@ export const imagekitComparison = {
     {
       title: 'Self-hosting is the exit ramp',
       detail:
-        'The v0.2.0 cloud code is licensed AGPL-3.0 and includes Docker and Coolify deployment files. The latest published v0.1.11 release remains Apache-2.0 until v0.2.0 is tagged. Moving in-house avoids a Keenpix license fee but transfers infrastructure, updates, monitoring, and routing to you.',
+        'The published v0.2.1 release is licensed AGPL-3.0 and includes Docker and Coolify deployment files. Moving in-house avoids a Keenpix license fee but transfers infrastructure, updates, monitoring, and routing to you.',
     },
   ],
   whenCompetitorWins: [
@@ -162,7 +162,7 @@ export const imagekitComparison = {
   faq: [
     {
       q: 'Is Keenpix actually cheaper than ImageKit?',
-      a: "For paid delivery, yes, and it compounds with volume: $9 buys 100 GB vs 40 GB, and overage is $0.05–0.08/GB vs $0.45–0.50/GB (as of July 2026). At 400 GB/month that is $19 vs roughly $168. But if you deliver under 20 GB/month and can tolerate the hard-stop, ImageKit's free tier costs $0 and Keenpix cloud does not have a free tier.",
+      a: "For paid delivery, yes, and it compounds with volume: $9 buys 100 GB vs 40 GB, and overage is $0.07–0.12/GB versus ImageKit's $0.45–0.50/GB (as of August 2026). At 400 GB/month Keenpix Pro is $29 versus roughly $168 on ImageKit. But if you deliver under 20 GB/month and can tolerate the hard-stop, ImageKit's free tier costs $0 and Keenpix cloud does not have a free tier.",
     },
     {
       q: 'Does Keenpix include storage or a media library like ImageKit?',
@@ -174,11 +174,11 @@ export const imagekitComparison = {
     },
     {
       q: 'What happens when I exceed my bandwidth quota?',
-      a: "Overage bills at your plan's per-GB rate ($0.08 on Basic down to $0.05 on Business) through the end of the billing period without interrupting paid delivery. Usage alerts and projected charges remain visible, and payment issues receive a dunning grace period. Compare ImageKit's free-tier behavior separately.",
+      a: "Overage bills at the subscribed plan rate: $0.12/$0.09/$0.07 per GB on Basic/Pro/Business. Paid delivery continues through the billing period, usage alerts and projected charges remain visible, and payment issues receive a dunning grace period. Compare ImageKit's free-tier behavior separately.",
     },
     {
       q: 'Can I self-host Keenpix?',
-      a: 'The upcoming v0.2.0 code is AGPL-3.0 and includes Docker/Coolify deployment files; the latest published v0.1.11 remains Apache-2.0 until v0.2.0 is tagged. Self-hosting has no Keenpix license fee, but you own infrastructure, updates, monitoring, and routing.',
+      a: 'The published v0.2.1 release is AGPL-3.0 and includes Docker/Coolify deployment files. Self-hosting has no Keenpix license fee, but you own infrastructure, updates, monitoring, and routing.',
     },
     {
       q: 'Do I have to re-upload my images to migrate?',
@@ -193,8 +193,8 @@ export const imagekitComparison = {
     },
     { label: 'Keenpix pricing', url: '/pricing' },
   ],
-  pricingAsOf: 'July 2026',
+  pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
-  verifiedAt: '2026-07-12',
+  verifiedAt: '2026-08-05',
   nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

@@ -11,11 +11,11 @@ const BELIEFS = [
   },
   {
     title: 'No lock-in, ever',
-    body: 'The exact engine behind the managed cloud is open source under AGPL. Point Keenpix at your existing origin, keep your URLs, and move to self-host whenever you want.',
+    body: 'The exact engine behind the managed cloud is open source under AGPL. Point Keenpix at your existing origin and retain a self-host path; moving still requires planned configuration, data, cache, and traffic routing work.',
   },
   {
     title: 'Transparency by default',
-    body: 'One published overage rate and built-in analytics that show bandwidth, projected charges, and bytes saved per project. Paid delivery remains online as usage grows.',
+    body: 'One published managed-delivery overage rate and built-in analytics that show delivered bytes, projected charges, and bytes saved per project. Paid delivery remains online as usage grows.',
   },
 ]
 
@@ -34,7 +34,7 @@ export function AboutPage() {
             </h1>
             <p className="mt-4 max-w-2xl text-balance text-lg text-muted-foreground leading-relaxed">
               Keenpix optimizes and delivers your images in modern formats from
-              a single URL — with published application-bandwidth pricing and an
+              a single URL — with published managed-delivery pricing and an
               open-source engine you can run yourself. We build it because image
               delivery should be fast, cheap, and impossible to get locked into.
             </p>
@@ -164,7 +164,7 @@ export function AboutPage() {
             </dl>
             <div className="mt-10 flex flex-wrap gap-3">
               <a className={buttonVariants()} href="/docs/self-hosting">
-                Self-host free
+                Self-host
               </a>
               <a
                 className={buttonVariants({ variant: 'outline' })}

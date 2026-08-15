@@ -1,8 +1,9 @@
 # Deploying keenpix cloud (keenpix.com)
 
 The managed multi-tenant SaaS. Self-host operators do **not** need any of this —
-this is only for running the hosted product. See `docker-compose.cloud.yml` and
-the CLOUD MODE section of `.env.example`.
+this is only for running the hosted product. `docker-compose.cloud.yml` is the
+portable reference stack; the live Coolify resource uses the volume-compatible
+`docker-compose.production.yml`. See the CLOUD MODE section of `.env.example`.
 
 ## Stack
 
@@ -93,17 +94,27 @@ the CLOUD MODE section of `.env.example`.
    region `auto`). Or use the bundled maxio service.
 7. **Secrets** — `BETTER_AUTH_SECRET` (openssl rand -hex 32), `CLICKHOUSE_PASSWORD`,
    `CRON_SECRET` (random), Postgres/admin creds (Coolify generates `SERVICE_*`).
-   Set `KEENPIX_IMAGE` to a versioned release tag or immutable image digest;
-   production Compose intentionally has no floating `latest` fallback.
 
 ## Deploy
+
+The production Coolify application (`keenpix`) currently tracks `master` and
+uses `docker-compose.production.yml`. It has no GitHub
+webhook, so pushing `master` publishes CI/GHCR artifacts but does **not** redeploy
+keenpix.com. Select and deploy the reviewed `master` commit manually in Coolify,
+then record the deployment id and smoke-test results. Repository GitHub Actions
+run on `ubuntu-latest`; no Blacksmith runner is configured.
+
+For the alternative image-based stack, set `KEENPIX_IMAGE` to a versioned
+release tag or immutable digest before running:
 
 ```
 docker compose -f docker-compose.cloud.yml up -d
 ```
 
-Update the pinned Keenpix, Maxio, and cron image references deliberately during
-a release; do not turn them back into floating `latest` tags.
+The Coolify production stack builds the reviewed source commit and ignores
+`KEENPIX_IMAGE`. Update its pinned Maxio and cron helper image references
+deliberately during a release; do not turn them back into floating `latest`
+tags.
 
 Migrations run on boot (`KEENPIX_RUN_MIGRATIONS=true`); seeding is off by default
 in cloud (`KEENPIX_RUN_SEED=false`). If you migrate existing self-host data first,

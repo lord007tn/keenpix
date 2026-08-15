@@ -126,7 +126,7 @@ export interface PlanPricing {
 // Monthly pricing derived from this catalog. Used in self-host and whenever live
 // Polar prices are unavailable so prices never render blank.
 export function catalogPricing(
-  phase: PricingPhase = 'founding',
+  phase: PricingPhase = 'standard',
   claimed = 0,
 ): PlanPricing {
   const plans = {} as PlanPricing['plans']

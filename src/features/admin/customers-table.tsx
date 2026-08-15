@@ -149,14 +149,14 @@ const columns: ColumnDef<CustomerAccount>[] = [
       <SortHeader
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       >
-        Bandwidth 30d
+        Managed delivery 30d
       </SortHeader>
     ),
     cell: ({ row }) => (
       <div className="flex flex-col gap-0.5 tabular-nums">
         <span>{humanBytes(row.original.usage30d.totalBandwidthBytes)}</span>
         <span className="text-muted-foreground text-xs">
-          {humanBytes(row.original.usage30d.bandwidthBytes)} delivered
+          {humanBytes(row.original.usage30d.bandwidthBytes)} application
         </span>
       </div>
     ),
@@ -391,10 +391,10 @@ export function CustomersTable() {
         </Table>
       </Card>
       <p className="text-muted-foreground text-xs">
-        Requests and bandwidth combine customer-scoped Edge delivery with origin
-        responses; delivered values include successful responses only. Cost
-        combines Polar fees, modeled Edge and origin delivery, and a
-        bandwidth-weighted share of fixed operations. Contribution is current
+        Requests and managed delivery combine customer-scoped Edge delivery with
+        application responses; delivered values include successful responses
+        only. Cost combines Polar fees, modeled Edge and origin delivery, and a
+        delivery-weighted share of fixed operations. Contribution is current
         paid MRR minus that total cost.
       </p>
     </div>

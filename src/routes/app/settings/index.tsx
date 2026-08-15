@@ -346,8 +346,8 @@ function SettingsPage() {
                     <CardDescription>
                       Optional hotlink protection on top of the allowlist:
                       require an HMAC signature on every transform URL so third
-                      parties can’t run up your bandwidth with cache-busting
-                      requests.
+                      parties can’t run up your managed delivery with
+                      cache-busting requests.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

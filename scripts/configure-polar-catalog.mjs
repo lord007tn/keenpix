@@ -95,6 +95,8 @@ function metadata(plan, phase, expected, current = {}) {
     overage_per_gb_cents: expected.overageCents,
     billing_scope: 'managed_delivery',
     team_members: 'unlimited',
+    // Descriptive offer metadata only. The application does not schedule or
+    // perform an automatic migration to a standard product after month 12.
     ...(phase === 'founding' ? { price_lock_months: 12 } : {}),
   }
 }

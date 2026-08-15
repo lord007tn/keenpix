@@ -17,7 +17,7 @@ export const Route = createFileRoute('/legal/terms')({
 
 function TermsPage() {
   return (
-    <LegalLayout lastUpdated="July 13, 2026" title="Terms of Service">
+    <LegalLayout lastUpdated="August 5, 2026" title="Terms of Service">
       <p>
         These Terms of Service ("Terms") govern your access to and use of the
         Keenpix cloud service operated by Keenpix ("Keenpix", "we", "us"). By
@@ -75,15 +75,17 @@ function TermsPage() {
         includes a monthly managed-delivery allotment. Successful optimized
         responses delivered through the Keenpix-managed edge or application
         count once; delivery above that allotment is billed at the published
-        per-GB overage rate for your plan. Transforms, requests, and team
-        members are not separately metered. Subscriptions renew automatically
-        until cancelled; you can cancel at any time from your billing portal and
-        retain access through the end of the paid period. Fees are
-        non-refundable except where required by law. If you believe a charge is
-        incorrect, contact us with the invoice or receipt before opening a
-        payment dispute so we can investigate it.
+        per-GB overage rate for your plan. Whether Cloudflare, Keenpix&apos;s
+        optimized-variant cache, or a new origin transform supplies that
+        response does not change the billable count. Saved bandwidth is separate
+        analytics and is never added to delivered bytes. Transforms, requests,
+        and team members are not separately metered. Subscriptions renew
+        automatically until cancelled; you can cancel at any time from your
+        billing portal and retain access through the end of the paid period.
+        Fees are non-refundable except where required by law. If you believe a
+        charge is incorrect, contact us with the invoice or receipt before
+        opening a payment dispute so we can investigate it.
       </p>
-
       <h2>5. Your content and origins</h2>
       <p>
         You retain all rights to your images. You grant Keenpix a limited

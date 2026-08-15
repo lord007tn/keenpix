@@ -5,12 +5,12 @@ export const vercelComparison = {
   competitor: 'Vercel Image Optimization',
   title: 'Vercel Image Optimization Alternative: Keenpix (2026)',
   metaDescription:
-    'Keenpix vs Vercel Image Optimization: one meter vs three, unlimited transforms, next/image loader support, and always-on paid usage. Pricing as of July 2026.',
+    'Keenpix vs Vercel Image Optimization: one meter vs three, unlimited transforms, next/image loader support, and always-on paid usage. Pricing as of August 2026.',
   heroHeadline: 'Keenpix vs Vercel Image Optimization: a portable alternative',
   heroSubhead:
     'Vercel Image Optimization bills transformations, cache reads, and cache writes — plus data transfer — and Hobby can return 402 at its included limits. Keenpix bills optimized managed delivery once across its edge and application; paid usage continues at the published overage rate.',
   verdict:
-    "If your site fits inside Vercel's Hobby allowances, or you already pay for Vercel Pro and image usage costs little, stay put — the default next/image loader is zero-config and Keenpix cannot beat free or nearly-free. Consider Keenpix when you prefer one bandwidth meter, image-specific analytics, managed custom domains, always-on paid usage, and the upcoming v0.2.0 AGPL-3.0 self-host path. Keenpix is a young, focused product with no video or storage, so the trade is portability and predictability for platform breadth and maturity.",
+    "If your site fits inside Vercel's Hobby allowances, or you already pay for Vercel Pro and image usage costs little, stay put — the default next/image loader is zero-config and Keenpix cannot beat free or nearly-free. Consider Keenpix when you prefer one managed-delivery meter, image-specific analytics, managed custom domains, always-on paid usage, and the current v0.2.1 AGPL-3.0 self-host path. Keenpix is a young, focused product with no video or storage, so the trade is portability and predictability for platform breadth and maturity.",
   pricingRows: [
     {
       scenario: 'Small site within Hobby caps (<5k transforms/mo)',
@@ -27,13 +27,13 @@ export const vercelComparison = {
       scenario: '400 GB delivered / month',
       competitor:
         'Pro: transforms + cache reads + cache writes + Fast Data Transfer — varies',
-      keenpix: '$19/mo Pro — 400 GB included, then $0.06/GB',
+      keenpix: '$29 Pro — 400 GB included, then $0.09 per GB',
     },
     {
       scenario: '1 TB delivered / month',
       competitor:
         "Pro metered usage + Fast Data Transfer at Vercel's regional rates",
-      keenpix: '$39/mo Business — 1 TB included, then $0.05/GB',
+      keenpix: '$69 Business — 1 TB included, then $0.07 per GB',
     },
     {
       scenario: 'Crawler spike: 3× unique widths requested',
@@ -88,7 +88,7 @@ export const vercelComparison = {
     {
       feature: 'Open source / self-host',
       competitor: 'No — managed service',
-      keenpix: 'Upcoming v0.2.0: AGPL-3.0 with Docker deployment files',
+      keenpix: 'v0.2.1: AGPL-3.0 with Docker deployment files',
     },
     {
       feature: 'Security model',
@@ -104,7 +104,7 @@ export const vercelComparison = {
     {
       feature: 'Serve from your own domain',
       competitor: "Yes — your app's domain",
-      keenpix: 'Not yet',
+      keenpix: 'Pro: 1 · Business: 10',
     },
     {
       feature: 'Video / storage / DAM',
@@ -116,7 +116,7 @@ export const vercelComparison = {
     {
       title: 'One meter you can actually forecast',
       detail:
-        "Vercel's image pricing has changed shape twice — legacy $5 per 1k source images, now three usage meters plus Fast Data Transfer. Predicting next month's bill means forecasting four line items that move independently. Keenpix bills delivered gigabytes, full stop: one number, one published overage rate.",
+        "Vercel's image pricing has changed shape twice — legacy $5 per 1k source images, now three usage meters plus Fast Data Transfer. Predicting next month's bill means forecasting four line items that move independently. Keenpix bills optimized bytes delivered through its managed edge or application once, regardless of cache or origin source. Saved bandwidth is separate analytics and is never added to the bill.",
     },
     {
       title: 'Unlimited transformations, so srcsets are free',
@@ -136,7 +136,7 @@ export const vercelComparison = {
     {
       title: 'An open-source escape hatch',
       detail:
-        'The v0.2.0 cloud code is AGPL-3.0 and includes a Docker deployment path. The latest published v0.1.11 release remains Apache-2.0 until v0.2.0 is tagged. Moving from hosted Keenpix to self-hosting can preserve the transform grammar when you control routing, but it still requires an operational migration.',
+        'The current v0.2.1 code is AGPL-3.0 and includes a Docker deployment path. Moving from hosted Keenpix to self-hosting can preserve the transform grammar when you control routing, but it still requires an operational migration.',
     },
   ],
   whenCompetitorWins: [
@@ -151,8 +151,8 @@ export const vercelComparison = {
     "Copy the loader snippet from /docs/frameworks/nextjs into image-loader.ts and set images.loaderFile in next.config — next/image keeps working unchanged, and Vercel's optimizer is bypassed automatically.",
     'For a custom Next.js loader, src becomes https://cdn.keenpix.com/p/<project-id>/img/<origin-url>, width maps to ?w=, and quality maps to ?q=. Validate any additional application-specific transforms in a preview deployment.',
     'Leave format selection automatic — Keenpix negotiates AVIF/WebP from the Accept header — or pin an output with ?fmt= where you need it.',
-    'Deploy a preview and confirm traffic in Keenpix live request logs, then route the image path through your existing CDN (e.g. Cloudflare) so edge caching stays free — Keenpix is designed to sit behind it.',
-    'Compare the single bandwidth meter and projected overage against your Vercel usage page during the trial.',
+    'Deploy a preview and confirm traffic in Keenpix live request logs, then route the image path through your existing CDN (e.g. Cloudflare) and verify its pricing and cache behavior — Keenpix is designed to sit behind it.',
+    'Compare the single managed-delivery meter and projected overage against your Vercel usage page during the trial.',
     'Optionally enable HMAC signed URLs to lock transform parameters before going to production.',
   ],
   faq: [
@@ -174,11 +174,11 @@ export const vercelComparison = {
     },
     {
       q: 'Why do LLM crawlers make Vercel image bills unpredictable?',
-      a: "Crawlers request image URLs at widths and combinations real users never hit, and every new variant is a fresh transformation plus a cache write — two billed meters on Vercel, and the fastest way to blow through Hobby's 5k-transform cap. On Keenpix transformations are free, so crawler traffic only costs the bandwidth it actually pulls; signed URLs and origin allowlists help prevent abusive variants.",
+      a: "Crawlers request image URLs at widths and combinations real users never hit, and every new variant is a fresh transformation plus a cache write — two billed meters on Vercel, and the fastest way to blow through Hobby's 5k-transform cap. On Keenpix transformations are free, so crawler traffic only costs the managed delivery it actually pulls; signed URLs and origin allowlists help prevent abusive variants.",
     },
     {
       q: 'Can I self-host Keenpix?',
-      a: 'The upcoming v0.2.0 code is AGPL-3.0 and includes Docker/Coolify deployment files; the latest published v0.1.11 remains Apache-2.0 until v0.2.0 is tagged. Self-hosting has no Keenpix license fee, but you own infrastructure and routing.',
+      a: 'The current v0.2.1 code is AGPL-3.0 and includes Docker/Coolify deployment files. Self-hosting has no Keenpix license fee, but you own infrastructure and routing.',
     },
   ],
   sources: [
@@ -193,8 +193,8 @@ export const vercelComparison = {
     },
     { label: 'Keenpix pricing', url: '/pricing' },
   ],
-  pricingAsOf: 'July 2026',
+  pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
-  verifiedAt: '2026-07-12',
+  verifiedAt: '2026-08-05',
   nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

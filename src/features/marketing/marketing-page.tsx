@@ -61,7 +61,7 @@ const FEATURES = [
   {
     icon: GlobeIcon,
     title: 'Optimize your origins',
-    body: 'Point Keenpix at your existing S3, R2, or any origin and keep your URLs — it sits behind the CDN you already run. No re-upload, no asset-library migration, no lock-in.',
+    body: 'Point Keenpix at your existing S3, R2, or any origin — it sits behind the CDN you already run. No re-upload or asset-library migration; moving still requires planned URL or hostname routing changes.',
   },
   {
     icon: ImageIcon,
@@ -164,7 +164,10 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
     ...PLAN_CARD_ORDER.map((planId) => prices.plans[planId].month.amountCents),
   )
   const metrics = [
-    [`from ${formatUsd(fromCents)}/mo`, 'or self-host free, forever'],
+    [
+      `from ${formatUsd(fromCents)}/mo`,
+      'or self-host with no Keenpix license fee',
+    ],
     ...METRICS_TAIL,
   ]
   return (
@@ -267,7 +270,7 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
                   })}
                   href="/docs/self-hosting"
                 >
-                  Self-host free
+                  Self-host
                 </a>
               </div>
               <p className="mt-5 text-sm text-white/60">
@@ -549,7 +552,7 @@ Vary: Accept`}</CodeBlock>
           </div>
         </section>
 
-        <PricingComparison />
+        <PricingComparison pricing={prices} />
 
         <AiExtensionsPreview />
 
@@ -565,8 +568,9 @@ Vary: Accept`}</CodeBlock>
               <p className="mt-4 text-muted-foreground leading-relaxed">
                 The Keenpix engine is open source under AGPL — dashboard,
                 analytics, and signed URLs included, no telemetry, no CLA.
-                Deploy it with Docker, keep the image pipeline on your own
-                infrastructure, and pay nothing.
+                Deploy it with Docker and keep the image pipeline on your own
+                infrastructure with no Keenpix license fee. You still pay for
+                and operate that infrastructure.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <a

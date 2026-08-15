@@ -147,9 +147,9 @@ function QuotaRow({
   )
 }
 
-// Usage this billing period: the metered bandwidth (with overage projection) plus
-// the plan-limited resource counts. Bandwidth is what Polar bills, so this is the
-// "no surprise bill" surface.
+// Usage this billing period: metered managed-delivery bytes (with overage
+// projection) plus the plan-limited resource counts. Saved bytes are analytics,
+// not billable usage, so they never enter this "no surprise bill" surface.
 function UsageCard({ data }: { data: BillingData }) {
   const { usage } = data
   const hasPlan = data.plan !== null
@@ -210,7 +210,7 @@ function UsageCard({ data }: { data: BillingData }) {
               used={usage.projects.used}
             />
             <QuotaRow
-              label="Seats"
+              label="Team members"
               limit={usage.seats.limit}
               pending={usage.seats.pending}
               used={usage.seats.used}
@@ -237,7 +237,7 @@ function UsageCard({ data }: { data: BillingData }) {
               </div>
             ) : null}
             <p className="text-muted-foreground text-xs">
-              Bandwidth totals are updated after each completed hour.
+              Managed-delivery totals are updated after each completed hour.
             </p>
           </>
         ) : null}

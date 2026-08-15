@@ -9,22 +9,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { STANDARD_PLAN_PRICES } from '@/lib/billing/plans'
+import type { PlanPricing } from '@/lib/billing/plans'
 
-const PROVIDERS = [
-  {
-    name: 'Keenpix Basic',
-    href: '/pricing',
-    featured: true,
-    values: [
-      `$${STANDARD_PLAN_PRICES.basic.priceMonthlyUsd}`,
-      '100 GB',
-      `$${(STANDARD_PLAN_PRICES.basic.overagePerGbCents / 100).toFixed(2)} / GB`,
-      'Unlimited',
-      'Unlimited',
-      'Included',
-    ],
-  },
+const COMPETITORS = [
   {
     name: 'ImageKit Lite',
     href: 'https://imagekit.io/plans',
@@ -68,7 +55,23 @@ const ROWS = [
   'Self-host option',
 ] as const
 
-export function PricingComparison() {
+export function PricingComparison({ pricing }: { pricing: PlanPricing }) {
+  const providers = [
+    {
+      name: 'Keenpix Basic',
+      href: '/pricing',
+      featured: true,
+      values: [
+        `$${pricing.plans.basic.month.amountCents / 100}`,
+        '100 GB',
+        `$${(pricing.plans.basic.overagePerGbCents / 100).toFixed(2)} / GB`,
+        'Unlimited',
+        'Unlimited',
+        'Included',
+      ],
+    },
+    ...COMPETITORS,
+  ]
   return (
     <section className="border-b bg-background" id="compare-pricing">
       <div className="mx-auto max-w-6xl px-6 py-20">
@@ -82,7 +85,7 @@ export function PricingComparison() {
           <p className="max-w-2xl text-muted-foreground leading-relaxed lg:justify-self-end">
             Keenpix stays focused on image optimization instead of bundling a
             DAM or video platform. That keeps the starting plan small, the
-            bandwidth allowance large, and the invoice readable.
+            managed-delivery allowance large, and the invoice readable.
           </p>
         </div>
 
@@ -98,7 +101,7 @@ export function PricingComparison() {
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40">
                   <TableHead className="w-52">Published plan</TableHead>
-                  {PROVIDERS.map((provider) => (
+                  {providers.map((provider) => (
                     <TableHead
                       className={
                         provider.featured
@@ -131,7 +134,7 @@ export function PricingComparison() {
                 {ROWS.map((row, rowIndex) => (
                   <TableRow key={row}>
                     <TableCell className="font-medium">{row}</TableCell>
-                    {PROVIDERS.map((provider) => {
+                    {providers.map((provider) => {
                       const value = provider.values[rowIndex]
                       return (
                         <TableCell
@@ -162,7 +165,7 @@ export function PricingComparison() {
         </div>
         <p className="mt-4 max-w-4xl text-muted-foreground text-xs leading-relaxed">
           Public self-service prices checked against vendor-owned pricing pages
-          on August 4, 2026. Products are not identical: ImageKit includes DAM
+          on August 5, 2026. Products are not identical: ImageKit includes DAM
           and video capabilities, imgix uses shared credits, and Bunny charges
           its CDN separately. Taxes, annual discounts, enterprise contracts, and
           regional CDN charges are excluded.
