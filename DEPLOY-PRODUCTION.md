@@ -33,7 +33,6 @@ Set these in Coolify before deploying:
 
 ```dotenv
 KEENPIX_APP_URL=https://keenpix.com
-KEENPIX_DEPLOYMENT_ENV=production
 KEENPIX_SUPER_ADMIN_EMAIL=you@example.com
 POLAR_TOKEN=polar_oat_...
 POLAR_WEBHOOK_SECRET=whsec_...
@@ -50,9 +49,9 @@ GOOGLE_CLIENT_SECRET=...
 
 `KEENPIX_APP_URL` supplies the service URL, Better Auth URL, generated-link URL,
 and browser build URL so they cannot drift across origins.
-Use `KEENPIX_DEPLOYMENT_ENV=staging` together with `POLAR_SERVER=sandbox` for an
-isolated staging deployment. The application rejects production Polar in staging
-and rejects localhost or non-HTTPS URLs in production cloud mode.
+The production Compose file fixes `KEENPIX_DEPLOYMENT_ENV=production` so the
+deployment mode cannot drift in Coolify. The application rejects localhost or
+non-HTTPS URLs and rejects Polar sandbox credentials in production cloud mode.
 
 `VITE_GA_MEASUREMENT_ID` and `VITE_GTM_CONTAINER_ID` are public configuration,
 not credentials. Mark configured values as available at both build time and
