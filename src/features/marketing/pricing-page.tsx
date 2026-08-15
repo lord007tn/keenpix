@@ -47,7 +47,7 @@ function formatUsd(cents: number): string {
 
 // Pricing-specific FAQ, rendered visibly by the
 // route. Every number derives from the plans catalog so it can't drift.
-export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
+const PRICING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'What exactly am I billed for?',
     answer:

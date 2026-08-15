@@ -21,16 +21,6 @@ export function getOrgSubscription(orgId: string) {
   return prisma.subscription.findUnique({ where: { orgId } })
 }
 
-// Counts organizations that have reached a real Polar-paid active state at
-// least once. Trialing subscriptions and local admin grants never set this
-// timestamp, while churned customers remain counted so founding slots cannot
-// reopen later.
-export function countFoundingCustomers() {
-  return prisma.subscription.count({
-    where: { becamePayingAt: { not: null } },
-  })
-}
-
 // Whether an org may serve transforms right now, including the dunning grace.
 // Cloud-only concern; self-host never calls this (it always serves).
 export async function orgIsServable(orgId: string): Promise<boolean> {

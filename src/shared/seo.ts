@@ -356,23 +356,6 @@ export function blogListingJsonLd(
   }
 }
 
-// FAQPage for the marketing home. The Q&As MUST also be visible on the page —
-// Google requires it for FAQ rich results — so this is emitted alongside a visible
-// FAQ section, not on its own.
-export function faqPageJsonLd(
-  items: Array<{ answer: string; question: string }>,
-) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: items.map((item) => ({
-      '@type': 'Question',
-      name: item.question,
-      acceptedAnswer: { '@type': 'Answer', text: item.answer },
-    })),
-  }
-}
-
 // BlogPosting + breadcrumb graph for a single article. Dated and attributed so
 // search engines can surface it as blog content, unlike undated docs WebPages.
 export function blogPostingJsonLd({

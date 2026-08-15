@@ -6,7 +6,7 @@ import { SiteFooter, SiteHeader } from '@/features/blog/blog-chrome'
 
 // Rendered visibly in the FAQ section by the
 // /self-hosted-image-cdn route (Google requires the answers to be on the page).
-export const SELF_HOSTED_FAQ: Array<{ answer: string; question: string }> = [
+const SELF_HOSTED_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Is the self-hosted version really free?',
     answer:

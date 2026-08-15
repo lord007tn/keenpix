@@ -1,13 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
 const {
-  countFoundingCustomers,
   loggerError,
   upsertSubscription,
   upsertSubscriptionAddon,
   upsertSubscriptionWithCustomer,
 } = vi.hoisted(() => ({
-  countFoundingCustomers: vi.fn(),
   loggerError: vi.fn(),
   upsertSubscription: vi.fn(),
   upsertSubscriptionAddon: vi.fn(),
@@ -15,7 +13,6 @@ const {
 }))
 
 vi.mock('@/data-access/subscriptions', () => ({
-  countFoundingCustomers,
   upsertSubscription,
   upsertSubscriptionWithCustomer,
 }))

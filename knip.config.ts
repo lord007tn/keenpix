@@ -13,6 +13,7 @@ const config: KnipConfig = {
     // so knip can't reach them through the module graph.
     'src/server/nitro/**/*.ts',
     'content/**/*.mdx',
+    'prisma/schema.prisma',
   ],
   project: [
     'src/**/*.{ts,tsx}',
@@ -21,7 +22,6 @@ const config: KnipConfig = {
     '*.{ts,tsx}',
   ],
   ignore: [
-    'prisma/schema.prisma',
     'source.config.ts',
     'src/components/mdx.tsx',
     'src/components/ui/**',
