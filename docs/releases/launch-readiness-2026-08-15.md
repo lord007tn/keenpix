@@ -47,7 +47,7 @@ the historical key incident, and the brand X account remain open.
 
 ## Live production validation
 
-Observed on August 15, 2026 after deploying commit `dc0a72c`:
+Observed on August 15, 2026 after deploying commit `94d8332`:
 
 - `https://keenpix.com/api/health`, `/robots.txt`, and `/sitemap.xml` return
   `200`. The sitemap exposes 69 canonical URLs, five Arabic pages, and ten
@@ -66,11 +66,13 @@ Observed on August 15, 2026 after deploying commit `dc0a72c`:
 - Cloudflare Email Address Obfuscation is disabled by an active all-request
   configuration rule. Fresh uncached About, Support, and Privacy HTML contains
   native `mailto:` links and no `/cdn-cgi/l/email-protection` rewrites.
-- The final 74-page SquirrelScan scored 76/C: 6,917 checks passed, 510 warned,
-  and 68 failed. Links now report zero errors. The remaining repeated hard
-  failures are a Fumadocs mobile table-of-contents progress SVG without an
-  accessible name; the scanner's secret-shaped documentation values are public
-  examples/placeholders, not credentials.
+- The final 74-page SquirrelScan scored 77/C: 6,960 checks passed, 465 warned,
+  and 71 failed. Links report zero errors and no unsafe external-link or orphan
+  warning. The 71 failures are fully triaged as 46 false-positive decorative
+  image-alt findings, 22 upstream Fumadocs mobile table-of-contents progressbar
+  findings, and three transient TTFB readings that measured 189–309 ms on
+  immediate repeated checks. The compact evidence record contains the complete
+  classification and raw-report checksum.
 - Search Console reports five clicks, 406 impressions, 1.2% CTR, and average
   position 34.7 for the current three-month window. Its indexing snapshot is
   dated August 7 and therefore predates this deployment: 41 URLs indexed and 19
@@ -90,8 +92,9 @@ Observed on August 15, 2026 after deploying commit `dc0a72c`:
    is unavailable for this flow, and account creation and public posting require
    action-time approval.
 
-The post-deploy SquirrelScan evidence is stored at
-`output/keenpix-squirrelscan-live-final-2026-08-15.md`.
+The tracked post-deploy evidence record is
+`docs/releases/keenpix-live-audit-2026-08-15.md`. The full generated report is a
+local operator artifact identified by filename and SHA-256 in that record.
 
 ## Prepared assets
 
