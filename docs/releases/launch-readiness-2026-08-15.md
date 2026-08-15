@@ -73,6 +73,9 @@ equivalent of the original deployment commit after the credential-history scrub)
   previously missing five-domain add-on was created, while the temporary product
   and meter used during verification were detached and archived. Polar confirms
   that sandbox changes do not process payments.
+- The authenticated Zoho Mail account is a confirmed member of the
+  `fariq@keenpix.com` group. No delivery test was sent and no mailbox, group,
+  forwarding, or account-security setting was changed.
 - Cloudflare Email Address Obfuscation is disabled by an active all-request
   configuration rule. Fresh uncached About, Support, and Privacy HTML contains
   native `mailto:` links and no `/cdn-cgi/l/email-protection` rewrites.
@@ -104,6 +107,8 @@ equivalent of the original deployment commit after the credential-history scrub)
 4. Polar production and sandbox catalogs were inspected in their authenticated
    dashboards. No payout, merchant-plan, balance, customer, subscription, or
    production-finance mutation was made.
+5. The Keenpix support-group membership was verified in Zoho Mail without
+   sending a message or changing mailbox state.
 
 The tracked post-deploy evidence record is
 `docs/releases/keenpix-live-audit-2026-08-15.md`. The full generated report is a
