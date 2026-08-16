@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Keenpix — image optimization CDN",
   "short_name": "Keenpix",
-  "description": "Optimize and deliver AVIF/WebP images from one URL with honest bandwidth pricing, unlimited transforms, and a free self-hosted option.",
+  "description": "Optimize and deliver AVIF/WebP images from one URL with honest managed-delivery pricing, unlimited transforms, and a self-hosted option with no Keenpix license fee.",
   "lang": "en",
   "start_url": "/",
   "scope": "/",

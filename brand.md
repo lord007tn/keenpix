@@ -23,7 +23,7 @@ Keenpix uses a modular image-pipeline mark: eight transformed tiles orbit an ope
 
 ## Asset locations
 
-Vector source assets live in `public/brand`:
+Brand source assets live in `public/brand`:
 
 | Asset | File | Use |
 | --- | --- | --- |
@@ -33,12 +33,16 @@ Vector source assets live in `public/brand`:
 | Monochrome icon | `keenpix-icon-monochrome.svg` | One-color printing and fallback usage |
 | Horizontal logo | `keenpix-logo-horizontal.svg` | Light headers, README, and partner pages |
 | Reverse horizontal logo | `keenpix-logo-horizontal-reverse.svg` | Dark and navy surfaces |
-| Social avatar | `keenpix-social-avatar.svg` | Social profile image source |
+| Social avatar | `keenpix-social-avatar.png` | Canonical social profile image; use this file directly |
 | Social card | `keenpix-og-card.svg` | Editable 1200×630 social-preview source |
 | Social card PNG | `keenpix-og-card.png` | Open Graph and Twitter/X card |
 | Social card JPEG | `keenpix-og-card.jpg` | Compatibility fallback |
 
 Generated raster exports live in `public/brand/raster`. Browser and app icons are also copied to the `public` root:
+
+`keenpix-social-avatar.png` is the only supported social-profile avatar. Do not
+create platform-specific copies or regenerate it from the core icon; social
+accounts should upload this canonical file directly.
 
 - `favicon.svg`, `favicon.ico`, `favicon-16x16.png`, `favicon-32x32.png`
 - `apple-touch-icon.png`, `mstile-150x150.png`
