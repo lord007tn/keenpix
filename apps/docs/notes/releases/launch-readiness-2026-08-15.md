@@ -124,7 +124,10 @@ local operator artifact identified by filename and SHA-256 in that record.
 
 ## Prepared assets
 
-- X header: `public/brand/raster/social/keenpix-x-header.png` (1500 × 500).
-- Editable X header source: `public/brand/keenpix-x-header.svg`.
+- Canonical social avatar: `apps/app/public/brand/keenpix-social-avatar.png`;
+  this is the only supported social-profile avatar source.
+- X header: `apps/app/public/brand/raster/social/keenpix-x-header.png`
+  (1500 × 500).
+- Editable X header source: `apps/app/public/brand/keenpix-x-header.svg`.
 - English and Arabic article cards are generated from the repository's brand
   asset pipeline.

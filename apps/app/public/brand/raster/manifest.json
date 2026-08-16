@@ -84,18 +84,6 @@
     "height": 1024
   },
   {
-    "source": "keenpix-social-avatar.svg",
-    "file": "public/brand/raster/social/keenpix-social-avatar-512.png",
-    "width": 512,
-    "height": 512
-  },
-  {
-    "source": "keenpix-social-avatar.svg",
-    "file": "public/brand/raster/social/keenpix-social-avatar-1024.png",
-    "width": 1024,
-    "height": 1024
-  },
-  {
     "source": "keenpix-logo-horizontal.svg",
     "file": "public/brand/raster/logo/keenpix-logo-horizontal.png",
     "width": 1024,

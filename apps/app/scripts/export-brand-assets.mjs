@@ -166,11 +166,6 @@ const svgAssets = {
     description: 'One-color Keenpix modular image pipeline mark.',
     monochrome: true,
   }),
-  'keenpix-social-avatar.svg': iconSvg({
-    title: 'Keenpix social avatar',
-    description:
-      'Keenpix modular image pipeline mark sized for social profiles.',
-  }),
   'keenpix-logo-horizontal.svg': horizontalLogo(),
   'keenpix-logo-horizontal-reverse.svg': horizontalLogo(true),
   'keenpix-og-card.svg': ogCardSvg(),
@@ -199,18 +194,6 @@ const jobs = [
   ['keenpix-icon.svg', 'icon/keenpix-icon-256.png', 256, 256],
   ['keenpix-icon.svg', 'icon/keenpix-icon-512.png', 512, 512],
   ['keenpix-icon.svg', 'icon/keenpix-icon-1024.png', 1024, 1024],
-  [
-    'keenpix-social-avatar.svg',
-    'social/keenpix-social-avatar-512.png',
-    512,
-    512,
-  ],
-  [
-    'keenpix-social-avatar.svg',
-    'social/keenpix-social-avatar-1024.png',
-    1024,
-    1024,
-  ],
   [
     'keenpix-logo-horizontal.svg',
     'logo/keenpix-logo-horizontal.png',
