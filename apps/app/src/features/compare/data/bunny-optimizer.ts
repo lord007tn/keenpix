@@ -29,13 +29,13 @@ export const bunnyOptimizerComparison = {
       scenario: '400 GB image delivery / month',
       competitor:
         '$9.50 + Bunny CDN bandwidth at the applicable regional/tier rate',
-      keenpix: '$19 founding / $29 standard Pro, 400 GB included',
+      keenpix: '$29 Pro, 400 GB included',
     },
     {
       scenario: '1 TB image delivery / month',
       competitor:
         '$9.50 + Bunny CDN bandwidth at the applicable regional/tier rate',
-      keenpix: '$39 founding / $69 standard Business, 1 TB included',
+      keenpix: '$69 Business, 1 TB included',
     },
     {
       scenario: 'Additional website / pull zone',
@@ -89,7 +89,7 @@ export const bunnyOptimizerComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'Managed Bunny service',
-      keenpix: 'v0.2.0 code is AGPL-3.0; you operate it',
+      keenpix: 'v0.2.1 code is AGPL-3.0; you operate it',
     },
   ],
   switchReasons: [
@@ -106,7 +106,7 @@ export const bunnyOptimizerComparison = {
     {
       title: 'A self-operated deployment option',
       detail:
-        'The current v0.2.0 code is AGPL-3.0 and includes Docker and Coolify deployment paths. Self-hosting requires operating and securing the service yourself.',
+        'The current v0.2.1 code is AGPL-3.0 and includes Docker and Coolify deployment paths. Self-hosting requires operating and securing the service yourself.',
     },
   ],
   whenCompetitorWins: [

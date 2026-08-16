@@ -5,6 +5,7 @@ export const SITEMAP_STATIC_PATHS = [
   '/about',
   '/pricing',
   '/blog',
+  '/blog/ar',
   '/authors/raed-bahri',
   '/compare',
   ...Object.keys(COMPARISONS).map((slug) => `/compare/${slug}`),

@@ -30,6 +30,13 @@ export default defineNitroConfig({
     './src/server/nitro/security-headers.ts',
     './src/server/nitro/request-log.ts',
   ],
+  handlers: [
+    {
+      handler: './src/server/nitro/canonical-redirect.ts',
+      middleware: true,
+      route: '/**',
+    },
+  ],
   routeRules: {
     '/**': { headers: SECURITY_HEADERS },
   },

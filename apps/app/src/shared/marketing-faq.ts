@@ -1,9 +1,9 @@
 import { PLANS, STANDARD_PLAN_PRICES, TRIAL } from '@/lib/billing/plans'
 
-// Single source of truth for the marketing-home FAQ: rendered as a visible
-// section AND emitted as FAQPage structured data (Google requires the answers to
-// be visible on the page). Written to target high-intent queries ("Cloudinary
-// alternative", "image CDN pricing") and to be citable by AI search engines.
+// Single source of truth for the visible marketing-home FAQ. Written to answer
+// high-intent questions ("Cloudinary alternative", "image CDN pricing") and to
+// be citable by AI search engines without emitting ineligible FAQ rich-result
+// markup for a non-government, non-health site.
 // Every price/limit is derived from the plans catalog so this copy can never
 // drift from what checkout actually charges.
 const GB = 1024 ** 3
@@ -13,12 +13,12 @@ function gb(bytes: number): string {
   return value >= 1000 ? `${value / 1000} TB` : `${value} GB`
 }
 
-const { basic, pro, business } = PLANS
+const { pro, business } = PLANS
 
 export const MARKETING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'How does Keenpix pricing work?',
-    answer: `Keenpix bills on one thing — optimized bytes delivered through its managed cloud — and never per transform, request, or team member. The first 25 paying organizations receive founding prices of $${basic.priceMonthlyUsd}/$${pro.priceMonthlyUsd}/$${business.priceMonthlyUsd} per month; trials and complimentary grants do not consume a spot, and a claimed spot never reopens after churn. Standard prices are $${STANDARD_PLAN_PRICES.basic.priceMonthlyUsd}/$${STANDARD_PLAN_PRICES.pro.priceMonthlyUsd}/$${STANDARD_PLAN_PRICES.business.priceMonthlyUsd}. A Cloudflare edge hit, a Keenpix cache hit, and a new origin transform each count once when delivered. Bandwidth saved is separate analytics and is never added to delivered bytes. Browser or customer-owned CDN cache hits that never reach Keenpix are not counted. The same open-source engine can be self-hosted with no Keenpix license fee; you still operate and pay for its infrastructure.`,
+    answer: `Keenpix bills on one thing — optimized bytes delivered through its managed cloud — and never per transform, request, or team member. Monthly plans are $${STANDARD_PLAN_PRICES.basic.priceMonthlyUsd}/$${STANDARD_PLAN_PRICES.pro.priceMonthlyUsd}/$${STANDARD_PLAN_PRICES.business.priceMonthlyUsd}. A Cloudflare edge hit, a Keenpix cache hit, and a new transform each count once when delivered. Browser or customer-owned CDN cache hits that never reach Keenpix are not counted. The same open-source engine can be self-hosted with no Keenpix license fee; you still operate and pay for its infrastructure.`,
   },
   {
     question: 'Does delivery stop when I use my included managed delivery?',
@@ -61,7 +61,7 @@ export const MARKETING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Can I self-host Keenpix?',
     answer:
-      'Yes. Keenpix is open-source (AGPL). Run the exact same transform and delivery engine on your own infrastructure with Docker, free and unlimited. The managed cloud is simply the hosted, supported version of the same engine.',
+      'Yes. Keenpix is open-source under AGPL-3.0. Run the same transform and delivery engine on your own infrastructure with Docker and no Keenpix license fee. You still own the servers, storage, database, backups, monitoring, and delivery network; managed cloud is the hosted, supported option.',
   },
   {
     question: 'How much smaller are images with Keenpix?',

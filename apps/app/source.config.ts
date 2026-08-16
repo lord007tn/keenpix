@@ -1,3 +1,5 @@
+import dayjs from 'dayjs'
+import customParseFormat from 'dayjs/plugin/customParseFormat.js'
 import {
   defineCollections,
   defineConfig,
@@ -6,14 +8,23 @@ import {
 } from 'fumadocs-mdx/config'
 import { z } from 'zod'
 
+dayjs.extend(customParseFormat)
+
+const publicationDateSchema = z
+  .string()
+  .refine(
+    (value) => dayjs(value, 'YYYY-MM-DD', true).isValid(),
+    'Use a valid YYYY-MM-DD publication date',
+  )
+
 export const docs = defineDocs({
   dir: '../docs/content',
   docs: {
     // Extend (don't replace) the default frontmatter schema so title/description/
     // icon still validate; `updated` is an optional freshness date that flows into
-    // the docs TechArticle JSON-LD as dateModified and the sitemap as <lastmod>.
+    // the docs WebPage JSON-LD as dateModified and the sitemap as <lastmod>.
     schema: frontmatterSchema.extend({
-      updated: z.string().optional(),
+      updated: publicationDateSchema.optional(),
     }),
     postprocess: {
       includeProcessedMarkdown: true,
@@ -21,18 +32,15 @@ export const docs = defineDocs({
   },
 })
 
-// Blog + SEO comparison content, rendered by /blog with its own layout (not the
-// docs sidebar). Frontmatter carries publishing metadata plus an optional
-// `competitor` tag so "Keenpix vs X" pages can be grouped and cross-linked.
-export const blog = defineCollections({
-  type: 'doc',
-  dir: 'content/blog',
-  schema: frontmatterSchema.extend({
+const blogFrontmatterSchema = frontmatterSchema
+  .extend({
     description: z.string(),
-    date: z.string(),
+    date: publicationDateSchema,
     // Optional last-edited date; defaults to `date` for BlogPosting dateModified
     // and drives article:modified_time. Set it when a post is materially updated.
-    updated: z.string().optional(),
+    updated: publicationDateSchema.optional(),
+    language: z.enum(['en', 'ar']).default('en'),
+    translationKey: z.string().min(1).optional(),
     author: z.string().default('Keenpix Team'),
     tags: z.array(z.string()).default([]),
     competitor: z.string().optional(),
@@ -47,7 +55,24 @@ export const blog = defineCollections({
     coverAlt: z.string().min(1).optional(),
     ogImage: z.string().startsWith('/editorial/').optional(),
     draft: z.boolean().default(false),
-  }),
+  })
+  .superRefine((data, ctx) => {
+    if (data.updated && dayjs(data.updated).isBefore(dayjs(data.date), 'day')) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Updated date cannot be earlier than the publication date',
+        path: ['updated'],
+      })
+    }
+  })
+
+// Blog + SEO comparison content, rendered by /blog with its own layout (not the
+// docs sidebar). Frontmatter carries publishing metadata plus an optional
+// `competitor` tag so "Keenpix vs X" pages can be grouped and cross-linked.
+export const blog = defineCollections({
+  type: 'doc',
+  dir: 'content/blog',
+  schema: blogFrontmatterSchema,
   // Full post bodies flow into llms-full.txt — the comparison posts are the
   // site's best GEO asset and must be visible to AI ingestion, not just their
   // one-line descriptions.

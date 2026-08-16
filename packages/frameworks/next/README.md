@@ -6,9 +6,9 @@ Keenpix produces each transformed URL.
 
 ```tsx
 import Image from 'next/image'
-import { createNextImageProps } from '@keenpix/next'
+import { createManagedKeenpixConfig, createNextImageProps } from '@keenpix/next'
 
-const keenpix = { baseUrl: 'https://images.example.com', projectId: 'project-id' }
+const keenpix = createManagedKeenpixConfig('project-id')
 
 export default function Hero() {
   return (

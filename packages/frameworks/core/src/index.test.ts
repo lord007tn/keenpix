@@ -4,6 +4,7 @@ import {
   buildSrcSet,
   canonicalSignaturePayload,
   createImageAttributes,
+  createManagedKeenpixConfig,
 } from './index'
 
 const config = {
@@ -20,29 +21,36 @@ describe('buildImageUrl', () => {
         width: 1200,
       }),
     ).toBe(
-      'https://keenpix.example.com/img/https://cdn.example.com/hero.jpg?project=project_1&fmt=webp&q=75&w=1200',
+      'https://keenpix.example.com/img/https%3A%2F%2Fcdn.example.com%2Fhero.jpg?project=project_1&fmt=webp&q=75&w=1200',
     )
   })
 
   it('builds managed project paths without a project query', () => {
     expect(
       buildImageUrl(
-        {
-          baseUrl: 'https://cdn.keenpix.com',
-          projectId: 'project_1',
-          projectInPath: true,
-        },
+        createManagedKeenpixConfig('project_1'),
         'https://cdn.example.com/hero.jpg',
         { width: 640 },
       ),
     ).toBe(
-      'https://cdn.keenpix.com/p/project_1/img/https://cdn.example.com/hero.jpg?w=640',
+      'https://cdn.keenpix.com/p/project_1/img/https%3A%2F%2Fcdn.example.com%2Fhero.jpg?w=640',
+    )
+  })
+
+  it('upgrades the retired managed app origin to canonical delivery', () => {
+    expect(
+      buildImageUrl(
+        { baseUrl: 'https://keenpix.com', projectId: 'project_1' },
+        'https://cdn.example.com/hero.jpg',
+      ),
+    ).toBe(
+      'https://cdn.keenpix.com/p/project_1/img/https%3A%2F%2Fcdn.example.com%2Fhero.jpg',
     )
   })
 
   it('normalizes a leading source slash in path mode', () => {
     expect(buildImageUrl(config, '/uploads/hero.jpg')).toBe(
-      'https://keenpix.example.com/img/uploads/hero.jpg?project=project_1',
+      'https://keenpix.example.com/img/uploads%2Fhero.jpg?project=project_1',
     )
   })
 
@@ -60,7 +68,7 @@ it('builds sorted, unique width candidates', () => {
   expect(
     buildSrcSet(config, 'https://cdn.example.com/a.jpg', [1280, 640, 640]),
   ).toBe(
-    'https://keenpix.example.com/img/https://cdn.example.com/a.jpg?project=project_1&w=640 640w, https://keenpix.example.com/img/https://cdn.example.com/a.jpg?project=project_1&w=1280 1280w',
+    'https://keenpix.example.com/img/https%3A%2F%2Fcdn.example.com%2Fa.jpg?project=project_1&w=640 640w, https://keenpix.example.com/img/https%3A%2F%2Fcdn.example.com%2Fa.jpg?project=project_1&w=1280 1280w',
   )
 })
 
@@ -74,7 +82,7 @@ it('preserves the display aspect ratio across responsive candidates', () => {
       widths: [400, 800],
     }).srcSet,
   ).toBe(
-    'https://keenpix.example.com/img/https://cdn.example.com/a.jpg?project=project_1&h=200&w=400 400w, https://keenpix.example.com/img/https://cdn.example.com/a.jpg?project=project_1&h=400&w=800 800w',
+    'https://keenpix.example.com/img/https%3A%2F%2Fcdn.example.com%2Fa.jpg?project=project_1&h=200&w=400 400w, https://keenpix.example.com/img/https%3A%2F%2Fcdn.example.com%2Fa.jpg?project=project_1&h=400&w=800 800w',
   )
 })
 

@@ -1,0 +1,132 @@
+---
+title: حماية روابط الصور بتوقيع HMAC ومنع التحويلات غير المصرح بها
+description: الفرق بين allowlist وتوقيع HMAC، وطريقة بناء الرابط الموقّع في Keenpix، والأخطاء التي تكسر التوقيع عند ترتيب query parameters.
+date: "2026-08-15"
+author: Raed Bahri
+language: ar
+translationKey: signed-image-urls-hmac
+tags: [security, signed-urls, implementation]
+image: /og/blog/ar/signed-image-urls-hmac.png?v=2026-08-15
+imageAlt: التحقق من توقيع HMAC قبل تنفيذ تحويل الصورة
+---
+
+وجود allowlist لا يعني أن رابط الصورة محمي من كل أنواع الاستهلاك غير المرغوب. القائمة تحدد النطاقات التي يحق لـ Keenpix جلب الصور منها. لكنها لا تمنع شخصاً يعرف `project id` من طلب عشرات المقاسات أو إضافة قيم جديدة تكسر الكاش.
+
+توقيع HMAC يعالج هذه النقطة. يربط عنوان المصدر وكل إعدادات التحويل بسر محفوظ على الخادم. إذا تغيّر العرض أو الجودة أو أي query parameter بعد إنشاء التوقيع، يرفض Keenpix الطلب.
+
+## النص الذي نوقّعه
+
+يبني Keenpix الرسالة بهذه الصورة:
+
+```text
+<source-url> + "\n" + <sorted-query>
+```
+
+تدخل جميع query parameters في الرسالة باستثناء `sig`. تتحول كل قيمة إلى `key=value`، ثم تُرتب القيم أبجدياً وتُجمع باستخدام `&`. بعد ذلك نحسب HMAC-SHA256 ونحوّل النتيجة إلى base64url من دون padding.
+
+سبب الترتيب بسيط. الرابطان التاليان يطلبان التحويل نفسه:
+
+```text
+project=p_123&w=800&fmt=webp
+fmt=webp&w=800&project=p_123
+```
+
+هذا المثال يخص رابط self-hosted. في خدمة Keenpix المُدارة وفي custom domain يظهر تعريف المشروع في مكان مختلف، لذلك يجب أن يعرف كود التوقيع شكل رابط التسليم. أما تغيير `w=800` إلى `w=1200` فيغيّر التوقيع في جميع الحالات.
+
+## إنشاء الرابط على الخادم
+
+```ts
+import { createHmac } from 'node:crypto'
+
+export function createSignedImageUrl({
+  baseUrl,
+  delivery,
+  params,
+  projectId,
+  secret,
+  source,
+}: {
+  baseUrl: string
+  delivery: 'self-host' | 'managed' | 'custom-domain'
+  params: URLSearchParams
+  projectId?: string
+  secret: string
+  source: string
+}) {
+  const publicQuery = new URLSearchParams(params)
+  publicQuery.delete('project')
+  publicQuery.delete('sig')
+  const signedQuery = new URLSearchParams(publicQuery)
+
+  if (delivery !== 'custom-domain') {
+    if (!projectId) throw new Error('projectId is required')
+    signedQuery.set('project', projectId)
+    if (delivery === 'self-host') publicQuery.set('project', projectId)
+  }
+
+  const sortedQuery = [...signedQuery.entries()]
+    .map(([key, value]) => `${key}=${value}`)
+    .sort()
+    .join('&')
+  const signature = createHmac('sha256', secret)
+    .update(`${source}\n${sortedQuery}`)
+    .digest('base64url')
+  publicQuery.set('sig', signature)
+  let prefix = baseUrl
+  if (delivery === 'managed') {
+    if (!projectId) throw new Error('projectId is required')
+    prefix = `${baseUrl}/p/${encodeURIComponent(projectId)}`
+  }
+
+  return `${prefix}/img/${encodeURIComponent(source)}?${publicQuery}`
+}
+```
+
+مكان هذا الكود هو server route أو backend أو خطوة build موثوقة. لا تضع المفتاح في متغير يبدأ بـ `NEXT_PUBLIC_`، ولا ترسله إلى تطبيق الهاتف، ولا تعرضه داخل endpoint للإعدادات.
+
+في self-hosted استخدم `delivery: 'self-host'`، وسيظهر `project` في الرابط وفي الرسالة الموقّعة. مع الرابط الرسمي `https://cdn.keenpix.com/p/<project>/...` استخدم `delivery: 'managed'`: لا يظهر `project` في query العامة، لكن Worker يأخذ المعرّف من المسار ويضيفه قبل فحص التوقيع، لذلك يجب أن يدخل في نسخة query المستخدمة للحساب. أما custom domain فيحدد المشروع من النطاق الموثّق؛ استخدم `delivery: 'custom-domain'` ولا تمرر `projectId`.
+
+## ماذا يحدث عند التحقق؟
+
+عندما تفعّل خيار Require signed URLs، يعيد الطلب الذي لا يحمل `sig` حالة `403`. التوقيع الخاص بصورة أو عرض معين لا يعمل مع صورة أو عرض آخر. في self-hosted والرابط الرسمي المُدار يدخل معرّف المشروع في الرسالة. وفي custom domain يربط النطاق الموثّق الطلب بالمشروع قبل فحص التوقيع.
+
+يفحص Keenpix التوقيع قبل قراءة كاش التحويل الداخلي. لا يدخل `sig` في مفتاح ذلك الكاش، ولذلك يمكن لطلبين صحيحين للمصدر والإعدادات نفسها استخدام النسخة المحوّلة نفسها.
+
+أما الـ CDN الخارجي فهو طبقة مستقلة، وعادةً يستخدم الرابط كاملاً، بما فيه `sig`. لا تحذف `sig` من مفتاح كاش الحافة إلا إذا كان التوقيع يُفحص قبل البحث في الكاش. خلاف ذلك، قد يصل طلب غير موقّع إلى نسخة مخزنة من دون المرور على Keenpix. يشرح [RFC 9111](https://www.rfc-editor.org/rfc/rfc9111.html#name-calculating-cache-keys-with) الأساس الذي تُبنى عليه مفاتيح كاش HTTP.
+
+هناك حدود واضحة لهذه الحماية. التوقيع لا يمنح Keenpix صلاحية الدخول إلى مصدر خاص، ولا يحوّل نظام الصور إلى تخزين ملفات. يبقى النطاق داخل allowlist، ويجب أن يكون المصدر قابلاً للجلب بالطريقة التي يدعمها المشروع.
+
+## أخطاء صغيرة تكسر كل شيء
+
+هذه أكثر الأخطاء التي تستحق اختباراً قبل النشر:
+
+- حساب التوقيع بعد تعديل شكل source URL بطريقة لا تطابق المسار المرسل؛
+- إدخال `sig` نفسه في الرسالة؛
+- إضافة tracking parameter بعد إنشاء التوقيع؛
+- إنشاء التوقيع داخل المتصفح؛
+- فقدان قيمة مكررة عند ترتيب query parameters.
+
+اكتب اختباراً بقيمة secret ثابتة ومصدر ثابت. غيّر ترتيب parameters وتأكد من بقاء النتيجة نفسها، ثم غيّر قيمة واحدة وتأكد من اختلافها.
+
+## التدوير يوقف الرابط عند المصدر، لا داخل كل كاش
+
+عند الضغط على Rotate، يرفض Keenpix المفتاح السابق فور وصول الطلب إلى المصدر. لكن المتصفح أو الـ CDN قد يعيد استجابة immutable مخزنة من دون أن يطلب من Keenpix فحص الرابط مرة أخرى. عند تسريب المفتاح، امسح الروابط الموقّعة من كاش الحافة قبل اعتبار التدوير مكتملاً. وقد يحتفظ المتصفح بصورة سبق تنزيلها.
+
+رتّب العملية هكذا:
+
+1. جهّز النسخة التي تستطيع استخدام المفتاح الجديد.
+2. نفّذ Rotate من إعدادات المشروع.
+3. أعد نشر الصفحات أو امسح نسخ HTML التي تحمل الروابط القديمة.
+4. امسح الروابط الموقّعة من الكاش، وراقب نسبة `403`، واحذف المفتاح السابق من أنظمة النشر.
+
+لا توجد فترة يقبل فيها Keenpix المفتاحين معاً. كما أن توقيع Keenpix لا يملك مدة صلاحية مدمجة، ولا يمنع إعادة استخدام رابط صحيح موجود مسبقاً. تعامل مع العملية كتغيير في بيانات الاعتماد يحتاج أيضاً إلى تنظيف الكاش.
+
+## هل تحتاج إلى التوقيع؟
+
+ليس دائماً. موقع توثيق عام يملك مصدراً واحداً وCDN خارجياً قد يكتفي بالـ allowlist وضوابط المرور المعتادة. التوقيع يضيف اعتماداً على الخادم ويجعل تدوير المفتاح جزءاً من عملية النشر.
+
+استخدمه عندما تكون تكلفة الإساءة واضحة: زيارات مرتفعة، أو مصادر يتحكم فيها المستخدم، أو تحويلات كثيرة، أو طلبات عشوائية هدفها صنع cache misses. التوقيع يضبط إنشاء طلب التحويل، لكنه ليس نظام صلاحيات لصور خاصة، ولا يربط الرابط بنطاق واحد.
+
+## المراجع
+
+مصادر التحقق بتاريخ 15 أغسطس 2026 هي [توثيق الروابط الموقّعة في Keenpix](/docs/concepts/signed-urls)، و[كود التوقيع المنشور](https://github.com/lord007tn/keenpix/blob/master/src/lib/transform-signing/signing.ts)، والاختبارات التي تغطي ترتيب parameters والتلاعب بها. طريقة بناء الرسالة جزء من API ويجب التعامل مع تغييرها كتغيير غير متوافق.

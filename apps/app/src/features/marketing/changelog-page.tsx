@@ -114,7 +114,7 @@ export function ChangelogPage({ markdown }: { markdown: string }) {
               <a
                 className="text-foreground underline underline-offset-4 hover:text-primary"
                 href={RELEASES_URL}
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 target="_blank"
               >
                 GitHub releases

@@ -68,12 +68,13 @@ describe('plan catalog', () => {
 })
 
 describe('catalogPricing', () => {
-  it('derives monthly cents from the catalog', () => {
+  it('defaults to standard monthly prices from the catalog', () => {
     const pricing = catalogPricing()
     expect(pricing.source).toBe('catalog')
+    expect(pricing.phase).toBe('standard')
     // Monthly = priceMonthlyUsd in cents.
     expect(pricing.plans.basic.month.amountCents).toBe(900)
-    expect(pricing.plans.pro.month.amountCents).toBe(1900)
+    expect(pricing.plans.pro.month.amountCents).toBe(2900)
     expect(pricing.plans.pro.month.currency).toBe('usd')
   })
 

@@ -140,7 +140,9 @@ function QuotaRow({
           {pending > 0 ? ` · ${pending} pending` : ''}
         </span>
       </div>
-      {limit === null ? null : <Progress value={pct} />}
+      {limit === null ? null : (
+        <Progress aria-label={`${label}: ${used} of ${limit}`} value={pct} />
+      )}
     </div>
   )
 }
@@ -179,7 +181,12 @@ function UsageCard({ data }: { data: BillingData }) {
                 : ` of ${humanBytes(usage.includedBytes)}`}
             </span>
           </div>
-          {usage.includedBytes === null ? null : <Progress value={pct} />}
+          {usage.includedBytes === null ? null : (
+            <Progress
+              aria-label={`Managed delivery: ${humanBytes(usage.bandwidthBytes)} of ${humanBytes(usage.includedBytes)}`}
+              value={pct}
+            />
+          )}
           {over ? (
             <p className="text-destructive text-xs">
               {humanBytes(usage.overageBytes)} over your allowance

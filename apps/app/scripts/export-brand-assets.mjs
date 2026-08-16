@@ -114,6 +114,39 @@ function ogCardSvg() {
 `
 }
 
+function xHeaderSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 500" role="img" aria-labelledby="title desc">
+  <title id="title">Keenpix X profile header</title>
+  <desc id="desc">Keenpix brand header with the modular image mark and image delivery promise.</desc>
+  <defs>
+    <linearGradient id="x-header-bg" x1="100" y1="20" x2="1420" y2="500" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#102A43" />
+      <stop offset=".58" stop-color="${colors.navy}" />
+      <stop offset="1" stop-color="#040A12" />
+    </linearGradient>
+    <radialGradient id="x-header-glow" cx="0" cy="0" r="1" gradientTransform="translate(1190 230) rotate(145) scale(440)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="${colors.cyan}" stop-opacity=".2" />
+      <stop offset="1" stop-color="${colors.cyan}" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="1500" height="500" fill="url(#x-header-bg)" />
+  <rect width="1500" height="500" fill="url(#x-header-glow)" />
+  <g opacity=".07" stroke="#B8D4EA">
+    <path d="M0 100h1500M0 200h1500M0 300h1500M0 400h1500" />
+    <path d="M100 0v500M200 0v500M300 0v500M400 0v500M500 0v500M600 0v500M700 0v500M800 0v500M900 0v500M1000 0v500M1100 0v500M1200 0v500M1300 0v500M1400 0v500" />
+  </g>
+  <g transform="translate(1035 -4) scale(.9)">${markArt('x-header-mark').trim()}</g>
+  <text x="300" y="112" fill="${colors.cloud}" font-family="Inter, Segoe UI, sans-serif" font-size="46" font-weight="760" letter-spacing="-1.5">Keenpix</text>
+  <rect x="300" y="140" width="84" height="6" rx="3" fill="${colors.cyan}" />
+  <rect x="390" y="140" width="48" height="6" rx="3" fill="${colors.green}" />
+  <text x="300" y="232" fill="#FFFFFF" font-family="Inter, Segoe UI, sans-serif" font-size="58" font-weight="720" letter-spacing="-2">Optimized images.</text>
+  <text x="300" y="300" fill="#FFFFFF" font-family="Inter, Segoe UI, sans-serif" font-size="58" font-weight="720" letter-spacing="-2">Clear bandwidth pricing.</text>
+  <text x="302" y="365" fill="#B8CADB" font-family="Inter, Segoe UI, sans-serif" font-size="26" font-weight="500">AVIF/WebP · one URL · unlimited transforms</text>
+  <text x="302" y="424" fill="${colors.cyan}" font-family="Inter, Segoe UI, sans-serif" font-size="23" font-weight="700" letter-spacing="1.5">KEENPIX.COM</text>
+</svg>
+`
+}
+
 const svgAssets = {
   'keenpix-icon.svg': iconSvg({
     title: 'Keenpix icon',
@@ -141,6 +174,7 @@ const svgAssets = {
   'keenpix-logo-horizontal.svg': horizontalLogo(),
   'keenpix-logo-horizontal-reverse.svg': horizontalLogo(true),
   'keenpix-og-card.svg': ogCardSvg(),
+  'keenpix-x-header.svg': xHeaderSvg(),
 }
 
 await mkdir(brandDir, { recursive: true })
@@ -190,6 +224,7 @@ const jobs = [
     256,
   ],
   ['keenpix-og-card.svg', 'social/keenpix-og-card.png', 1200, 630],
+  ['keenpix-x-header.svg', 'social/keenpix-x-header.png', 1500, 500],
 ]
 
 const manifest = []

@@ -1,5 +1,9 @@
 import { prisma } from '@keenpix/database'
 import type { Prisma } from '@keenpix/database/client'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+
+dayjs.extend(utc)
 
 // Accepts the global client or an interactive-transaction client, so the usage
 // reporter can run its reads/writes inside the advisory-locked transaction.
@@ -9,17 +13,11 @@ type Db = Prisma.TransactionClient
 // (bucketStart < this), so a partial in-flight hour is never under-counted — it's
 // picked up next cycle once complete.
 function currentHourStart(now: Date): Date {
-  return new Date(
-    Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate(),
-      now.getUTCHours(),
-    ),
-  )
+  return dayjs.utc(now).startOf('hour').toDate()
 }
 
-// Managed delivery for an org over the complete hours in [since, currentHour).
+// Managed delivery for an org over [since, through). `through` defaults to the
+// current UTC hour and can be fixed by the billing reporter for retry-safe events.
 // Application responses come from the durable request-log rollup; successful
 // Cloudflare offloads come from the project-attributed edge rollup. A response
 // is counted exactly once: edge hits use stage=edge, while edge misses reach the
@@ -28,9 +26,9 @@ function currentHourStart(now: Date): Date {
 export async function deliveredBytesSince(
   orgId: string,
   since: Date | null,
+  through = currentHourStart(new Date()),
   db: Db = prisma,
 ): Promise<{ bytes: number; through: Date }> {
-  const through = currentHourStart(new Date())
   const bucketStart = since ? { gte: since, lt: through } : { lt: through }
   const [application, edge] = await Promise.all([
     db.analyticsRollupHourly.aggregate({
@@ -90,6 +88,25 @@ export function listUsageBillingCustomers(db: Db = prisma) {
     },
     select: { orgId: true, polarCustomerId: true, lastUsageReportAt: true },
   })
+}
+
+export async function getOldestPaidUsageReportAt(db: Db = prisma) {
+  const customer = await db.billingCustomer.findFirst({
+    where: {
+      lastUsageReportAt: { not: null },
+      organization: {
+        subscription: {
+          is: {
+            polarSubscriptionId: { not: null },
+            status: { not: 'trialing' },
+          },
+        },
+      },
+    },
+    orderBy: { lastUsageReportAt: 'asc' },
+    select: { lastUsageReportAt: true },
+  })
+  return customer?.lastUsageReportAt ?? null
 }
 
 // Orgs currently in a free trial. The usage reporter skips ingesting their

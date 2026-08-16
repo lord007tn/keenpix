@@ -1,3 +1,7 @@
+import {
+  signTransformRequest,
+  verifyTransformSignature,
+} from '@keenpix/transform'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const resolveCustomDomainProject = vi.hoisted(() => vi.fn())
@@ -31,7 +35,7 @@ describe('transform request routing', () => {
     })
   })
 
-  it('permanently redirects a legacy cloud URL to the project edge path', async () => {
+  it('retires a legacy cloud URL with its canonical replacement', async () => {
     const response = await handleTransformRequest(
       new Request(
         `https://keenpix.com/img/${encodedSource}?project=project_123&w=800&sig=signed`,
@@ -39,15 +43,18 @@ describe('transform request routing', () => {
       encodedSource,
     )
 
-    expect(response.status).toBe(308)
-    expect(response.headers.get('location')).toBe(
-      `https://cdn.keenpix.com/p/project_123/img/${encodedSource}?w=800&sig=signed`,
+    const canonical = `https://cdn.keenpix.com/p/project_123/img/${encodedSource}?w=800&sig=signed`
+    expect(response.status).toBe(410)
+    expect(response.headers.get('deprecation')).toBe('true')
+    expect(response.headers.get('link')).toBe(
+      `<${canonical}>; rel="successor-version"`,
     )
+    await expect(response.text()).resolves.toContain(canonical)
     expect(optimizeProjectImage).not.toHaveBeenCalled()
     expect(resolveCustomDomainProject).not.toHaveBeenCalled()
   })
 
-  it('redirects the first-party www hostname to the same canonical path', async () => {
+  it('retires the first-party www legacy hostname with the same replacement', async () => {
     const response = await handleTransformRequest(
       new Request(
         `https://www.keenpix.com/img/${encodedSource}?project=project_123&w=800`,
@@ -55,9 +62,9 @@ describe('transform request routing', () => {
       encodedSource,
     )
 
-    expect(response.status).toBe(308)
-    expect(response.headers.get('location')).toBe(
-      `https://cdn.keenpix.com/p/project_123/img/${encodedSource}?w=800`,
+    expect(response.status).toBe(410)
+    expect(response.headers.get('link')).toBe(
+      `<https://cdn.keenpix.com/p/project_123/img/${encodedSource}?w=800>; rel="successor-version"`,
     )
   })
 
@@ -80,6 +87,40 @@ describe('transform request routing', () => {
     expect(response.headers.get('x-keenpix-edge-project')).toBe('project_123')
     expect(optimizeProjectImage).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: 'project_123' }),
+    )
+  })
+
+  it('verifies the canonical managed URL after the Worker injects its project', async () => {
+    const secret = 'managed-signing-secret'
+    const signingParams = new URLSearchParams({
+      project: 'project_123',
+      w: '800',
+    })
+    const publicParams = new URLSearchParams({ w: '800' })
+    publicParams.set('sig', signTransformRequest(secret, source, signingParams))
+    const originUrl = new URL(`https://keenpix.com/img/${encodedSource}`)
+    originUrl.search = publicParams.toString()
+    originUrl.searchParams.set('__keenpix_edge_host', 'cdn.keenpix.com')
+    originUrl.searchParams.set('project', 'project_123')
+    const originRequest = new Request(originUrl, {
+      headers: {
+        'x-keenpix-custom-host': 'cdn.keenpix.com',
+        'x-keenpix-edge-project': 'project_123',
+        'x-keenpix-edge-secret': 'edge-secret',
+      },
+    })
+
+    expect(
+      await handleTransformRequest(originRequest, encodedSource),
+    ).toHaveProperty('status', 200)
+    const input = optimizeProjectImage.mock.calls[0]?.[0]
+    if (!input) {
+      throw new Error('Expected the transform action to be called.')
+    }
+    expect(input.projectId).toBe('project_123')
+    expect(input.searchParams.get('project')).toBe('project_123')
+    expect(verifyTransformSignature(secret, source, input.searchParams)).toBe(
+      true,
     )
   })
 

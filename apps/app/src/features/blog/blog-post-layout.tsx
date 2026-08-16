@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import dayjs from 'dayjs'
+import 'dayjs/locale/ar'
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
@@ -14,6 +15,7 @@ export interface BlogPostMeta {
   description: string
   image: string
   imageAlt: string
+  language: 'ar' | 'en'
   tags: string[]
   title: string
   updated?: string
@@ -21,16 +23,17 @@ export interface BlogPostMeta {
 
 export function BlogPostHeader({ meta }: { meta: BlogPostMeta }) {
   const author = getAuthor(meta.author)
+  const arabic = meta.language === 'ar'
   const authorLink = author.profilePath ?? author.sameAs?.[0]
   return (
     <header className="border-b bg-muted/30">
       <div className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
         <a
           className="inline-flex min-h-11 touch-manipulation items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
-          href="/blog"
+          href={arabic ? '/blog/ar' : '/blog'}
         >
           <ArrowLeftIcon className="size-4" />
-          All posts
+          {arabic ? 'كل المقالات' : 'All posts'}
         </a>
         <img
           alt={meta.coverAlt ?? meta.imageAlt}
@@ -42,7 +45,9 @@ export function BlogPostHeader({ meta }: { meta: BlogPostMeta }) {
         />
         {meta.competitor ? (
           <div className="mt-6">
-            <Badge variant="secondary">Comparison · vs {meta.competitor}</Badge>
+            <Badge variant="secondary">
+              {arabic ? 'مقارنة' : 'Comparison'} · vs {meta.competitor}
+            </Badge>
           </div>
         ) : null}
         <h1 className="mt-4 text-balance font-semibold text-3xl tracking-tight sm:text-4xl">
@@ -66,15 +71,19 @@ export function BlogPostHeader({ meta }: { meta: BlogPostMeta }) {
           )}
           <span aria-hidden="true">·</span>
           <time dateTime={meta.date}>
-            {dayjs(meta.date).format('MMMM D, YYYY')}
+            {dayjs(meta.date)
+              .locale(arabic ? 'ar' : 'en')
+              .format(arabic ? 'D MMMM YYYY' : 'MMMM D, YYYY')}
           </time>
           {meta.updated && meta.updated !== meta.date ? (
             <>
               <span aria-hidden="true">·</span>
               <span>
-                Updated{' '}
+                {arabic ? 'حُدّث في ' : 'Updated '}
                 <time dateTime={meta.updated}>
-                  {dayjs(meta.updated).format('MMMM D, YYYY')}
+                  {dayjs(meta.updated)
+                    .locale(arabic ? 'ar' : 'en')
+                    .format(arabic ? 'D MMMM YYYY' : 'MMMM D, YYYY')}
                 </time>
               </span>
             </>
@@ -94,20 +103,28 @@ export function BlogPostHeader({ meta }: { meta: BlogPostMeta }) {
   )
 }
 
-export function BlogPostTrust({ authorName }: { authorName: string }) {
+export function BlogPostTrust({
+  authorName,
+  language,
+}: {
+  authorName: string
+  language: 'ar' | 'en'
+}) {
   const author = getAuthor(authorName)
+  const arabic = language === 'ar'
   return (
     <aside
       aria-label="Article accountability"
       className="mx-auto max-w-3xl px-6 pb-12"
     >
       <div className="rounded-lg border bg-muted/30 p-6">
-        <h2 className="font-semibold text-lg">About this article</h2>
+        <h2 className="font-semibold text-lg">
+          {arabic ? 'عن هذا المقال' : 'About this article'}
+        </h2>
         <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
-          {author.bio ?? `${author.name} writes for Keenpix.`} Product claims
-          are checked against the current Keenpix code and pricing. Competitor
-          facts use primary vendor sources and carry a verification date;
-          estimates and opinions are labeled as such.
+          {arabic
+            ? `كتب ${author.name} هذا المقال. نراجع ادعاءات المنتج مقابل كود Keenpix الحالي، ونذكر تاريخ التحقق عند الاستناد إلى مصدر خارجي.`
+            : `${author.bio ?? `${author.name} writes for Keenpix.`} Product claims are checked against the current Keenpix code and pricing. Competitor facts use primary vendor sources and carry a verification date; estimates and opinions are labeled as such.`}
         </p>
         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
           {author.profilePath ? (
@@ -115,20 +132,20 @@ export function BlogPostTrust({ authorName }: { authorName: string }) {
               className="inline-flex min-h-11 touch-manipulation items-center font-medium text-primary hover:underline"
               href={author.profilePath}
             >
-              Author profile
+              {arabic ? 'صفحة الكاتب' : 'Author profile'}
             </a>
           ) : null}
           <a
             className="inline-flex min-h-11 touch-manipulation items-center font-medium text-primary hover:underline"
             href="/methodology/comparisons"
           >
-            Editorial methodology
+            {arabic ? 'منهجية التحرير' : 'Editorial methodology'}
           </a>
           <a
             className="inline-flex min-h-11 touch-manipulation items-center font-medium text-primary hover:underline"
             href="/support"
           >
-            Request a correction
+            {arabic ? 'أرسل تصحيحاً' : 'Request a correction'}
           </a>
         </div>
       </div>
@@ -136,17 +153,21 @@ export function BlogPostTrust({ authorName }: { authorName: string }) {
   )
 }
 
-export function BlogPostCta() {
+export function BlogPostCta({ language }: { language: 'ar' | 'en' }) {
+  const arabic = language === 'ar'
   return (
     <section className="border-t bg-muted/30">
       <div className="mx-auto flex max-w-3xl flex-col items-start justify-between gap-6 px-6 py-12 sm:flex-row sm:items-center">
         <div>
           <h2 className="font-semibold text-2xl tracking-tight">
-            Optimized images, minus the surprise bill.
+            {arabic
+              ? 'صور محسّنة وفاتورة يمكن فهمها.'
+              : 'Optimized images, minus the surprise bill.'}
           </h2>
           <p className="mt-2 text-muted-foreground">
-            One published price on managed image delivery. Or self-host the
-            open-source engine, free.
+            {arabic
+              ? 'استخدم الخدمة المدارة أو شغّل المحرك مفتوح المصدر على خادمك.'
+              : 'One published price on managed image delivery. Or self-host the open-source engine, free.'}
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-3">
@@ -157,7 +178,7 @@ export function BlogPostCta() {
             })}
             href="/docs/self-hosting"
           >
-            Self-host
+            {arabic ? 'دليل التشغيل الذاتي' : 'Self-host'}
           </a>
           <Link
             className={buttonVariants({
@@ -165,7 +186,7 @@ export function BlogPostCta() {
             })}
             to="/signup"
           >
-            Start free trial
+            {arabic ? 'ابدأ التجربة' : 'Start free trial'}
             <ArrowRightIcon data-icon="inline-end" />
           </Link>
         </div>

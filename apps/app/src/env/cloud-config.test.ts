@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 // cron secret) so a cloud deploy can't boot green with billing/signup dead.
 const CLOUD_KEYS = [
   'KEENPIX_MODE',
+  'KEENPIX_DEPLOYMENT_ENV',
   'DATABASE_URL',
   'BETTER_AUTH_SECRET',
   'BETTER_AUTH_URL',
@@ -14,11 +15,17 @@ const CLOUD_KEYS = [
   'EMAIL_PROVIDER',
   'POSTMARK_API_KEY',
   'POSTMARK_FROM',
+  'SMTP_HOST',
+  'SMTP_FROM_EMAIL',
   'POLAR_TOKEN',
   'POLAR_SERVER',
   'POLAR_WEBHOOK_SECRET',
   'POLAR_SANDBOX_WEBHOOK_SECRET',
   'CRON_SECRET',
+  'CLOUDFLARE_API_TOKEN',
+  'CLOUDFLARE_ACCOUNT_API_TOKEN',
+  'CLOUDFLARE_ACCOUNT_ID',
+  'CLOUDFLARE_ZONE_ID',
   'CLOUDFLARE_SAAS_API_TOKEN',
   'CLOUDFLARE_SAAS_ZONE_ID',
   'CLOUDFLARE_SAAS_CNAME_TARGET',
@@ -28,6 +35,8 @@ const CLOUD_KEYS = [
 
 const FULL_CLOUD_ENV = {
   KEENPIX_MODE: 'cloud',
+  KEENPIX_DEPLOYMENT_ENV: 'production',
+  KEENPIX_APP_URL: 'https://keenpix.com',
   DATABASE_URL: 'postgresql://localhost/keenpix',
   BETTER_AUTH_SECRET: 'a'.repeat(48),
   EMAIL_PROVIDER: 'postmark',
@@ -37,6 +46,10 @@ const FULL_CLOUD_ENV = {
   POLAR_SERVER: 'production',
   POLAR_WEBHOOK_SECRET: 'whsec_x',
   CRON_SECRET: 'cron-x',
+  CLOUDFLARE_API_TOKEN: 'zone-analytics-token',
+  CLOUDFLARE_ACCOUNT_API_TOKEN: 'account-analytics-token',
+  CLOUDFLARE_ACCOUNT_ID: 'account-id',
+  CLOUDFLARE_ZONE_ID: 'zone-id',
 }
 
 const silence = () => undefined
@@ -76,6 +89,12 @@ describe('cloud config env validation', () => {
     expect(env.EMAIL_PROVIDER).toBe('postmark')
   })
 
+  it('rejects cloud metering without project edge credentials', async () => {
+    vi.spyOn(console, 'error').mockImplementation(silence)
+    const { CLOUDFLARE_ACCOUNT_API_TOKEN, ...partial } = FULL_CLOUD_ENV
+    await expect(loadEnv(partial)).rejects.toThrow()
+  })
+
   it('rejects a Google OAuth client without its server-only secret', async () => {
     vi.spyOn(console, 'error').mockImplementation(silence)
     await expect(
@@ -89,10 +108,44 @@ describe('cloud config env validation', () => {
   it('accepts Polar sandbox on an isolated cloud staging hostname', async () => {
     const env = await loadEnv({
       ...FULL_CLOUD_ENV,
+      KEENPIX_DEPLOYMENT_ENV: 'staging',
       KEENPIX_APP_URL: 'https://staging.keenpix.example',
       POLAR_SERVER: 'sandbox',
     })
     expect(env.POLAR_SERVER).toBe('sandbox')
+  })
+
+  it('rejects production Polar in staging', async () => {
+    vi.spyOn(console, 'error').mockImplementation(silence)
+    await expect(
+      loadEnv({
+        ...FULL_CLOUD_ENV,
+        KEENPIX_DEPLOYMENT_ENV: 'staging',
+        KEENPIX_APP_URL: 'https://staging.keenpix.example',
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('rejects localhost URLs in production cloud', async () => {
+    vi.spyOn(console, 'error').mockImplementation(silence)
+    await expect(
+      loadEnv({
+        ...FULL_CLOUD_ENV,
+        KEENPIX_APP_URL: 'http://localhost:3000',
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('rejects the staging Mailpit sink in production cloud', async () => {
+    vi.spyOn(console, 'error').mockImplementation(silence)
+    await expect(
+      loadEnv({
+        ...FULL_CLOUD_ENV,
+        EMAIL_PROVIDER: 'smtp',
+        SMTP_HOST: 'mailpit',
+        SMTP_FROM_EMAIL: 'no-reply@branch-cloud.keenpix.test',
+      }),
+    ).rejects.toThrow()
   })
 
   it('rejects Polar sandbox on the production Keenpix hostname', async () => {

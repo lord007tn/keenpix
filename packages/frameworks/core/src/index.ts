@@ -77,6 +77,15 @@ const TRANSFORM_PARAMS = {
 
 const TRAILING_SLASHES = /\/+$/
 const LEADING_SLASHES = /^\/+/
+const MANAGED_DELIVERY_ORIGIN = 'https://cdn.keenpix.com'
+
+export function createManagedKeenpixConfig(projectId: string) {
+  return {
+    baseUrl: MANAGED_DELIVERY_ORIGIN,
+    projectId,
+    projectInPath: true,
+  } satisfies KeenpixConfig
+}
 
 function setTransformParams(
   searchParams: URLSearchParams,
@@ -96,18 +105,31 @@ export function buildImageUrl(
   src: string,
   transform: KeenpixTransform = {},
 ) {
-  const baseUrl = config.baseUrl.replace(TRAILING_SLASHES, '')
+  const configuredBaseUrl = config.baseUrl.replace(TRAILING_SLASHES, '')
+  const configuredHostname = new URL(configuredBaseUrl).hostname.toLowerCase()
+  const managedFirstParty = [
+    'cdn.keenpix.com',
+    'keenpix.com',
+    'www.keenpix.com',
+  ].includes(configuredHostname)
+  const baseUrl = managedFirstParty
+    ? MANAGED_DELIVERY_ORIGIN
+    : configuredBaseUrl
   const projectPath =
-    config.projectInPath && config.projectId ? `/p/${config.projectId}` : ''
+    (managedFirstParty || config.projectInPath) && config.projectId
+      ? `/p/${encodeURIComponent(config.projectId)}`
+      : ''
   const sourceMode = config.sourceMode ?? 'path'
   const sourcePath =
-    sourceMode === 'path' ? `/${src.replace(LEADING_SLASHES, '')}` : ''
+    sourceMode === 'path'
+      ? `/${encodeURIComponent(src.replace(LEADING_SLASHES, ''))}`
+      : ''
   const url = new URL(`${baseUrl}${projectPath}/img${sourcePath}`)
 
   if (sourceMode === 'query') {
     url.searchParams.set('url', src)
   }
-  if (config.projectId && !config.projectInPath) {
+  if (config.projectId && !(managedFirstParty || config.projectInPath)) {
     url.searchParams.set('project', config.projectId)
   }
 

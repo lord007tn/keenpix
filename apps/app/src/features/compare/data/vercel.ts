@@ -10,7 +10,7 @@ export const vercelComparison = {
   heroSubhead:
     'Vercel Image Optimization bills transformations, cache reads, and cache writes — plus data transfer — and Hobby can return 402 at its included limits. Keenpix bills optimized managed delivery once across its edge and application; paid usage continues at the published overage rate.',
   verdict:
-    "If your site fits inside Vercel's Hobby allowances, or you already pay for Vercel Pro and image usage costs little, stay put — the default next/image loader is zero-config and Keenpix cannot beat free or nearly-free. Consider Keenpix when you prefer one managed-delivery meter, image-specific analytics, managed custom domains, always-on paid usage, and the current v0.2.0 AGPL-3.0 self-host path. Keenpix is a young, focused product with no video or storage, so the trade is portability and predictability for platform breadth and maturity.",
+    "If your site fits inside Vercel's Hobby allowances, or you already pay for Vercel Pro and image usage costs little, stay put — the default next/image loader is zero-config and Keenpix cannot beat free or nearly-free. Consider Keenpix when you prefer one managed-delivery meter, image-specific analytics, managed custom domains, always-on paid usage, and the current v0.2.1 AGPL-3.0 self-host path. Keenpix is a young, focused product with no video or storage, so the trade is portability and predictability for platform breadth and maturity.",
   pricingRows: [
     {
       scenario: 'Small site within Hobby caps (<5k transforms/mo)',
@@ -27,15 +27,13 @@ export const vercelComparison = {
       scenario: '400 GB delivered / month',
       competitor:
         'Pro: transforms + cache reads + cache writes + Fast Data Transfer — varies',
-      keenpix:
-        '$19 founding / $29 standard Pro — 400 GB included, then $0.06 / $0.09 per GB',
+      keenpix: '$29 Pro — 400 GB included, then $0.09 per GB',
     },
     {
       scenario: '1 TB delivered / month',
       competitor:
         "Pro metered usage + Fast Data Transfer at Vercel's regional rates",
-      keenpix:
-        '$39 founding / $69 standard Business — 1 TB included, then $0.05 / $0.07 per GB',
+      keenpix: '$69 Business — 1 TB included, then $0.07 per GB',
     },
     {
       scenario: 'Crawler spike: 3× unique widths requested',
@@ -90,7 +88,7 @@ export const vercelComparison = {
     {
       feature: 'Open source / self-host',
       competitor: 'No — managed service',
-      keenpix: 'v0.2.0: AGPL-3.0 with Docker deployment files',
+      keenpix: 'v0.2.1: AGPL-3.0 with Docker deployment files',
     },
     {
       feature: 'Security model',
@@ -138,7 +136,7 @@ export const vercelComparison = {
     {
       title: 'An open-source escape hatch',
       detail:
-        'The current v0.2.0 code is AGPL-3.0 and includes a Docker deployment path. Moving from hosted Keenpix to self-hosting can preserve the transform grammar when you control routing, but it still requires an operational migration.',
+        'The current v0.2.1 code is AGPL-3.0 and includes a Docker deployment path. Moving from hosted Keenpix to self-hosting can preserve the transform grammar when you control routing, but it still requires an operational migration.',
     },
   ],
   whenCompetitorWins: [
@@ -180,7 +178,7 @@ export const vercelComparison = {
     },
     {
       q: 'Can I self-host Keenpix?',
-      a: 'The current v0.2.0 code is AGPL-3.0 and includes Docker/Coolify deployment files. Self-hosting has no Keenpix license fee, but you own infrastructure and routing.',
+      a: 'The current v0.2.1 code is AGPL-3.0 and includes Docker/Coolify deployment files. Self-hosting has no Keenpix license fee, but you own infrastructure and routing.',
     },
   ],
   sources: [

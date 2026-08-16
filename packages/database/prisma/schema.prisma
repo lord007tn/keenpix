@@ -284,9 +284,9 @@ model Project {
   watermarkMargin   Int            @default(16)
   createdAt         DateTime       @default(now())
   requestLogs       RequestLog[]
+  analyticsOutboxEvents AnalyticsEventOutbox[]
   apiKeyScopes      ApiKeyScope[]
   customDomains     CustomDomain[]
-  edgeRollups       ProjectEdgeRollupHourly[]
 
   @@unique([id, orgId])
   @@index([orgId])
@@ -390,6 +390,48 @@ model RequestLog {
   @@index([projectId, sourceHost])
 }
 
+// Durable ingress for managed request analytics. A successful managed image
+// response inserts one lightweight row here before it is acknowledged. A
+// background batch transaction moves rows into RequestLog and hourly rollups,
+// preventing process exits from losing billable delivery bytes without
+// restoring the old contended per-request rollup upsert.
+model AnalyticsEventOutbox {
+  id         String   @id
+  orgId      String
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ts         DateTime
+  path       String
+  width      Int?
+  quality    Int?
+  format     String
+  status     Int
+  cached     Boolean
+  latencyMs  Float
+  bytesIn    Int
+  bytesOut   Int
+  bytesSaved Int      @default(0)
+  region     String?
+  country    String?
+  sourceHost String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([orgId, ts])
+}
+
+// Minimal, non-secret attribution retained after a project is deleted. The
+// delivery edge can emit delayed or cached events for that project id after the
+// mutable Project row is gone; this mapping keeps those bytes assigned to the
+// correct organization until capture and billing complete.
+model ProjectBillingAttribution {
+  projectId String   @id
+  orgId     String
+  deletedAt DateTime @default(now())
+
+  @@index([orgId])
+}
+
 // Hourly request-log rollups used by dashboard/analytics so normal views do
 // not scan raw logs indefinitely. Null sourceHost values are stored as an empty
 // string to keep the deterministic rollup key compact and indexable.
@@ -487,7 +529,6 @@ model ProjectEdgeRollupHourly {
   bucketStart DateTime
   orgId       String
   projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   host        String   @default("")
   stage       String
   cacheStatus String

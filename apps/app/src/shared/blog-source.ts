@@ -19,18 +19,20 @@ export interface BlogListItem {
   description: string
   image: string
   imageAlt: string
+  language: 'ar' | 'en'
   slug: string
   tags: string[]
   title: string
+  translationKey?: string
   url: string
 }
 
 // Published, non-draft posts newest-first — the shape the index route needs
 // (drops the MDX body/methods, keeps only serializable frontmatter).
-export function listBlogPosts(): BlogListItem[] {
+export function listBlogPosts(language: 'ar' | 'en' = 'en') {
   return blogSource
     .getPages()
-    .filter((page) => !page.data.draft)
+    .filter((page) => !page.data.draft && page.data.language === language)
     .map((page) => ({
       author: page.data.author,
       competitor: page.data.competitor,
@@ -40,9 +42,11 @@ export function listBlogPosts(): BlogListItem[] {
       description: page.data.description,
       image: page.data.image,
       imageAlt: page.data.imageAlt,
+      language: page.data.language,
       slug: page.slugs.join('/'),
       tags: page.data.tags,
       title: page.data.title,
+      translationKey: page.data.translationKey,
       url: page.url,
     }))
     .sort((a, b) => (a.date < b.date ? 1 : -1))

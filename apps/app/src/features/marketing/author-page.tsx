@@ -47,7 +47,7 @@ export function AuthorPage() {
               <a
                 className="font-medium text-primary hover:underline"
                 href={REPOSITORY_URL}
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 target="_blank"
               >
                 GitHub repository
@@ -55,7 +55,7 @@ export function AuthorPage() {
               <a
                 className="font-medium text-primary hover:underline"
                 href={SOCIAL_X_URL}
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 target="_blank"
               >
                 X profile

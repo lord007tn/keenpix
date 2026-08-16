@@ -38,22 +38,29 @@ vi.mock('@/lib/logger/logger', () => ({
 const { reportUsage } = await import('./usage-reporter')
 
 const GB = 1024 ** 3
+const SINCE = new Date('2026-07-10T09:00:00Z')
 const THROUGH = new Date('2026-07-10T10:00:00Z')
 
-function customer(orgId: string) {
-  return { orgId, polarCustomerId: `cus_${orgId}`, lastUsageReportAt: null }
+function customer(orgId: string, lastUsageReportAt: Date | null = SINCE) {
+  return { orgId, polarCustomerId: `cus_${orgId}`, lastUsageReportAt }
 }
 
 beforeEach(() => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-07-10T11:30:00Z'))
   locked.value = true
   listTrialingOrgIds.mockResolvedValue([])
-  deliveredBytesSince.mockResolvedValue({ bytes: 2 * GB, through: THROUGH })
+  deliveredBytesSince.mockImplementation(
+    (_orgId: string, _since: Date, through: Date) =>
+      Promise.resolve({ bytes: 2 * GB, through }),
+  )
   markUsageReported.mockResolvedValue({})
 })
 
 afterEach(() => {
   vi.clearAllMocks()
   vi.unstubAllGlobals()
+  vi.useRealTimers()
 })
 
 describe('reportUsage', () => {
@@ -109,16 +116,41 @@ describe('reportUsage', () => {
       .mockResolvedValueOnce({})
 
     expect(await reportUsage()).toMatchObject({ failed: 1, ingested: 1 })
-    expect(await reportUsage()).toMatchObject({ failed: 0, ingested: 1 })
+    vi.setSystemTime(new Date('2026-07-10T12:30:00Z'))
+    expect(await reportUsage()).toMatchObject({ failed: 0, ingested: 2 })
 
     const eventIds = fetchSpy.mock.calls.map(([, init]) => {
       const body = JSON.parse(init.body)
       return body.events[0].external_id
     })
     expect(eventIds).toEqual([
-      'keenpix:bandwidth:org_a:2026-07-10T10:00:00.000Z',
-      'keenpix:bandwidth:org_a:2026-07-10T10:00:00.000Z',
+      'keenpix:bandwidth:org_a:2026-07-10T09:00:00.000Z:2026-07-10T10:00:00.000Z',
+      'keenpix:bandwidth:org_a:2026-07-10T09:00:00.000Z:2026-07-10T10:00:00.000Z',
+      'keenpix:bandwidth:org_a:2026-07-10T10:00:00.000Z:2026-07-10T11:00:00.000Z',
     ])
+  })
+
+  it('does not bill a legacy customer whose lower watermark is unknown', async () => {
+    listUsageBillingCustomers.mockResolvedValue([customer('org_a', null)])
+    const fetchSpy = vi.fn()
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const result = await reportUsage()
+
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(markUsageReported).toHaveBeenCalledWith('org_a', THROUGH)
+    expect(result).toMatchObject({ failed: 0, ingested: 0 })
+  })
+
+  it('leaves the just-closed hour open for late delivery increments', async () => {
+    vi.setSystemTime(new Date('2026-07-10T10:00:00Z'))
+    listUsageBillingCustomers.mockResolvedValue([customer('org_a')])
+
+    const result = await reportUsage()
+
+    expect(deliveredBytesSince).not.toHaveBeenCalled()
+    expect(markUsageReported).not.toHaveBeenCalled()
+    expect(result).toEqual({ failed: 0, ingested: 0, orgs: 1, skipped: false })
   })
 
   it('never bills a trialing org but still advances its watermark', async () => {

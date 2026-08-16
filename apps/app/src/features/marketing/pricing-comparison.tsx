@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -94,6 +95,9 @@ export function PricingComparison({ pricing }: { pricing: PlanPricing }) {
         <div className="mt-3 overflow-hidden rounded-xl border bg-card shadow-sm sm:mt-10">
           <div className="overflow-x-auto">
             <Table className="min-w-[880px]">
+              <TableCaption className="sr-only">
+                Published image optimization plan comparison
+              </TableCaption>
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40">
                   <TableHead className="w-52">Published plan</TableHead>
@@ -111,7 +115,7 @@ export function PricingComparison({ pricing }: { pricing: PlanPricing }) {
                         href={provider.href}
                         rel={
                           provider.href.startsWith('http')
-                            ? 'noreferrer'
+                            ? 'noopener noreferrer'
                             : undefined
                         }
                         target={
@@ -166,6 +170,12 @@ export function PricingComparison({ pricing }: { pricing: PlanPricing }) {
           its CDN separately. Taxes, annual discounts, enterprise contracts, and
           regional CDN charges are excluded.
         </p>
+        <a
+          className="mt-4 inline-flex font-medium text-primary text-sm underline-offset-4 hover:underline"
+          href="/blog/best-image-cdns-2026"
+        >
+          Read the full 10-provider image CDN comparison
+        </a>
       </div>
     </section>
   )

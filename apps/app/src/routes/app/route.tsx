@@ -7,6 +7,7 @@ import { getActiveOrgRoleFn, getSessionFn } from '@/functions/auth'
 import { getWorkspaceAccessFn } from '@/functions/billing'
 import { getPublicConfigFn } from '@/functions/config'
 import { listProjectsFn } from '@/functions/projects'
+import { QueryProvider } from '@/lib/tanstack-query/root-provider'
 import { appPageHead } from '@/shared/seo'
 import { ProjectProvider } from '@/stores/project-context'
 
@@ -65,15 +66,24 @@ function AppLayout() {
   const projects = Route.useLoaderData()
   const { user, cloud, workspaceReady } = Route.useRouteContext()
   return (
-    <ProjectProvider projects={projects}>
-      <div className="flex min-h-svh flex-col bg-background">
-        <AppTopnav cloud={cloud} user={user} workspaceReady={workspaceReady} />
-        <ImpersonationBanner user={user} />
-        <ServingBanner cloud={cloud} />
-        <main className="flex flex-1 flex-col overflow-auto" id="main-content">
-          <Outlet />
-        </main>
-      </div>
-    </ProjectProvider>
+    <QueryProvider>
+      <ProjectProvider projects={projects}>
+        <div className="flex min-h-svh flex-col bg-background">
+          <AppTopnav
+            cloud={cloud}
+            user={user}
+            workspaceReady={workspaceReady}
+          />
+          <ImpersonationBanner user={user} />
+          <ServingBanner cloud={cloud} />
+          <main
+            className="flex flex-1 flex-col overflow-auto"
+            id="main-content"
+          >
+            <Outlet />
+          </main>
+        </div>
+      </ProjectProvider>
+    </QueryProvider>
   )
 }

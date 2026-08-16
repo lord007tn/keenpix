@@ -136,11 +136,12 @@ export async function getEffectiveCloudflareSettings() {
     where: { id: DEFAULT_CLOUDFLARE_ID },
   })
   if (db?.enabled && db.apiToken && db.zoneId) {
+    const apiToken = decryptSecret(db.apiToken)
     return {
       enabled: true,
       accountId: db.accountId ?? env.CLOUDFLARE_ACCOUNT_ID,
-      accountApiToken: decryptSecret(db.apiToken),
-      apiToken: decryptSecret(db.apiToken),
+      accountApiToken: env.CLOUDFLARE_ACCOUNT_API_TOKEN ?? apiToken,
+      apiToken,
       zoneId: db.zoneId,
       host: normalizeCloudflareHost(db.host),
     } satisfies EffectiveCloudflareSettings

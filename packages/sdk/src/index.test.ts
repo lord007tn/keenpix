@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createKeenpixClient, KeenpixApiError } from './index'
-import { signTransformUrl } from './signing'
+import { signTransformRequest, signTransformUrl } from './signing'
 
 describe('createKeenpixClient', () => {
   it('normalizes the base URL and authenticates versioned SDK requests', async () => {
@@ -49,5 +49,23 @@ describe('signTransformUrl', () => {
     expect(signed.searchParams.get('iat')).toBeTruthy()
     expect(signed.searchParams.get('exp')).toBeTruthy()
     expect(signed.searchParams.get('sig')).toBeTruthy()
+  })
+
+  it('signs managed project attribution without serializing a project query', () => {
+    const src = 'https://cdn.example.com/a.jpg'
+    const signed = new URL(
+      signTransformUrl(
+        `https://cdn.keenpix.com/p/project_1/img/${encodeURIComponent(src)}?w=800`,
+        'secret',
+        { signatureParams: { project: 'project_1' }, src },
+      ),
+    )
+    const verificationParams = new URLSearchParams(signed.searchParams)
+    verificationParams.set('project', 'project_1')
+
+    expect(signed.searchParams.has('project')).toBe(false)
+    expect(signed.searchParams.get('sig')).toBe(
+      signTransformRequest('secret', src, verificationParams),
+    )
   })
 })

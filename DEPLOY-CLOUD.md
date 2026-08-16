@@ -21,21 +21,23 @@ portable reference stack; the live Coolify resource uses the volume-compatible
 
 ## One-time setup
 
-1. **Domain** — buy `keenpix.com`, point DNS at the host, set `SERVICE_URL_APP=https://keenpix.com`.
+1. **Domain** — buy `keenpix.com`, point DNS at the host, and set
+   `SERVICE_URL_APP=https://keenpix.com`. This stack declares
+   `KEENPIX_DEPLOYMENT_ENV=production`; staging must instead use
+   `KEENPIX_DEPLOYMENT_ENV=staging` with `POLAR_SERVER=sandbox`.
 2. **Email** — pick one provider with `EMAIL_PROVIDER` and verify the sender
    domain. Postmark: `EMAIL_PROVIDER=postmark` + `POSTMARK_API_KEY` +
    `POSTMARK_FROM="Keenpix <no-reply@keenpix.com>"`. Resend:
    `EMAIL_PROVIDER=resend` + `RESEND_API_KEY` + `RESEND_FROM`. SMTP:
    `EMAIL_PROVIDER=smtp` + `SMTP_HOST` + `SMTP_FROM_EMAIL` (+ auth).
 3. **Polar (production org)** —
-   - Keep two monthly product sets for basic/pro/business: `founding` and
-     `standard`. Each product carries `plan`, `interval`, `pricing_phase`,
-     `included_gb`, and `overage_per_gb_cents`. The application exposes the
-     founding set until 25 real paying Polar organizations have become active,
-     then switches checkout to the standard set. Founding Basic/Pro/Business is
-     $9/$19/$39 with $0.08/$0.06/$0.05 per delivered GB of overage; standard is
-     $9/$29/$69 with $0.12/$0.09/$0.07. Trials and local admin grants never
-     claim a founding slot, and churn does not reopen one.
+   - Keep the standard monthly product set for basic/pro/business active. Each
+     product carries `plan`, `interval`, `pricing_phase=standard`, `included_gb`,
+     and `overage_per_gb_cents`. New application checkout uses only the standard
+     $9/$29/$69 set. Founding catalog records may remain for historical
+     subscribers and catalog verification, but do not expose direct checkout
+     links or advertise a capped cohort until activation-time slots can be
+     reserved atomically.
      Set `interval=month`. Archive any older annual products: do not delete them,
      but do not leave public annual checkout links active. Annual checkout is
      intentionally disabled until monthly allowance resets can be reconciled
@@ -44,15 +46,10 @@ portable reference stack; the live Coolify resource uses the volume-compatible
      `bandwidth_delivered` events), the three fixed monthly prices, their
      metered overages, and catalog metadata with
      `pnpm billing:configure-catalog -- --server=production`. Inspect the dry
-     run, then repeat it with `--apply`. The command migrates the legacy three
-     products to the founding set and creates/verifies the three standard
-     products. Per plan, keep one `meter_credit` benefit whose units equal the
-     included GB and attach it to both pricing phases.
-   - Founding products carry `price_lock_months=12` as catalog metadata and the
-     public promise is "at least 12 months." That metadata is descriptive: no
-     scheduler, webhook handler, or Polar product migration automatically moves
-     a founding subscription to standard pricing after month 12. Do not describe
-     the transition as automatic unless that workflow is implemented and tested.
+     run, then repeat it with `--apply`. The command creates or verifies the
+     founding and standard catalog records; the application exposes only the
+     standard set to new checkout. Per plan, keep one `meter_credit` benefit
+     whose units equal the included GB and attach it to both catalog records.
    - Create a webhook endpoint → `https://keenpix.com/api/auth/polar/webhooks`
      (events: `subscription.created`, `subscription.active`,
      `subscription.updated`, `subscription.canceled`,
@@ -67,7 +64,7 @@ portable reference stack; the live Coolify resource uses the volume-compatible
      parity. Never reuse `POLAR_WEBHOOK_SECRET` for it.
    - To verify and attach the included managed-delivery credits, run a dry check
      inside the cloud app container, then apply only after it identifies exactly
-     six monthly products and three benefits:
+     six monthly catalog products and three benefits:
      `pnpm billing:configure-benefits -- --server=production`, followed by the
      same command with `--apply`. The script preserves any existing benefits,
      refuses ambiguous catalogs, and never prints the access token.
@@ -85,10 +82,17 @@ portable reference stack; the live Coolify resource uses the volume-compatible
    Each customer domain receives an exact Worker route, so Coolify never needs
    arbitrary customer hostnames or certificates. Cache rules for custom hosts
    should match `/img/*` by path rather than a single host.
-5. **Shared cache** — create a Cloudflare R2 bucket + R2 API token, set the five
+5. **Edge analytics for billing** — create a zone-scoped token with **Zone →
+   Analytics → Read** and a separate account-scoped token with **Account →
+   Account Analytics → Read**. Set `CLOUDFLARE_API_TOKEN`,
+   `CLOUDFLARE_ZONE_ID`, `CLOUDFLARE_ACCOUNT_API_TOKEN`, and
+   `CLOUDFLARE_ACCOUNT_ID`. All four are required in cloud mode: project-level
+   Analytics Engine capture must succeed before the Polar usage watermark can
+   advance. `CLOUDFLARE_HOST` remains an optional zone-analytics filter.
+6. **Shared cache** — create a Cloudflare R2 bucket + R2 API token, set the five
    `KEENPIX_CACHE_S3_*` (endpoint `https://<account>.r2.cloudflarestorage.com`,
    region `auto`). Or use the bundled maxio service.
-6. **Secrets** — `BETTER_AUTH_SECRET` (openssl rand -hex 32), `CLICKHOUSE_PASSWORD`,
+7. **Secrets** — `BETTER_AUTH_SECRET` (openssl rand -hex 32), `CLICKHOUSE_PASSWORD`,
    `CRON_SECRET` (random), Postgres/admin creds (Coolify generates `SERVICE_*`).
 
 ## Deploy
@@ -100,9 +104,17 @@ keenpix.com. Select and deploy the reviewed `master` commit manually in Coolify,
 then record the deployment id and smoke-test results. Repository GitHub Actions
 run on `ubuntu-latest`; no Blacksmith runner is configured.
 
+For the alternative image-based stack, set `KEENPIX_APP_IMAGE` to a versioned
+release tag or immutable digest before running:
+
 ```
 docker compose -f docker-compose.cloud.yml up -d
 ```
+
+The Coolify production stack builds the reviewed source commit and ignores
+`KEENPIX_APP_IMAGE`. Update its pinned Maxio and cron helper image references
+deliberately during a release; do not turn them back into floating `latest`
+tags.
 
 Migrations run on boot (`KEENPIX_RUN_MIGRATIONS=true`); seeding is off by default
 in cloud (`KEENPIX_RUN_SEED=false`). If you migrate existing self-host data first,

@@ -33,6 +33,10 @@ const { captureEdgeHistory } = await import('./edge-history')
 describe('captureEdgeHistory', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    recordProjectEdgeCaptureSuccess.mockResolvedValue({
+      coveredFrom: new Date('2026-08-14T04:00:00Z'),
+      coveredUntil: new Date('2026-08-15T04:00:00Z'),
+    })
   })
 
   it('is a no-op when Cloudflare edge analytics is not configured', async () => {
@@ -47,6 +51,8 @@ describe('captureEdgeHistory', () => {
 
   it('persists the hourly adaptive groups without exposing credentials', async () => {
     const settings = {
+      accountApiToken: 'account-secret',
+      accountId: 'account',
       apiToken: 'secret',
       host: 'keenpix.com',
       zoneId: 'zone',
@@ -61,10 +67,16 @@ describe('captureEdgeHistory', () => {
     ]
     getEffectiveCloudflareSettings.mockResolvedValue(settings)
     fetchEdgeAdaptiveHourly.mockResolvedValue(groups)
+    fetchProjectEdgeHourly.mockResolvedValue([])
+    upsertProjectEdgeRollups.mockResolvedValue(0)
 
-    await expect(captureEdgeHistory()).resolves.toEqual({
+    await expect(captureEdgeHistory()).resolves.toMatchObject({
       configured: true,
       groups: 1,
+      projectCoverage: {
+        coveredFrom: expect.any(Date),
+        coveredUntil: expect.any(Date),
+      },
       projectGroups: 0,
     })
     expect(upsertEdgeRollups).toHaveBeenCalledWith(
@@ -83,6 +95,8 @@ describe('captureEdgeHistory', () => {
 
   it('records provider failures before rethrowing them', async () => {
     getEffectiveCloudflareSettings.mockResolvedValue({
+      accountApiToken: 'account-secret',
+      accountId: 'account',
       apiToken: 'secret',
       host: '',
       zoneId: 'zone',
@@ -97,6 +111,20 @@ describe('captureEdgeHistory', () => {
         zoneId: 'zone',
       }),
     )
+  })
+
+  it('fails when project-attributed capture lacks an account ID', async () => {
+    getEffectiveCloudflareSettings.mockResolvedValue({
+      apiToken: 'secret',
+      host: 'keenpix.com',
+      zoneId: 'zone',
+    })
+    fetchEdgeAdaptiveHourly.mockResolvedValue([])
+
+    await expect(captureEdgeHistory()).rejects.toThrow(
+      'Cloudflare account ID is required',
+    )
+    expect(fetchProjectEdgeHourly).not.toHaveBeenCalled()
   })
 
   it('captures project-attributed Analytics Engine groups independently', async () => {
@@ -122,13 +150,39 @@ describe('captureEdgeHistory', () => {
     ])
     upsertProjectEdgeRollups.mockResolvedValue(1)
 
-    await expect(captureEdgeHistory()).resolves.toEqual({
+    await expect(captureEdgeHistory()).resolves.toMatchObject({
       configured: true,
       groups: 0,
+      projectCoverage: {
+        coveredFrom: expect.any(Date),
+        coveredUntil: expect.any(Date),
+      },
       projectGroups: 1,
     })
     expect(recordProjectEdgeCaptureSuccess).toHaveBeenCalledWith(
       expect.objectContaining({ groups: 1 }),
     )
+  })
+
+  it('returns persisted continuous coverage after a Polar-only outage', async () => {
+    getEffectiveCloudflareSettings.mockResolvedValue({
+      accountId: 'account',
+      apiToken: 'secret',
+      zoneId: 'zone',
+    })
+    fetchEdgeAdaptiveHourly.mockResolvedValue([])
+    fetchProjectEdgeHourly.mockResolvedValue([])
+    upsertProjectEdgeRollups.mockResolvedValue(0)
+    recordProjectEdgeCaptureSuccess.mockResolvedValue({
+      coveredFrom: new Date('2026-08-12T04:00:00Z'),
+      coveredUntil: new Date('2026-08-15T04:00:00Z'),
+    })
+
+    await expect(captureEdgeHistory()).resolves.toMatchObject({
+      projectCoverage: {
+        coveredFrom: new Date('2026-08-12T04:00:00Z'),
+        coveredUntil: new Date('2026-08-15T04:00:00Z'),
+      },
+    })
   })
 })

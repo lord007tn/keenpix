@@ -10,12 +10,15 @@ Create `providers/keenpix.ts`:
 
 ```ts
 import { defineProvider } from '@nuxt/image/runtime'
-import { createNuxtImageProvider } from '@keenpix/nuxt'
+import { createManagedKeenpixConfig, createNuxtImageProvider } from '@keenpix/nuxt'
+
+const managed = createManagedKeenpixConfig('website')
 
 export default defineProvider(
   createNuxtImageProvider({
-    baseURL: 'https://images.example.com',
-    projectId: 'website',
+    baseURL: managed.baseUrl,
+    projectId: managed.projectId,
+    projectInPath: managed.projectInPath,
   }),
 )
 ```

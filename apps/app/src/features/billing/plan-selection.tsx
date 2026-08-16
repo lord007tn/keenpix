@@ -27,6 +27,8 @@ const PLAN_ORDER: PlanId[] = ['basic', 'pro', 'business']
 // Drop a trailing `.00` so whole-dollar prices read as "$9" not "$9.00".
 const TRAILING_ZEROS = /\.00$/
 
+export const PLAN_SELECTION_FALLBACK_PRICING = catalogPricing('standard')
+
 function formatBandwidth(bytes: number): string {
   const gb = bytes / GB
   if (gb >= 1000) {
@@ -117,7 +119,7 @@ export function PlanSelection({
     queryFn: () => getPlanPricingFn(),
     staleTime: 10 * 60 * 1000,
   })
-  const pricing = pricingData ?? catalogPricing()
+  const pricing = pricingData ?? PLAN_SELECTION_FALLBACK_PRICING
 
   async function startCheckout(planId: PlanId) {
     setBusy(planId)

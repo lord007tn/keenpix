@@ -1,4 +1,3 @@
-import { countFoundingCustomers } from '@/data-access/subscriptions'
 import {
   catalogPricing,
   FOUNDING_CUSTOMER_LIMIT,
@@ -148,26 +147,19 @@ function getPriceCatalog(phase: PricingPhase) {
 }
 
 export async function getPlanPricing() {
-  // Fail closed on a database error: showing standard pricing cannot consume an
-  // extra founding slot, while assuming zero paid customers could.
-  const claimed = await countFoundingCustomers().catch((error) => {
-    logger.warn(
-      errorContext(error),
-      'plan pricing: founding customer count unavailable; using standard pricing',
-    )
-    return FOUNDING_CUSTOMER_LIMIT
-  })
-  const remaining = Math.max(0, FOUNDING_CUSTOMER_LIMIT - claimed)
-  const phase: PricingPhase = remaining > 0 ? 'founding' : 'standard'
+  // Display and checkout use standard pricing until founding slots can be
+  // reserved atomically at paid activation. Historical founding subscriptions
+  // keep their provider price, but no race-prone promise is made to new trials.
+  const phase: PricingPhase = 'standard'
   const catalog = await getPriceCatalog(phase)
   return {
     ...catalog,
     phase,
     foundingOffer: {
-      active: remaining > 0,
-      claimed,
+      active: false,
+      claimed: FOUNDING_CUSTOMER_LIMIT,
       limit: FOUNDING_CUSTOMER_LIMIT,
-      remaining,
+      remaining: 0,
     },
   }
 }

@@ -10,7 +10,7 @@ export const cloudinaryComparison = {
   heroSubhead:
     'Cloudinary bundles transformations, storage, and bandwidth into credits. Keenpix bills exactly one thing: optimized bytes delivered through managed cloud, with unlimited transforms and team members plus always-on paid overage.',
   verdict:
-    'If you need video transcoding, a full digital asset manager, or AI-powered transforms today, pick Cloudinary — its breadth is real and Keenpix AI extensions are only coming soon. If what you use Cloudinary for is resizing and delivering images, Keenpix offers one managed-delivery meter, unlimited transformations and team members, managed custom domains, always-on paid usage, and an AGPL-3.0 v0.2.0 self-host path. Be aware of what you give up: Keenpix is a young solo-founder product with no video or storage. As of August 2026, 400 GB/month is $19 at Keenpix founding pricing or $29 at standard pricing; Cloudinary bandwidth draws from the Advanced plan’s pooled credits alongside transforms and storage.',
+    'If you need video transcoding, a full digital asset manager, or AI-powered transforms today, pick Cloudinary — its breadth is real and Keenpix AI extensions are only coming soon. If what you use Cloudinary for is resizing and delivering images, Keenpix offers one managed-delivery meter, unlimited transformations and team members, managed custom domains, always-on paid usage, and an AGPL-3.0 v0.2.1 self-host path. Be aware of what you give up: Keenpix is a young solo-founder product with no video or storage. As of August 2026, 400 GB/month is $29 at Keenpix; Cloudinary bandwidth draws from the Advanced plan’s pooled credits alongside transforms and storage.',
   pricingRows: [
     {
       scenario: 'Credits → GB translation',
@@ -21,23 +21,22 @@ export const cloudinaryComparison = {
     {
       scenario: '100 GB delivered / month',
       competitor: '$99/mo Plus — 100 of 225 credits gone before any transforms',
-      keenpix: '$9/mo Basic (founding and standard)',
+      keenpix: '$9/mo Basic',
     },
     {
       scenario: '400 GB delivered / month',
       competitor: "$249/mo Advanced — Plus's 225 credits can't cover it",
-      keenpix: '$19 founding / $29 standard Pro',
+      keenpix: '$29 Pro',
     },
     {
       scenario: '1 TB delivered / month',
       competitor: "Custom/enterprise — past Advanced's 600 credits",
-      keenpix: '$39 founding / $69 standard Business',
+      keenpix: '$69 Business',
     },
     {
       scenario: 'Effective cost per GB',
       competitor: '~$0.44 per credit-GB on Plus',
-      keenpix:
-        'Plan effective rate varies; overage $0.05–0.08 founding / $0.07–0.12 standard',
+      keenpix: 'Plan effective rate varies; overage $0.07–0.12',
     },
     {
       scenario: 'The month you exceed the plan',
@@ -65,7 +64,7 @@ export const cloudinaryComparison = {
     {
       feature: 'Overage handling',
       competitor: 'Soft limits; plan upgrade or custom terms may be required',
-      keenpix: 'Linear $0.05–0.08/GB founding or $0.07–0.12/GB standard',
+      keenpix: 'Linear $0.07–0.12/GB',
     },
     {
       feature: 'Paid overage behavior',
@@ -75,7 +74,7 @@ export const cloudinaryComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No',
-      keenpix: 'v0.2.0: AGPL-3.0 with Docker deployment files',
+      keenpix: 'v0.2.1: AGPL-3.0 with Docker deployment files',
     },
     {
       feature: 'Analytics',
@@ -137,7 +136,7 @@ export const cloudinaryComparison = {
     {
       title: 'An open-source escape hatch',
       detail:
-        'The published v0.2.0 release is AGPL-3.0 and includes Docker/Coolify deployment files. Moving in-house still requires infrastructure, operations, and a hostname/routing plan. Cloudinary has no self-host path.',
+        'The published v0.2.1 release is AGPL-3.0 and includes Docker/Coolify deployment files. Moving in-house still requires infrastructure, operations, and a hostname/routing plan. Cloudinary has no self-host path.',
     },
     {
       title: 'Core analytics on every Keenpix tier',
@@ -164,11 +163,11 @@ export const cloudinaryComparison = {
   faq: [
     {
       q: 'How do Cloudinary credits translate to gigabytes?',
-      a: 'One credit buys 1 GB of bandwidth, 1,000 transformations, or 1 GB of managed storage — all drawn from a single pool. Plus ($99/mo) includes 225 credits, so 225 GB delivered is the theoretical maximum if you spend zero credits on transforms and storage; real delivery is always less. Keenpix instead publishes separate founding and standard plan prices plus one delivered-GB overage rate per plan.',
+      a: 'One credit buys 1 GB of bandwidth, 1,000 transformations, or 1 GB of managed storage — all drawn from a single pool. Plus ($99/mo) includes 225 credits, so 225 GB delivered is the theoretical maximum if you spend zero credits on transforms and storage; real delivery is always less. Keenpix instead publishes one plan price plus one delivered-GB overage rate per plan.',
     },
     {
       q: 'What happens when I hit my plan limit?',
-      a: "Cloudinary describes its plan limits as soft limits and says it contacts customers about upgrading to a plan that better fits their usage. Keenpix bills $0.05–0.08/GB at founding pricing or $0.07–0.12/GB at standard pricing, keeps paid delivery online, and charges accumulated overage at the end of the billing period. Confirm either service's current terms before relying on a failure mode.",
+      a: "Cloudinary describes its plan limits as soft limits and says it contacts customers about upgrading to a plan that better fits their usage. Keenpix bills $0.07–0.12/GB, keeps paid delivery online, and charges accumulated overage at the end of the billing period. Confirm either service's current terms before relying on a failure mode.",
     },
     {
       q: 'Do I have to migrate my images out of Cloudinary?',
@@ -180,7 +179,7 @@ export const cloudinaryComparison = {
     },
     {
       q: 'Is the self-hosted version feature-limited?',
-      a: 'The published v0.2.0 release provides the engine under AGPL-3.0 and includes the transform pipeline, caching, and analytics. Self-hosting still requires your own infrastructure and operations.',
+      a: 'The published v0.2.1 release provides the engine under AGPL-3.0 and includes the transform pipeline, caching, and analytics. Self-hosting still requires your own infrastructure and operations.',
     },
     {
       q: 'Is there a free tier?',

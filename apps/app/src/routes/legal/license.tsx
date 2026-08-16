@@ -32,7 +32,7 @@ function LicensePage() {
       <h2>Engine license</h2>
       <p>
         The Keenpix engine is licensed under the{' '}
-        <a href={LICENSE_URL} rel="noreferrer" target="_blank">
+        <a href={LICENSE_URL} rel="noopener noreferrer" target="_blank">
           GNU Affero General Public License v3.0 (AGPL-3.0)
         </a>
         . You are free to run it on your own infrastructure subject to that

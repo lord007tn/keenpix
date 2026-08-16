@@ -1,5 +1,6 @@
 import { prisma } from '@keenpix/database'
 import dayjs from 'dayjs'
+import { drainProjectAnalyticsOutbox } from '@/data-access/analytics-outbox'
 import type { Project, ProjectFit, WatermarkPosition } from '@/shared/types'
 
 // Single source of truth for shaping a Prisma project row into the domain
@@ -224,13 +225,25 @@ export async function updateProject(
 // Returns whether a row was actually deleted.
 export function deleteProject(projectId: string, orgId: string) {
   return prisma.$transaction(async (tx) => {
-    const project = await tx.project.findFirst({
-      where: { id: projectId, orgId },
-      select: { id: true },
-    })
+    // Lock the project before draining its durable delivery outbox. Concurrent
+    // transform inserts retain an FK to this row, so they either commit before
+    // this drain or wait and fail after deletion; no acknowledged event can be
+    // silently cascaded between the drain and delete.
+    const projects = await tx.$queryRaw<Array<{ id: string; orgId: string }>>`
+      SELECT "id", "orgId"
+      FROM "Project"
+      WHERE "id" = ${projectId} AND "orgId" = ${orgId}
+      FOR UPDATE`
+    const project = projects[0]
     if (!project) {
       return false
     }
+    await drainProjectAnalyticsOutbox(tx, projectId)
+    await tx.projectBillingAttribution.upsert({
+      where: { projectId },
+      create: { projectId, orgId },
+      update: { orgId, deletedAt: new Date() },
+    })
     // Project-scoped keys cannot outlive their authorization target. Delete the
     // Better Auth key rows first; activities and scopes cascade with them.
     await tx.apiKey.deleteMany({

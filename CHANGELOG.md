@@ -4,7 +4,34 @@ All notable changes to Keenpix are documented here.
 
 ## Unreleased
 
-No unreleased changes.
+### Added
+
+- Bilingual English/Arabic blog routing, localized metadata, hreflang alternates,
+  sitemap entries, and four paired production guides.
+- Durable managed-delivery metering with settled hourly windows, Cloudflare
+  capture coverage checks, deletion-safe billing attribution, and fail-closed
+  reporting.
+
+### Changed
+
+- Managed framework helpers, SDK configuration, onboarding, and docs now emit
+  only `cdn.keenpix.com/p/<project>/img/<encoded-source>` URLs. v0.3 returns
+  `410 Gone` for the retired first-party `keenpix.com/img?...project=` shape and
+  includes the canonical replacement in a `Link` header.
+- New checkout and every public pricing fallback now expose only standard
+  $9/$29/$69 monthly plans; historical founding products remain auditable but
+  unlisted until allocation can be made race-safe.
+- Public-route bundles, accessibility landmarks, schema, comparison tables,
+  security headers, email delivery validation, and production deployment
+  guidance were hardened for launch.
+
+### Fixed
+
+- Corrected signed-URL examples and encoding, draft indexability, Arabic document
+  direction, trailing-slash/canonical behavior, 404 metadata, and sitemap
+  localization.
+- Prevented usage watermarks from advancing across incomplete outbox drains,
+  trial usage, missing edge coverage, or deleted-project attribution gaps.
 
 ## [v0.2.1] - 2026-08-05
 

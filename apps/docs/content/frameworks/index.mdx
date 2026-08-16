@@ -2,6 +2,7 @@
 title: Framework integrations
 description: Official @keenpix packages for web frameworks, meta-frameworks, static generators, and native apps.
 icon: Boxes
+updated: "2026-08-16"
 ---
 
 Keenpix image delivery works with plain URLs, but the official MIT-licensed package family gives each framework its native integration shape. All adapters extend `@keenpix/core`, so URL construction, source normalization, proportional responsive dimensions, signing payloads, and transform parameters stay consistent.
@@ -14,10 +15,9 @@ pnpm add @keenpix/react
 Every adapter takes the same public delivery configuration:
 
 ```ts
-const config = {
-  baseUrl: 'https://images.example.com',
-  projectId: 'website',
-}
+import { createManagedKeenpixConfig } from '@keenpix/core'
+
+const config = createManagedKeenpixConfig('website')
 ```
 
 `baseUrl` and `projectId` are safe to expose in rendered HTML. Management API keys and signing secrets are server-only.

@@ -85,7 +85,7 @@ export async function getProjectConfiguration(
       origin: project.origin,
       allowedOrigins: project.allowedOrigins,
       imageBaseUrl: `${deliveryBaseUrl}/img`,
-      transformUrlTemplate: `${deliveryBaseUrl}/img/<source-url>${projectQuery}`,
+      transformUrlTemplate: `${deliveryBaseUrl}/img/<encoded-source-url>${projectQuery}`,
       watermark: {
         enabled: project.watermarkEnabled,
         margin: project.watermarkMargin,

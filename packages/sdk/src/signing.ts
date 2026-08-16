@@ -19,6 +19,7 @@ export function signTransformUrl(
   options: {
     expiresAt?: Date | number
     keyVersion?: number
+    signatureParams?: Record<string, string>
     src?: string
   } = {},
 ) {
@@ -38,9 +39,13 @@ export function signTransformUrl(
   if (options.keyVersion !== undefined) {
     signed.searchParams.set('kid', String(options.keyVersion))
   }
+  const signatureSearchParams = new URLSearchParams(signed.searchParams)
+  for (const [key, value] of Object.entries(options.signatureParams ?? {})) {
+    signatureSearchParams.set(key, value)
+  }
   signed.searchParams.set(
     'sig',
-    signTransformRequest(secret, src, signed.searchParams),
+    signTransformRequest(secret, src, signatureSearchParams),
   )
   return signed.toString()
 }

@@ -11,8 +11,10 @@ import {
 } from 'fumadocs-ui/layouts/docs/page'
 import { RootProvider } from 'fumadocs-ui/provider/tanstack'
 import { Suspense } from 'react'
+import { NotFoundPage } from '@/components/app/error-page'
 import { JsonLd } from '@/components/app/json-ld'
 import { getMDXComponents } from '@/components/mdx'
+import { DocsMainContainer } from '@/features/docs/docs-main-container'
 import { docsSlugsSchema } from '@/schemas/docs'
 import { getAppUrl, isCloud } from '@/server/deployment'
 import { source } from '@/shared/docs-source'
@@ -38,6 +40,11 @@ interface DocsLoaderData {
 }
 
 export const Route = createFileRoute('/docs/$')({
+  // The Fumadocs client loader and renderer depend on each other. Keeping them
+  // in one route-only chunk prevents the docs UI from leaking into every
+  // public page through the router's shared loader/reference bundle.
+  codeSplitGroupings: [['loader', 'component']],
+  notFoundComponent: NotFoundPage,
   loader: async ({ params }) => {
     const slugs = params._splat?.split('/').filter(Boolean) ?? []
     const data = (await serverLoader({ data: slugs })) as DocsLoaderData
@@ -45,15 +52,30 @@ export const Route = createFileRoute('/docs/$')({
     return data
   },
   head: ({ loaderData }: { loaderData?: DocsLoaderData }) => {
+    if (!loaderData) {
+      return {
+        links: [{ rel: 'stylesheet', href: docsCss }],
+        meta: [
+          { title: 'Page not found - Keenpix' },
+          {
+            name: 'description',
+            content:
+              "The page you're looking for doesn't exist or may have moved.",
+          },
+          { name: 'robots', content: 'noindex,nofollow' },
+        ],
+      }
+    }
+
     const title =
-      loaderData?.title && loaderData.title !== SITE_NAME
+      loaderData.title && loaderData.title !== SITE_NAME
         ? `${loaderData.title} - Keenpix docs`
         : 'Keenpix docs'
     const description =
-      loaderData?.description ??
+      loaderData.description ??
       'Self-hosted image optimization, caching, analytics, and transform API documentation.'
-    const canonicalUrl = loaderData?.canonicalUrl ?? absoluteUrl('/docs')
-    const ogImage = loaderData?.ogImage ?? absoluteUrl(BRAND_IMAGE_PATH)
+    const canonicalUrl = loaderData.canonicalUrl
+    const ogImage = loaderData.ogImage ?? absoluteUrl(BRAND_IMAGE_PATH)
 
     return {
       links: [
@@ -69,7 +91,7 @@ export const Route = createFileRoute('/docs/$')({
           description,
           image: ogImage,
           url: canonicalUrl,
-          type: 'article',
+          type: 'website',
         }),
         ...(loaderData?.selfHost
           ? [{ name: 'robots', content: 'noindex,nofollow' }]
@@ -130,7 +152,7 @@ const serverLoader = createServerFn({ method: 'GET' })
 const clientLoader = browserCollections.docs.createClientLoader({
   component({ toc, frontmatter, default: MDX }) {
     return (
-      <DocsPage toc={toc}>
+      <DocsPage slots={{ container: DocsMainContainer }} toc={toc}>
         <DocsTitle>{frontmatter.title}</DocsTitle>
         <DocsDescription>{frontmatter.description}</DocsDescription>
         <DocsBody>

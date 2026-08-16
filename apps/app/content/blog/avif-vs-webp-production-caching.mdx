@@ -1,0 +1,92 @@
+---
+title: "AVIF vs WebP in production: choose with your cache"
+description: Compare AVIF and WebP without borrowed benchmarks, then configure format negotiation and CDN cache variants without serving the wrong bytes.
+date: "2026-08-15"
+author: Raed Bahri
+language: en
+translationKey: avif-vs-webp-production-caching
+tags: [image-formats, caching, performance]
+image: /og/blog/avif-vs-webp-production-caching.png?v=2026-08-15
+imageAlt: AVIF and WebP responses separated into safe cache variants by the Accept header
+---
+
+The dangerous part of `AVIF vs WebP` is not picking the format with the smallest file in a test folder. It is putting two different responses behind one URL, then letting a cache forget which browser asked for which format.
+
+Keenpix can return AVIF, WebP, or JPEG from the same `fmt=auto` URL. That is convenient only when every cache in the path understands the variation. If the cache does not, use an explicit format in the URL.
+
+## Start with one fixed test set
+
+Do not compare an AVIF thumbnail at one quality with a WebP hero at another. Choose a small set that resembles the images you actually serve:
+
+- one photograph with texture and gradients;
+- one product image with a clean background;
+- one image with transparency, if your catalog uses it.
+
+Keep source pixels, output dimensions, crop, and quality fixed. Record the output bytes and inspect the result at normal size and at 200% zoom. A lower byte count loses its value when text edges, skin, or product colors look wrong.
+
+Keenpix passes the project quality value to Sharp for both formats. It currently sets AVIF effort to `3` to reduce encoding work when the requested variant is not in cache. That is an operating choice, not proof that one format wins for every image.
+
+## What fmt=auto does
+
+With automatic formatting enabled for the project, Keenpix reads the request's `Accept` header in this order:
+
+1. return AVIF when the header includes `image/avif`;
+2. otherwise return WebP when it includes `image/webp`;
+3. otherwise return JPEG.
+
+The response includes `Vary: Accept`. You can check each branch without changing the URL:
+
+```bash
+URL='https://images.example.com/img/https://assets.example.com/hero.jpg?project=store&w=1200&q=80&fmt=auto'
+
+curl -sS -D avif.headers -o avif.bin \
+  -H 'Accept: image/avif,image/webp,image/*' "$URL"
+curl -sS -D webp.headers -o webp.bin \
+  -H 'Accept: image/webp,image/*' "$URL"
+curl -sS -D jpeg.headers -o jpeg.bin \
+  -H 'Accept: image/jpeg,image/*' "$URL"
+
+wc -c avif.bin webp.bin jpeg.bin
+```
+
+Read `Content-Type`, `Vary`, `Cache-Control`, and the byte counts. Open the three files too. The command tests negotiation and size, but it cannot judge visual damage for you.
+
+## The cache decides whether auto is safe
+
+These two requests share a URL but must not share a stored object:
+
+```text
+Accept: image/avif,image/webp,image/*
+Accept: image/webp,image/*
+```
+
+A browser cache understands `Vary: Accept`. An outer CDN may require an explicit variant rule or cache-key setting. Cloudflare's Vary for Images feature also requires a compatible image extension in the path. Cloudflare documents the feature for Pro, Business, and Enterprise plans, and requires a configured variants rule; returning `Vary: Accept` does not enable it by itself.
+
+Run two cold requests with different `Accept` headers, then repeat them. Confirm both the MIME type and the CDN cache status. If either format returns the other's MIME type after a hit, disable automatic negotiation at that layer.
+
+The simpler option puts the format in the URL:
+
+```text
+/hero.jpg?project=store&w=1200&q=80&fmt=avif
+/hero.jpg?project=store&w=1200&q=80&fmt=webp
+```
+
+Now each format has a distinct cache key without depending on a request header. Your application must choose a supported format, usually through `<picture>` sources or framework-generated URLs.
+
+## A practical rule for choosing
+
+Use `fmt=auto` when the CDN has proven variant support. If that CDN is Cloudflare, retain the source extension in the request path to meet its Vary for Images rules. That lets a current browser ask for AVIF while the JPEG fallback remains available.
+
+Use explicit WebP when the delivery stack needs one predictable modern format and the audience test supports it. Use explicit AVIF only when the fixed-image comparison shows a useful byte reduction at acceptable quality and the caller already handles fallback. For a screenshot with small text, a higher-quality WebP can be the better result even when an AVIF file is smaller.
+
+Animation, transparency, and progressive display deserve separate test cases. Do not turn a result from still photographs into a policy for every asset type.
+
+## When format work is premature
+
+Fix oversized dimensions before spending time on codec differences. A 2400-pixel WebP displayed in a 600-pixel slot can waste more than the format choice saves. Check responsive widths, `sizes`, crop, and quality first, then compare codecs using the bytes that remain.
+
+You also do not need Keenpix to use AVIF or WebP. Static builds and framework optimizers can produce both. An image service becomes useful when the variants depend on runtime dimensions, changing origins, or a shared URL policy across applications.
+
+## Sources and verification
+
+This article was checked on August 15, 2026 against the [AVIF 1.2.0 specification](https://aomedia.org/docs/AV1%20Image%20File%20Format%20%28AVIF%29%20v1.2.0.pdf), the official [WebP container specification](https://developers.google.com/speed/webp/docs/riff_container), the [Sharp AVIF and WebP output options](https://sharp.pixelplumbing.com/api-output/), [Cloudflare's Vary for Images requirements](https://developers.cloudflare.com/cache/advanced-configuration/vary-for-images/), and the [Keenpix parameter reference](/docs/reference/parameters). The [MDN image format guide](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Image_types) is included as supplementary browser guidance. This article contains no universal compression percentage because the result depends on the source, dimensions, quality, and encoder settings.

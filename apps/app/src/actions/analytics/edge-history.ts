@@ -47,7 +47,9 @@ export async function captureConfiguredProjectEdgeHistory(
   settings: EffectiveCloudflareSettings,
 ) {
   if (!settings.accountId) {
-    return 0
+    throw new Error(
+      'Cloudflare account ID is required for project-attributed edge billing.',
+    )
   }
   const attemptedAt = dayjs()
   const coveredFrom = attemptedAt.subtract(24, 'hour').add(1, 'second')
@@ -57,12 +59,16 @@ export async function captureConfiguredProjectEdgeHistory(
       until: attemptedAt.toDate(),
     })
     const attributedGroups = await upsertProjectEdgeRollups(groups)
-    await recordProjectEdgeCaptureSuccess({
+    const captureState = await recordProjectEdgeCaptureSuccess({
       groups: attributedGroups,
       coveredFrom: coveredFrom.toDate(),
       coveredUntil: attemptedAt.toDate(),
     })
-    return attributedGroups
+    return {
+      coveredFrom: captureState.coveredFrom ?? coveredFrom.toDate(),
+      coveredUntil: captureState.coveredUntil ?? attemptedAt.toDate(),
+      groups: attributedGroups,
+    }
   } catch (error) {
     await recordProjectEdgeCaptureFailure({
       attemptedAt: attemptedAt.toDate(),
@@ -84,9 +90,17 @@ export async function captureEdgeHistory() {
   if (!settings) {
     return { configured: false, groups: 0 }
   }
-  const [zoneGroups, projectGroups] = await Promise.all([
+  const [zoneGroups, projectHistory] = await Promise.all([
     captureConfiguredEdgeHistory(settings),
     captureConfiguredProjectEdgeHistory(settings),
   ])
-  return { configured: true, groups: zoneGroups, projectGroups }
+  return {
+    configured: true as const,
+    groups: zoneGroups,
+    projectCoverage: {
+      coveredFrom: projectHistory.coveredFrom,
+      coveredUntil: projectHistory.coveredUntil,
+    },
+    projectGroups: projectHistory.groups,
+  }
 }

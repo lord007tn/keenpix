@@ -2,6 +2,7 @@
 title: Nuxt
 description: Register Keenpix as a custom @nuxt/image provider.
 icon: Mountain
+updated: "2026-08-16"
 ---
 
 [`@nuxt/image`](https://image.nuxt.com) supports custom providers, so `<NuxtImg>` and
@@ -22,9 +23,8 @@ const operationsGenerator = createOperationsGenerator({
 export const getImage = (src, { modifiers = {}, baseURL = '', project = '' } = {}) => {
   const operations = operationsGenerator(modifiers)
   const url = src.startsWith('http') ? src : `${baseURL}${src}` // Keenpix needs an absolute URL
-  const query = `project=${project}${operations ? `&${operations}` : ''}`
   return {
-    url: `${process.env.KEENPIX_HOST}/img/${encodeURIComponent(url)}?${query}`,
+    url: `https://cdn.keenpix.com/p/${encodeURIComponent(project)}/img/${encodeURIComponent(url)}${operations ? `?${operations}` : ''}`,
   }
 }
 ```
@@ -65,7 +65,13 @@ want an SVG origin returned as optimized SVG.
   In `@nuxt/image`, the `format` prop maps to Keenpix's `fmt` query parameter. Do not
   pass a helper that always returns `avif` unless you want to force AVIF for every
   client. For JoodCMS-style wrappers, keep the wrapper's default `format` value
-  undefined and only pass a format for deliberate fixed-format URLs.
+undefined and only pass a format for deliberate fixed-format URLs.
+</Callout>
+
+<Callout title="Self-hosted delivery">
+  The snippet above is for managed cloud and never emits the retired
+  `keenpix.com/img?...project=` shape. For self-hosting, use `@keenpix/nuxt` with your own
+  delivery base URL and public project query.
 </Callout>
 
 <Callout title="Simpler option">

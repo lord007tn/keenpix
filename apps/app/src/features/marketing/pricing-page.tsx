@@ -13,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -44,9 +45,9 @@ function formatUsd(cents: number): string {
   return (cents / 100).toFixed(2).replace(TRAILING_ZEROS, '')
 }
 
-// Pricing-specific FAQ, rendered visibly AND emitted as FAQPage JSON-LD by the
+// Pricing-specific FAQ, rendered visibly by the
 // route. Every number derives from the plans catalog so it can't drift.
-export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
+const PRICING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'What exactly am I billed for?',
     answer:
@@ -59,17 +60,7 @@ export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'What happens when I use more than my included delivery?',
     answer:
-      'Delivery keeps working and additional gigabytes are billed at the rate shown for the plan you subscribed to. Founding customers retain $0.08/$0.06/$0.05 per GB on Basic/Pro/Business; standard pricing is $0.12/$0.09/$0.07. Polar charges accumulated usage at the end of the billing period.',
-  },
-  {
-    question: 'Who qualifies for founding pricing?',
-    answer:
-      'The first 25 organizations whose Polar subscription becomes actively paid qualify. A free trial does not claim a spot, complimentary access granted by an administrator never claims one, and each paying organization can claim only one. Once claimed, the spot remains in the paid-customer ledger after cancellation or churn and never reopens.',
-  },
-  {
-    question: 'What does the 12-month founding price lock mean?',
-    answer:
-      'Founding pricing is promised for at least 12 months. The current billing implementation keeps the organization on its founding Polar product and does not automatically migrate it to standard pricing at month 12. If that implementation changes, affected customers will receive notice before any price change.',
+      'Delivery keeps working and additional gigabytes are billed at the rate shown for the plan you subscribed to: $0.12/$0.09/$0.07 per GB on Basic/Pro/Business. Polar charges accumulated usage at the end of the billing period.',
   },
   {
     question: 'Can overage take my images offline?',
@@ -82,9 +73,9 @@ export const PRICING_FAQ: Array<{ answer: string; question: string }> = [
       'Nothing breaks immediately. Keenpix keeps serving your images through a dunning grace window while Polar retries the payment, and you get an email right away. Delivery only stops if billing stays unresolved and the subscription ends.',
   },
   {
-    question: 'Is self-hosting really free?',
+    question: 'What does self-hosting cost?',
     answer:
-      'Yes. The entire engine — transform pipeline, dashboard, analytics, allowlists, signed URLs — is open source under AGPL-3.0 with no feature gates, no telemetry, and no CLA. You run it on your own infrastructure with one Docker Compose command and pay only for your own servers. The managed cloud exists for teams who would rather not operate it.',
+      'The entire engine — transform pipeline, dashboard, analytics, allowlists, and signed URLs — is open source under AGPL-3.0 with no Keenpix license fee, feature gates, telemetry, or CLA. You still pay for and operate your own servers, storage, database, backups, monitoring, and delivery network. The managed cloud exists for teams that would rather not own that work.',
   },
 ]
 
@@ -181,7 +172,7 @@ const MATRIX: Array<{
 ]
 
 export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
-  const prices = pricing ?? catalogPricing()
+  const prices = pricing ?? catalogPricing('standard')
   const matrix = MATRIX.map((row) =>
     row.feature === 'Overage per GB'
       ? {
@@ -212,7 +203,8 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
               Edge hits, cache hits, and new transforms count once in one clear
               delivery meter. A single published overage rate keeps production
               online through the period. A {TRIAL.days}-day free trial that is
-              never billed. Or self-host the whole engine, free.
+              never billed. Or self-host the whole engine with no Keenpix
+              license fee while operating your own infrastructure.
             </p>
 
             <div className="mt-8 text-left">
@@ -290,7 +282,7 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
         <section className="border-b">
           <div className="mx-auto max-w-5xl px-6 py-14">
             <h2 className="font-semibold text-2xl tracking-tight">
-              Compare every tier — including free
+              Compare managed plans with self-hosting
             </h2>
             <p className="mt-2 max-w-2xl text-muted-foreground">
               Self-host is a real tier, not a demo: the same AGPL engine with
@@ -298,13 +290,20 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
             </p>
             <div className="mt-8 overflow-x-auto">
               <Table className="min-w-[720px]">
+                <TableCaption className="sr-only">
+                  Keenpix self-hosted and managed cloud plan comparison
+                </TableCaption>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-56" />
-                    <TableHead>Self-host (no license fee)</TableHead>
-                    <TableHead>Basic</TableHead>
-                    <TableHead>Pro</TableHead>
-                    <TableHead>Business</TableHead>
+                    <TableHead className="w-56" scope="col">
+                      <span className="sr-only">Plan feature</span>
+                    </TableHead>
+                    <TableHead scope="col">
+                      Self-host (no license fee)
+                    </TableHead>
+                    <TableHead scope="col">Basic</TableHead>
+                    <TableHead scope="col">Pro</TableHead>
+                    <TableHead scope="col">Business</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -342,7 +341,7 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
                 className="text-foreground underline"
                 href="/docs/self-hosting"
               >
-                Self-host Keenpix free
+                Self-host Keenpix
               </a>{' '}
               — or read{' '}
               <a className="text-foreground underline" href="/compare">

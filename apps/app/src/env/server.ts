@@ -38,6 +38,14 @@ export const env = createEnv({
         requireVar('SMTP_HOST', value.SMTP_HOST, when)
         requireVar('SMTP_FROM_EMAIL', value.SMTP_FROM_EMAIL, when)
       }
+      if (Boolean(value.SMTP_USER) !== Boolean(value.SMTP_PASSWORD)) {
+        const missing = value.SMTP_USER ? 'SMTP_PASSWORD' : 'SMTP_USER'
+        ctx.addIssue({
+          code: 'custom',
+          path: [missing],
+          message: 'SMTP_USER and SMTP_PASSWORD must be configured together.',
+        })
+      }
       if (
         Boolean(value.GOOGLE_CLIENT_ID) !== Boolean(value.GOOGLE_CLIENT_SECRET)
       ) {
@@ -114,12 +122,69 @@ export const env = createEnv({
         requireVar('POLAR_TOKEN', value.POLAR_TOKEN, when)
         requireVar('POLAR_WEBHOOK_SECRET', value.POLAR_WEBHOOK_SECRET, when)
         requireVar('CRON_SECRET', value.CRON_SECRET, when)
+        requireVar('CLOUDFLARE_API_TOKEN', value.CLOUDFLARE_API_TOKEN, when)
+        requireVar(
+          'CLOUDFLARE_ACCOUNT_API_TOKEN',
+          value.CLOUDFLARE_ACCOUNT_API_TOKEN,
+          when,
+        )
+        requireVar('CLOUDFLARE_ACCOUNT_ID', value.CLOUDFLARE_ACCOUNT_ID, when)
+        requireVar('CLOUDFLARE_ZONE_ID', value.CLOUDFLARE_ZONE_ID, when)
+        requireVar('KEENPIX_DEPLOYMENT_ENV', value.KEENPIX_DEPLOYMENT_ENV, when)
         // POLAR_SERVER defaults to "sandbox"; require it explicitly in cloud.
         // The public keenpix.com deployment must use production, while a separate
         // staging hostname may deliberately use the Polar sandbox.
         requireVar('POLAR_SERVER', value.POLAR_SERVER, when)
         const appUrl = value.KEENPIX_APP_URL ?? value.BETTER_AUTH_URL
+        requireVar('KEENPIX_APP_URL', appUrl, when)
         const appHostname = appUrl ? new URL(appUrl).hostname : undefined
+        if (value.KEENPIX_DEPLOYMENT_ENV === 'production' && appUrl) {
+          const url = new URL(appUrl)
+          if (
+            url.protocol !== 'https:' ||
+            url.hostname === 'localhost' ||
+            url.hostname === '127.0.0.1' ||
+            url.hostname === '::1'
+          ) {
+            ctx.addIssue({
+              code: 'custom',
+              path: ['KEENPIX_APP_URL'],
+              message:
+                'Production cloud deployments require a public HTTPS KEENPIX_APP_URL or BETTER_AUTH_URL.',
+            })
+          }
+          if (value.POLAR_SERVER !== 'production') {
+            ctx.addIssue({
+              code: 'custom',
+              path: ['POLAR_SERVER'],
+              message:
+                'POLAR_SERVER must be "production" when KEENPIX_DEPLOYMENT_ENV="production".',
+            })
+          }
+          if (
+            value.EMAIL_PROVIDER === 'smtp' &&
+            (value.SMTP_HOST === 'mailpit' ||
+              value.SMTP_FROM_EMAIL?.endsWith('.test'))
+          ) {
+            ctx.addIssue({
+              code: 'custom',
+              path: ['SMTP_HOST'],
+              message:
+                'Production cloud email cannot use the bundled Mailpit or a .test sender.',
+            })
+          }
+        }
+        if (
+          value.KEENPIX_DEPLOYMENT_ENV === 'staging' &&
+          value.POLAR_SERVER !== 'sandbox'
+        ) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['POLAR_SERVER'],
+            message:
+              'POLAR_SERVER must be "sandbox" when KEENPIX_DEPLOYMENT_ENV="staging".',
+          })
+        }
         if (
           value.POLAR_SERVER === 'sandbox' &&
           (appHostname === 'keenpix.com' || appHostname === 'www.keenpix.com')

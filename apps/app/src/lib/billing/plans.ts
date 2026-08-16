@@ -126,7 +126,7 @@ export interface PlanPricing {
 // Monthly pricing derived from this catalog. Used in self-host and whenever live
 // Polar prices are unavailable so prices never render blank.
 export function catalogPricing(
-  phase: PricingPhase = 'founding',
+  phase: PricingPhase = 'standard',
   claimed = 0,
 ): PlanPricing {
   const plans = {} as PlanPricing['plans']
@@ -137,13 +137,16 @@ export function catalogPricing(
       overagePerGbCents: terms.overagePerGbCents,
     }
   }
-  const boundedClaimed = Math.max(0, claimed)
+  const boundedClaimed =
+    phase === 'standard'
+      ? Math.max(FOUNDING_CUSTOMER_LIMIT, claimed)
+      : Math.max(0, claimed)
   const remaining = Math.max(0, FOUNDING_CUSTOMER_LIMIT - boundedClaimed)
   return {
     source: 'catalog',
     phase,
     foundingOffer: {
-      active: remaining > 0,
+      active: phase === 'founding' && remaining > 0,
       claimed: boundedClaimed,
       limit: FOUNDING_CUSTOMER_LIMIT,
       remaining,

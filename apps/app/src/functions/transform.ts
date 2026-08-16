@@ -90,22 +90,27 @@ export async function handleTransformRequest(
         })
       }
 
-      // Cloud traffic has one canonical, project-attributed edge URL. Keep the
-      // old app-origin route as a permanent redirect only; the trusted Worker
-      // request bypasses this branch and still executes the transform here.
-      // Removing `project` is safe for signed legacy URLs because the Worker
-      // restores the same project value before origin verification.
-      const redirectUrl = new URL(CLOUD_DELIVERY_ORIGIN)
-      redirectUrl.pathname = `/p/${encodeURIComponent(projectId)}${requestUrl.pathname}`
-      redirectUrl.search = requestUrl.search
-      redirectUrl.searchParams.delete('project')
-      return new Response(null, {
-        status: 308,
-        headers: {
-          'cache-control': 'public, max-age=86400',
-          location: redirectUrl.toString(),
+      // v0.2 redirected this legacy first-party shape. v0.3 removes it so new
+      // integrations cannot silently depend on an extra request hop. The
+      // canonical replacement stays machine-readable in the Link header and
+      // human-readable in the response body. Trusted Worker requests bypass
+      // this branch and continue to execute the transform at the origin.
+      const canonicalUrl = new URL(CLOUD_DELIVERY_ORIGIN)
+      canonicalUrl.pathname = `/p/${encodeURIComponent(projectId)}${requestUrl.pathname}`
+      canonicalUrl.search = requestUrl.search
+      canonicalUrl.searchParams.delete('project')
+      return new Response(
+        `Legacy managed delivery URLs were removed in Keenpix v0.3. Use ${canonicalUrl}.`,
+        {
+          status: 410,
+          headers: {
+            'cache-control': 'public, max-age=86400',
+            'content-type': 'text/plain; charset=utf-8',
+            deprecation: 'true',
+            link: `<${canonicalUrl}>; rel="successor-version"`,
+          },
         },
-      })
+      )
     }
 
     projectId = (await resolveCustomDomainProject(requestHostname)) ?? undefined

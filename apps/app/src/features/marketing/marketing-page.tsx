@@ -39,7 +39,7 @@ import {
 } from '@/features/marketing/plan-card-content'
 import { catalogPricing, PLANS, type PlanPricing } from '@/lib/billing/plans'
 import { cn } from '@/lib/cn/utils'
-import { SOCIAL_X_URL } from '@/shared/authors'
+import { BRAND_X_URL } from '@/shared/authors'
 import { MARKETING_FAQ } from '@/shared/marketing-faq'
 import { REPOSITORY_URL } from '@/shared/repository'
 import { AiExtensionsPreview } from './ai-extensions-preview'
@@ -159,7 +159,7 @@ function MobileNav() {
 export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
   // Loader provides live pricing; fall back to the catalog so the page always
   // renders real numbers (and to satisfy the self-host-typed null).
-  const prices = pricing ?? catalogPricing()
+  const prices = pricing ?? catalogPricing('standard')
   const fromCents = Math.min(
     ...PLAN_CARD_ORDER.map((planId) => prices.plans[planId].month.amountCents),
   )
@@ -587,8 +587,17 @@ Vary: Accept`}</CodeBlock>
                     className: 'min-h-12 touch-manipulation px-4',
                     variant: 'outline',
                   })}
+                  href="/self-hosted-image-cdn"
+                >
+                  Self-hosting overview
+                </a>
+                <a
+                  className={buttonVariants({
+                    className: 'min-h-12 touch-manipulation px-4',
+                    variant: 'outline',
+                  })}
                   href={REPOSITORY_URL}
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   target="_blank"
                 >
                   View on GitHub
@@ -726,15 +735,15 @@ open http://localhost:3000`}</CodeBlock>
             <a
               className="hover:text-foreground"
               href={REPOSITORY_URL}
-              rel="noreferrer"
+              rel="noopener noreferrer"
               target="_blank"
             >
               GitHub
             </a>
             <a
               className="hover:text-foreground"
-              href={SOCIAL_X_URL}
-              rel="noreferrer"
+              href={BRAND_X_URL}
+              rel="noopener noreferrer"
               target="_blank"
             >
               X

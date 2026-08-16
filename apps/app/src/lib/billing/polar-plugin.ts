@@ -1,13 +1,11 @@
 import { checkout, polar, portal, webhooks } from '@polar-sh/better-auth'
 import { upsertSubscriptionAddon } from '@/data-access/subscription-addons'
 import {
-  countFoundingCustomers,
   upsertSubscription,
   upsertSubscriptionWithCustomer,
 } from '@/data-access/subscriptions'
 import { env } from '@/env/server'
 import { notifyPaymentIssue } from '@/lib/billing/alerts'
-import { FOUNDING_CUSTOMER_LIMIT } from '@/lib/billing/plans'
 import { errorContext, logger } from '@/lib/logger/logger'
 import { listCheckoutProducts } from './polar-checkout-products'
 import { createPolarClient } from './polar-client'
@@ -20,7 +18,7 @@ import {
 // Mirror a Polar subscription into our local snapshot so the hot path reads
 // entitlements from Postgres, never Polar. `status` is passed explicitly since
 // the webhook event names the transition (active/canceled/revoked).
-async function syncSubscription(
+export async function syncSubscription(
   sub: PolarSubscriptionData,
   status: string,
 ): Promise<void> {
@@ -29,8 +27,18 @@ async function syncSubscription(
     const addon = mapSubscriptionAddonSnapshot(sub, status)
     if (addon) {
       await upsertSubscriptionAddon(addon)
+      return
     }
-    return
+    const error = new Error(
+      `Unrecognized Polar subscription payload for subscription ${sub.id}`,
+    )
+    logger.error(
+      { ...errorContext(error), polarSubscriptionId: sub.id },
+      'polar subscription webhook could not be attributed to a known plan or add-on',
+    )
+    // Reject the delivery so Polar retries after catalog/attribution drift is
+    // corrected. A 2xx here would permanently charge without entitlement.
+    throw error
   }
   const customerId = sub.customer?.id
   let previousStatus: string | null = null
@@ -84,14 +92,11 @@ export function buildPolarPlugin() {
     return null
   }
   const checkoutPlugin = checkout({
-    products: async () => {
-      const claimed = await countFoundingCustomers().catch(
-        () => FOUNDING_CUSTOMER_LIMIT,
-      )
-      return listCheckoutProducts(
-        client,
-        claimed < FOUNDING_CUSTOMER_LIMIT ? 'founding' : 'standard',
-      )
+    products: () => {
+      // New founding-price assignment is disabled until it can be reserved
+      // atomically at activation. Selecting by a live count during checkout can
+      // oversubscribe a capped cohort when trials or concurrent checkouts race.
+      return listCheckoutProducts(client, 'standard')
     },
     successUrl: env.POLAR_SUCCESS_URL ?? SUCCESS_URL,
     authenticatedUsersOnly: true,

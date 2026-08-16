@@ -4,13 +4,13 @@ import { CodeBlock } from '@/components/app/code-block'
 import { buttonVariants } from '@/components/ui/button'
 import { SiteFooter, SiteHeader } from '@/features/blog/blog-chrome'
 
-// Rendered visibly in the FAQ section AND emitted as FAQPage JSON-LD by the
+// Rendered visibly in the FAQ section by the
 // /self-hosted-image-cdn route (Google requires the answers to be on the page).
-export const SELF_HOSTED_FAQ: Array<{ answer: string; question: string }> = [
+const SELF_HOSTED_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Is the self-hosted version really free?',
     answer:
-      'The current v0.2.0 source is AGPL-3.0, with no Keenpix license fee, team-member limit, transform limit, or telemetry. You operate and pay for the infrastructure. Managed cloud starts at $9/month for 100 GB of managed image delivery with unlimited transformations and team members (as of August 2026).',
+      'The current v0.2.1 source is AGPL-3.0, with no Keenpix license fee, team-member limit, transform limit, or telemetry. You operate and pay for the infrastructure. Managed cloud starts at $9/month for 100 GB of managed image delivery with unlimited transformations and team members (as of August 2026).',
   },
   {
     question: 'How does Keenpix compare to imgproxy?',
@@ -30,7 +30,7 @@ export const SELF_HOSTED_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Can I move to the managed cloud later?',
     answer:
-      'The v0.2.0 cloud and self-host deployment paths share the transform URL grammar. Moving still requires a planned hostname, configuration, cache, database, and traffic migration; it is not only a DNS switch. Validate both directions with canary traffic before cutover.',
+      'The v0.2.1 cloud and self-host deployment paths share the transform URL grammar. Moving still requires a planned hostname, configuration, cache, database, and traffic migration; it is not only a DNS switch. Validate both directions with canary traffic before cutover.',
   },
 ]
 
@@ -114,8 +114,8 @@ const PROMISES = [
     body: 'Your self-hosted instance phones home to nobody. Analytics are computed and stored on your own infrastructure, for you.',
   },
   {
-    title: 'AGPL-3.0, free forever',
-    body: 'The current v0.2.0 source is AGPL-3.0. Earlier releases through v0.1.11 remain available under Apache-2.0.',
+    title: 'AGPL-3.0, no license fee',
+    body: 'The current v0.2.1 source is AGPL-3.0. Earlier releases through v0.1.11 remain available under Apache-2.0.',
   },
   {
     title: 'No CLA',
@@ -183,7 +183,7 @@ export function SelfHostedLandingPage({
               you run yourself: sharp-powered transforms, automatic AVIF/WebP
               negotiation, a disk + memory cache with stale-while-revalidate,
               and built-in analytics — installed with one Docker command. It is
-              the v0.2.0 engine used by the managed-cloud code path, licensed
+              the v0.2.1 engine used by the managed-cloud code path, licensed
               AGPL-3.0, and designed to sit behind the CDN you already have.
             </p>
             <p className="mt-4 max-w-2xl text-muted-foreground leading-relaxed">
@@ -202,7 +202,7 @@ export function SelfHostedLandingPage({
               <a
                 className={buttonVariants()}
                 href={repositoryUrl}
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 target="_blank"
               >
                 Get the code on GitHub
@@ -260,13 +260,29 @@ export function SelfHostedLandingPage({
             </p>
             <div className="mt-6 overflow-x-auto">
               <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+                <caption className="sr-only">
+                  Self-hosted image optimization feature comparison
+                </caption>
                 <thead>
                   <tr className="border-b">
-                    <th className="py-3 pr-4 font-medium text-muted-foreground" />
-                    <th className="py-3 pr-4 font-semibold">Keenpix</th>
-                    <th className="py-3 pr-4 font-semibold">imgproxy (OSS)</th>
-                    <th className="py-3 pr-4 font-semibold">Thumbor</th>
-                    <th className="py-3 font-semibold">ipx</th>
+                    <th
+                      className="py-3 pr-4 font-medium text-muted-foreground"
+                      scope="col"
+                    >
+                      <span className="sr-only">Feature</span>
+                    </th>
+                    <th className="py-3 pr-4 font-semibold" scope="col">
+                      Keenpix
+                    </th>
+                    <th className="py-3 pr-4 font-semibold" scope="col">
+                      imgproxy (OSS)
+                    </th>
+                    <th className="py-3 pr-4 font-semibold" scope="col">
+                      Thumbor
+                    </th>
+                    <th className="py-3 font-semibold" scope="col">
+                      ipx
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -498,7 +514,7 @@ docker compose up -d --build
               <a
                 className={buttonVariants()}
                 href={repositoryUrl}
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 target="_blank"
               >
                 GitHub
@@ -515,7 +531,7 @@ docker compose up -d --build
               >
                 Start a 14-day trial
               </Link>{' '}
-              — managed v0.2.0 deployment, from $9/month.
+              — managed v0.2.1 deployment, from $9/month.
             </p>
           </div>
         </section>

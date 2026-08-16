@@ -1,9 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { env } from '@/env/server'
 import { isCloud } from '@/server/deployment'
-import { MARKETING_FAQ } from '@/shared/marketing-faq'
 import {
-  faqPageJsonLd,
   homePageJsonLd,
   organizationJsonLd,
   softwareApplicationJsonLd,
@@ -33,7 +31,6 @@ export const getPublicConfigFn = createServerFn({ method: 'GET' }).handler(
             organizationJsonLd(),
             webSiteJsonLd(),
             homePageJsonLd(),
-            faqPageJsonLd(MARKETING_FAQ),
           ]
         : null,
     }

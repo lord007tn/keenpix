@@ -21,7 +21,8 @@ export function QuickStart({ project }: { project: Project }) {
     ? `https://cdn.keenpix.com/p/${project.id}`
     : base
   const projectQuery = cloudDelivery ? '' : `project=${project.id}&`
-  const url = `${deliveryBase}/img/${project.origin}/your-image.jpg?${projectQuery}w=800&fmt=webp`
+  const source = encodeURIComponent(`${project.origin}/your-image.jpg`)
+  const url = `${deliveryBase}/img/${source}?${projectQuery}w=800&fmt=webp`
   return (
     <Card>
       <CardHeader>

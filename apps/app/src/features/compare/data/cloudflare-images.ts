@@ -32,8 +32,7 @@ export const cloudflareImagesComparison = {
     {
       scenario: 'Remote-origin image delivery',
       competitor: '$0.50 per 1,000 unique transformations after 5,000 included',
-      keenpix:
-        '$0.05–$0.08/GB founding or $0.07–$0.12/GB standard overage after the plan allowance',
+      keenpix: '$0.07–$0.12/GB overage after the plan allowance',
     },
   ],
   featureRows: [
@@ -75,7 +74,7 @@ export const cloudflareImagesComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'Managed Cloudflare service',
-      keenpix: 'v0.2.0 code is AGPL-3.0; you operate it',
+      keenpix: 'v0.2.1 code is AGPL-3.0; you operate it',
     },
     {
       feature: 'Image analytics',
@@ -97,7 +96,7 @@ export const cloudflareImagesComparison = {
     {
       title: 'A self-operated path',
       detail:
-        'The current v0.2.0 code is AGPL-3.0 and includes deployment files. Self-hosting removes a Keenpix service bill but adds infrastructure and operational work.',
+        'The current v0.2.1 code is AGPL-3.0 and includes deployment files. Self-hosting removes a Keenpix service bill but adds infrastructure and operational work.',
     },
   ],
   whenCompetitorWins: [

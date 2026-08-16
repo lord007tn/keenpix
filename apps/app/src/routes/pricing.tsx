@@ -1,12 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { JsonLd } from '@/components/app/json-ld'
-import { PRICING_FAQ, PricingPage } from '@/features/marketing/pricing-page'
+import { PricingPage } from '@/features/marketing/pricing-page'
 import { getPlanPricingFn } from '@/functions/pricing'
 import { isCloud } from '@/server/deployment'
 import {
   absoluteUrl,
-  faqPageJsonLd,
   PRICING_DESCRIPTION,
   pricingPageJsonLd,
   seo,
@@ -21,9 +20,7 @@ export const Route = createFileRoute('/pricing')({
   loader: async () => {
     const meta = await pricingMetaFn()
     const pricing = meta.selfHost ? null : await getPlanPricingFn()
-    const jsonLd = pricing
-      ? [pricingPageJsonLd(pricing), faqPageJsonLd(PRICING_FAQ)]
-      : null
+    const jsonLd = pricing ? pricingPageJsonLd(pricing) : null
     return { ...meta, jsonLd, pricing }
   },
   head: ({ loaderData }) => {

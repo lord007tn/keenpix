@@ -2,6 +2,7 @@
 title: Next.js
 description: Use Keenpix as a custom loader for next/image.
 icon: Triangle
+updated: "2026-08-15"
 ---
 
 `next/image` lets you swap its optimizer for a custom loader. Point it at Keenpix and keep
@@ -13,18 +14,29 @@ each width.
 ```js
 // keenpix-loader.js
 export default function keenpixLoader({ src, width, quality }) {
-  const host = process.env.NEXT_PUBLIC_KEENPIX_HOST
+  const baseUrl = process.env.NEXT_PUBLIC_KEENPIX_BASE_URL
   const project = process.env.NEXT_PUBLIC_KEENPIX_PROJECT
   const origin = process.env.NEXT_PUBLIC_IMAGE_ORIGIN ?? ''
 
   // next/image passes `src` as-is; Keenpix needs an absolute URL.
   const url = src.startsWith('http') ? src : `${origin}${src}`
 
-  const params = new URLSearchParams({ project, w: String(width), fmt: 'auto' })
+  const params = new URLSearchParams({ w: String(width), fmt: 'auto' })
+  if (project) params.set('project', project)
   if (quality) params.set('q', String(quality))
-  return `${host}/img/${encodeURIComponent(url)}?${params.toString()}`
+  return `${baseUrl}/img/${encodeURIComponent(url)}?${params.toString()}`
 }
 ```
+
+Use the canonical managed-cloud path without a project query:
+
+```dotenv
+NEXT_PUBLIC_KEENPIX_BASE_URL=https://cdn.keenpix.com/p/YOUR_PROJECT_ID
+NEXT_PUBLIC_IMAGE_ORIGIN=https://assets.example.com
+```
+
+For a self-hosted instance, set `NEXT_PUBLIC_KEENPIX_BASE_URL` to your image host and
+set `NEXT_PUBLIC_KEENPIX_PROJECT`; the loader adds that project id to the query.
 
 ## 2. Point next.config at it
 
@@ -46,7 +58,7 @@ export default function Hero() {
 ```
 
 <Callout>
-  Add **both** your Keenpix host and your image origin host to the project's allowlist
-  (**Settings → Security**). Set `NEXT_PUBLIC_KEENPIX_HOST`, `NEXT_PUBLIC_KEENPIX_PROJECT`,
-  and `NEXT_PUBLIC_IMAGE_ORIGIN` in `.env`.
+  Add the image origin host to the project's allowlist (**Settings → Security**). Set
+  `NEXT_PUBLIC_KEENPIX_BASE_URL` and `NEXT_PUBLIC_IMAGE_ORIGIN` in `.env`, plus
+  `NEXT_PUBLIC_KEENPIX_PROJECT` on self-hosted deployments.
 </Callout>
