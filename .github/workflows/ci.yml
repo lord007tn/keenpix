@@ -8,14 +8,12 @@ on:
     branches: [master]
     paths-ignore:
       - "*.md"
-      - "docs/**"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE.md"
   pull_request:
     branches: [master]
     paths-ignore:
       - "*.md"
-      - "docs/**"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE.md"
 
@@ -52,7 +50,7 @@ jobs:
         run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0 --prefer-offline
 
       - name: Generate Prisma client
-        run: pnpm exec prisma generate
+        run: pnpm db:generate
 
       - name: Repository health
         run: pnpm run health

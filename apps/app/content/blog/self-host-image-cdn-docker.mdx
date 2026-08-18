@@ -1,0 +1,148 @@
+---
+title: "Self-host an image CDN with Docker: production checklist"
+description: Deploy Keenpix with a pinned Docker image, persistent Postgres, health checks, CDN cache rules, backups, and a repeatable smoke test.
+date: "2026-08-15"
+author: Raed Bahri
+language: en
+translationKey: self-host-image-cdn-docker
+tags: [self-hosting, docker, operations]
+image: /og/blog/self-host-image-cdn-docker.png?v=2026-08-15
+imageAlt: Docker deployment with Keenpix, Postgres, persistent volumes, and a CDN cache layer
+---
+
+`docker compose up -d` can leave you with seven healthy containers and an unsafe deployment. The database may have no backup, image tags may drift across services during the next pull, or a proxy may cache the sign-in page along with transformed images.
+
+This setup treats the first successful container start as the beginning of the job. It uses the Compose file in the Keenpix repository, pins a release, and checks the pieces that carry state.
+
+## What the Compose stack runs
+
+The repository's `docker-compose.yml` starts seven services:
+
+- PostgreSQL 18 on the private Compose network, with a named database volume;
+- Dragonfly for queues and shared hot-cache metadata;
+- MaxIO for the shared S3-compatible image cache;
+- the app control plane, transform data plane, BullMQ worker, and standalone docs service.
+
+The stateful and Keenpix services have readiness checks. The app waits for its dependencies, runs Prisma migrations and the initial seed through its entrypoint, then serves `/api/health` on port 3000. The Keenpix containers run as the unprivileged `node` user.
+
+The database volume is durable state. Back it up. The image cache can be rebuilt from the origin and should not be treated as a backup of your source images.
+
+## Pin the release before starting
+
+The Compose file defaults to the moving `latest` image. For a controlled installation, check out a release and pin the matching container tag:
+
+```bash
+git clone --branch v0.3.0 --depth 1 https://github.com/lord007tn/keenpix.git
+cd keenpix
+cp .env.example .env
+```
+
+Set at least these values in `.env`:
+
+```dotenv
+KEENPIX_APP_IMAGE=ghcr.io/lord007tn/keenpix-app:v0.3.0
+KEENPIX_TRANSFORM_IMAGE=ghcr.io/lord007tn/keenpix-transform:v0.3.0
+KEENPIX_WORKER_IMAGE=ghcr.io/lord007tn/keenpix-worker:v0.3.0
+KEENPIX_DOCS_IMAGE=ghcr.io/lord007tn/keenpix-docs:v0.3.0
+POSTGRES_PASSWORD=<a-long-random-password>
+BETTER_AUTH_SECRET=<output-of-openssl-rand-hex-32>
+BETTER_AUTH_URL=https://admin.images.example.com
+KEENPIX_APP_URL=https://admin.images.example.com
+KEENPIX_SUPER_ADMIN_EMAIL=admin@example.com
+KEENPIX_SUPER_ADMIN_PASSWORD=<a-different-long-password>
+```
+
+Generate the auth secret instead of typing the placeholder:
+
+```bash
+openssl rand -hex 32
+```
+
+Then pull and start the exact image:
+
+```bash
+docker compose pull
+docker compose up -d
+docker compose ps
+```
+
+Do not publish PostgreSQL's port to the internet. The supplied Compose file keeps it private and only publishes the Keenpix application port.
+
+## Put TLS and caching in the right places
+
+Terminate HTTPS at Caddy, Nginx, Coolify's proxy, or a CDN. Set `BETTER_AUTH_URL` and `KEENPIX_APP_URL` to the public dashboard URL so cookies and generated links use the same origin.
+
+Cache only `/img/*`. Keep `/app`, `/api/auth`, `/api/health`, and the rest of the dashboard outside the cache rule. A broad "cache everything" rule can store authenticated or session-dependent responses.
+
+The cache key must include the complete path and query string. These requests are different image variants:
+
+```text
+/img/https://assets.example.com/hero.jpg?project=store&w=640&fmt=webp
+/img/https://assets.example.com/hero.jpg?project=store&w=1200&fmt=webp
+```
+
+If you use `fmt=auto`, the outer cache must also separate variants by `Accept`. Use explicit `fmt=avif`, `fmt=webp`, or `fmt=jpeg` when the CDN cannot prove that behavior.
+
+## Create a project and run a smoke test
+
+Sign in with the bootstrap admin account, create a project, and add the source hostname to its allowed-host list. Then request one known image:
+
+```bash
+curl -sS -D transform.headers -o transformed.webp \
+  'https://images.example.com/img/https://assets.example.com/catalog/chair.jpg?project=PROJECT_ID&w=1200&fmt=webp&q=80'
+```
+
+Check these facts instead of stopping at HTTP 200:
+
+- `Content-Type` is `image/webp`;
+- `Cache-Control` keeps the transform cacheable;
+- the returned dimensions match the request and source limits;
+- a source hostname outside the allowlist is rejected;
+- a repeated request becomes a hit at the cache layer you intended to test.
+
+Also check the service health and recent logs:
+
+```bash
+curl -fsS https://admin.images.example.com/api/health
+docker compose logs --since=10m app
+```
+
+The health response proves that this instance can answer its configured checks. It does not test every source, transformation, or CDN region.
+
+## Back up Postgres before the first upgrade
+
+Create and test a database-backup routine before users add projects or invitations. A simple manual dump from the bundled service is a useful first check:
+
+```bash
+docker compose exec -T postgres sh -lc \
+  'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
+  > keenpix-$(date +%F).dump
+```
+
+Store backups away from the Docker host. A named volume protects data from routine container replacement, but it does not protect against disk loss, operator mistakes, or a damaged database.
+
+Before an upgrade, read the release notes, take a fresh dump, change all four `KEENPIX_*_IMAGE` variables to the selected version, then run:
+
+```bash
+docker compose pull app transform worker docs
+docker compose up -d app transform worker docs
+docker compose ps
+```
+
+The entrypoint applies database migrations. Keep the previous image reference and a verified restore procedure available until the smoke tests pass.
+
+## Capacity choices you still own
+
+The default Compose cache cap is 8 GB. Set `KEENPIX_CACHE_MAX_BYTES` from the actual disk budget, then watch eviction behavior. Set transform concurrency near the CPU capacity and keep a bounded queue so cold traffic sheds with `503` before the host runs out of memory.
+
+Horizontal self-hosted replicas do not share Keenpix's local disk cache. The bundled stack uses MaxIO for its shared object-storage tier; production operators can replace it with R2 or another S3-compatible service. Put a CDN in front of the transform service. PostgreSQL also needs a deliberate high-availability and backup plan if the service matters to production traffic.
+
+## When managed Keenpix is the better choice
+
+Self-hosting removes the managed-service bill, not the operations work. Choose it when infrastructure control, data placement, or the ability to modify the AGPL-3.0 code matters enough to own upgrades, monitoring, backups, abuse controls, and incident response.
+
+Use the managed service when the team wants image delivery without maintaining that stack. The transform URL concepts are similar, but the operational responsibility is not.
+
+## Sources and verification
+
+This guide was updated on August 18, 2026 for [Keenpix v0.3.0](https://github.com/lord007tn/keenpix/releases/tag/v0.3.0), the repository's four Dockerfiles and `docker-compose.yml`, the [deployment presets](/docs/self-hosting/presets), [configuration reference](/docs/self-hosting/configuration), and [CDN setup](/docs/self-hosting/cdn). The commands are an installation checklist, not a claim that every production deployment takes the same amount of time.

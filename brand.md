@@ -23,7 +23,7 @@ Keenpix uses a modular image-pipeline mark: eight transformed tiles orbit an ope
 
 ## Asset locations
 
-Brand source assets live in `public/brand`:
+Brand source assets live in `apps/app/public/brand`:
 
 | Asset | File | Use |
 | --- | --- | --- |
@@ -38,7 +38,8 @@ Brand source assets live in `public/brand`:
 | Social card PNG | `keenpix-og-card.png` | Open Graph and Twitter/X card |
 | Social card JPEG | `keenpix-og-card.jpg` | Compatibility fallback |
 
-Generated raster exports live in `public/brand/raster`. Browser and app icons are also copied to the `public` root:
+Generated raster exports live in `apps/app/public/brand/raster`. Browser and app
+icons are also copied to the app's `public` root:
 
 `keenpix-social-avatar.png` is the only supported social-profile avatar. Do not
 create platform-specific copies or regenerate it from the core icon; social

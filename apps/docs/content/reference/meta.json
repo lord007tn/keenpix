@@ -1,0 +1,12 @@
+{
+  "title": "API reference",
+  "icon": "Code",
+  "pages": [
+    "endpoint",
+    "parameters",
+    "responses",
+    "sdk-package",
+    "sdk-api",
+    "operations"
+  ]
+}

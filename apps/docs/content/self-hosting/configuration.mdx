@@ -1,0 +1,139 @@
+---
+title: Configuration
+description: Environment variables for a self-hosted instance.
+icon: Settings2
+---
+
+Set these in `.env` (or your orchestrator's secrets).
+
+## Core
+
+| Variable                         | Required      | Default            | Purpose                                                                                    |
+| -------------------------------- | ------------- | ------------------ | ------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`                   | yes           | —                  | Postgres connection string                                                                 |
+| `POSTGRES_PASSWORD`              | yes (compose) | —                  | Password for the bundled Compose Postgres service                                          |
+| `BETTER_AUTH_SECRET`             | yes (prod)    | —                  | Session secret; must be 32+ random chars                                                   |
+| `BETTER_AUTH_URL`                | no            | `http://localhost:3000` | Public base URL for auth callbacks and secure-cookie behavior                         |
+| `KEENPIX_APP_URL`                | no            | `BETTER_AUTH_URL`  | Canonical app URL for generated metadata, docs links, and OG URLs                          |
+| `KEENPIX_SUPER_ADMIN_EMAIL`      | yes           | —                  | Email for the bootstrapped super admin account                                             |
+| `KEENPIX_SUPER_ADMIN_PASSWORD`   | yes           | —                  | Password for the bootstrapped super admin account                                          |
+| `KEENPIX_ADMIN_EMAIL`            | legacy alias  | —                  | Backward-compatible alias for `KEENPIX_SUPER_ADMIN_EMAIL`                                  |
+| `KEENPIX_ADMIN_PASSWORD`         | legacy alias  | —                  | Backward-compatible alias for `KEENPIX_SUPER_ADMIN_PASSWORD`                               |
+| `KEENPIX_RUN_MIGRATIONS`         | no            | `true` in Docker   | Docker entrypoint switch for running migrations before start                               |
+| `KEENPIX_RUN_SEED`               | no            | `true` in Docker   | Docker entrypoint switch for seeding the default org and super admin before start          |
+| `KEENPIX_CACHE_DIR`              | no            | `./.keenpix-cache` | Where transformed images are cached on disk                                                |
+| `KEENPIX_MODE`                   | no            | `selfhost`         | `selfhost` (default) or `cloud`. Self-host disables the marketing site, self-signup, and billing |
+| `LOG_LEVEL`                      | no            | `info`             | Server log level: `fatal`, `error`, `warn`, `info`, `debug`, `trace`, or `silent`          |
+| `KEENPIX_LOG_DIR`                | no            | —                  | Also retain rotating evlog NDJSON files in this directory; stdout logging remains enabled  |
+
+## Browser public URLs
+
+These Vite variables are only needed when the browser bundle must call a non-default
+public app or auth URL.
+
+| Variable                    | Default | Purpose                                      |
+| --------------------------- | ------- | -------------------------------------------- |
+| `VITE_KEENPIX_PUBLIC_URL`   | —       | Browser-facing app URL                       |
+| `VITE_KEENPIX_AUTH_URL`     | —       | Backward-compatible auth URL alias           |
+| `VITE_BETTER_AUTH_URL`      | —       | Backward-compatible Better Auth URL alias    |
+
+## Transactional email
+
+Verification, password reset, and teammate invitation emails go through exactly
+**one** provider, selected with `EMAIL_PROVIDER`. Email is configured entirely
+from the environment — there is no in-app email settings screen. Leave
+`EMAIL_PROVIDER` unset to disable email (fine for a single-admin install that
+never invites teammates). When it is set, the selected provider's required
+variables must be present or the app fails to start.
+
+| Variable         | Default | Purpose                                       |
+| ---------------- | ------- | --------------------------------------------- |
+| `EMAIL_PROVIDER` | —       | `postmark`, `resend`, or `smtp` (unset = off) |
+
+### `EMAIL_PROVIDER=postmark`
+
+| Variable                  | Default    | Purpose                                          |
+| ------------------------- | ---------- | ------------------------------------------------ |
+| `POSTMARK_API_KEY`        | —          | Postmark server token (required)                 |
+| `POSTMARK_FROM`           | —          | Verified sender, e.g. `Keenpix <no-reply@…>` (required) |
+| `POSTMARK_MESSAGE_STREAM` | `outbound` | Message stream to send on                        |
+
+### `EMAIL_PROVIDER=resend`
+
+| Variable         | Default | Purpose                                       |
+| ---------------- | ------- | --------------------------------------------- |
+| `RESEND_API_KEY` | —       | Resend API key (required)                     |
+| `RESEND_FROM`    | —       | Verified sender, e.g. `Keenpix <no-reply@…>` (required) |
+
+### `EMAIL_PROVIDER=smtp`
+
+Point at any SMTP relay (a provider, or a self-hosted Postfix/Mailpit).
+
+| Variable          | Default | Purpose                                       |
+| ----------------- | ------- | --------------------------------------------- |
+| `SMTP_HOST`       | —       | SMTP server hostname (required)               |
+| `SMTP_FROM_EMAIL` | —       | Sender email address (required)               |
+| `SMTP_PORT`       | `587`   | SMTP server port                              |
+| `SMTP_SECURE`     | `false` | `true` for implicit TLS, `false` for STARTTLS |
+| `SMTP_USER`       | —       | SMTP username                                 |
+| `SMTP_PASSWORD`   | —       | SMTP password                                 |
+| `SMTP_FROM_NAME`  | —       | Sender display name                           |
+
+## Cloudflare edge analytics
+
+Optional. Wire a Cloudflare API token so keenpix can show real edge cache
+hit-rate alongside its origin-shield figures (see [edge analytics](/docs/self-hosting/cdn#built-in-edge-analytics)).
+keenpix now persists hourly edge rollups, so edge analytics covers any range and
+accumulates history beyond Cloudflare's ~24h adaptive window — coverage grows
+forward as the dashboard is used. Configure it with the environment variables
+below; the effective status is shown read-only at **Admin → Settings**. The token
+only needs the zone-scoped **Analytics → Read** permission.
+
+| Variable               | Default | Purpose                                                                |
+| ---------------------- | ------- | ---------------------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN` | —       | Zone-scoped API token with Analytics → Read                            |
+| `CLOUDFLARE_ZONE_ID`   | —       | 32-character hex zone id for the image hostname                        |
+| `CLOUDFLARE_HOST`      | —       | Optional. A Cloudflare zone can serve several subdomains and edge analytics only filter by path (`/img/*`), so set this to the keenpix hostname (e.g. `images.example.com`) when the zone also hosts other sites that use a `/img` path. Leave blank to count the whole zone. |
+
+## Limits & performance
+
+| Variable                   | Default        | Purpose                                          |
+| -------------------------- | -------------- | ------------------------------------------------ |
+| `KEENPIX_CACHE_MAX_BYTES` | transform default: `2147483648` (2GB); Docker/Coolify: `8589934592` (8GB) | Disk cache LRU cap |
+| `KEENPIX_CACHE_STALE_MS` | `86400000` (24h) | Serve stale disk entries immediately and refresh them in the background; `0` disables stale refresh |
+| `KEENPIX_MEMORY_CACHE_MAX_BYTES` | transform default: `67108864` (64MB); Docker/Coolify: `268435456` (256MB) | In-process hot variant LRU cap; `0` disables memory caching |
+| `KEENPIX_CACHE_REDIS_URL` | Compose: `redis://dragonfly:6379` | Shared Dragonfly variant tier; separate setting from the BullMQ queue URL |
+| `KEENPIX_CACHE_DRAGONFLY_MAX_BYTES` | `536870912` (512MB) | Dragonfly variant LRU budget |
+| `KEENPIX_CACHE_DELETE_AFTER_MS` | `2592000000` (30d) | Terminal age after which a variant is deleted from every tier; `0` disables |
+| `KEENPIX_CACHE_S3_BUCKET` | — | Shared S3/R2/MaxIO cache bucket |
+| `KEENPIX_CACHE_S3_ENDPOINT` | — | S3-compatible endpoint |
+| `KEENPIX_CACHE_S3_REGION` | `auto` | S3-compatible region |
+| `KEENPIX_CACHE_S3_ACCESS_KEY_ID` | — | S3-compatible access key |
+| `KEENPIX_CACHE_S3_SECRET_ACCESS_KEY` | — | S3-compatible secret key |
+| `KEENPIX_MAX_ORIGIN_BYTES` | `52428800` (50MB) | Max bytes pulled from an origin before `413`  |
+| `KEENPIX_MAX_WATERMARK_BYTES` | `5242880` (5MB) | Max bytes pulled for a project watermark asset |
+| `KEENPIX_QUEUE_URL`        | `redis://127.0.0.1:6379` | BullMQ connection URL; Compose uses Dragonfly |
+| `KEENPIX_WORKBENCH_USERNAME` | —            | Basic-auth username for the internal worker dashboard; set with the password |
+| `KEENPIX_WORKBENCH_PASSWORD` | —            | Basic-auth password for the internal worker dashboard; set with the username |
+| `KEENPIX_WORKER_SECRET`    | —              | 32+ character secret for worker-to-app callbacks |
+| `KEENPIX_WORKER_CONCURRENCY` | `4`          | Concurrent prewarm jobs per worker process       |
+| `KEENPIX_WORKER_PORT`      | `3001`         | Internal health and Workbench listener for the worker container; Compose does not publish it |
+| `KEENPIX_WORKER_TIMEOUT_MS` | `60000`       | Maximum transform wait for one prewarm job |
+| `KEENPIX_TRANSFORM_URL`    | —              | Internal transform service URL used by app and worker |
+| `KEENPIX_TRANSFORM_PORT`   | `3002`         | Transform HTTP listener |
+| `KEENPIX_MAX_INPUT_PIXELS` | `50000000`     | Decode-time pixel ceiling (decompression-bomb guard) |
+| `KEENPIX_MAX_DIMENSION`    | `4096`         | Longest output side when a request gives no `w`/`h` |
+| `KEENPIX_ORIGIN_TIMEOUT_MS` | `10000`       | Per-attempt origin fetch timeout before `504`    |
+
+## Compose images and ports
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `KEENPIX_APP_IMAGE` | `ghcr.io/lord007tn/keenpix-app:latest` | Control-plane image |
+| `KEENPIX_TRANSFORM_IMAGE` | `ghcr.io/lord007tn/keenpix-transform:latest` | Transform data-plane image |
+| `KEENPIX_WORKER_IMAGE` | `ghcr.io/lord007tn/keenpix-worker:latest` | Worker and Workbench image |
+| `KEENPIX_DOCS_IMAGE` | `ghcr.io/lord007tn/keenpix-docs:latest` | Standalone docs image |
+| `KEENPIX_PORT` | `3000` | Published app port in self-host Compose |
+| `KEENPIX_DOCS_PORT` | `3003` | Published docs port in self-host Compose |
+
+Pin all four images to the same release tag in production.

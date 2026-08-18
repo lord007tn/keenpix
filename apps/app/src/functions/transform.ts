@@ -1,0 +1,183 @@
+import {
+  getContentType,
+  getPublicTransformErrorMessage,
+  getTransformErrorStatus,
+} from '@keenpix/transform'
+import { resolveCustomDomainProject } from '@/actions/custom-domains'
+import { optimizeProjectImage } from '@/actions/transform'
+import { env } from '@/env/server'
+import {
+  EDGE_PROJECT_HEADER,
+  getTrustedEdgeRequest,
+  validateCustomDomainCachePartition,
+} from '@/helpers/custom-domains/edge-request'
+import { cacheControl } from '@/lib/cache/cache'
+import { getAppUrl, isCloud } from '@/server/deployment'
+
+const LEADING_SLASHES_RE = /^\/+/
+
+// HTTP boundary for the transform API. Routes handle URL shape here, then the
+// action layer owns project lookup, origin safety, transforms, cache, and logs.
+export async function handleTransformRequest(
+  request: Request,
+  pathSource?: string,
+) {
+  if (env.KEENPIX_TRANSFORM_URL && !isCloud()) {
+    const incoming = new URL(request.url)
+    const target = new URL(
+      `${incoming.pathname}${incoming.search}`,
+      env.KEENPIX_TRANSFORM_URL,
+    )
+    return fetch(target, {
+      headers: request.headers,
+      method: request.method,
+      redirect: 'manual',
+    })
+  }
+  const startedAt = performance.now()
+  const requestUrl = new URL(request.url)
+  const searchParams = requestUrl.searchParams
+  const src = pathSource
+    ? decodeSourcePath(pathSource)
+    : searchParams.get('url')
+
+  if (!src) {
+    return new Response('Missing source image URL', { status: 400 })
+  }
+
+  const edgeRequest = getTrustedEdgeRequest(
+    request,
+    env.CLOUDFLARE_SAAS_EDGE_SECRET,
+  )
+  const edgeHostname = edgeRequest?.hostname
+  if (!validateCustomDomainCachePartition(searchParams, edgeHostname)) {
+    return new Response(
+      edgeHostname
+        ? 'Invalid custom-domain edge request'
+        : 'Reserved query parameter',
+      { status: 400 },
+    )
+  }
+  let projectId = edgeRequest?.projectId
+  if (edgeRequest) {
+    projectId ??=
+      (await resolveCustomDomainProject(edgeRequest.hostname)) ?? undefined
+    if (!edgeRequest.projectId) {
+      const requestedProjectId = searchParams.get('project')
+      if (projectId && requestedProjectId && requestedProjectId !== projectId) {
+        return new Response('Project does not match verified custom domain', {
+          status: 400,
+          headers: { [EDGE_PROJECT_HEADER]: projectId },
+        })
+      }
+      searchParams.delete('project')
+    }
+  } else if (isCloud()) {
+    const requestHostname = requestUrl.hostname.toLowerCase()
+    const appHostname = new URL(getAppUrl()).hostname.toLowerCase()
+    const firstPartyHostnames = new Set([
+      appHostname,
+      appHostname.startsWith('www.')
+        ? appHostname.slice('www.'.length)
+        : `www.${appHostname}`,
+    ])
+    if (firstPartyHostnames.has(requestHostname)) {
+      // Public managed delivery terminates at the edge hostname. Only a
+      // secret-authenticated edge request may reach the app's origin route.
+      return new Response('Not found', { status: 404 })
+    }
+
+    projectId = (await resolveCustomDomainProject(requestHostname)) ?? undefined
+    const requestedProjectId = searchParams.get('project')
+    if (projectId && requestedProjectId && requestedProjectId !== projectId) {
+      return new Response('Project does not match verified custom domain', {
+        status: 400,
+      })
+    }
+    // Custom domains identify their project by hostname. Do not let a public
+    // query value affect cache keys, signatures, transforms, or attribution.
+    searchParams.delete('project')
+  } else {
+    projectId =
+      searchParams.get('project') ??
+      (await resolveCustomDomainProject(requestUrl.hostname)) ??
+      undefined
+  }
+  if (!projectId) {
+    return new Response('Missing ?project or verified custom domain', {
+      status: 400,
+    })
+  }
+
+  // The edge tells us the requester's country (Cloudflare/Vercel set these);
+  // absent in local/dev, where it just falls back to "" (Unknown).
+  const country = (
+    request.headers.get('cf-ipcountry') ??
+    request.headers.get('x-vercel-ip-country') ??
+    ''
+  ).toUpperCase()
+
+  try {
+    const result = await optimizeProjectImage({
+      accept: request.headers.get('accept') ?? '',
+      clientHints: {
+        dpr: request.headers.get('sec-ch-dpr') ?? request.headers.get('dpr'),
+        viewportWidth:
+          request.headers.get('sec-ch-viewport-width') ??
+          request.headers.get('viewport-width'),
+        width:
+          request.headers.get('sec-ch-width') ?? request.headers.get('width'),
+      },
+      country,
+      projectId,
+      searchParams,
+      src,
+      startedAt,
+    })
+
+    // SVG can carry script; even after SVGO optimization it is served with a
+    // locked-down CSP + nosniff so a malicious source SVG can't execute in the
+    // serving origin's context (stored-XSS / account-takeover guard).
+    const isSvg = result.format === 'svg'
+    return new Response(new Uint8Array(result.body), {
+      status: 200,
+      headers: {
+        'content-type': getContentType(result.format),
+        'content-length': String(result.body.byteLength),
+        'cache-control': cacheControl(),
+        'accept-ch': 'Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width',
+        vary: 'Accept, Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width, DPR, Width, Viewport-Width',
+        ...(result.contentDpr
+          ? { 'content-dpr': String(result.contentDpr) }
+          : {}),
+        'x-content-type-options': 'nosniff',
+        // Origin-shield cache status, for observability behind an outer CDN.
+        'x-keenpix-cache': result.cached ? 'HIT' : 'MISS',
+        // The trusted edge Worker consumes and strips this marker. Keeping it
+        // on the cached origin response lets later Cloudflare hits retain the
+        // same project attribution without a KV lookup or public API key.
+        ...(edgeRequest ? { [EDGE_PROJECT_HEADER]: projectId } : {}),
+        ...(isSvg
+          ? {
+              'content-security-policy':
+                "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+            }
+          : {}),
+      },
+    })
+  } catch (error) {
+    return new Response(getPublicTransformErrorMessage(error), {
+      status: getTransformErrorStatus(error),
+      headers: edgeRequest ? { [EDGE_PROJECT_HEADER]: projectId } : undefined,
+    })
+  }
+}
+
+function decodeSourcePath(pathSource: string) {
+  const trimmed = pathSource.replace(LEADING_SLASHES_RE, '')
+  try {
+    return decodeURIComponent(trimmed)
+  } catch {
+    return trimmed
+  }
+}

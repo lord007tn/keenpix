@@ -1,8 +1,8 @@
 # Keenpix
 
-![Keenpix brand image](./public/brand/keenpix-og-card.png)
+![Keenpix brand image](./apps/app/public/brand/keenpix-og-card.png)
 
-Keenpix is a self-hosted image optimization layer for teams that want the speed of an image CDN without handing the pipeline to another service. Point it at an allowlisted origin, request one URL, and Keenpix fetches the image, transforms it with [sharp](https://sharp.pixelplumbing.com/), caches the variant to disk, records analytics, and serves a CDN-ready response.
+Keenpix is a self-hosted image optimization layer for teams that want the speed of an image CDN without handing the pipeline to another service. Point it at an allowlisted origin, request one URL, and Keenpix fetches the image, transforms it with [sharp](https://sharp.pixelplumbing.com/), caches the variant through memory, Dragonfly, and R2/MaxIO tiers, records analytics, and serves a CDN-ready response.
 
 It is built for operators who want the important parts kept visible: project allowlists, request logs, disk cache behavior, and deployment configuration all live in your own stack.
 
@@ -14,11 +14,12 @@ Don't want to run it yourself? The same engine is available as a managed cloud a
 - **No public API keys** - access is gated by each project's domain allowlist. An empty allowlist fails closed with 403, so a fresh project is never an open proxy.
 - **Internal API keys** - trusted backend systems can manage projects, domains, and pipeline settings through authenticated JSON endpoints.
 - **Projects and origins** - each project owns its source host rules, settings, request logs, and analytics.
+- **Delivery controls** - optional expiring/versioned HMAC URLs, automatic Client Hints, and project-level watermark overlays.
 - **Built-in analytics** - requests, bandwidth saved, cache hit rate, output formats, latency, top images, and source domains come from Postgres rollups fed by the request log; optional Cloudflare edge analytics show the cache layer in front.
 - **Self-host dashboard** - seeded super admin, staff invitations, project settings, API keys, Cloudflare edge analytics, and operational views. Transactional email is configured via `EMAIL_PROVIDER` (Postmark / Resend / SMTP) in the environment.
-- **Open-internet hardening** - allowlist checks, private/loopback/link-local/CGNAT blocking, IPv4-mapped IPv6 handling, DNS rebinding protection, response-size limits, decompression-bomb limits, and transform back-pressure.
+- **Open-internet hardening** - allowlist checks, private/loopback/link-local/CGNAT blocking, IPv4-mapped IPv6 handling, DNS rebinding protection, response-size limits, decompression-bomb limits, and bounded worker concurrency.
 
-Stack: TanStack Start (React 19, SSR) · Prisma 7 + PostgreSQL · sharp · Docker. AGPL-3.0 licensed.
+Stack: TanStack Start (React 19, SSR) · Prisma 7 + PostgreSQL · sharp · BullMQ + Dragonfly · Docker. AGPL-3.0 licensed.
 
 ---
 
@@ -33,7 +34,7 @@ Keenpix keeps helpers and utils scoped by folder and purpose:
 - `data-access/` talks to the database; `actions/` combine data-access/helpers/utils/integrations into use cases; `functions/` validate, authorize, shape entry/exit data, and call actions.
 - Function complexity lint rules are disabled on purpose. Prefer readable local control flow over splitting code only for a metric.
 
-See [AGENTS.md](./AGENTS.md) and [src/README.md](./src/README.md) for the full repository rules.
+See [AGENTS.md](./AGENTS.md) and [apps/app/src/README.md](./apps/app/src/README.md) for the full repository rules.
 
 ---
 
@@ -43,13 +44,14 @@ Requires Docker + Docker Compose.
 
 ```bash
 cp .env.example .env
-# Generate a signing secret and put it in .env (compose refuses to start without one):
+# Generate independent auth and worker secrets (compose refuses to start without them):
 #   openssl rand -hex 32   →   BETTER_AUTH_SECRET=...
+#   openssl rand -hex 32   →   KEENPIX_WORKER_SECRET=...
 # Set POSTGRES_PASSWORD, KEENPIX_SUPER_ADMIN_EMAIL, and KEENPIX_SUPER_ADMIN_PASSWORD in .env.
 docker compose up -d
 ```
 
-The app comes up on **http://localhost:3000** by default. Set `KEENPIX_PORT` to publish a different host port, `BETTER_AUTH_URL` to your public base URL, or `KEENPIX_IMAGE` to a pinned image tag/digest. Compose runs Postgres, applies migrations on boot, seeds the default org and super admin user, and exposes `/api/health` for the container healthcheck. Self-host is the default (`KEENPIX_MODE` unset), so `/` shows a private self-host splash with links into `/app` and `/docs`; the dashboard, API, and docs are served, while public marketing and LLM export routes are not.
+The app comes up on **http://localhost:3000** and the standalone docs site on **http://localhost:3003** by default. Set `KEENPIX_PORT` or `KEENPIX_DOCS_PORT` to change the host ports, and pin `KEENPIX_APP_IMAGE`, `KEENPIX_TRANSFORM_IMAGE`, `KEENPIX_WORKER_IMAGE`, and `KEENPIX_DOCS_IMAGE` to one release tag for controlled rollouts. Compose runs Postgres, Dragonfly, the control plane, transform data plane, BullMQ worker, and docs; applies migrations on app boot; seeds the default org and super admin user; and health-checks every runtime. The private worker ops server provides `/health/live`, `/health/ready`, `/health/details`, and a BullMQ dashboard at `/workbench` on port 3001. Dragonfly is configured with its BullMQ-required Lua compatibility flag and five-minute snapshots.
 
 The Docker image entrypoint accepts `start` (default), `migrate`, and `seed`. For normal installs, leave the default `start`; it applies migrations, seeds bootstrap data, then starts the app. Set `KEENPIX_RUN_MIGRATIONS=false` or `KEENPIX_RUN_SEED=false` only when an external deployment workflow owns those steps.
 
@@ -63,7 +65,7 @@ Use [docker-compose.coolify.yml](./docker-compose.coolify.yml) for a Coolify ser
 4. Optionally change `KEENPIX_SUPER_ADMIN_EMAIL` from the default `admin@example.com`.
 5. Deploy, then sign in with `KEENPIX_SUPER_ADMIN_EMAIL` and the generated `SERVICE_PASSWORD_64_ADMIN` value shown in Coolify's environment variables.
 
-The Coolify stack defaults to `ghcr.io/lord007tn/keenpix:latest`, keeps Postgres private, persists database/cache volumes, runs migrations and seed on app startup, and exposes the app through Coolify's proxy on container port `3000`. Set `KEENPIX_IMAGE` to pin a specific tag or digest when you want controlled rollouts.
+The Coolify stack uses the four published Keenpix images, keeps Postgres, Dragonfly, MaxIO, transform, and worker networking private, persists database/cache volumes, runs migrations and seed on app startup, and exposes the app and docs through Coolify's proxy. Coolify generates Better Auth, worker, Postgres, MaxIO, admin, and Workbench credentials when they are not supplied.
 
 If an earlier Coolify deploy failed with a Postgres 18 message about existing data in `/var/lib/postgresql/data`, remove the failed `keenpix-pg` volume from that Coolify resource or recreate the resource before deploying this compose. The Coolify compose now uses a fresh `keenpix_pg18` volume mounted at `/var/lib/postgresql`, which is the Postgres 18-compatible layout.
 
@@ -110,6 +112,7 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_SUPER_ADMIN_PASSWORD` | ✅ | Password for the seeded super admin account. |
 | `KEENPIX_ADMIN_EMAIL` / `KEENPIX_ADMIN_PASSWORD` | – | Legacy aliases for the super-admin bootstrap variables. |
 | `LOG_LEVEL` | – | Server log level (`info` by default). |
+| `KEENPIX_LOG_DIR` | – | Optional directory for rotating evlog NDJSON files. Structured logs always continue to stdout. |
 | `VITE_KEENPIX_PUBLIC_URL` | – | Browser-facing app URL for local/source builds when it cannot be inferred from the browser origin. |
 | `VITE_GTM_CONTAINER_ID` | – | Primary consent-gated Google Tag Manager container ID. The published container must contain an unpaused Google tag and event routing; setting the ID alone does not route events. Because Vite embeds this value at build time, set it as both a Docker build argument and a runtime variable in cloud deployments. |
 | `VITE_GA_MEASUREMENT_ID` | – | Consent-gated direct GA4 fallback used only when GTM is unset. Set it at both Docker build time and runtime. |
@@ -127,11 +130,20 @@ All via environment variables (see `.env.example`):
 | `KEENPIX_CACHE_MAX_BYTES` | – | LRU eviction cap. The app default is 2 GB; the Docker/Coolify compose files default to 8 GB for CDN-fronted origin-shield use. |
 | `KEENPIX_CACHE_STALE_MS` | – | Serve cached variants immediately after this age and refresh them in the background; `0` disables internal stale refresh. Default 24h. |
 | `KEENPIX_MEMORY_CACHE_MAX_BYTES` | – | In-process hot variant LRU cap; set `0` to disable. The app default is 64 MB; the Docker/Coolify compose files default to 256 MB. |
+| `KEENPIX_CACHE_REDIS_URL` | – | Dragonfly transformed-variant tier; Compose supplies `redis://dragonfly:6379`. |
+| `KEENPIX_CACHE_DRAGONFLY_MAX_BYTES` | – | Dragonfly variant LRU budget (default 512 MB). |
+| `KEENPIX_CACHE_DELETE_AFTER_MS` | – | Terminal variant lifetime across all cache tiers (default 30 days; `0` disables). |
+| `KEENPIX_CACHE_S3_*` | – | Cloudflare R2 or S3-compatible durable cache. Compose configures MaxIO when not overridden. |
+| `KEENPIX_MAX_WATERMARK_BYTES` | – | Maximum fetched project watermark asset (default 5 MB). |
 | `KEENPIX_MAX_ORIGIN_BYTES` | – | Reject origin responses larger than this (default 50 MB). |
 | `KEENPIX_MAX_INPUT_PIXELS` | – | Decompression-bomb ceiling (default ~50 MP). |
 | `KEENPIX_MAX_DIMENSION` | – | Longest output side when a request omits `w`/`h` (default 4096). |
 | `KEENPIX_ORIGIN_TIMEOUT_MS` | – | Per-attempt origin fetch timeout; a slow origin returns 504 (default 10000). |
-| `KEENPIX_MAX_CONCURRENCY` / `KEENPIX_MAX_QUEUE` | – | Concurrent transform jobs / queue depth before shedding 503. |
+| `KEENPIX_QUEUE_URL` | – | BullMQ connection URL. Compose points it at the bundled Dragonfly service. |
+| `KEENPIX_WORKBENCH_USERNAME` / `KEENPIX_WORKBENCH_PASSWORD` | – | Optional basic auth for the worker's `/workbench` BullMQ dashboard. Both must be set together; production presets generate them. |
+| `KEENPIX_WORKER_SECRET` | ✅ (prod) | Independent 32+ character secret authenticating worker callbacks to the app. |
+| `KEENPIX_WORKER_CONCURRENCY` | – | Concurrent durable prewarm jobs per worker process (default 4). |
+| `KEENPIX_WORKER_PORT` | – | Internal worker ops port (default 3001). Compose probes `/health/ready` without publishing it publicly. |
 | `KEENPIX_MEM_LIMIT` / `KEENPIX_CPU_LIMIT` / `KEENPIX_MEM_RESERVATION` | – | Opt-in Docker Compose resource caps for the app container. Default `0` = no limit. When set, Docker enforces them and the Operations page CPU/RAM gauges read the cap as the real ceiling. A too-low memory cap can get the app OOM-killed. |
 | `KEENPIX_PG_MEM_LIMIT` / `KEENPIX_PG_CPU_LIMIT` / `KEENPIX_PG_MEM_RESERVATION` | – | Same opt-in resource caps for the bundled Postgres container. Default `0` = no limit. |
 
@@ -142,7 +154,7 @@ serves it: an edge hit is counted at the edge, while an edge miss is counted onl
 when the application returns it. Optimizer savings (`bytesSaved`) remain a
 separate analytics measure and are never added to delivered bytes. Customer
 analytics remain organization/project scoped. See
-[`docs/analytics-history.md`](docs/analytics-history.md) for retention, export,
+[`apps/docs/notes/analytics-history.md`](apps/docs/notes/analytics-history.md) for retention, export,
 coverage, and the prospective project-attributed edge design.
 
 ---
@@ -159,12 +171,12 @@ GET /img/<origin-url>?project=<id>&w=&h=&q=&fmt=&fit=&dpr=&blur=&...
 |---|---|
 | `project` | Project id (copy it from **Settings → Project ID**). Its allowlist is the gate. |
 | path source | Source image URL after `/img/` — its host must be on the project allowlist. |
-| `w` / `h`, `resize` / `s` | Target width/height (1–5000). `resize`/`s` accept `WIDTHxHEIGHT`, `WIDTH`, or `xHEIGHT`. |
+| `w` / `h`, `resize` / `s` | Target width/height (1–5000). `w=auto` uses image Client Hints; `resize`/`s` accept `WIDTHxHEIGHT`, `WIDTH`, or `xHEIGHT`. |
 | `q` | Quality 30–100 (default 75). |
 | `fmt` | `auto` (Accept-negotiated), `avif`, `webp`, `jpeg`, `png`, `gif`, `heif`, `tiff`, `svg`. |
 | `fit` | `cover` / `contain` / `fill` / `inside` / `outside`. |
 | `position` / `pos` / `gravity` | Crop anchor for `cover`/`contain`: edges, corners, compass gravity, `entropy`, or `attention`. |
-| `dpr` | Device pixel ratio 1–3. |
+| `dpr` | Device pixel ratio 1–3, or `auto` for `Sec-CH-DPR`. |
 | `enlarge` | Allows upscaling when set to `1`/`true`; omitted requests do not upscale. |
 | `kernel` | Resize kernel: `nearest`, `linear`, `cubic`, `mitchell`, `lanczos2`, `lanczos3`, `mks2013`, `mks2021`. |
 | `background` / `bg`, `flatten` | Fill color and alpha flattening controls. |
@@ -176,9 +188,19 @@ GET /img/<origin-url>?project=<id>&w=&h=&q=&fmt=&fit=&dpr=&blur=&...
 
 Simple source URLs can be written directly in the path. If the source URL contains its own `?` or `#`, URL-encode the source before appending Keenpix transform parameters.
 
-Responses set `Cache-Control: public, max-age=31536000, immutable` and `Vary: Accept`, so a CDN can cache each image variant once you configure it to cache `/img/*` with the full query string. The source URL lives in the path so Cloudflare and other CDNs can still see the source file extension; use omitted `fmt` / `fmt=auto` only when your CDN can cache separate `Accept` variants, and use explicit `fmt` values when you intentionally want a fixed output format.
+Responses set immutable cache control, advertise `Sec-CH-DPR`, `Sec-CH-Width`,
+and `Sec-CH-Viewport-Width`, and vary by the effective negotiation headers. A CDN
+can cache each image variant once you configure it to cache `/img/*` with the full
+query string. The source URL lives in the path so Cloudflare and other CDNs can
+still see the source file extension; use omitted `fmt` / `fmt=auto` only when your
+CDN can cache separate `Accept` variants, and use explicit `fmt` values when you
+intentionally want a fixed output format.
 
-Keenpix also supports internal stale-while-revalidate for the disk cache. After `KEENPIX_CACHE_STALE_MS`, a cached variant is still served immediately and a refresh is queued in the background. This keeps user-facing p95 low while allowing long-lived variants to be refreshed from the origin.
+Keenpix also supports internal stale-while-revalidate across its ordered cache
+coordinator. Production reads memory → Dragonfly → R2/MaxIO, promotes lower hits,
+writes durable tiers first, and deletes variants from the chain after
+`KEENPIX_CACHE_DELETE_AFTER_MS`. After `KEENPIX_CACHE_STALE_MS`, a cached variant
+is still served immediately and a refresh starts in the background.
 
 For good cache hit rates, keep frontend widths normalized. Instead of generating arbitrary widths from every viewport value, choose a small shared ladder such as `320`, `480`, `640`, `768`, `960`, and `1280`, then reuse those values across your CMS and frontend. Each unique `src + project + w + h + q + fmt + fit + dpr + blur` combination is a separate variant.
 
@@ -230,7 +252,6 @@ Keenpix is remote-origin and project-allowlist oriented rather than a storage-pr
 | **404** | Unknown `project` id |
 | **413** | Origin image exceeds `KEENPIX_MAX_ORIGIN_BYTES` |
 | **502** | Origin unreachable, errored, returned a non-image body, or too many redirects |
-| **503** | Transform queue saturated (back-pressure) |
 | **504** | Origin timed out |
 
 In an `<img>`, any non-200 shows as a broken image — a 403 almost always means the source host isn't on the allowlist.
@@ -373,14 +394,16 @@ Failure modes:
 
 ## Releases and Docker Images
 
-Keenpix releases from a semantic version tag (`vMAJOR.MINOR.PATCH`, e.g. `v0.1.0`). Before tagging, add a matching `## [vX.Y.Z] - YYYY-MM-DD` section to [CHANGELOG.md](./CHANGELOG.md) and bump `version` in `package.json`. Pushing the tag then creates the GitHub release from that changelog section ([release.yml](./.github/workflows/release.yml)) and publishes the GHCR image as `vX.Y.Z` and `vX.Y` ([docker.yml](./.github/workflows/docker.yml)); pushes to `master` publish `latest`.
+Keenpix application releases use semantic version tags (`vMAJOR.MINOR.PATCH`, e.g. `v0.3.0`). Before tagging, add a matching section to [CHANGELOG.md](./CHANGELOG.md) and align the five private app/edge package versions. Pushing the tag creates the GitHub release through [release.yml](./.github/workflows/release.yml). Docker builds and publishing are intentionally manual-only: run [docker.yml](./.github/workflows/docker.yml) on the reviewed tag and explicitly enable its publish input to push all four GHCR images as `vX.Y.Z` and `vX.Y`.
+
+Public `@keenpix/*` integration packages use Changesets and are released independently from the application image. Run `pnpm changeset` for a package-facing change. The package family is versioned together so adapters cannot drift away from the shared core contract.
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
-See [RELEASE.md](./RELEASE.md) for the full maintainer checklist. The compose file defaults to `ghcr.io/lord007tn/keenpix:latest`; override with `KEENPIX_IMAGE` to pin a tag or digest.
+See [RELEASE.md](./RELEASE.md) for the full maintainer checklist. Compose defaults to the `keenpix-app`, `keenpix-transform`, `keenpix-worker`, and `keenpix-docs` GHCR images; pin all four to the same tag or digest.
 
 ---
 
@@ -392,21 +415,42 @@ Hosted builds serve the marketing page, Fumadocs documentation, docs search, `ll
 
 ## Architecture
 
-Four one-way layers: **route → server fn (`*Fn`) → action (pure) → data-access (Prisma)**. The transform endpoint (`/img/*`) is a route handler calling the pure sharp/SSRF/cache actions directly. Every record is `orgId`-scoped (self-host runs as a single org; SaaS-ready later).
+The repository is a pnpm/Turborepo monorepo. Product runtimes live in `apps/`; reusable and publishable boundaries live in `packages/`. There are intentionally no `internal/` or `tooling/` namespaces.
 
+```text
+apps/
+  app/                 TanStack control plane, dashboard, and public API
+  docs/                standalone TanStack Start and Fumadocs application
+  transform/           independently scaled image transformation data plane
+  worker/              independently scaled BullMQ prewarm consumer
+  custom-domain-edge/  independently deployed Cloudflare Worker
+packages/
+  analytics/           buffered transform analytics collection
+  auth/                shared Better Auth configuration primitives
+  bullmq/              BullMQ connections, queues, jobs, and worker factories
+  cache/               unstorage-backed disk, memory, S3, and Redis caching
+  clickhouse/          ClickHouse client, configuration, queries, and schema
+  contracts/           versioned cross-service request and job contracts
+  database/            Prisma schema, migrations, generated client, and seed
+  email/               provider-neutral transactional email delivery
+  logger/              shared evlog terminal and optional disk logging
+  sdk/                 publishable server-side management SDK
+  transform/           reusable Sharp, SVG, origin, signing, and SSRF logic
+  frameworks/
+    core/              framework-neutral URL and responsive-image behavior
+    react, next, vue, nuxt, svelte, sveltekit, astro, remix, ...
 ```
-src/
-  routes/        UI + API route handlers (/img/*, /api/health, /api/auth)
-  functions/     server fns (auth-gated via middleware)
-  actions/       pure logic — transform pipeline, SSRF guard
-  data-access/   Prisma queries
-  lib/           sharp, cache, auth
-```
+
+Inside `apps/app`, the one-way server layers remain **route → function → action → data-access**. Image delivery runs in `apps/transform`, which owns the HTTP data-plane lifecycle while delegating reusable Sharp, SSRF, origin, signing, SVG, cache, and analytics behavior to flat packages. The control plane proxies self-hosted transform requests during the migration, while the custom-domain edge Worker targets the transform origin directly. Durable SDK prewarm work has its own scaling lifecycle in `apps/worker`; every BullMQ connection, queue, job contract, and worker factory lives in `packages/bullmq`. Transactional delivery lives in `packages/email`, and all Node runtimes share evlog through `packages/logger`.
+
+The app, transform service, worker, and docs site each have an independent Docker image. Dragonfly backs BullMQ, while image caching is configured separately so queue storage and transformed-image storage cannot accidentally share an eviction policy.
+
+Every framework adapter extends `@keenpix/core` rather than reimplementing URL construction, responsive attributes, or request signing. The initial family covers HTML, React, Next.js, Vue, Nuxt, Svelte, SvelteKit, Astro, Remix, TanStack Start, Angular, Analog, Solid, SolidStart, Qwik, Preact, Gatsby, Expo, React Native, Docusaurus, VitePress, Vite, Lit, Eleventy, Ember, Fresh, Redwood, and Waku.
 
 ---
 
 ## License
 
-[GNU Affero General Public License v3.0](./LICENSE) (AGPL-3.0-only).
+[GNU Affero General Public License v3.0](./LICENSE) (AGPL-3.0-only) covers the Keenpix application and private operational packages. The public SDK and framework integrations are MIT licensed so applications can adopt them without inheriting the server's copyleft license.
 
 The self-host engine stays AGPL and free — no rug-pull, no CLA, and no features removed from self-host to upsell the cloud. Releases published before the relicense (v0.1.11 and earlier) remain available under Apache-2.0.

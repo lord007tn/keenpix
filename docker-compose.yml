@@ -21,10 +21,35 @@ services:
       timeout: 5s
       retries: 10
 
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.37.0
+    restart: unless-stopped
+    ulimits:
+      memlock: -1
+    command:
+      - --dir=/data
+      - --default_lua_flags=allow-undeclared-keys
+      - --snapshot_cron=*/5 * * * *
+    volumes:
+      - keenpix_dragonfly:/data
+
+  maxio:
+    image: ghcr.io/coollabsio/maxio:latest
+    command: serve
+    restart: unless-stopped
+    environment:
+      MAXIO_ACCESS_KEY: ${KEENPIX_CACHE_S3_ACCESS_KEY_ID:-keenpix}
+      MAXIO_SECRET_KEY: ${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY:-keenpix-local-cache}
+      MAXIO_REGION: auto
+      MAXIO_DEFAULT_BUCKETS: ${KEENPIX_CACHE_S3_BUCKET:-keenpix-cache}
+    volumes:
+      - keenpix_maxio:/data
+
   app:
-    image: "${KEENPIX_IMAGE:-ghcr.io/lord007tn/keenpix:latest}"
+    image: "${KEENPIX_APP_IMAGE:-ghcr.io/lord007tn/keenpix-app:latest}"
     env_file:
-      - .env
+      - path: .env
+        required: false
     restart: unless-stopped
     # Opt-in resource caps. Default 0 = no limit. Setting KEENPIX_MEM_LIMIT makes
     # the Operations page CPU/RAM gauges read against a real cgroup cap and lets
@@ -35,6 +60,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      dragonfly:
+        condition: service_started
+      maxio:
+        condition: service_started
+      transform:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: "3000"
@@ -44,16 +75,14 @@ services:
       # so copied deployments cannot accidentally ship with a default secret.
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (openssl rand -hex 32)}"
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      KEENPIX_TRANSFORM_URL: http://transform:3002
       KEENPIX_SUPER_ADMIN_EMAIL: "${KEENPIX_SUPER_ADMIN_EMAIL:?set KEENPIX_SUPER_ADMIN_EMAIL}"
       KEENPIX_SUPER_ADMIN_PASSWORD: "${KEENPIX_SUPER_ADMIN_PASSWORD:?set KEENPIX_SUPER_ADMIN_PASSWORD}"
-      KEENPIX_CACHE_DIR: /var/cache/keenpix
-      KEENPIX_CACHE_MAX_BYTES: "${KEENPIX_CACHE_MAX_BYTES:-8589934592}"
-      KEENPIX_CACHE_STALE_MS: "${KEENPIX_CACHE_STALE_MS:-86400000}"
-      KEENPIX_MEMORY_CACHE_MAX_BYTES: "${KEENPIX_MEMORY_CACHE_MAX_BYTES:-268435456}"
+      KEENPIX_QUEUE_URL: redis://dragonfly:6379
+      KEENPIX_WORKER_CONCURRENCY: "${KEENPIX_WORKER_CONCURRENCY:-4}"
+      KEENPIX_WORKER_SECRET: "${KEENPIX_WORKER_SECRET:?set KEENPIX_WORKER_SECRET (openssl rand -hex 32)}"
     ports:
       - "${KEENPIX_PORT:-3000}:3000"
-    volumes:
-      - keenpix_cache:/var/cache/keenpix
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--output", "/dev/null", "http://127.0.0.1:3000/api/health"]
       interval: 10s
@@ -61,6 +90,93 @@ services:
       retries: 6
       start_period: 40s
 
+  transform:
+    image: "${KEENPIX_TRANSFORM_IMAGE:-ghcr.io/lord007tn/keenpix-transform:latest}"
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dragonfly:
+        condition: service_started
+      maxio:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-keenpix}"
+      KEENPIX_CACHE_DIR: /var/cache/keenpix
+      KEENPIX_CACHE_MAX_BYTES: "${KEENPIX_CACHE_MAX_BYTES:-8589934592}"
+      KEENPIX_CACHE_REDIS_URL: redis://dragonfly:6379
+      KEENPIX_CACHE_DRAGONFLY_MAX_BYTES: "${KEENPIX_CACHE_DRAGONFLY_MAX_BYTES:-536870912}"
+      KEENPIX_CACHE_DELETE_AFTER_MS: "${KEENPIX_CACHE_DELETE_AFTER_MS:-2592000000}"
+      KEENPIX_CACHE_STALE_MS: "${KEENPIX_CACHE_STALE_MS:-86400000}"
+      KEENPIX_MEMORY_CACHE_MAX_BYTES: "${KEENPIX_MEMORY_CACHE_MAX_BYTES:-268435456}"
+      KEENPIX_CACHE_S3_BUCKET: "${KEENPIX_CACHE_S3_BUCKET:-keenpix-cache}"
+      KEENPIX_CACHE_S3_ENDPOINT: "${KEENPIX_CACHE_S3_ENDPOINT:-http://maxio:9000}"
+      KEENPIX_CACHE_S3_REGION: "${KEENPIX_CACHE_S3_REGION:-auto}"
+      KEENPIX_CACHE_S3_ACCESS_KEY_ID: "${KEENPIX_CACHE_S3_ACCESS_KEY_ID:-keenpix}"
+      KEENPIX_CACHE_S3_SECRET_ACCESS_KEY: "${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY:-keenpix-local-cache}"
+      KEENPIX_MAX_WATERMARK_BYTES: "${KEENPIX_MAX_WATERMARK_BYTES:-5242880}"
+      KEENPIX_MODE: selfhost
+      KEENPIX_TRANSFORM_PORT: "3002"
+      KEENPIX_WORKER_SECRET: "${KEENPIX_WORKER_SECRET:?set KEENPIX_WORKER_SECRET (openssl rand -hex 32)}"
+    volumes:
+      - keenpix_cache:/var/cache/keenpix
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--output", "/dev/null", "http://127.0.0.1:3002/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  worker:
+    image: "${KEENPIX_WORKER_IMAGE:-ghcr.io/lord007tn/keenpix-worker:latest}"
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      transform:
+        condition: service_healthy
+      dragonfly:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      KEENPIX_TRANSFORM_URL: http://transform:3002
+      KEENPIX_QUEUE_URL: redis://dragonfly:6379
+      KEENPIX_WORKBENCH_PASSWORD: "${KEENPIX_WORKBENCH_PASSWORD:-}"
+      KEENPIX_WORKBENCH_USERNAME: "${KEENPIX_WORKBENCH_USERNAME:-}"
+      KEENPIX_WORKER_CONCURRENCY: "${KEENPIX_WORKER_CONCURRENCY:-4}"
+      KEENPIX_WORKER_PORT: "3001"
+      KEENPIX_WORKER_SECRET: "${KEENPIX_WORKER_SECRET:?set KEENPIX_WORKER_SECRET (openssl rand -hex 32)}"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+  docs:
+    image: "${KEENPIX_DOCS_IMAGE:-ghcr.io/lord007tn/keenpix-docs:latest}"
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3003"
+    ports:
+      - "${KEENPIX_DOCS_PORT:-3003}:3003"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3003/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
 volumes:
   keenpix_pg:
+  keenpix_dragonfly:
+  keenpix_maxio:
   keenpix_cache:

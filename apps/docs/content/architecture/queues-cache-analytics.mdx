@@ -1,0 +1,39 @@
+---
+title: Queues, cache, and analytics
+description: Dragonfly, BullMQ, unstorage cache tiers, MaxIO or R2, and ClickHouse responsibilities.
+icon: DatabaseZap
+---
+
+## Queue
+
+BullMQ uses `KEENPIX_QUEUE_URL`, normally `redis://dragonfly:6379`. The queue contains prewarm work, retry state, and job metadata. Job IDs are deterministic so repeated requests do not create duplicate work.
+
+Dragonfly is Redis-compatible and is the default queue backend in Compose. It snapshots its data volume every five minutes.
+
+## Image cache
+
+`@keenpix/cache` exposes the `KeenpixTierCoordinator`. Its production read
+order is fixed and intentional:
+
+1. An in-process memory LRU for hot variants.
+2. Dragonfly for a larger shared, low-latency tier.
+3. Cloudflare R2, or the bundled MaxIO S3-compatible fallback.
+4. Terminal deletion once `KEENPIX_CACHE_DELETE_AFTER_MS` is reached.
+
+Reads promote a lower-tier hit back into every faster tier. Writes run from the
+durable tier upward, so an eviction never happens before a lower copy exists.
+Temporary tier failures are tolerated as long as at least one tier accepts the
+write. The queue and cache use separate URLs even when both point at the bundled
+Dragonfly service, keeping their namespaces and capacity controls independent.
+
+Plain Docker Compose and Coolify configure MaxIO automatically. To use R2, set
+the five `KEENPIX_CACHE_S3_*` values; the endpoint is
+`https://<ACCOUNT_ID>.r2.cloudflarestorage.com` and the region is `auto`.
+Source-only development without Dragonfly or object storage retains a local disk
+fallback.
+
+## Analytics
+
+Transform events are buffered through `packages/analytics`. Postgres remains the control-plane source of truth. ClickHouse is optional and owns high-volume request analytics and long-history queries when configured.
+
+If ClickHouse is unavailable, transformation still works. Readiness only treats dependencies as fatal when the deployment has configured them as required.

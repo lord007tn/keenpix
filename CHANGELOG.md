@@ -2,7 +2,7 @@
 
 All notable changes to Keenpix are documented here.
 
-## Unreleased
+## [v0.3.0] - 2026-08-18
 
 ### Added
 
@@ -14,6 +14,9 @@ All notable changes to Keenpix are documented here.
 
 ### Changed
 
+- Managed framework helpers, SDK configuration, onboarding, and docs now emit
+  only `cdn.keenpix.com/p/<project>/img/<encoded-source>` URLs. Public managed
+  delivery is no longer accepted from the application hostname.
 - New checkout and every public pricing fallback now expose only standard
   $9/$29/$69 monthly plans; historical founding products remain auditable but
   unlisted until allocation can be made race-safe.
@@ -26,6 +29,9 @@ All notable changes to Keenpix are documented here.
 - Corrected signed-URL examples and encoding, draft indexability, Arabic document
   direction, trailing-slash/canonical behavior, 404 metadata, and sitemap
   localization.
+- Corrected the container entrypoint's migration and seed invocations and kept
+  BullMQ/SVGO runtime dependencies outside relocated server bundles so fresh
+  four-service Docker deployments can start and answer health checks.
 - Prevented usage watermarks from advancing across incomplete outbox drains,
   trial usage, missing edge coverage, or deleted-project attribution gaps.
 

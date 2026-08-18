@@ -1,0 +1,53 @@
+---
+title: Vue framework family
+description: Vue 3, Nuxt Image, and VitePress integrations.
+icon: Component
+---
+
+## Vue 3
+
+```vue
+<script setup lang="ts">
+import { createVueKeenpix } from '@keenpix/vue'
+
+const { Image: KeenpixImage } = createVueKeenpix({
+  baseUrl: 'https://images.example.com',
+  projectId: 'website',
+})
+</script>
+
+<template>
+  <KeenpixImage alt="Hero" src="/hero.jpg" :widths="[640, 1280]" />
+</template>
+```
+
+Use `imageProps()` with `v-bind` when you want a native `<img>`. The adapter returns lowercase `srcset`, matching Vue DOM bindings.
+
+## Nuxt Image
+
+```ts
+// providers/keenpix.ts
+import { createNuxtImageProvider } from '@keenpix/nuxt'
+
+export const getImage = createNuxtImageProvider({
+  baseUrl: 'https://images.example.com',
+  projectId: 'website',
+})
+```
+
+Register it as a custom provider in `nuxt.config.ts`, then use that provider with `<NuxtImg>`. The adapter implements Nuxt Image's `getImage` response contract and maps provider modifiers into Keenpix transforms.
+
+## VitePress
+
+```ts
+// .vitepress/theme/index.ts
+import DefaultTheme from 'vitepress/theme'
+import { createVueKeenpix, withKeenpixTheme } from '@keenpix/vitepress'
+
+const config = { baseUrl: 'https://images.example.com', projectId: 'docs' }
+const { Image } = createVueKeenpix(config)
+
+export default withKeenpixTheme(DefaultTheme, config, Image)
+```
+
+The component is registered as `<KeenpixImage />`. Markdown image syntax is not rewritten automatically, preserving VitePress' asset pipeline.

@@ -1,0 +1,28 @@
+{
+  "name": "@keenpix/cache",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "git clean -xdf node_modules"
+  },
+  "dependencies": {
+    "@keenpix/transform": "workspace:*",
+    "aws4fetch": "^1.0.20",
+    "ioredis": "^5.7.0",
+    "lru-cache": "^11.5.1",
+    "unstorage": "^1.17.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "title": "Architecture",
+  "icon": "Network",
+  "pages": [
+    "index",
+    "services",
+    "packages",
+    "queues-cache-analytics",
+    "observability"
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "name": "@keenpix/lit",
+  "version": "0.1.0",
+  "description": "Keenpix image primitives for Lit.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts --dts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "publint": "publint",
+    "pack:check": "pnpm run build && pnpm run publint && pnpm pack --dry-run",
+    "prepublishOnly": "pnpm run typecheck && pnpm run test && pnpm run pack:check",
+    "clean": "git clean -xdf dist node_modules"
+  },
+  "dependencies": {
+    "@keenpix/core": "workspace:^"
+  },
+  "peerDependencies": {
+    "lit": ">=3"
+  },
+  "devDependencies": {
+    "lit": "^3.3.3",
+    "publint": "^0.3.15",
+    "tsdown": "0.22.3",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

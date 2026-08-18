@@ -1,0 +1,25 @@
+{
+  "name": "@keenpix/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./access-control": "./src/access-control.ts",
+    "./client": "./src/client.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit",
+    "clean": "git clean -xdf dist node_modules"
+  },
+  "dependencies": {
+    "@better-auth/api-key": "1.6.11",
+    "@polar-sh/better-auth": "^1.8.4",
+    "better-auth": "^1.6.11"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "typescript": "^5.9.3"
+  }
+}
