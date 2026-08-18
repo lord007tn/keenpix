@@ -10,7 +10,7 @@
 
 ## Executive decision
 
-Keenpix has a sound crawlable, server-rendered foundation but a weak authority and demand-capture position. The live crawl found no critical crawl or indexability defect: every one of the 69 sitemap URLs returned `200`, exposed a single H1, an indexable robots directive, a self-canonical, and server-rendered content. The constraint is not another technical file. It is the combination of a young external entity, thin high-intent pages, limited search corroboration, an incomplete measurement baseline, and no provider-grade backlink data.
+Keenpix has a sound crawlable, server-rendered foundation but a weak authority and demand-capture position. The live crawl found no critical crawl or indexability defect: every one of the 69 sitemap URLs returned `200`, exposed a single H1, an indexable robots directive, a self-canonical, and server-rendered content. Authenticated Search Console and GA4 now provide a small first-party baseline, but the constraint is not another technical file. It is the combination of a young external entity, thin high-intent pages, 19 discovered-but-not-crawled URLs, no externally detected links in Search Console, and an incomplete conversion-goal configuration.
 
 **Evidence-backed score: 79/100.** The independent whole-site crawler returned **77/C** (6,956 passes, 469 warnings, 71 failures). The difference reflects weighting: optional IndexNow and repeated third-party/decorative-image scanner findings are not given the same weight as crawlability, content, or conversion.
 
@@ -23,7 +23,7 @@ Keenpix has a sound crawlable, server-rendered foundation but a weak authority a
 | Performance | 72 | Lab-only mobile LCP ranged 3.70–4.67 seconds; no CrUX/field verdict was available. Desktop LCP was 1.29 seconds. |
 | GEO/AI visibility | 68 | `llms.txt`, `llms-full.txt`, direct answers, and source-backed comparisons are good; third-party entity corroboration is the limiting factor. |
 | Images | 93 | No missing dimensions, no missing alt attributes, no content image over 200 KB; responsive editorial variants remain an opportunity. |
-| Backlinks | — | **INSUFFICIENT DATA**: fewer than four of seven health factors were available. |
+| Backlinks | — | **INSUFFICIENT DATA**: Search Console reports zero external links and Common Crawl has no reportable authority metrics, but fewer than four of seven health factors were available. |
 
 ## Product truth and positioning guardrails
 
@@ -54,6 +54,18 @@ Do not claim “cheapest,” universal speed or byte savings, enterprise scale, 
 - Lighthouse 13.3 live homepage lab runs: mobile performance 84 (LCP 3.70 s, TBT 15 ms, CLS 0) and 72 (LCP 4.67 s, TBT 12 ms, CLS 0); desktop 93 (LCP 1.29 s, TBT 0, CLS 0). No INP or field verdict is claimed.
 - Lighthouse estimated about 76 KB unused in the 198 KB main JavaScript payload and reported one render-blocking 21 KB CSS resource. It also reported three 3.33:1 card-label contrast failures, fixed here.
 - Lighthouse reported a canonical audit discrepancy even though raw SSR HTML and the 69-URL crawl each found exactly one canonical. Validate this specific discrepancy in PageSpeed/GSC rather than removing a proven canonical.
+
+### Authenticated Google evidence
+
+Read-only checks used the verified `sc-domain:keenpix.com` Search Console property and GA4 property `545156185` on 2026-08-18. Search Console's freshest performance data ended 2026-08-15; its page-indexing report was last updated 2026-08-14.
+
+- Search Console, 28 days (2026-07-19 through 2026-08-15): **5 clicks, 350 impressions, 1.4% CTR, average position 37.8**. Treat this as an early baseline, not a statistically stable trend.
+- Leading query impressions included `cdn images` (26), `cloudinary credits` (20), `image cdn` (10), and `best image cdn` (7). These support the category, pricing/comparison, and pillar priorities without implying rank or volume beyond this property window.
+- Leading pages were `/blog/image-cdn-vs-traditional-cdn` (1 click/73 impressions), `/blog/best-image-cdns-2026` (1/70), and the homepage (3/11). Search Console also attributed impressions to historical `www` URLs; the live `308` apex redirect and self-canonicals are correct, so monitor consolidation rather than adding duplicate canonical logic.
+- Page indexing reported **41 indexed** and **61 not indexed** known URLs. The excluded set includes 18 redirects, 15 proper-canonical alternates, five intentional `noindex` pages, two historical `www` duplicates, one historical `www` soft 404, one delivery-host 404, and **19 discovered-currently-not-indexed URLs**. None were reported as crawled-currently-not-indexed.
+- The 19 discovered URLs had never been crawled and included the category pillar, Next.js/React/Remix/Vue docs, two comparison pages, the self-hosted landing, author/methodology/trust pages, and several legal/reference URLs. Improve crawl demand through the implemented hub/internal-link work and authority plan; do not treat this as a rendered-content defect.
+- `sitemap.xml` was submitted and read successfully on 2026-08-15 with 69 discovered pages. Core Web Vitals had insufficient 90-day Chrome UX data on both mobile and desktop. HTTPS showed no non-HTTPS URLs; manual actions and security issues both reported no issues.
+- The Links report showed **0 external links** and 176 internal links. This confirms the authority deficit directionally but is still insufficient for a numeric backlink health score or anchor/toxicity claims.
 
 ## Page-by-page review
 
@@ -114,10 +126,10 @@ Do not claim “cheapest,” universal speed or byte savings, enterprise scale, 
 | hreflang | Applied | Five Arabic pages and counterparts passed reciprocal/self/canonical validation. |
 | local | Inapplicable | No NAP, GBP, service area, or location-page business model. |
 | maps | Inapplicable | No physical/location discovery conversion path. |
-| google | Blocked | No `google-api.json`, Google API key, OAuth/service account, default GSC property, or GA4 property access. |
+| google | Applied interactively; API automation blocked | Authenticated Chrome verified Search Console and GA4 baselines. No local `google-api.json`, API key, OAuth/service account, or configured default properties exist for repeatable API collection. |
 | backlinks | Applied, insufficient | Common Crawl + auth checks only; no provider-grade link list. Score withheld. |
 | cluster | Applied, precision blocked | Intent clusters built from live sampled SERPs; exact overlap/volume matrix blocked by DataForSEO absence. |
-| sxo | Applied | 73/100; consent footprint fixed, intent/CTA pathways mapped, measurement still incomplete. |
+| sxo | Applied | 73/100; consent footprint fixed, intent/CTA pathways mapped, first-party baseline captured, and key-event/funnel definitions still incomplete. |
 | drift | Applied | Production baseline ID 1 exists from 2026-07-11; rebaseline only after this change deploys. |
 | ecommerce | Inapplicable as business audit | Keenpix has no catalog/cart/merchant feed. E-commerce is a possible customer use case only. |
 | firecrawl | Blocked | Firecrawl MCP/tool and credential were not available. |
@@ -161,7 +173,7 @@ Programmatic gate: self-canonical, breadcrumbs, hub links, runnable setup, frame
 
 ## Backlinks, community, and GEO/LLMO
 
-The Common Crawl 2026 Jan–Mar web graph contained Keenpix but placed it below its reporting threshold; PageRank, harmonic centrality, host count, and referring domains were therefore null. No known link list existed for verification. By contrast, Cloudinary appears prominently in the same graph, which is useful only as directional evidence of a large authority gap—not as a comparable raw score or exhaustive domain count.
+The Common Crawl 2026 Jan–Mar web graph contained Keenpix but placed it below its reporting threshold; PageRank, harmonic centrality, host count, and referring domains were therefore null. Authenticated Search Console independently reported zero external links and no linking-site data. No known link list existed for verification. By contrast, Cloudinary appears prominently in the same Common Crawl graph, which is useful only as directional evidence of a large authority gap—not as a comparable raw score or exhaustive domain count.
 
 No outreach or external publishing was performed. The compliant acquisition sequence is:
 
@@ -188,15 +200,25 @@ Required definitions for the first clean baseline:
 - first successful transform;
 - organic landing → trial start and trial start → first transform.
 
-The existing repository documentation records GA4 account `400817194`, property `545156185`, stream `15243494513`, measurement ID `G-C04VQED7GV`, and GTM container `GTM-TFJ9TQDN`. Those identifiers do not confer analytics access. Event QA and performance comparisons require property access and a clean 28-day baseline.
+Authenticated GA4 read access confirmed account `400817194`, property `545156185`, and the `Keenpix Cloud Production` stream. For the 28 days ending 2026-08-17, GA4 reported **59 sessions, 32 engaged sessions, 54.24% engagement, 901 events, and 9 total users**. Channel detail was:
+
+| Channel | Sessions | Engaged sessions | Engagement rate | Average engagement time/session | Key events |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Referral | 36 | 22 | 61.11% | 8m 44s | 1 |
+| Direct | 17 | 5 | 29.41% | 14s | 0 |
+| Organic Search | 6 | 5 | 83.33% | 3m 10s | 0 |
+
+The sample is too small for conversion optimization claims, but it establishes that organic acquisition is being measured and engaged. The event stream recorded 14 recent event names, including `acquisition_landing` (7), `primary_cta_click` (3), `sign_up` (2), `begin_checkout` (1), `project_created` (1), `first_image_served` (1), and `subscription_activated` (1). Only `begin_checkout` is currently marked as a key event; `purchase` is configured but has no stream data. Before using the funnel as a KPI, the analytics owner should approve which signup, activation, and subscription events are key events, verify each event fires once at its intended boundary, and exclude internal/test traffic.
+
+The repository documents stream `15243494513`, measurement ID `G-C04VQED7GV`, and GTM container `GTM-TFJ9TQDN`. Interactive access does not solve repeatable collection: API automation still requires local OAuth/service-account configuration and explicit default GSC/GA4 properties.
 
 ## 30/60/90 roadmap
 
-Targets below are planning assumptions. Recalibrate after the first clean 28-day GSC/GA4 baseline.
+Targets below are planning assumptions. Recalibrate after a clean 28-day period with the approved key-event taxonomy and the new `content_group` dimension deployed.
 
 | Window | Owner | Work | Dependency | Exit/KPI |
 | --- | --- | --- | --- | --- |
-| Days 0–30 | Growth/analytics engineer | Lock event definitions, content groups, organic funnel, GSC page/query groups, weekly cohort QA. | GSC/GA4 property access. | ≥95% event QA; baseline established. |
+| Days 0–30 | Growth/analytics engineer | Lock key-event definitions, deploy content groups, exclude internal/test traffic, and create organic funnel plus GSC page/query groups. | Analytics owner approval + deployment. | ≥95% event QA; clean conversion baseline established. |
 | Days 0–30 | SEO/content lead | Assign one intent per live URL; internal-link map; expand category pillar and refresh two spokes. | Editorial review. | 100% public URLs classified; zero intentional orphans. |
 | Days 0–30 | Founder/product marketing | Approve positioning guardrails and comparison source owner. | Product sign-off. | 100% comparison pages have source, method, review date. |
 | Days 0–30 | OSS maintainer | GitHub discoverability/release hygiene and benchmark/data specification. | Maintainer access. | Versioned asset spec ready. |
@@ -217,7 +239,7 @@ Longer planning assumptions:
 
 **Critical**
 
-- Secure read access and owners for GSC/GA4; establish the clean funnel/index baseline.
+- Assign a GSC/GA4 owner; approve key-event definitions, exclude internal/test traffic, and establish the clean funnel baseline after `content_group` deploys.
 - Preserve factual claim governance, source dates, workload assumptions, and quarterly comparison review.
 - Assign one primary intent and accountable owner to every public route.
 
@@ -255,7 +277,7 @@ Longer planning assumptions:
 
 ## Credentials, external changes, and blockers
 
-- Google: missing `C:\Users\raedb\.config\codex-seo\google-api.json`, API key, OAuth token/service account, default GSC property, and GA4 property authorization. PSI returned HTTP 429 quota `defaultPerDayPerProject=0`; CrUX returned 403 for an unregistered caller.
+- Google: authenticated Chrome supplied read-only access to `sc-domain:keenpix.com` and GA4 property `545156185`; no Google setting was changed. Repeatable API collection remains blocked by missing `C:\Users\raedb\.config\codex-seo\google-api.json`, API key, OAuth token/service account, and configured default properties. PSI returned HTTP 429 quota `defaultPerDayPerProject=0`; direct CrUX returned 403 for an unregistered caller, while Search Console confirmed insufficient field data for both device classes.
 - Moz: missing `MOZ_API_KEY` or `moz_api_key` in `C:\Users\raedb\.config\codex-seo\backlinks-api.json`.
 - Bing Webmaster: missing `BING_WEBMASTER_API_KEY` or `bing_api_key` in the same config.
 - Cloudflare analytics: the production RUM beacon is visible, but no API token, account ID, or zone authorization exists locally.
@@ -267,6 +289,7 @@ Longer planning assumptions:
 ## Verification and release gate
 
 - Whole-site live crawl: 74 pages sampled by the crawler; 69 sitemap URLs directly validated.
+- Authenticated read-only Google verification: Search Console performance/indexing/sitemap/CWV/links/manual-action/security reports and GA4 acquisition/event reports.
 - Unit suite: 100 files, 457 tests passed.
 - TypeScript/Fumadocs typecheck: passed after generating the local Prisma client.
 - Biome formatting/lint: passed.
