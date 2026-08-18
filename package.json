@@ -32,6 +32,7 @@
     "db:seed": "pnpm --filter @keenpix/database seed",
     "db:reset": "pnpm --filter @keenpix/database reset",
     "release:notes": "pnpm dlx changelogithub@14.0.0",
+    "release:check": "pnpm --recursive --workspace-concurrency=1 --if-present --filter=./packages/frameworks/** --filter=@keenpix/sdk run pack:check",
     "release:packages": "changeset publish",
     "changeset": "changeset",
     "seo:drift": "pnpm --filter @keenpix/app seo:drift",
