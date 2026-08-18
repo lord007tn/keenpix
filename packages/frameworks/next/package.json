@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/next",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Keenpix loader and image helpers for Next.js.",
   "type": "module",
   "license": "MIT",
