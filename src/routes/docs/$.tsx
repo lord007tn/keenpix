@@ -69,11 +69,19 @@ export const Route = createFileRoute('/docs/$')({
 
     const title =
       loaderData.title && loaderData.title !== SITE_NAME
-        ? `${loaderData.title} - Keenpix docs`
-        : 'Keenpix docs'
-    const description =
+        ? `${loaderData.title} | Keenpix image CDN docs`
+        : 'Keenpix image CDN documentation'
+    const pageDescription =
       loaderData.description ??
       'Self-hosted image optimization, caching, analytics, and transform API documentation.'
+    let description = pageDescription
+    if (pageDescription.length < 45) {
+      description = `${pageDescription} Learn how to configure Keenpix image delivery with practical setup steps, code examples, and production checks.`
+    } else if (pageDescription.length < 80) {
+      description = `${pageDescription} Get practical setup steps, code examples, security notes, and production checks.`
+    } else if (pageDescription.length < 120) {
+      description = `${pageDescription} Includes setup and production guidance.`
+    }
     const canonicalUrl = loaderData.canonicalUrl
     const ogImage = loaderData.ogImage ?? absoluteUrl(BRAND_IMAGE_PATH)
 

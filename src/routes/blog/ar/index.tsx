@@ -49,7 +49,7 @@ export const Route = createFileRoute('/blog/ar/')({
         ...seo({
           title: 'مدونة Keenpix: تحسين الصور للمطورين',
           description:
-            'أدلة عربية عملية عن CDN الصور، صيغ AVIF وWebP، الحماية بالتوقيع، وتشغيل Keenpix باستخدام Docker.',
+            'أدلة عربية عملية عن CDN الصور، صيغ AVIF وWebP، الحماية بالتوقيع، وتشغيل Keenpix باستخدام Docker، مع أمثلة قابلة للاختبار قبل الإنتاج.',
           locale: 'ar_AR',
           url: canonicalUrl,
         }),

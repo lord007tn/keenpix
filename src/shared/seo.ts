@@ -17,7 +17,7 @@ export const SITE_TITLE = 'Image optimization CDN with honest pricing | Keenpix'
 // Kept ~155 chars so the trailing self-host differentiator survives Google's SERP
 // snippet truncation (~160). Social cards allow ~200, so they still get it whole.
 export const SITE_DESCRIPTION =
-  'Keenpix optimizes and delivers your images as AVIF/WebP from one URL — transparent managed-delivery pricing, unlimited transforms, no lock-in. Or self-host with no Keenpix license fee.'
+  'Keenpix optimizes and delivers AVIF/WebP images from one URL with transparent pricing and unlimited transforms—or self-host the AGPL engine.'
 export const SITE_KEYWORDS =
   'image optimization CDN, image CDN, Cloudinary alternative, imgix alternative, ImageKit alternative, WebP, AVIF, sharp image transforms, self-hosted image optimization, open-source image CDN, bandwidth pricing'
 export const PRICING_DESCRIPTION =
@@ -288,7 +288,7 @@ export function pricingPageJsonLd(
         inLanguage: 'en',
         isPartOf: { '@id': WEBSITE_ID },
         mainEntity: { '@id': SOFTWARE_ID },
-        name: `Pricing - ${SITE_NAME}`,
+        name: `Image CDN Pricing | ${SITE_NAME}`,
         publisher: { '@id': ORGANIZATION_ID },
         url: absoluteUrl('/pricing'),
       },
@@ -340,10 +340,11 @@ export function blogListingJsonLd(
   language: 'ar' | 'en' = 'en',
 ) {
   const arabic = language === 'ar'
+  const listingUrl = absoluteUrl(arabic ? '/blog/ar' : '/blog')
   return {
     '@context': 'https://schema.org',
     '@type': 'Blog',
-    '@id': `${absoluteUrl('/blog')}#blog`,
+    '@id': `${listingUrl}#blog`,
     blogPost: posts.map((post) => ({
       '@type': 'BlogPosting',
       datePublished: post.date,
@@ -357,8 +358,141 @@ export function blogListingJsonLd(
     inLanguage: language,
     name: arabic ? `مدونة ${SITE_NAME}` : `${SITE_NAME} Blog`,
     publisher: { '@id': ORGANIZATION_ID },
-    url: absoluteUrl(arabic ? '/blog/ar' : '/blog'),
+    url: listingUrl,
   }
+}
+
+export function comparisonPageJsonLd({
+  dateModified,
+  description,
+  name,
+  path,
+  url,
+}: {
+  dateModified: string
+  description: string
+  name: string
+  path: Array<{ name: string; url: string }>
+  url: string
+}) {
+  const profileUrl = absoluteUrl(FOUNDER.profilePath ?? '/authors/raed-bahri')
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      '@id': `${url}#webpage`,
+      about: { '@id': SOFTWARE_ID },
+      dateModified,
+      description,
+      inLanguage: 'en',
+      isPartOf: { '@id': WEBSITE_ID },
+      mainEntity: { '@id': SOFTWARE_ID },
+      name,
+      publisher: { '@id': ORGANIZATION_ID },
+      reviewedBy: { '@id': `${profileUrl}#person` },
+      url,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: path.map((item, index) => ({
+        '@type': 'ListItem',
+        item: item.url,
+        name: item.name,
+        position: index + 1,
+      })),
+    },
+  ]
+}
+
+export function marketingPageJsonLd({
+  description,
+  name,
+  path,
+  url,
+}: {
+  description: string
+  name: string
+  path: Array<{ name: string; url: string }>
+  url: string
+}) {
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      '@id': `${url}#webpage`,
+      about: { '@id': SOFTWARE_ID },
+      description,
+      inLanguage: 'en',
+      isPartOf: { '@id': WEBSITE_ID },
+      mainEntity: { '@id': SOFTWARE_ID },
+      name,
+      publisher: { '@id': ORGANIZATION_ID },
+      url,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: path.map((item, index) => ({
+        '@type': 'ListItem',
+        item: item.url,
+        name: item.name,
+        position: index + 1,
+      })),
+    },
+  ]
+}
+
+export function comparisonListingJsonLd(
+  items: Array<{ name: string; url: string }>,
+) {
+  const url = absoluteUrl('/compare')
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      '@id': `${url}#webpage`,
+      about: { '@id': SOFTWARE_ID },
+      description:
+        'Source-backed image CDN comparisons with dated pricing, feature matrices, migration guidance, and clear best-fit tradeoffs.',
+      inLanguage: 'en',
+      isPartOf: { '@id': WEBSITE_ID },
+      mainEntity: { '@id': `${url}#comparisons` },
+      name: 'Keenpix image CDN comparisons',
+      publisher: { '@id': ORGANIZATION_ID },
+      url,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      '@id': `${url}#comparisons`,
+      itemListElement: items.map((item, index) => ({
+        '@type': 'ListItem',
+        item: item.url,
+        name: item.name,
+        position: index + 1,
+      })),
+      numberOfItems: items.length,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          item: absoluteUrl('/'),
+          name: 'Keenpix',
+          position: 1,
+        },
+        {
+          '@type': 'ListItem',
+          item: url,
+          name: 'Compare',
+          position: 2,
+        },
+      ],
+    },
+  ]
 }
 
 // BlogPosting + breadcrumb graph for a single article. Dated and attributed so

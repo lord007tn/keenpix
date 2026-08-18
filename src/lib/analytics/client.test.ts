@@ -13,6 +13,7 @@ vi.mock('@/env/client', () => ({ clientEnv }))
 
 import {
   getAnalyticsConsent,
+  getPublicContentGroup,
   loadGoogleAnalytics,
   setAnalyticsConsent,
   trackEvent,
@@ -41,6 +42,19 @@ describe('consent-aware Google analytics', () => {
 
     expect(document.querySelector('script')).toBeNull()
     expect(window.dataLayer).toEqual([])
+  })
+
+  it('groups organic landing surfaces for funnel reporting', () => {
+    expect(getPublicContentGroup('/blog/best-image-cdns-2026')).toBe(
+      'editorial',
+    )
+    expect(getPublicContentGroup('/compare/gumlet-alternative')).toBe(
+      'comparison',
+    )
+    expect(getPublicContentGroup('/docs/frameworks/nextjs')).toBe(
+      'documentation',
+    )
+    expect(getPublicContentGroup('/pricing')).toBe('pricing')
   })
 
   it('remembers a consent decision when local storage is unavailable later', () => {

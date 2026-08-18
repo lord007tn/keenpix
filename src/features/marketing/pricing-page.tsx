@@ -197,7 +197,7 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
               Pricing
             </span>
             <h1 className="mt-2 text-balance font-semibold text-4xl tracking-tight sm:text-5xl">
-              One meter: optimized bytes delivered.
+              Image CDN pricing with one delivery meter.
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-balance text-lg text-muted-foreground leading-relaxed">
               Edge hits, cache hits, and new transforms count once in one clear
