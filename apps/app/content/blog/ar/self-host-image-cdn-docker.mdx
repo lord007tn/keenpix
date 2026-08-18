@@ -10,13 +10,13 @@ image: /og/blog/ar/self-host-image-cdn-docker.png?v=2026-08-15
 imageAlt: نشر Keenpix وPostgres داخل Docker مع volumes دائمة وطبقة CDN أمام الصور
 ---
 
-نجاح `docker compose up -d` لا يعني أن خدمة الصور جاهزة للإنتاج. قد تظهر الحاويتان بحالة healthy، لكن قاعدة البيانات بلا نسخة احتياطية، وقد يشير الوسم `latest` إلى إصدار مختلف عند السحب التالي. وقد يخزّن الـ proxy صفحة تسجيل الدخول إن كانت قاعدة الكاش واسعة أكثر من اللازم.
+نجاح `docker compose up -d` لا يعني أن خدمة الصور جاهزة للإنتاج. قد تظهر الحاويات السبع بحالة healthy، لكن قاعدة البيانات بلا نسخة احتياطية، وقد تنحرف وسوم الصور الأربع عند السحب التالي. وقد يخزّن الـ proxy صفحة تسجيل الدخول إن كانت قاعدة الكاش واسعة أكثر من اللازم.
 
 تشغيل الحاوية هو الفحص الأول فقط. ما يأتي بعده هو ما يحدد إن كان النشر قابلاً للصيانة.
 
 ## ما الذي يعمل داخل Compose؟
 
-يشغّل ملف `docker-compose.yml` خدمتين. الأولى PostgreSQL 18 داخل شبكة Compose الخاصة، والثانية حاوية Keenpix المبنية على Node وSharp. لكل خدمة healthcheck، وينتظر التطبيق جاهزية Postgres قبل أن يبدأ.
+يشغّل ملف `docker-compose.yml` سبع خدمات: PostgreSQL 18 وDragonfly وMaxIO، إضافة إلى التطبيق وخدمة التحويل والـ worker وموقع التوثيق. للخدمات الأساسية readiness checks، وينتظر التطبيق جاهزية الاعتماديات قبل أن يبدأ.
 
 يملك Postgres volume مستقلاً، ويملك كاش الصور volume آخر. الفرق مهم: قاعدة البيانات تحتوي المشاريع والمستخدمين والإعدادات، لذلك تحتاج إلى backup. أما كاش الصور فيمكن إعادة بنائه من المصادر، ولا يجوز اعتباره نسخة من ملفاتك الأصلية.
 
@@ -27,7 +27,7 @@ imageAlt: نشر Keenpix وPostgres داخل Docker مع volumes دائمة وط
 الإعداد الافتراضي يسحب `latest`. هذا مناسب لتجربة سريعة، لكنه يجعل الترقية غير واضحة. ابدأ من release محدد:
 
 ```bash
-git clone --branch v0.2.1 --depth 1 https://github.com/lord007tn/keenpix.git
+git clone --branch v0.3.0 --depth 1 https://github.com/lord007tn/keenpix.git
 cd keenpix
 cp .env.example .env
 ```
@@ -35,7 +35,10 @@ cp .env.example .env
 ضع القيم الأساسية في `.env`:
 
 ```dotenv
-KEENPIX_IMAGE=ghcr.io/lord007tn/keenpix:v0.2.1
+KEENPIX_APP_IMAGE=ghcr.io/lord007tn/keenpix-app:v0.3.0
+KEENPIX_TRANSFORM_IMAGE=ghcr.io/lord007tn/keenpix-transform:v0.3.0
+KEENPIX_WORKER_IMAGE=ghcr.io/lord007tn/keenpix-worker:v0.3.0
+KEENPIX_DOCS_IMAGE=ghcr.io/lord007tn/keenpix-docs:v0.3.0
 POSTGRES_PASSWORD=<a-long-random-password>
 BETTER_AUTH_SECRET=<output-of-openssl-rand-hex-32>
 BETTER_AUTH_URL=https://admin.images.example.com
@@ -113,11 +116,11 @@ docker compose exec -T postgres sh -lc \
 
 انقل النسخة إلى مكان خارج الخادم. يحافظ volume على البيانات عند استبدال الحاوية، لكنه لا يحميك من تلف القرص أو حذف خاطئ أو قاعدة متضررة.
 
-قبل الترقية، اقرأ release notes، وخذ dump جديداً، ثم غيّر `KEENPIX_IMAGE` إلى الإصدار المطلوب:
+قبل الترقية، اقرأ release notes، وخذ dump جديداً، ثم غيّر متغيرات `KEENPIX_*_IMAGE` الأربعة إلى الإصدار المطلوب:
 
 ```bash
-docker compose pull app
-docker compose up -d app
+docker compose pull app transform worker docs
+docker compose up -d app transform worker docs
 docker compose ps
 ```
 
@@ -127,7 +130,7 @@ docker compose ps
 
 الحد الافتراضي لكاش القرص في Compose هو 8 GB. اضبط `KEENPIX_CACHE_MAX_BYTES` حسب مساحة القرص، ثم راقب عمليات eviction. حدّد عدد التحويلات المتزامنة بما يناسب CPU، واترك queue محدودة حتى يرفض التطبيق الحمل الزائد بـ `503` بدلاً من استهلاك ذاكرة الخادم كلها.
 
-عند تشغيل أكثر من replica، لا تشترك الحاويات في كاش القرص. ضع CDN أمامها. وضع الاستضافة الذاتية المرفق لا يوفر حالياً كاشاً مشتركاً على object storage. أما Postgres فيحتاج إلى خطة منفصلة للتوافر والنسخ الاحتياطي إذا كانت الخدمة جزءاً من مسار إنتاج فعلي.
+عند تشغيل أكثر من replica، لا تشترك الحاويات في كاش القرص المحلي. يستخدم الإعداد المرفق MaxIO لطبقة object storage مشتركة، ويمكن استبداله بـ R2 أو خدمة متوافقة مع S3. ضع CDN أمام خدمة التحويل. أما Postgres فيحتاج إلى خطة منفصلة للتوافر والنسخ الاحتياطي إذا كانت الخدمة جزءاً من مسار إنتاج فعلي.
 
 ## متى أختار الخدمة المدارة؟
 
@@ -137,4 +140,4 @@ docker compose ps
 
 ## المراجع
 
-مصادر التحقق بتاريخ 15 أغسطس 2026 هي [إصدار Keenpix v0.2.1](https://github.com/lord007tn/keenpix/releases/tag/v0.2.1)، وملفا `docker-compose.yml` و`Dockerfile` في المشروع، و[إعدادات النشر](/docs/self-hosting/presets)، و[مرجع configuration](/docs/self-hosting/configuration)، و[إعداد CDN](/docs/self-hosting/cdn). هذه قائمة فحص للنشر، وليست وعداً بأن كل بيئة تُجهّز في مدة ثابتة.
+حُدّث هذا الدليل في 18 أغسطس 2026 من أجل [إصدار Keenpix v0.3.0](https://github.com/lord007tn/keenpix/releases/tag/v0.3.0)، وملفات Docker الأربعة و`docker-compose.yml` في المشروع، و[إعدادات النشر](/docs/self-hosting/presets)، و[مرجع configuration](/docs/self-hosting/configuration)، و[إعداد CDN](/docs/self-hosting/cdn). هذه قائمة فحص للنشر، وليست وعداً بأن كل بيئة تُجهّز في مدة ثابتة.
