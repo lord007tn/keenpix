@@ -59,6 +59,37 @@ export function AboutPage() {
           </div>
         </section>
 
+        <section className="border-b">
+          <div className="mx-auto max-w-3xl px-6 py-14">
+            <h2 className="font-semibold text-2xl tracking-tight">
+              How product facts stay current
+            </h2>
+            <p className="mt-4 text-muted-foreground leading-relaxed">
+              The public repository is the inspection surface for the engine,
+              deployment files, tests, and release history. Product
+              documentation describes the routes and configuration shipped by
+              that code. The changelog records material product changes, while
+              dated documentation and blog sources show when implementation or
+              commercial facts were last checked.
+            </p>
+            <p className="mt-4 text-muted-foreground leading-relaxed">
+              Commercial comparisons follow a separate review policy: primary
+              vendor pricing and documentation come first, assumptions are
+              visible, and every page says when the other product is the better
+              fit. Pricing, plan limits, and vendor features can change between
+              reviews, so readers are directed to the cited source rather than
+              asked to trust an undated summary.
+            </p>
+            <p className="mt-4 text-muted-foreground leading-relaxed">
+              Corrections are handled through the public support address. A
+              useful report includes the page URL, disputed statement, and a
+              primary source. Product incidents, security reports, and editorial
+              corrections use different paths so a content issue is not confused
+              with an operational or vulnerability report.
+            </p>
+          </div>
+        </section>
+
         <section className="border-b bg-muted/30">
           <div className="mx-auto max-w-3xl px-6 py-14">
             <h2 className="font-semibold text-2xl tracking-tight">

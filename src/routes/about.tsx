@@ -22,7 +22,7 @@ export const Route = createFileRoute('/about')({
         ...seo({
           title: 'About Keenpix — the honest image CDN',
           description:
-            'Keenpix is an image optimization CDN with transparent managed-delivery pricing and an open-source, self-hostable engine. Meet the team and the principles behind it.',
+            'Keenpix is an image optimization CDN with transparent managed-delivery pricing and an open-source engine. Meet the team and principles behind it.',
           url: canonicalUrl,
         }),
         ...(loaderData?.selfHost

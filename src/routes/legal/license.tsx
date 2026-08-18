@@ -11,7 +11,7 @@ export const Route = createFileRoute('/legal/license')({
     meta: seo({
       title: 'License & Open Source - Keenpix',
       description:
-        'Keenpix is open source. The engine that powers the cloud is available to self-host under its repository license.',
+        'Review the AGPL-3.0 license for the open-source Keenpix image optimization engine, earlier release licensing, self-hosting rights, and operator duties.',
       url: absoluteUrl('/legal/license'),
     }),
   }),

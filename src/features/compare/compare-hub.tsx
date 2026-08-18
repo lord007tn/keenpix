@@ -28,6 +28,67 @@ export function CompareHub() {
           </div>
         </section>
 
+        <section className="border-b">
+          <div className="mx-auto max-w-5xl px-6 py-14">
+            <h2 className="font-semibold text-2xl tracking-tight">
+              Start with the product boundary, not the feature count
+            </h2>
+            <p className="mt-4 max-w-3xl text-muted-foreground leading-relaxed">
+              “Image CDN” can mean a full media platform, a managed optimizer
+              attached to a CDN, a hosting-platform feature, or a transform
+              engine you operate yourself. Those categories overlap, but they do
+              not create the same bill or move the same operational work.
+              Keenpix is a focused image transformation and delivery layer: it
+              does not provide a DAM, source-image library, or video platform.
+            </p>
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              <div className="rounded-lg border bg-card p-5">
+                <h3 className="font-semibold">Full media platforms</h3>
+                <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
+                  Cloudinary and Gumlet are stronger fits when video, DAM,
+                  upload workflows, AI media features, or enterprise media
+                  operations belong in the same vendor relationship.
+                </p>
+              </div>
+              <div className="rounded-lg border bg-card p-5">
+                <h3 className="font-semibold">Managed image delivery</h3>
+                <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
+                  ImageKit, imgix, Cloudflare Images, Bunny Optimizer, Vercel,
+                  Gumlet Image, and Keenpix differ in meters, storage
+                  assumptions, integrations, CDN ownership, and transform depth.
+                  Model the exact workload instead of one headline rate.
+                </p>
+              </div>
+              <div className="rounded-lg border bg-card p-5">
+                <h3 className="font-semibold">Self-hosted engines</h3>
+                <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
+                  Self-hosting replaces a service fee with infrastructure,
+                  delivery, backups, upgrades, capacity planning, abuse
+                  controls, and incident response. It is an ownership choice,
+                  not a universal cost shortcut.
+                </p>
+              </div>
+            </div>
+            <div className="mt-8 rounded-lg border bg-muted/30 p-5">
+              <h3 className="font-semibold">How these comparisons are built</h3>
+              <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
+                Each page uses current vendor pricing and documentation,
+                discloses that Keenpix benefits if you choose it, states where
+                the competitor wins, and carries a verification and next-review
+                date. Pricing scenarios are estimates, not quotes, and no page
+                substitutes unsupported benchmarks, ratings, or customer proof
+                for reproducible evidence.
+              </p>
+              <Link
+                className="mt-3 inline-flex font-medium text-primary text-sm hover:underline"
+                to="/methodology/comparisons"
+              >
+                Read the comparison and corrections methodology
+              </Link>
+            </div>
+          </div>
+        </section>
+
         <section>
           <div className="mx-auto max-w-5xl px-6 py-14">
             <div className="grid gap-4 md:grid-cols-2">
