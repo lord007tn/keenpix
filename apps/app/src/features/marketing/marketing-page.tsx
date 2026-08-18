@@ -613,7 +613,7 @@ Vary: Accept`}</CodeBlock>
             </div>
             <div className="flex min-w-0 flex-col gap-6">
               <CodeBlock>{`cp .env.example .env   # set secrets + admin login
-docker compose up -d   # app + Postgres, migrated and seeded
+docker compose up -d   # four runtimes + stateful services, migrated and seeded
 open http://localhost:3000`}</CodeBlock>
               <div className="grid gap-4 sm:grid-cols-3">
                 {[

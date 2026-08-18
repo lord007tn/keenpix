@@ -10,18 +10,20 @@ image: /og/blog/self-host-image-cdn-docker.png?v=2026-08-15
 imageAlt: Docker deployment with Keenpix, Postgres, persistent volumes, and a CDN cache layer
 ---
 
-`docker compose up -d` can leave you with two healthy containers and an unsafe deployment. The database may have no backup, the image tag may move during the next pull, or a proxy may cache the sign-in page along with transformed images.
+`docker compose up -d` can leave you with seven healthy containers and an unsafe deployment. The database may have no backup, image tags may drift across services during the next pull, or a proxy may cache the sign-in page along with transformed images.
 
 This setup treats the first successful container start as the beginning of the job. It uses the Compose file in the Keenpix repository, pins a release, and checks the pieces that carry state.
 
 ## What the Compose stack runs
 
-The repository's `docker-compose.yml` starts two services:
+The repository's `docker-compose.yml` starts seven services:
 
 - PostgreSQL 18 on the private Compose network, with a named database volume;
-- the Keenpix Node container, with a separate named disk-cache volume.
+- Dragonfly for queues and shared hot-cache metadata;
+- MaxIO for the shared S3-compatible image cache;
+- the app control plane, transform data plane, BullMQ worker, and standalone docs service.
 
-Both services have health checks. The app waits for PostgreSQL before it starts, runs Prisma migrations and the initial seed through its entrypoint, then serves `/api/health` on port 3000. The container runs as the unprivileged `node` user.
+The stateful and Keenpix services have readiness checks. The app waits for its dependencies, runs Prisma migrations and the initial seed through its entrypoint, then serves `/api/health` on port 3000. The Keenpix containers run as the unprivileged `node` user.
 
 The database volume is durable state. Back it up. The image cache can be rebuilt from the origin and should not be treated as a backup of your source images.
 
@@ -30,7 +32,7 @@ The database volume is durable state. Back it up. The image cache can be rebuilt
 The Compose file defaults to the moving `latest` image. For a controlled installation, check out a release and pin the matching container tag:
 
 ```bash
-git clone --branch v0.2.1 --depth 1 https://github.com/lord007tn/keenpix.git
+git clone --branch v0.3.0 --depth 1 https://github.com/lord007tn/keenpix.git
 cd keenpix
 cp .env.example .env
 ```
@@ -38,7 +40,10 @@ cp .env.example .env
 Set at least these values in `.env`:
 
 ```dotenv
-KEENPIX_IMAGE=ghcr.io/lord007tn/keenpix:v0.2.1
+KEENPIX_APP_IMAGE=ghcr.io/lord007tn/keenpix-app:v0.3.0
+KEENPIX_TRANSFORM_IMAGE=ghcr.io/lord007tn/keenpix-transform:v0.3.0
+KEENPIX_WORKER_IMAGE=ghcr.io/lord007tn/keenpix-worker:v0.3.0
+KEENPIX_DOCS_IMAGE=ghcr.io/lord007tn/keenpix-docs:v0.3.0
 POSTGRES_PASSWORD=<a-long-random-password>
 BETTER_AUTH_SECRET=<output-of-openssl-rand-hex-32>
 BETTER_AUTH_URL=https://admin.images.example.com
@@ -116,11 +121,11 @@ docker compose exec -T postgres sh -lc \
 
 Store backups away from the Docker host. A named volume protects data from routine container replacement, but it does not protect against disk loss, operator mistakes, or a damaged database.
 
-Before an upgrade, read the release notes, take a fresh dump, change `KEENPIX_IMAGE` to the selected version, then run:
+Before an upgrade, read the release notes, take a fresh dump, change all four `KEENPIX_*_IMAGE` variables to the selected version, then run:
 
 ```bash
-docker compose pull app
-docker compose up -d app
+docker compose pull app transform worker docs
+docker compose up -d app transform worker docs
 docker compose ps
 ```
 
@@ -130,7 +135,7 @@ The entrypoint applies database migrations. Keep the previous image reference an
 
 The default Compose cache cap is 8 GB. Set `KEENPIX_CACHE_MAX_BYTES` from the actual disk budget, then watch eviction behavior. Set transform concurrency near the CPU capacity and keep a bounded queue so cold traffic sheds with `503` before the host runs out of memory.
 
-Horizontal self-hosted replicas do not share Keenpix's disk cache. Put a CDN in front of them. The bundled self-host mode does not currently provide a shared object-storage cache. PostgreSQL also needs a deliberate high-availability and backup plan if the service matters to production traffic.
+Horizontal self-hosted replicas do not share Keenpix's local disk cache. The bundled stack uses MaxIO for its shared object-storage tier; production operators can replace it with R2 or another S3-compatible service. Put a CDN in front of the transform service. PostgreSQL also needs a deliberate high-availability and backup plan if the service matters to production traffic.
 
 ## When managed Keenpix is the better choice
 
@@ -140,4 +145,4 @@ Use the managed service when the team wants image delivery without maintaining t
 
 ## Sources and verification
 
-This guide was checked on August 15, 2026 against the public [Keenpix v0.2.1 release](https://github.com/lord007tn/keenpix/releases/tag/v0.2.1), the repository's `docker-compose.yml` and `Dockerfile`, the [deployment presets](/docs/self-hosting/presets), [configuration reference](/docs/self-hosting/configuration), and [CDN setup](/docs/self-hosting/cdn). The commands are an installation checklist, not a claim that every production deployment takes the same amount of time.
+This guide was updated on August 18, 2026 for [Keenpix v0.3.0](https://github.com/lord007tn/keenpix/releases/tag/v0.3.0), the repository's four Dockerfiles and `docker-compose.yml`, the [deployment presets](/docs/self-hosting/presets), [configuration reference](/docs/self-hosting/configuration), and [CDN setup](/docs/self-hosting/cdn). The commands are an installation checklist, not a claim that every production deployment takes the same amount of time.

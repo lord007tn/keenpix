@@ -74,7 +74,7 @@ export const cloudflareImagesComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'Managed Cloudflare service',
-      keenpix: 'v0.2.1 code is AGPL-3.0; you operate it',
+      keenpix: 'v0.3.0 code is AGPL-3.0; you operate it',
     },
     {
       feature: 'Image analytics',
@@ -96,7 +96,7 @@ export const cloudflareImagesComparison = {
     {
       title: 'A self-operated path',
       detail:
-        'The current v0.2.1 code is AGPL-3.0 and includes deployment files. Self-hosting removes a Keenpix service bill but adds infrastructure and operational work.',
+        'The current v0.3.0 code is AGPL-3.0 and includes deployment files. Self-hosting removes a Keenpix service bill but adds infrastructure and operational work.',
     },
   ],
   whenCompetitorWins: [

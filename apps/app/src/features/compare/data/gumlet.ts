@@ -99,7 +99,7 @@ export const gumletComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No public self-hosted Gumlet Image edition documented',
-      keenpix: 'Published v0.2.1 under AGPL-3.0 with Docker deployment files',
+      keenpix: 'Published v0.3.0 under AGPL-3.0 with Docker deployment files',
     },
     {
       feature: 'Managed entry price',

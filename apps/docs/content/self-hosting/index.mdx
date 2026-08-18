@@ -14,14 +14,14 @@ Weighing self-host against the hosted option? See [self-hosted vs managed image 
 ## Deploy a pinned release
 
 ```bash
-git clone --branch v0.2.1 --depth 1 https://github.com/lord007tn/keenpix.git
+git clone --branch v0.3.0 --depth 1 https://github.com/lord007tn/keenpix.git
 cd keenpix
 cp .env.example .env
 # keep every service on the release you just checked out:
-echo 'KEENPIX_APP_IMAGE=ghcr.io/lord007tn/keenpix-app:v0.2.1' >> .env
-echo 'KEENPIX_TRANSFORM_IMAGE=ghcr.io/lord007tn/keenpix-transform:v0.2.1' >> .env
-echo 'KEENPIX_WORKER_IMAGE=ghcr.io/lord007tn/keenpix-worker:v0.2.1' >> .env
-echo 'KEENPIX_DOCS_IMAGE=ghcr.io/lord007tn/keenpix-docs:v0.2.1' >> .env
+echo 'KEENPIX_APP_IMAGE=ghcr.io/lord007tn/keenpix-app:v0.3.0' >> .env
+echo 'KEENPIX_TRANSFORM_IMAGE=ghcr.io/lord007tn/keenpix-transform:v0.3.0' >> .env
+echo 'KEENPIX_WORKER_IMAGE=ghcr.io/lord007tn/keenpix-worker:v0.3.0' >> .env
+echo 'KEENPIX_DOCS_IMAGE=ghcr.io/lord007tn/keenpix-docs:v0.3.0' >> .env
 # set a strong secret:
 #   BETTER_AUTH_SECRET=$(openssl rand -hex 32)
 # set POSTGRES_PASSWORD, KEENPIX_SUPER_ADMIN_EMAIL, and KEENPIX_SUPER_ADMIN_PASSWORD
