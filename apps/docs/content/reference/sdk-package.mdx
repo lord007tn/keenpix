@@ -1,0 +1,113 @@
+---
+title: Node SDK package
+description: Install and use @keenpix/sdk from trusted server code for projects, configuration, domains, prewarming, and signing.
+icon: PackageOpen
+---
+
+`@keenpix/sdk` is the MIT-licensed, server-side management client for the versioned `/api/sdk/v1` API.
+
+```bash
+pnpm add @keenpix/sdk
+# or npm install @keenpix/sdk
+```
+
+Never import the management client into browser or mobile code. Its API key has control-plane permissions.
+
+## Create a client
+
+```ts
+import { createKeenpixClient } from '@keenpix/sdk'
+
+const keenpix = createKeenpixClient({
+  apiKey: process.env.KEENPIX_API_KEY!,
+  baseUrl: 'https://keenpix.example.com',
+})
+```
+
+The SDK uses the platform `fetch`. Pass a custom `fetch` implementation for tests, tracing, or a runtime with a nonstandard fetch implementation.
+
+## Projects
+
+```ts
+const projects = await keenpix.listProjects()
+
+const project = await keenpix.createProject({
+  name: 'Marketing site',
+  origin: 'https://assets.example.com',
+  allowedOrigins: ['assets.example.com'],
+})
+
+await keenpix.updateProject(project.id, {
+  autoFormat: true,
+  defaultQuality: 82,
+  maxWidth: 2400,
+  stripMetadata: true,
+  watermarkEnabled: true,
+  watermarkUrl: 'https://assets.example.com/brand/watermark.png',
+  watermarkPosition: 'southeast',
+  watermarkOpacity: 65,
+  watermarkScale: 18,
+  watermarkMargin: 20,
+})
+```
+
+Use `getProject(projectId)` for one project and `getConfiguration(projectId)` for the delivery configuration consumed by framework integrations.
+
+## Domains
+
+```ts
+await keenpix.addDomain(project.id, 'images.example.com')
+await keenpix.removeDomain(project.id, 'images.example.com')
+```
+
+Domain changes are authenticated control-plane operations. Public transform URLs remain keyless and are constrained by project origins and SSRF protections.
+
+## Prewarming
+
+```ts
+await keenpix.prewarm(project.id, {
+  sources: ['/hero.jpg', '/product.jpg'],
+  widths: [640, 1280, 1920],
+  formats: ['avif', 'webp'],
+  quality: 82,
+})
+```
+
+Prewarming enqueues deterministic BullMQ jobs. The call returns accepted source and variant counts; the worker processes them asynchronously.
+
+## Errors
+
+Non-2xx responses throw `KeenpixApiError` with `status` and parsed `body` fields.
+
+```ts
+import { KeenpixApiError } from '@keenpix/sdk'
+
+try {
+  await keenpix.getProject('missing')
+} catch (error) {
+  if (error instanceof KeenpixApiError && error.status === 404) {
+    // handle a missing project
+  }
+}
+```
+
+## Server-side signing
+
+The optional `@keenpix/sdk/signing` export creates HMAC signatures with the same canonical payload as `@keenpix/core`:
+
+```ts
+import { signTransformUrl } from '@keenpix/sdk/signing'
+
+const signed = signTransformUrl(
+  'https://images.example.com/img?url=https%3A%2F%2Fassets.example.com%2Fhero.jpg&w=auto&dpr=auto',
+  process.env.KEENPIX_SIGNING_SECRET!,
+  {
+    expiresAt: Date.now() + 5 * 60 * 1000,
+    keyVersion: 3,
+  },
+)
+```
+
+Keep the signing secret on the server. `signTransformUrl` signs `kid`, `iat`,
+`exp`, Client Hint modes, and every other query value. Browser framework adapters
+build unsigned public URLs unless your server signs them first.

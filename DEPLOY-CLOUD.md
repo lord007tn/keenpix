@@ -70,9 +70,9 @@ portable reference stack; the live Coolify resource uses the volume-compatible
      refuses ambiguous catalogs, and never prints the access token.
 4. **Custom delivery domains** — enable Cloudflare for SaaS and create an
    originless fallback such as `fallback.keenpix.com` (the Worker handles the
-   request before that placeholder origin). Deploy `workers/custom-domain-edge`
+   request before that placeholder origin). Deploy `apps/custom-domain-edge`
    as `keenpix-custom-domain-edge`, set its `EDGE_SECRET`, and keep
-   `APP_ORIGIN=https://keenpix.com`. Create `customers.keenpix.com` as the CNAME
+   `TRANSFORM_ORIGIN=https://transform.keenpix.com`. Create `customers.keenpix.com` as the CNAME
    target customers use. The application token needs **Zone → SSL and
    Certificates → Edit** and **Zone → Workers Routes → Edit**; a separate deploy
    identity needs **Account → Workers Scripts → Edit**. Set
@@ -104,7 +104,7 @@ keenpix.com. Select and deploy the reviewed `master` commit manually in Coolify,
 then record the deployment id and smoke-test results. Repository GitHub Actions
 run on `ubuntu-latest`; no Blacksmith runner is configured.
 
-For the alternative image-based stack, set `KEENPIX_IMAGE` to a versioned
+For the alternative image-based stack, set `KEENPIX_APP_IMAGE` to a versioned
 release tag or immutable digest before running:
 
 ```
@@ -112,13 +112,13 @@ docker compose -f docker-compose.cloud.yml up -d
 ```
 
 The Coolify production stack builds the reviewed source commit and ignores
-`KEENPIX_IMAGE`. Update its pinned Maxio and cron helper image references
+`KEENPIX_APP_IMAGE`. Update its pinned Maxio and cron helper image references
 deliberately during a release; do not turn them back into floating `latest`
 tags.
 
 Migrations run on boot (`KEENPIX_RUN_MIGRATIONS=true`); seeding is off by default
 in cloud (`KEENPIX_RUN_SEED=false`). If you migrate existing self-host data first,
-run `pnpm tsx scripts/backfill-clickhouse.ts` once so ClickHouse has history.
+run `pnpm --filter @keenpix/app exec tsx scripts/backfill-clickhouse.ts` once so ClickHouse has history.
 
 ## Verify after deploy
 

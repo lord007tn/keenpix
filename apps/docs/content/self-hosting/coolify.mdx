@@ -1,0 +1,47 @@
+---
+title: Coolify
+description: Deploy the complete Keenpix stack with generated secrets, domains, health checks, and independent services.
+icon: CloudCog
+---
+
+Use `docker-compose.coolify.yml` for a normal self-hosted Coolify deployment. It references published images and uses Coolify magic variables for generated credentials.
+
+## Create the resource
+
+1. Create a **Docker Compose** resource from the Keenpix repository.
+2. Select `docker-compose.coolify.yml`.
+3. Assign a domain to `SERVICE_URL_APP` and a docs domain to `SERVICE_URL_DOCS`.
+4. Set `KEENPIX_SUPER_ADMIN_EMAIL`.
+5. Deploy.
+
+Coolify generates:
+
+- `SERVICE_USER_POSTGRES` and `SERVICE_PASSWORD_64_POSTGRES`
+- `SERVICE_HEX_64_KEENPIX` for Better Auth
+- `SERVICE_HEX_64_KEENPIX_WORKER` for internal worker authentication
+- `SERVICE_USER_WORKBENCH` and `SERVICE_PASSWORD_64_WORKBENCH` for Workbench basic auth
+- `SERVICE_USER_MAXIO` and `SERVICE_PASSWORD_64_MAXIO` for the fallback object cache
+- `SERVICE_PASSWORD_64_ADMIN` for the initial super-admin password
+
+You may override Workbench with `KEENPIX_WORKBENCH_USERNAME` and `KEENPIX_WORKBENCH_PASSWORD`, but both must be set together.
+
+## Service routing
+
+Only `app:3000` and `docs:3003` need public domains. Keep `transform:3002`,
+`worker:3001`, Postgres, Dragonfly, and MaxIO private. If you expose Workbench
+through a private operator domain, keep its basic auth enabled and add Coolify
+access controls in front of it.
+
+## Health checks
+
+Coolify should show these containers as healthy:
+
+- app: `GET /api/health`
+- transform: `GET /health/ready` (database plus configured cache tiers)
+- worker: `GET /health/ready` (queue connectivity)
+- docs: `GET /health`
+- Postgres: `pg_isready`
+
+## Cloud deployment
+
+`docker-compose.production.yml` is the maintained source-build stack for keenpix.com. It adds ClickHouse, MaxIO, Mailpit, usage reporting, and Postgres backups. Self-hosters should start with `docker-compose.coolify.yml` and add those capabilities only when their scale requires them.

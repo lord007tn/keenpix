@@ -1,0 +1,36 @@
+{
+  "name": "@keenpix/transform-app",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Keenpix image transformation data plane.",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsdown src/index.ts --platform node",
+    "start": "node --import tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "git clean -xdf dist node_modules"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.14",
+    "@keenpix/analytics": "workspace:*",
+    "@keenpix/cache": "workspace:*",
+    "@keenpix/clickhouse": "workspace:*",
+    "@keenpix/contracts": "workspace:*",
+    "@keenpix/database": "workspace:*",
+    "@keenpix/logger": "workspace:*",
+    "@keenpix/transform": "workspace:*",
+    "dayjs": "^1.11.20",
+    "hono": "^4.12.30",
+    "tsx": "^4.22.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "tsdown": "0.22.3",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,9 @@
+ALTER TABLE "Project"
+ADD COLUMN "signingKeyVersion" INTEGER NOT NULL DEFAULT 1,
+ADD COLUMN "signedUrlTtlSeconds" INTEGER,
+ADD COLUMN "watermarkEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "watermarkUrl" TEXT,
+ADD COLUMN "watermarkPosition" TEXT NOT NULL DEFAULT 'southeast',
+ADD COLUMN "watermarkOpacity" INTEGER NOT NULL DEFAULT 70,
+ADD COLUMN "watermarkScale" INTEGER NOT NULL DEFAULT 20,
+ADD COLUMN "watermarkMargin" INTEGER NOT NULL DEFAULT 16;

@@ -46,6 +46,18 @@ services:
       retries: 12
       start_period: 30s
 
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.37.0
+    restart: unless-stopped
+    ulimits:
+      memlock: -1
+    command:
+      - --dir=/data
+      - --default_lua_flags=allow-undeclared-keys
+      - --snapshot_cron=*/5 * * * *
+    volumes:
+      - keenpix_dragonfly:/data
+
   # Shared object-storage cache (S3-compatible). In production, prefer Cloudflare
   # R2: set KEENPIX_CACHE_S3_ENDPOINT/keys to R2 and remove this service.
   maxio:
@@ -53,18 +65,18 @@ services:
     command: serve
     restart: unless-stopped
     environment:
-      - MAXIO_ACCESS_KEY=${KEENPIX_CACHE_S3_ACCESS_KEY_ID} # (required)
-      - MAXIO_SECRET_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY} # (required)
+      - MAXIO_ACCESS_KEY=${KEENPIX_CACHE_S3_ACCESS_KEY_ID:-keenpix}
+      - MAXIO_SECRET_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY:-keenpix-local-cache}
       - MAXIO_REGION=auto
       - MAXIO_DEFAULT_BUCKETS=${KEENPIX_CACHE_S3_BUCKET:-keenpix-cache}
     volumes:
       - keenpix_maxio:/data
 
   app:
-    image: "${KEENPIX_IMAGE:?set a versioned Keenpix image tag or immutable digest}"
+    image: "${KEENPIX_APP_IMAGE:?set a versioned Keenpix app image tag or immutable digest}"
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: apps/app/Dockerfile
       args:
         VITE_KEENPIX_PUBLIC_URL: ${SERVICE_URL_APP}
         VITE_GTM_CONTAINER_ID: ${VITE_GTM_CONTAINER_ID:-}
@@ -72,17 +84,19 @@ services:
     restart: unless-stopped
     mem_limit: ${KEENPIX_MEM_LIMIT:-0}
     cpus: ${KEENPIX_CPU_LIMIT:-0}
-    # Give the graceful shutdown room to run before Docker SIGKILLs: on SIGTERM the
-    # app marks itself un-ready (health → 503) and drains in-flight transforms
-    # (~25s budget + backstop). Must exceed SERVER_SHUTDOWN_TIMEOUT below.
+    # Give the HTTP server room to drain active requests before Docker SIGKILLs.
     stop_grace_period: ${KEENPIX_SHUTDOWN_GRACE:-30s}
     depends_on:
       postgres:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
+      dragonfly:
+        condition: service_started
       maxio:
         condition: service_started
+      transform:
+        condition: service_healthy
     environment:
       - SERVICE_URL_APP
       - NODE_ENV=production
@@ -94,6 +108,7 @@ services:
       - BETTER_AUTH_SECRET=${SERVICE_HEX_64_KEENPIX}
       - BETTER_AUTH_URL=${SERVICE_URL_APP}
       - KEENPIX_APP_URL=${SERVICE_URL_APP}
+      - KEENPIX_TRANSFORM_URL=http://transform:3002
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - VITE_GTM_CONTAINER_ID=${VITE_GTM_CONTAINER_ID:-}
@@ -111,9 +126,12 @@ services:
       - KEENPIX_CACHE_S3_BUCKET=${KEENPIX_CACHE_S3_BUCKET:-keenpix-cache}
       - KEENPIX_CACHE_S3_ENDPOINT=${KEENPIX_CACHE_S3_ENDPOINT:-http://maxio:9000}
       - KEENPIX_CACHE_S3_REGION=${KEENPIX_CACHE_S3_REGION:-auto}
-      - KEENPIX_CACHE_S3_ACCESS_KEY_ID=${KEENPIX_CACHE_S3_ACCESS_KEY_ID}
-      - KEENPIX_CACHE_S3_SECRET_ACCESS_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY}
+      - KEENPIX_CACHE_S3_ACCESS_KEY_ID=${KEENPIX_CACHE_S3_ACCESS_KEY_ID:-keenpix}
+      - KEENPIX_CACHE_S3_SECRET_ACCESS_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY:-keenpix-local-cache}
       - KEENPIX_CACHE_DIR=/var/cache/keenpix
+      - KEENPIX_QUEUE_URL=redis://dragonfly:6379
+      - KEENPIX_WORKER_CONCURRENCY=${KEENPIX_WORKER_CONCURRENCY:-4}
+      - KEENPIX_WORKER_SECRET=${KEENPIX_WORKER_SECRET}
       # Seconds srvx waits for in-flight HTTP requests to finish on SIGTERM before
       # force-closing. Keep ≤ stop_grace_period so slow transforms can complete.
       - SERVER_SHUTDOWN_TIMEOUT=${SERVER_SHUTDOWN_TIMEOUT:-25}
@@ -160,14 +178,104 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
     expose:
       - "3000"
-    volumes:
-      - keenpix_cache:/var/cache/keenpix
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "--output", "/dev/null", "http://127.0.0.1:3000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 6
       start_period: 60s
+
+  transform:
+    image: "${KEENPIX_TRANSFORM_IMAGE:-ghcr.io/lord007tn/keenpix-transform:latest}"
+    build:
+      context: .
+      dockerfile: apps/transform/Dockerfile
+    restart: unless-stopped
+    stop_grace_period: ${KEENPIX_SHUTDOWN_GRACE:-30s}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      dragonfly:
+        condition: service_started
+      maxio:
+        condition: service_started
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_64_POSTGRES}@postgres:5432/${POSTGRES_DB:-keenpix}
+      - KEENPIX_MODE=cloud
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - CLICKHOUSE_DATABASE=${CLICKHOUSE_DATABASE:-keenpix}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - KEENPIX_CACHE_S3_BUCKET=${KEENPIX_CACHE_S3_BUCKET:-keenpix-cache}
+      - KEENPIX_CACHE_S3_ENDPOINT=${KEENPIX_CACHE_S3_ENDPOINT:-http://maxio:9000}
+      - KEENPIX_CACHE_S3_REGION=${KEENPIX_CACHE_S3_REGION:-auto}
+      - KEENPIX_CACHE_S3_ACCESS_KEY_ID=${KEENPIX_CACHE_S3_ACCESS_KEY_ID:-keenpix}
+      - KEENPIX_CACHE_S3_SECRET_ACCESS_KEY=${KEENPIX_CACHE_S3_SECRET_ACCESS_KEY:-keenpix-local-cache}
+      - KEENPIX_CACHE_REDIS_URL=redis://dragonfly:6379
+      - KEENPIX_CACHE_DRAGONFLY_MAX_BYTES=${KEENPIX_CACHE_DRAGONFLY_MAX_BYTES:-536870912}
+      - KEENPIX_CACHE_DELETE_AFTER_MS=${KEENPIX_CACHE_DELETE_AFTER_MS:-2592000000}
+      - KEENPIX_MAX_WATERMARK_BYTES=${KEENPIX_MAX_WATERMARK_BYTES:-5242880}
+      - KEENPIX_CACHE_DIR=/var/cache/keenpix
+      - KEENPIX_TRANSFORM_PORT=3002
+      - KEENPIX_WORKER_SECRET=${KEENPIX_WORKER_SECRET}
+      - CLOUDFLARE_SAAS_EDGE_SECRET=${CLOUDFLARE_SAAS_EDGE_SECRET:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - keenpix_cache:/var/cache/keenpix
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--output", "/dev/null", "http://127.0.0.1:3002/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  worker:
+    image: "${KEENPIX_WORKER_IMAGE:-ghcr.io/lord007tn/keenpix-worker:latest}"
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      transform:
+        condition: service_healthy
+      dragonfly:
+        condition: service_started
+    environment:
+      - NODE_ENV=production
+      - KEENPIX_TRANSFORM_URL=http://transform:3002
+      - KEENPIX_QUEUE_URL=redis://dragonfly:6379
+      - KEENPIX_WORKBENCH_PASSWORD=${KEENPIX_WORKBENCH_PASSWORD:-${SERVICE_PASSWORD_64_WORKBENCH}}
+      - KEENPIX_WORKBENCH_USERNAME=${KEENPIX_WORKBENCH_USERNAME:-${SERVICE_USER_WORKBENCH}}
+      - KEENPIX_WORKER_CONCURRENCY=${KEENPIX_WORKER_CONCURRENCY:-4}
+      - KEENPIX_WORKER_PORT=3001
+      - KEENPIX_WORKER_SECRET=${KEENPIX_WORKER_SECRET}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+  docs:
+    image: "${KEENPIX_DOCS_IMAGE:-ghcr.io/lord007tn/keenpix-docs:latest}"
+    restart: unless-stopped
+    environment:
+      - SERVICE_URL_DOCS
+      - NODE_ENV=production
+      - PORT=3003
+    expose:
+      - "3003"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3003/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   # Hourly usage reporter → Polar meter (for overage billing). In Coolify you can
   # replace this with a native Scheduled Task hitting the same endpoint.
@@ -199,5 +307,6 @@ services:
 volumes:
   keenpix_pg18:
   keenpix_clickhouse:
+  keenpix_dragonfly:
   keenpix_maxio:
   keenpix_cache:

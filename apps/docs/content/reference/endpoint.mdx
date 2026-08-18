@@ -1,0 +1,39 @@
+---
+title: Transform endpoint
+description: GET /img/<source> - the public image transform endpoint.
+icon: Webhook
+---
+
+Keenpix exposes one public image endpoint. No API key is used for image URLs - the
+project's allowlist is the access control.
+
+```http
+GET /img/SOURCE_URL?project=PROJECT_ID&w=…&fmt=…
+GET /img/?url=SOURCE_URL&project=PROJECT_ID&w=…&fmt=…
+```
+
+| Part       | Required | Notes                                                       |
+| ---------- | -------- | ----------------------------------------------------------- |
+| path source or `url` | yes | Absolute source URL after `/img/`, or in the `url` query parameter when no path source is present. Host must be allowlisted. Missing -> `400`. |
+| `project`  | yes      | Project id; its allowlist gates access. Missing → `400`.    |
+| transforms | no       | `w`, `h`, `q`, `fmt`, `fit`, `dpr`, `blur`, Sharp/IPX-style modifiers — see [Parameters](/docs/reference/parameters). |
+
+Simple source URLs can be written directly in the path. If the source URL contains its
+own `?` or `#`, URL-encode the source before appending Keenpix transform parameters.
+The `url` query parameter is also accepted for backends or integrations that prefer to
+keep the source URL out of the path.
+
+## Example
+
+```bash
+curl -I "https://keenpix.example.com/img/https://cdn.example.com/hero.jpg?project=store&w=800&fmt=webp"
+# HTTP/1.1 200 OK
+# content-type: image/webp
+# cache-control: public, max-age=31536000, immutable
+# accept-ch: Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width
+# vary: Accept, Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width, DPR, Width, Viewport-Width
+
+curl -I "https://keenpix.example.com/img/?url=https%3A%2F%2Fcdn.example.com%2Fhero.jpg&project=store&w=800&fmt=webp"
+```
+
+Next steps: [Parameters](/docs/reference/parameters) · [Responses & errors](/docs/reference/responses) · [SDK API](/docs/reference/sdk-api).

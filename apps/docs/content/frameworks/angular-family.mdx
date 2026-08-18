@@ -1,0 +1,39 @@
+---
+title: Angular framework family
+description: Native IMAGE_LOADER providers for Angular NgOptimizedImage and Analog.
+icon: Triangle
+---
+
+## Angular
+
+```ts
+import { provideKeenpixImageLoader } from '@keenpix/angular'
+
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideKeenpixImageLoader({
+      baseUrl: 'https://images.example.com',
+      projectId: 'website',
+    }),
+  ],
+})
+```
+
+Use Angular's native `NgOptimizedImage` directive normally. Pass Keenpix-specific transform values through `loaderParams` when needed. The adapter maps width, height, quality, format, fit, DPR, and remaining supported transform parameters.
+
+## Analog
+
+```ts
+import { createAnalogImageProvider } from '@keenpix/analog'
+
+export const appConfig = {
+  providers: [
+    createAnalogImageProvider({
+      baseUrl: 'https://images.example.com',
+      projectId: 'website',
+    }),
+  ],
+}
+```
+
+Analog uses Angular's `IMAGE_LOADER` contract, so template behavior and `NgOptimizedImage` diagnostics remain native. Use `createAnalogImageLoader()` when you need the loader function without provider registration.

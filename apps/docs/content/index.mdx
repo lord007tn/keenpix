@@ -1,0 +1,38 @@
+---
+title: Documentation
+description: Drop-in image optimization — managed cloud or self-hosted, with optional framework packages and a server SDK.
+icon: Sparkles
+---
+
+Keenpix is an image-optimization service you can use two ways — [managed cloud](https://keenpix.com)
+at keenpix.com or [self-hosted](/docs/self-hosting) on your own infrastructure — and an
+open-source alternative to
+[ImageKit](/blog/keenpix-vs-imagekit), [imgix](/blog/keenpix-vs-imgix), and [Cloudinary](/blog/keenpix-vs-cloudinary). Its public transform API is a single HTTP endpoint that fetches an image from
+your origin, transforms it with [sharp](https://sharp.pixelplumbing.com) (resize,
+crop, filter, and re-encode), optimizes SVG explicitly with `fmt=svg`, caches the
+result on disk, and serves it behind a long-lived, immutable `Cache-Control`.
+
+Image delivery needs no runtime SDK and no API key in your image URLs — **a request is just a URL**. Optional `@keenpix/*` framework packages provide native loaders and components, while `@keenpix/sdk` automates trusted server-side management:
+
+```html
+<img
+  src="https://keenpix.example.com/img/https://cdn.example.com/hero.jpg?project=PROJECT_ID&w=1200&fmt=auto"
+  alt="Hero"
+/>
+```
+
+## Start here
+
+- [**Quickstart**](/docs/getting-started/quickstart) — your first optimized image in two minutes.
+- [**Cloud quickstart**](/docs/getting-started/cloud-quickstart) — the managed option: signup to optimized image, no server required.
+- [**How it works**](/docs/concepts/how-it-works) — the request lifecycle, caching, and security model.
+- [**Frameworks**](/docs/frameworks) — drop Keenpix into Next.js, Nuxt, TanStack Start, SvelteKit, Astro, and more.
+- [**API reference**](/docs/reference/endpoint) — transform parameters, response headers, and the authenticated SDK API.
+- [**Self-hosting**](/docs/self-hosting) — deploy with Docker in about a minute.
+
+## Why Keenpix
+
+- **Drop-in.** Any framework that renders an `<img>` works — no rewrite required.
+- **Cloud or self-hosted.** Use the managed cloud at keenpix.com, or run the app, transform data plane, worker, and docs images on your own infrastructure; put a configured CDN in front of `/img/*`.
+- **Keyless.** Access is gated by a per-project domain allowlist, not by secrets.
+- **Built-in analytics.** Every origin request is logged, and optional Cloudflare edge analytics show the cache layer in front.

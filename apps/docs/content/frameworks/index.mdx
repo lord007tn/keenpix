@@ -1,0 +1,58 @@
+---
+title: Framework integrations
+description: Official @keenpix packages for web frameworks, meta-frameworks, static generators, and native apps.
+icon: Boxes
+updated: "2026-08-16"
+---
+
+Keenpix image delivery works with plain URLs, but the official MIT-licensed package family gives each framework its native integration shape. All adapters extend `@keenpix/core`, so URL construction, source normalization, proportional responsive dimensions, signing payloads, and transform parameters stay consistent.
+
+```bash
+pnpm add @keenpix/react
+# or npm install @keenpix/react
+```
+
+Every adapter takes the same public delivery configuration:
+
+```ts
+import { createManagedKeenpixConfig } from '@keenpix/core'
+
+const config = createManagedKeenpixConfig('website')
+```
+
+`baseUrl` and `projectId` are safe to expose in rendered HTML. Management API keys and signing secrets are server-only.
+
+<Cards>
+  <Card title="Complete package catalog" href="/docs/frameworks/catalog" description="All 29 packages, integration contracts, and support notes" />
+  <Card title="React family" href="/docs/frameworks/react-family" description="React, Next, Preact, Remix, Gatsby, TanStack, Redwood, Waku, and Docusaurus" />
+  <Card title="Vue family" href="/docs/frameworks/vue-family" description="Vue, Nuxt, and VitePress" />
+  <Card title="Svelte family" href="/docs/frameworks/svelte-family" description="Svelte and SvelteKit" />
+  <Card title="Angular family" href="/docs/frameworks/angular-family" description="Angular and Analog NgOptimizedImage loaders" />
+  <Card title="Native apps" href="/docs/frameworks/native" description="Expo Image and React Native Image sources" />
+  <Card title="Web and meta-frameworks" href="/docs/frameworks/web-and-meta-frameworks" description="Astro, Qwik, Solid, Lit, Fresh, Ember, Eleventy, Vite, and HTML" />
+</Cards>
+
+## Core primitives
+
+Use `@keenpix/core` when a framework has no dedicated adapter or when you are building an integration library:
+
+```ts
+import { createKeenpix, createImageAttributes } from '@keenpix/core'
+
+const keenpix = createKeenpix(config)
+const src = keenpix.url('/hero.jpg', { width: 1280, format: 'webp' })
+const hinted = keenpix.url('/hero.jpg', { width: 'auto', dpr: 'auto' })
+const attributes = createImageAttributes(config, {
+  alt: 'Hero',
+  src: '/hero.jpg',
+  widths: [640, 960, 1280],
+})
+```
+
+Transform URLs do not require the management SDK or an API key. Use [`@keenpix/sdk`](/docs/reference/sdk-package) only from trusted server code when automating projects, domains, configuration, or prewarming.
+
+Every framework adapter inherits `width: 'auto'` and `dpr: 'auto'` from
+`@keenpix/core`. The browser-facing packages never receive a signing secret;
+generate HMAC URLs in trusted server/build code with `@keenpix/sdk/signing` and
+pass the resulting URL to the framework integration. Project watermarks require
+no adapter option because the transform service applies them consistently.

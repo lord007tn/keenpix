@@ -1,0 +1,50 @@
+---
+title: Framework package catalog
+description: Complete support matrix for every official @keenpix framework integration.
+icon: Library
+---
+
+All packages are ESM, ship TypeScript declarations, are side-effect free where the framework permits it, and are published under MIT. Each package includes its own README and runtime tests.
+
+| Package | Integration contract | Support notes |
+| --- | --- | --- |
+| `@keenpix/core` | URL builder, loader, srcset, responsive attributes | Foundation for every adapter |
+| `@keenpix/html` | Escaped attributes and HTML renderer | Any backend or static HTML |
+| `@keenpix/react` | SSR-safe component and configured factory | React 18/19 |
+| `@keenpix/next` | Native `next/image` loader and props | Proportional loader dimensions |
+| `@keenpix/preact` | Preact-compatible image props factory | SSR-safe |
+| `@keenpix/remix` | React Router/Remix props and loader | Pure and isomorphic |
+| `@keenpix/tanstack-start` | TanStack Start image props and loader | Pure SSR/hydration output |
+| `@keenpix/gatsby` | `GatsbyImage` data and URL builder | Dynamic `GatsbyImage`; `StaticImage` must stay static |
+| `@keenpix/redwood` | RedwoodSDK/RedwoodJS image props | RSC- and prerender-safe |
+| `@keenpix/waku` | RSC-safe image attributes | Preview while Waku 1.0 is beta |
+| `@keenpix/docusaurus` | Docusaurus/MDX image props | Does not rewrite local Markdown assets |
+| `@keenpix/vue` | Vue 3 component and native attributes | SSR and hydration safe |
+| `@keenpix/nuxt` | Nuxt Image custom provider | Implements Nuxt `getImage` contract |
+| `@keenpix/vitepress` | VitePress theme extender and Vue component | Preserves the base theme hook |
+| `@keenpix/svelte` | Lowercase native image attributes | Compiler-independent props API |
+| `@keenpix/sveltekit` | SvelteKit props and isomorphic loader | No hook required |
+| `@keenpix/angular` | Native Angular `IMAGE_LOADER` provider | Works with `NgOptimizedImage` |
+| `@keenpix/analog` | Analog/Angular `IMAGE_LOADER` provider | Uses Angular image contracts |
+| `@keenpix/solid` | Solid image props | Compiler-independent props API |
+| `@keenpix/solid-start` | SolidStart props and loader | Isomorphic |
+| `@keenpix/qwik` | Serializable props and Qwik image transformer | Wrap transformer with Qwik `$()` when required |
+| `@keenpix/astro` | External image service and HTML attributes | Export at `@keenpix/astro/service` |
+| `@keenpix/fresh` | Preact component and configured factory | Server-renderable |
+| `@keenpix/lit` | Lit `TemplateResult` helper | Uses Lit directives for optional attributes |
+| `@keenpix/ember` | Importable plain helper factories | Modern Ember/strict-mode friendly |
+| `@keenpix/eleventy` | Universal shortcode, URL filter, and attributes | Extends `@keenpix/html` |
+| `@keenpix/vite` | `virtual:keenpix` plugin and client types | Works in client and SSR builds |
+| `@keenpix/expo` | `expo-image` source, sources, and props | Cache policy and responsive web sources |
+| `@keenpix/react-native` | Native `Image` sources and props | Network source, cache, accessibility, dimensions |
+
+## Version policy
+
+The framework family is a Changesets fixed group. A compatibility change to `@keenpix/core` releases the adapters together, preventing adapters from silently drifting onto incompatible core behavior.
+
+Package support follows the peer-dependency ranges in each package manifest. Preview status means the upstream framework itself is still changing, not that the package skips validation.
+
+All 29 packages inherit automatic Client Hint transforms from `@keenpix/core`.
+Signing stays server-only through `@keenpix/sdk/signing`, and project watermark
+policy is applied at delivery time, so adapters do not duplicate security or
+overlay logic.

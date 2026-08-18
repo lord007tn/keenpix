@@ -1,0 +1,45 @@
+---
+title: Health and operations
+description: Readiness, liveness, Workbench, logging, backups, and the first checks when a deployment is unhealthy.
+icon: HeartPulse
+---
+
+## Probe matrix
+
+| Service | Endpoint | Healthy response |
+| --- | --- | --- |
+| App | `GET /api/health` | HTTP 200 with application and dependency status |
+| Transform | `GET /health/live` | Process is accepting requests |
+| Transform | `GET /health/ready` | Required storage and database probes pass |
+| Worker | `GET /health/live` | Worker HTTP process is running |
+| Worker | `GET /health/ready` | Queue and transform dependencies are usable |
+| Docs | `GET /health` | Documentation server is running |
+
+Use liveness to restart a stuck process. Use readiness to decide whether it should receive traffic.
+
+## Workbench
+
+Workbench is hosted by `apps/worker` and shows queue state, jobs, retries, and failures. It uses HTTP basic auth from `KEENPIX_WORKBENCH_USERNAME` and `KEENPIX_WORKBENCH_PASSWORD`. Coolify generates credentials automatically.
+
+Workbench is an operator surface. Do not expose it without authentication, and prefer a private network, VPN, or access proxy.
+
+## Logs
+
+```bash
+docker compose logs --since=15m app
+docker compose logs --since=15m transform
+docker compose logs --since=15m worker
+```
+
+evlog writes structured output to the container terminal. Set `KEENPIX_LOG_DIR` only when you also mount a persistent directory and have a retention plan.
+
+## Failure order
+
+1. Check `docker compose ps` for the first unhealthy dependency.
+2. Check Postgres credentials and migrations.
+3. Check transform readiness and available cache-disk space.
+4. Check Dragonfly and worker queue connectivity.
+5. Confirm `KEENPIX_WORKER_SECRET` matches between app, transform, and worker.
+6. Confirm the origin host is allowed and resolvable from the transform container.
+
+Back up Postgres before upgrades. Cache volumes are disposable; Postgres is not.

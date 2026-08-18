@@ -1,0 +1,65 @@
+---
+title: Web and meta-frameworks
+description: Astro, Qwik, Solid, Fresh, Lit, Ember, Eleventy, Vite, and plain HTML integrations.
+icon: PanelsTopLeft
+---
+
+## Astro
+
+Configure the native external image service with `@keenpix/astro/service`, or call `createAstroImageService()` and `createAstroImageAttributes()` directly. Numeric quality is forwarded; named Astro quality presets are not remapped.
+
+```ts
+// astro.config.ts
+import { defineConfig } from 'astro/config'
+
+export default defineConfig({
+  image: {
+    service: {
+      entrypoint: '@keenpix/astro/service',
+      config: {
+        baseUrl: 'https://images.example.com',
+        projectId: 'website',
+      },
+    },
+  },
+})
+```
+
+## Qwik
+
+`createQwikKeenpix()` returns serializable image props and a transformer compatible with Qwik's image tooling. Wrap the transformer with Qwik `$()` at the application boundary when the consuming API requires a QRL.
+
+## Solid and SolidStart
+
+Use `createSolidKeenpix()` or `createSolidStartKeenpix()` and spread `imageProps()` onto a native `<img>`. SolidStart also exports `createSolidStartImageLoader`. Both APIs are pure and SSR-safe.
+
+## Fresh
+
+`@keenpix/fresh` exports a server-renderable `KeenpixImage`, `createFreshImageProps()`, and `createKeenpixImage()` configured factory. It uses Preact-compatible output without requiring client hydration.
+
+## Lit
+
+Use `keenpixImage(config, input)` for a Lit `TemplateResult`, or `createLitImageAttributes()` when composing your own template. Optional attributes use Lit's `ifDefined` semantics.
+
+## Ember
+
+`createKeenpixUrlHelper()` and `createKeenpixImageAttributesHelper()` return importable plain helper functions suitable for modern Ember strict-mode templates. The package does not require legacy global helper registration.
+
+## Eleventy
+
+Register `keenpixEleventyPlugin()` to get a universal image shortcode and URL filter. `createEleventyImageAttributes()` is also available for custom templates. HTML escaping and rendering come from `@keenpix/html`.
+
+## Vite
+
+```ts
+// vite.config.ts
+import { keenpix } from '@keenpix/vite'
+
+export default { plugins: [keenpix(config)] }
+```
+
+Import the configured helper from `virtual:keenpix`. Add `/// <reference types="@keenpix/vite/client" />` to `vite-env.d.ts` for virtual-module types.
+
+## Plain HTML
+
+`createHtmlImageAttributes()` returns safe attributes; `renderKeenpixImage()` returns an escaped responsive `<img>` string. Use `@keenpix/core` directly for URL-only integrations in any language or backend.

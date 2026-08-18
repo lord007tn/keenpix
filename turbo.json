@@ -1,0 +1,30 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "globalDependencies": [".env", ".env.*local"],
+  "ui": "stream",
+  "tasks": {
+    "build": {
+      "dependsOn": ["generate", "^build", "^generate"],
+      "outputs": ["dist/**", ".output/**", ".source/**"]
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
+    "generate": {
+      "cache": false
+    },
+    "test": {
+      "dependsOn": ["generate", "^build", "^generate"],
+      "outputs": ["coverage/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["generate", "^build", "^generate"],
+      "outputs": []
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

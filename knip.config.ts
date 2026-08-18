@@ -4,37 +4,76 @@ const config: KnipConfig = {
   compilers: {
     mdx: true,
   },
-  entry: [
-    'src/router.tsx',
-    'src/routes/**/*.{ts,tsx}',
-    'src/functions/**/*.ts',
-    'src/actions/**/*.ts',
-    // Nitro server plugins, registered by path in nitro.config.ts (not imported),
-    // so knip can't reach them through the module graph.
-    'src/server/nitro/**/*.ts',
-    'content/**/*.mdx',
-    'prisma/schema.prisma',
-  ],
-  project: [
-    'src/**/*.{ts,tsx}',
-    'content/**/*.mdx',
-    'prisma/**/*.ts',
-    '*.{ts,tsx}',
-  ],
-  ignore: [
-    'source.config.ts',
-    'src/components/mdx.tsx',
-    'src/components/ui/**',
-  ],
-  ignoreDependencies: ['shadcn', 'tailwindcss', 'tw-animate-css'],
-  vitest: {
-    config: ['vitest.config.ts'],
-    entry: ['src/**/*.{test,spec}.ts'],
+  ignoreIssues: {
+    'packages/frameworks/eleventy/src/index.ts': ['duplicates'],
   },
-  prisma: {
-    config: ['prisma.config.ts'],
-    project: ['prisma/schema.prisma'],
+  workspaces: {
+    'apps/app': {
+      entry: [
+        'src/router.tsx',
+        'src/routes/**/*.{ts,tsx}',
+        'src/functions/**/*.ts',
+        'src/actions/**/*.ts',
+        'src/server/nitro/**/*.ts',
+        'content/**/*.mdx',
+        'scripts/**/*.{mjs,ts}',
+      ],
+      project: ['src/**/*.{ts,tsx}', 'content/**/*.mdx', '*.{ts,tsx}'],
+      ignore: [
+        'source.config.ts',
+        'src/components/mdx.tsx',
+        'src/components/ui/**',
+      ],
+      ignoreDependencies: [
+        '@keenpix/docs',
+        'bullmq',
+        'shadcn',
+        'svgo',
+        'tailwindcss',
+        'tw-animate-css',
+      ],
+    },
+    'apps/custom-domain-edge': {
+      project: ['src/**/*.ts'],
+    },
+    'apps/worker': {
+      project: ['src/**/*.ts'],
+    },
+    'apps/transform': {
+      project: ['src/**/*.ts'],
+    },
+    'apps/docs': {
+      entry: [
+        'src/router.tsx',
+        'src/routes/**/*.{ts,tsx}',
+        'content/**/*.mdx',
+        'source.config.ts',
+      ],
+      project: ['src/**/*.{ts,tsx}', 'content/**/*.mdx', '*.{ts,tsx}'],
+      ignoreDependencies: ['tailwindcss'],
+    },
+    'packages/*': {
+      entry: ['src/index.{ts,tsx}'],
+      project: ['src/**/*.{ts,tsx}'],
+    },
+    'packages/sdk': {
+      entry: ['src/index.ts', 'src/signing.ts'],
+      project: ['src/**/*.ts'],
+    },
+    'packages/frameworks/*': {
+      entry: ['src/index.{ts,tsx}'],
+      project: ['src/**/*.{ts,tsx}'],
+    },
+    'packages/frameworks/astro': {
+      entry: ['src/index.ts', 'src/service.ts'],
+      project: ['src/**/*.ts'],
+    },
+    'packages/frameworks/eleventy': {
+      entry: ['src/index.ts'],
+      project: ['src/**/*.ts'],
+    },
   },
+  ignoreDependencies: ['vitest'],
   exclude: ['types', 'nsTypes'],
 }
 

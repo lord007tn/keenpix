@@ -1,0 +1,61 @@
+{
+  "name": "@keenpix/svelte",
+  "version": "0.1.0",
+  "description": "SSR-safe responsive Keenpix image attributes for Svelte.",
+  "keywords": [
+    "keenpix",
+    "image",
+    "svelte",
+    "responsive-images"
+  ],
+  "homepage": "https://keenpix.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lord007tn/keenpix.git",
+    "directory": "packages/frameworks/svelte"
+  },
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts --dts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "publint": "publint",
+    "pack:check": "pnpm pack --dry-run"
+  },
+  "dependencies": {
+    "@keenpix/core": "workspace:^"
+  },
+  "peerDependencies": {
+    "svelte": ">=4"
+  },
+  "peerDependenciesMeta": {
+    "svelte": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "publint": "^0.3.15",
+    "tsdown": "0.22.3",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@keenpix/analytics",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "clean": "git clean -xdf node_modules"
+  },
+  "dependencies": {
+    "@keenpix/clickhouse": "workspace:*",
+    "@keenpix/database": "workspace:*",
+    "@keenpix/logger": "workspace:*",
+    "cuid": "^3.0.0",
+    "dayjs": "^1.11.20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

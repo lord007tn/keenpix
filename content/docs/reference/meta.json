@@ -1,5 +1,0 @@
-{
-  "title": "API reference",
-  "icon": "Code",
-  "pages": ["endpoint", "parameters", "responses", "sdk-api", "operations"]
-}
