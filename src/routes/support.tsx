@@ -8,7 +8,7 @@ export const Route = createFileRoute('/support')({
     meta: seo({
       title: 'Keenpix support and corrections',
       description:
-        'How to get Keenpix cloud help, report security or delivery issues, and request editorial corrections.',
+        'Get Keenpix cloud support, report image-delivery or security issues with useful diagnostics, and request corrections to technical or comparison content.',
       url: absoluteUrl('/support'),
     }),
   }),

@@ -7,8 +7,9 @@ export const Route = createFileRoute('/legal/terms')({
   head: () => ({
     links: [{ rel: 'canonical', href: absoluteUrl('/legal/terms') }],
     meta: seo({
-      title: 'Terms of Service - Keenpix',
-      description: 'The terms governing your use of the Keenpix cloud service.',
+      title: 'Keenpix Terms of Service | Managed Image CDN',
+      description:
+        'Read the terms governing Keenpix cloud accounts, image delivery, billing, acceptable use, source origins, subscriptions, and service availability.',
       url: absoluteUrl('/legal/terms'),
     }),
   }),

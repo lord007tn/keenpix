@@ -29,7 +29,7 @@ export const Route = createFileRoute('/pricing')({
       links: [{ rel: 'canonical', href: canonicalUrl }],
       meta: [
         ...seo({
-          title: 'Pricing — one honest usage meter - Keenpix',
+          title: 'Image CDN Pricing — $9 for 100 GB | Keenpix',
           description: PRICING_DESCRIPTION,
           url: canonicalUrl,
         }),

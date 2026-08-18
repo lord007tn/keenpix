@@ -1,6 +1,7 @@
 import { bunnyOptimizerComparison } from './data/bunny-optimizer'
 import { cloudflareImagesComparison } from './data/cloudflare-images'
 import { cloudinaryComparison } from './data/cloudinary'
+import { gumletComparison } from './data/gumlet'
 import { imagekitComparison } from './data/imagekit'
 import { imgixComparison } from './data/imgix'
 import { vercelComparison } from './data/vercel'
@@ -35,5 +36,6 @@ export const COMPARISONS: Record<string, ComparisonPageData> = {
   [bunnyOptimizerComparison.slug]: bunnyOptimizerComparison,
   [imgixComparison.slug]: imgixComparison,
   [imagekitComparison.slug]: imagekitComparison,
+  [gumletComparison.slug]: gumletComparison,
   [vercelComparison.slug]: vercelComparison,
 }

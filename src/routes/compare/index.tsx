@@ -1,13 +1,23 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
+import { JsonLd } from '@/components/app/json-ld'
 import { CompareHub } from '@/features/compare/compare-hub'
+import { COMPARISONS } from '@/features/compare/comparison-data'
 import { isCloud } from '@/server/deployment'
-import { absoluteUrl, seo } from '@/shared/seo'
+import { absoluteUrl, comparisonListingJsonLd, seo } from '@/shared/seo'
 
 // Same gating as /about: the page renders everywhere, but the self-host
 // marketing surface is noindex so only the managed cloud ranks for it.
 const compareHubMetaFn = createServerFn({ method: 'GET' }).handler(() => ({
   selfHost: !isCloud(),
+  jsonLd: isCloud()
+    ? comparisonListingJsonLd(
+        Object.values(COMPARISONS).map((comparison) => ({
+          name: `Keenpix vs ${comparison.competitor}`,
+          url: absoluteUrl(`/compare/${comparison.slug}`),
+        })),
+      )
+    : null,
 }))
 
 export const Route = createFileRoute('/compare/')({
@@ -20,7 +30,7 @@ export const Route = createFileRoute('/compare/')({
         ...seo({
           title: 'How Keenpix compares — honest image CDN comparisons',
           description:
-            'Compare Keenpix with Cloudinary, imgix, ImageKit, and Vercel Image Optimization using dated pricing, feature matrices, and best-fit guidance.',
+            'Compare Keenpix with Cloudinary, imgix, ImageKit, Gumlet, Cloudflare, Bunny, and Vercel using dated pricing, feature matrices, and best-fit guidance.',
           url: canonicalUrl,
         }),
         ...(loaderData?.selfHost
@@ -33,5 +43,11 @@ export const Route = createFileRoute('/compare/')({
 })
 
 function CompareHubPage() {
-  return <CompareHub />
+  const { jsonLd } = Route.useLoaderData()
+  return (
+    <>
+      {jsonLd ? <JsonLd data={jsonLd} /> : null}
+      <CompareHub />
+    </>
+  )
 }
