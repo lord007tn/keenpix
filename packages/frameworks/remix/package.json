@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/remix",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Keenpix image loaders for Remix and React Router applications.",
   "type": "module",
   "license": "MIT",

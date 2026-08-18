@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/gatsby",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Keenpix image data for Gatsby's dynamic GatsbyImage component.",
   "type": "module",
   "license": "MIT",

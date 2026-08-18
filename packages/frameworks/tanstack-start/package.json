@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/tanstack-start",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Keenpix image helpers for TanStack Start.",
   "type": "module",
   "license": "MIT",

@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/qwik",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Serializable Keenpix image props and transformers for Qwik.",
   "keywords": [
     "keenpix",
