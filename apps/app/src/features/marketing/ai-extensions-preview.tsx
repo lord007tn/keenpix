@@ -64,7 +64,7 @@ export function AiExtensionsPreview() {
                 <span className="flex size-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
                   <extension.icon className="size-5" />
                 </span>
-                <span className="font-mono text-muted-foreground/60 text-xs">
+                <span className="font-mono text-muted-foreground text-xs">
                   0{index + 1}
                 </span>
               </div>

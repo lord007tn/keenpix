@@ -18,14 +18,20 @@ not loaded on a later visit while consent remains denied.
 
 | Stage | Data-layer event | Trigger | Parameters |
 | --- | --- | --- | --- |
-| Acquisition | `acquisition_landing` | First consented landing in the browser | path, referrer origin, sanitized UTM source/medium/campaign |
-| CTA | `primary_cta_click` | Same-origin link to `/signup` | label, source path |
+| Acquisition | `acquisition_landing` | First consented landing in the browser | path, public content group, referrer origin, sanitized UTM source/medium/campaign |
+| CTA | `primary_cta_click` | Same-origin link to `/signup` | label, source path, public content group |
 | Signup | `sign_up` | Email account creation or new Google account callback | method |
 | Trial | `trial_started` | First observed `trialing` subscription | none |
 | Project | `project_created` | Successful project creation | none |
 | Activation | `first_image_served` | Dashboard first observes at least one request | none |
 | Checkout | `begin_checkout` | Polar returns a checkout URL | plan, billing interval |
 | Paid | `subscription_activated` | First observed active subscription | none |
+
+Public acquisition, page-view, and signup-CTA events carry a deterministic
+`content_group`: `home`, `pricing`, `self_hosted`, `comparison`, `editorial`,
+`documentation`, `trust`, `legal`, `authentication`, `product`, or `other`.
+These values are derived from the sanitized pathname; they contain no query
+string, visitor identity, project name, or image-pipeline content.
 
 Milestones are deduplicated per browser with consented local storage. This is a
 measurement aid, not an authoritative billing ledger. Polar and the Keenpix

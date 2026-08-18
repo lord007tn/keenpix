@@ -1,13 +1,18 @@
 ---
 title: Next.js
-description: Use Keenpix as a custom loader for next/image.
+description: Configure next/image with a Keenpix custom loader, responsive sizes, managed or self-hosted delivery, origin controls, and production validation.
 icon: Triangle
-updated: "2026-08-15"
+updated: "2026-08-18"
 ---
 
 `next/image` lets you swap its optimizer for a custom loader. Point it at Keenpix and keep
 using `<Image>` exactly as before — Next still generates the `srcset`, Keenpix serves
 each width.
+
+**Use this setup when you want image transformation and delivery to remain separate from
+the Next.js server or hosting platform.** Keep the built-in optimizer when it already meets
+your deployment, cache, and cost requirements. A custom image CDN adds another service
+boundary, so the gain must justify the URL migration, cache policy, and failure mode.
 
 ## 1. Add the loader
 
@@ -62,3 +67,81 @@ export default function Hero() {
   `NEXT_PUBLIC_KEENPIX_BASE_URL` and `NEXT_PUBLIC_IMAGE_ORIGIN` in `.env`, plus
   `NEXT_PUBLIC_KEENPIX_PROJECT` on self-hosted deployments.
 </Callout>
+
+## Set `sizes` for responsive layouts
+
+The loader receives each width that Next.js puts into the generated `srcset`. The browser
+still needs an accurate `sizes` value to choose among those candidates. Without it, a
+responsive image can be treated as viewport-wide and download more pixels than its actual
+slot needs.
+
+```jsx
+<Image
+  alt="Canvas backpack in olive green"
+  height={1200}
+  sizes="(max-width: 768px) 100vw, 50vw"
+  src="/products/backpack.jpg"
+  width={1600}
+/>
+```
+
+Keep width candidates aligned with real component breakpoints. More variants are not
+automatically better: they create more cache keys, and adjacent widths that produce almost
+the same byte size add little value.
+
+## Static export and non-Vercel deployments
+
+A custom loader returns ordinary external image URLs, so it also works when Next.js emits a
+static export and no Next.js image-optimization server exists at runtime. Keenpix still has
+to be reachable from the browser, and every relative `src` still needs an absolute
+`NEXT_PUBLIC_IMAGE_ORIGIN`.
+
+For managed delivery, the public project id belongs in the
+`cdn.keenpix.com/p/<project-id>` path. It is routing context, not a secret. For self-hosting,
+the project query parameter selects the project on your own image host. The transform URL
+concepts are similar, but moving between the two paths still requires hostname, cache, and
+configuration planning.
+
+## Protect the source and URL grammar
+
+Keenpix only fetches from hosts in the project's origin allowlist. Start with the narrowest
+set of source hosts your application actually uses and verify that an unapproved host fails.
+The fetcher also blocks private/internal addresses and revalidates redirects, but the
+allowlist remains the first product-level boundary.
+
+Do not put an HMAC signing secret in `keenpix-loader.js`; the loader is browser-facing. If
+your project requires signed transform URLs, sign them on a server you control or route the
+request through a server-side signing endpoint. Signatures are useful when third parties
+could append parameters and create expensive cache misses. They do not stop someone from
+copying and replaying an already valid public image URL.
+
+## Validate the integration before launch
+
+Check the result as a delivery pipeline, not only as a rendered image:
+
+1. Inspect the final `<img>` and confirm `srcset` contains several Keenpix URLs with
+   different `w` values.
+2. Resize the viewport and verify the browser selects a candidate appropriate to the
+   rendered slot.
+3. Check `Content-Type`, `Vary`, and `Cache-Control` on AVIF, WebP, and fallback responses.
+4. Confirm an unapproved source host is rejected.
+5. Compare decoded output and transferred bytes with your own source files and settings.
+6. Test an uncached request, a repeat request, an origin failure, and the rollback path.
+
+`fmt=auto` varies the response by the browser's `Accept` header. Every cache in front of the
+image service must keep those variants separate. If the outer CDN cannot vary safely, use
+explicit AVIF/WebP URLs and provide a fallback through `<picture>` instead.
+
+## Decide on cost and ownership
+
+Next.js and Vercel's built-in image optimization can be the simplest option because there
+is no new provider or URL migration. Keenpix is a better candidate when the team wants one
+image URL grammar across frameworks, a separately measured delivery layer, published
+managed-delivery allowances, or a future self-host path. Neither architecture is
+universally cheaper or faster; model requests, cache reads/writes, delivered bytes, origin
+behavior, and engineering time from your own workload.
+
+- Review the [managed image CDN pricing](/pricing).
+- Compare [Keenpix with Vercel Image Optimization](/compare/vercel-image-optimization-alternative).
+- Read the deeper [Next.js custom-loader production guide](/blog/nextjs-custom-image-cdn-loader).
+- If you own the operations stack, review [self-hosted image CDN deployment](/self-hosted-image-cdn).

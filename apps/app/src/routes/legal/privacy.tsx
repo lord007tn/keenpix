@@ -7,9 +7,9 @@ export const Route = createFileRoute('/legal/privacy')({
   head: () => ({
     links: [{ rel: 'canonical', href: absoluteUrl('/legal/privacy') }],
     meta: seo({
-      title: 'Privacy Policy - Keenpix',
+      title: 'Keenpix Privacy Policy | Image CDN Service',
       description:
-        'How Keenpix collects, uses, and protects personal data in the cloud service.',
+        'Learn how Keenpix collects, uses, protects, and retains account, operational, billing, support, and optional website analytics data in the cloud service.',
       url: absoluteUrl('/legal/privacy'),
     }),
   }),

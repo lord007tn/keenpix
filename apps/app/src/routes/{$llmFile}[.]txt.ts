@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { llms } from 'fumadocs-core/source'
+import { COMPARISONS } from '@/features/compare/comparison-data'
 import { getAppUrl, isCloud } from '@/server/deployment'
 import { blogSource, listBlogPosts } from '@/shared/blog-source'
 import { source } from '@/shared/docs-source'
@@ -66,13 +67,42 @@ export const Route = createFileRoute('/{$llmFile}.txt')({
 
 function llmsIndex() {
   const baseUrl = getAppUrl()
+  const comparisonList = Object.values(COMPARISONS)
+    .map(
+      (comparison) =>
+        `- [Keenpix vs ${comparison.competitor}](${baseUrl}/compare/${comparison.slug}): ${comparison.metaDescription}`,
+    )
+    .join('\n')
   const blogList = listBlogPosts()
     .map(
       (post) => `- [${post.title}](${baseUrl}${post.url}): ${post.description}`,
     )
     .join('\n')
 
-  return `${generator.index()}
+  return `# Keenpix product, documentation, and research
+
+> Official public sources for Keenpix, a developer-focused image optimization CDN available as managed cloud or an AGPL-3.0 self-hosted engine.
+
+## Product and plans
+
+- [Keenpix image CDN](${baseUrl}/): product scope, delivery model, security controls, analytics, and deployment paths.
+- [Image CDN pricing](${baseUrl}/pricing): current managed plan allowances, overage rates, trial terms, and billing boundary.
+- [Self-hosted image CDN](${baseUrl}/self-hosted-image-cdn): Docker deployment, architecture, operational responsibilities, limitations, and alternatives.
+- [Comparison hub](${baseUrl}/compare): dated, source-backed vendor comparisons and best-fit guidance.
+
+${generator.index()}
+
+## Comparisons
+
+${comparisonList}
+
+## Trust and methodology
+
+- [About Keenpix](${baseUrl}/about): company, founder, product principles, and public profiles.
+- [Security and data handling](${baseUrl}/security): origin controls, signed URLs, infrastructure boundaries, and claim limits.
+- [Comparison methodology](${baseUrl}/methodology/comparisons): source order, pricing assumptions, disclosures, review cadence, and corrections.
+- [Support and corrections](${baseUrl}/support): reporting product issues and requesting factual corrections.
+- [Service status guidance](${baseUrl}/status): current health checks, incident communication, and status limitations.
 
 ## Blog
 
@@ -86,6 +116,18 @@ ${blogList}
 
 async function llmsFull() {
   const baseUrl = getAppUrl()
+  const comparisonSections = Object.values(COMPARISONS).map((comparison) =>
+    [
+      `## Keenpix vs ${comparison.competitor}`,
+      '',
+      `Source: ${baseUrl}/compare/${comparison.slug}`,
+      '',
+      comparison.verdict,
+      '',
+      `Facts verified: ${comparison.verifiedAt}; next review: ${comparison.nextReviewAt}.`,
+      '',
+    ].join('\n'),
+  )
   const docsSections = await Promise.all(
     source.getPages().map(async (page) => {
       const body = await processedMarkdown(page.data)
@@ -131,16 +173,24 @@ async function llmsFull() {
   )
 
   return [
-    '# Keenpix documentation',
+    '# Keenpix product, documentation, and research',
     '',
-    'Complete documentation for Keenpix, an image optimization CDN available as managed cloud or a self-hosted open-source engine.',
+    'Official public sources for Keenpix, an image optimization CDN available as managed cloud or an AGPL-3.0 self-hosted engine.',
+    '',
+    `Product: ${baseUrl}/`,
+    `Pricing and plan terms: ${baseUrl}/pricing`,
+    `Self-hosting: ${baseUrl}/self-hosted-image-cdn`,
+    `Comparison methodology: ${baseUrl}/methodology/comparisons`,
     '',
     ...docsSections,
     '# Keenpix blog',
     '',
-    'Guides and honest comparisons (Cloudinary, imgix, ImageKit) from the Keenpix team.',
+    'Implementation guides, category education, and source-backed vendor comparisons from the Keenpix team.',
     '',
     ...blogSections,
+    '# Keenpix comparisons',
+    '',
+    ...comparisonSections,
     '# Frequently asked questions',
     '',
     ...faqSections,

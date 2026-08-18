@@ -5,7 +5,7 @@ export const imgixComparison = {
   competitor: 'imgix',
   title: 'imgix Alternative: Keenpix vs imgix (2026)',
   metaDescription:
-    "Compare Keenpix and imgix after imgix's 2025 credit switch: one managed-delivery meter, published rates, an AGPL self-host option, and a URL param migration map.",
+    "Compare Keenpix and imgix after imgix's 2025 credit switch: one delivery meter, published rates, an AGPL self-host option, and a URL migration map.",
   heroHeadline: 'Keenpix vs imgix: a predictable image CDN alternative',
   heroSubhead:
     'Keenpix bills optimized bytes delivered through managed cloud — no credits, management meter, request fees, or seat charges. Published v0.2.1 is AGPL-3.0 and can be self-hosted without a Keenpix license fee, or used as a managed service from $9/month.',
