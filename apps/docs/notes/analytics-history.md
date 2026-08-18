@@ -56,11 +56,10 @@ The canonical cloud URL is
 extracts the project id from that path, forwards the transform to Keenpix's
 existing `/img/*` origin route, and adds a secret-authenticated project header.
 The origin still owns project lookup, entitlement, allowlist, and optional URL
-signature validation. In v0.2, legacy first-party `/img/*?project=<project-id>`
-requests received a permanent redirect to the canonical project path. v0.3
-returns `410 Gone` with the canonical replacement in a `Link` header. Customer custom
-domains continue to use `/img/*` and resolve the project from their verified
-hostname without a public project parameter.
+signature validation. In v0.3, public managed delivery is accepted only on the
+canonical project path at the edge hostname. Customer custom domains continue
+to use `/img/*` and resolve the project from their verified hostname without a
+public project parameter.
 
 The Worker:
 

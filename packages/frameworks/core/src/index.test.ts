@@ -37,14 +37,14 @@ describe('buildImageUrl', () => {
     )
   })
 
-  it('upgrades the retired managed app origin to canonical delivery', () => {
-    expect(
+  it('rejects the application hostname as a managed delivery base', () => {
+    expect(() =>
       buildImageUrl(
         { baseUrl: 'https://keenpix.com', projectId: 'project_1' },
         'https://cdn.example.com/hero.jpg',
       ),
-    ).toBe(
-      'https://cdn.keenpix.com/p/project_1/img/https%3A%2F%2Fcdn.example.com%2Fhero.jpg',
+    ).toThrow(
+      'Managed Keenpix delivery requires createManagedKeenpixConfig(projectId).',
     )
   })
 

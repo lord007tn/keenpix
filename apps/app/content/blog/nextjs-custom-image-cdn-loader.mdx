@@ -48,8 +48,7 @@ export default function keenpixLoader({ src, width, quality }) {
 }
 ```
 
-For managed Keenpix, put the project id in the canonical delivery path. The old
-`keenpix.com/img/...?...project=` shape redirected in v0.2 and is rejected in v0.3:
+For managed Keenpix, put the project id in the canonical delivery path:
 
 ```dotenv
 NEXT_PUBLIC_KEENPIX_BASE_URL=https://cdn.keenpix.com/p/your-project-id

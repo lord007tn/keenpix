@@ -10,9 +10,8 @@ const images = createKeenpix(createManagedKeenpixConfig('project-id'))
 images.url('https://cdn.example.com/hero.jpg', { width: 1200 })
 ```
 
-Managed URLs use `https://cdn.keenpix.com/p/<project>/img/<encoded-source>` and
-never emit the retired `keenpix.com/img?...project=` form. For self-hosting,
-pass your own `baseUrl` and `projectId` instead.
+Managed URLs use `https://cdn.keenpix.com/p/<project>/img/<encoded-source>`.
+For self-hosting, pass your own `baseUrl` and `projectId` instead.
 
 All framework adapters inherit automatic responsive Client Hint modes:
 

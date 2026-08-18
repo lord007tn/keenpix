@@ -15,7 +15,6 @@ import { cacheControl } from '@/lib/cache/cache'
 import { getAppUrl, isCloud } from '@/server/deployment'
 
 const LEADING_SLASHES_RE = /^\/+/
-const CLOUD_DELIVERY_ORIGIN = 'https://cdn.keenpix.com'
 
 // HTTP boundary for the transform API. Routes handle URL shape here, then the
 // action layer owns project lookup, origin safety, transforms, cache, and logs.
@@ -83,34 +82,9 @@ export async function handleTransformRequest(
         : `www.${appHostname}`,
     ])
     if (firstPartyHostnames.has(requestHostname)) {
-      projectId = searchParams.get('project') ?? undefined
-      if (!projectId) {
-        return new Response('Missing ?project or verified custom domain', {
-          status: 400,
-        })
-      }
-
-      // v0.2 redirected this legacy first-party shape. v0.3 removes it so new
-      // integrations cannot silently depend on an extra request hop. The
-      // canonical replacement stays machine-readable in the Link header and
-      // human-readable in the response body. Trusted Worker requests bypass
-      // this branch and continue to execute the transform at the origin.
-      const canonicalUrl = new URL(CLOUD_DELIVERY_ORIGIN)
-      canonicalUrl.pathname = `/p/${encodeURIComponent(projectId)}${requestUrl.pathname}`
-      canonicalUrl.search = requestUrl.search
-      canonicalUrl.searchParams.delete('project')
-      return new Response(
-        `Legacy managed delivery URLs were removed in Keenpix v0.3. Use ${canonicalUrl}.`,
-        {
-          status: 410,
-          headers: {
-            'cache-control': 'public, max-age=86400',
-            'content-type': 'text/plain; charset=utf-8',
-            deprecation: 'true',
-            link: `<${canonicalUrl}>; rel="successor-version"`,
-          },
-        },
-      )
+      // Public managed delivery terminates at the edge hostname. Only a
+      // secret-authenticated edge request may reach the app's origin route.
+      return new Response('Not found', { status: 404 })
     }
 
     projectId = (await resolveCustomDomainProject(requestHostname)) ?? undefined
@@ -120,7 +94,7 @@ export async function handleTransformRequest(
         status: 400,
       })
     }
-    // Custom domains identify their project by hostname. Do not let a legacy
+    // Custom domains identify their project by hostname. Do not let a public
     // query value affect cache keys, signatures, transforms, or attribution.
     searchParams.delete('project')
   } else {

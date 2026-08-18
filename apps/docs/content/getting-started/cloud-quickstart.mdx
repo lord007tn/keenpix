@@ -44,7 +44,7 @@ A request is just a URL — prefix your image with the cloud endpoint:
 
 Encode the complete source URL with `encodeURIComponent(source)` before appending it
 after `/img/`. This preserves `https://`, query parameters, and fragments as one source
-value. The old `keenpix.com/img?...project=` endpoint was retired in v0.3.
+value. Managed delivery is available only through the canonical CDN hostname.
 
 Use `fmt=auto` to negotiate AVIF/WebP/JPEG from each browser's `Accept` header instead
 of pinning a format. The first request is a cache **MISS** (Keenpix fetches + transforms

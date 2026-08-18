@@ -26,7 +26,9 @@ const config: KnipConfig = {
       ],
       ignoreDependencies: [
         '@keenpix/docs',
+        'bullmq',
         'shadcn',
+        'svgo',
         'tailwindcss',
         'tw-animate-css',
       ],

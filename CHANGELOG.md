@@ -15,9 +15,8 @@ All notable changes to Keenpix are documented here.
 ### Changed
 
 - Managed framework helpers, SDK configuration, onboarding, and docs now emit
-  only `cdn.keenpix.com/p/<project>/img/<encoded-source>` URLs. v0.3 returns
-  `410 Gone` for the retired first-party `keenpix.com/img?...project=` shape and
-  includes the canonical replacement in a `Link` header.
+  only `cdn.keenpix.com/p/<project>/img/<encoded-source>` URLs. Public managed
+  delivery is no longer accepted from the application hostname.
 - New checkout and every public pricing fallback now expose only standard
   $9/$29/$69 monthly plans; historical founding products remain auditable but
   unlisted until allocation can be made race-safe.

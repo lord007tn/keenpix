@@ -1,78 +1,97 @@
 # Releasing Keenpix
 
-Keenpix publishes a GitHub release and GHCR Docker images from a semantic-version tag.
-This is the maintainer checklist for cutting one.
+Keenpix v0.3 ships four deployable services, a GitHub release, and a family of
+public npm packages. Docker publishing is always manual; pull requests, pushes,
+and tag creation never build or publish container images automatically.
 
-## Managed-cloud production gate
+## 1. Prepare the release pull request
 
-Production Coolify currently tracks `master` and has no GitHub webhook. A push to
-`master` runs CI and publishes the `master`/`latest` GHCR tags, but it does not
-redeploy keenpix.com. Run `pnpm health`, browser smoke tests, SEO drift, and the
-cloud integration checklist; then manually deploy the reviewed `master` commit
-to the `keenpix` Coolify application and record its deployment id and rollback
-evidence. Production uses `docker-compose.production.yml`.
+- Merge current `master` into the release branch. Resolve moved files at their
+  monorepo paths and confirm `git merge-base --is-ancestor master HEAD` succeeds.
+- Run `pnpm install --frozen-lockfile --config.minimumReleaseAge=0`.
+- Run `pnpm health`.
+- Validate every Compose preset with the required environment variables.
+- Build all four Dockerfiles locally without pushing:
+  - `apps/app/Dockerfile`
+  - `apps/transform/Dockerfile`
+  - `apps/worker/Dockerfile`
+  - `apps/docs/Dockerfile`
+- Boot the self-host Compose stack with locally built images and verify
+  migrations, seed, health endpoints, sign-in, one transform miss, and the
+  following cache hit.
+- Run the managed URL gate documented in
+  `apps/docs/notes/releases/v0.3-legacy-managed-url-removal.md`.
+- Keep the pull request ready for review, with CI green and deployment evidence
+  attached. Do not leave the release pull request in draft state.
 
-The public v0.2.0 release record remains in `docs/releases/v0.2.0.md`.
+## 2. Version the release
 
-## 1. Pre-flight (on `master`, clean tree)
+The deployable apps use the product version, while public SDK/framework
+packages are versioned through Changesets.
 
-- [ ] `git switch master && git pull`
-- [ ] `pnpm install` (lockfile up to date)
-- [ ] `pnpm health` — lint, typecheck, test, knip, doctor, and build must all pass. CI
-      runs the same gate on every push.
+- Set the versions of `@keenpix/app`, `@keenpix/transform-app`,
+  `@keenpix/worker`, `@keenpix/docs`, and `@keenpix/custom-domain-edge` to the
+  release version.
+- Run `pnpm changeset status` and confirm every public package change has an
+  intentional changeset.
+- Keep `CHANGELOG.md` and the release note under `apps/docs/notes/releases/`
+  aligned with the shipped behavior.
+- Commit the version changes as `chore(release): vX.Y.Z`.
 
-## 2. Version
+After the release pull request is merged, the Packages workflow uses Changesets
+to open or update the package-version pull request. Merging that generated pull
+request publishes the public `@keenpix/*` packages to npm. Confirm the repository
+has a valid `NPM_TOKEN` before merging it.
 
-- [ ] Bump `version` in `package.json` to the new `MAJOR.MINOR.PATCH`.
-- [ ] Commit: `chore(release): vX.Y.Z`.
+## 3. Tag and publish the GitHub release
 
-Release notes are generated automatically by
-[changelogithub](https://github.com/antfu/changelogithub) from the Conventional Commit
-messages since the previous tag. Keep `CHANGELOG.md` and the release-specific notes under
-`docs/releases/` aligned with material product and operational changes. Write commits as
-`feat: …`, `fix: …`, etc.; anything that doesn't match a recognized type is left out of
-the generated notes, so granular, well-typed commits make the best release.
+On an up-to-date, clean `master`:
 
-## 3. Tag and push
+```bash
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
 
-- [ ] `git tag vX.Y.Z`
-- [ ] `git push origin master --tags`
+The tag triggers `.github/workflows/release.yml`, which validates semver and
+publishes the GitHub release notes. It does not build Docker images.
 
-The tag must be a valid semver (`v0.1.0`, `v0.1.0-rc.1`); both workflows reject anything
-else.
+## 4. Build and publish Docker images manually
 
-## 4. What CI does automatically
+In GitHub Actions, open the **Docker** workflow, choose **Run workflow**, and
+select the `vX.Y.Z` tag as the ref. Enable **Publish the built images to GHCR**;
+the manual matrix publishes:
 
-| Workflow | Trigger | Result |
-| --- | --- | --- |
-| [`release.yml`](.github/workflows/release.yml) | tag `v*` | Runs `pnpm release:notes` (changelogithub) to generate notes from Conventional Commits since the previous tag and publish the GitHub release. |
-| [`docker.yml`](.github/workflows/docker.yml) | tag `v*` | Builds and pushes `ghcr.io/lord007tn/keenpix:vX.Y.Z` and `:vX.Y`. |
-| [`docker.yml`](.github/workflows/docker.yml) | push to `master` | Builds and pushes `:latest` (and `:master`). |
+- `ghcr.io/lord007tn/keenpix-app:vX.Y.Z` and `:vX.Y`
+- `ghcr.io/lord007tn/keenpix-transform:vX.Y.Z` and `:vX.Y`
+- `ghcr.io/lord007tn/keenpix-worker:vX.Y.Z` and `:vX.Y`
+- `ghcr.io/lord007tn/keenpix-docs:vX.Y.Z` and `:vX.Y`
 
-`latest` follows the `master` branch, not the tag. Pin a specific `vX.Y.Z` (or a digest)
-in production via `KEENPIX_IMAGE`.
+Run the same workflow manually on `master` only when the reviewed default branch
+should update the `master` and `latest` tags. Never add `push` or `pull_request`
+Docker build triggers. Leave the publish input disabled for a build-only
+verification run.
 
 ## 5. Post-release verification
 
-Pull the published image and confirm the deploy path works end to end:
+- Pin all four `KEENPIX_*_IMAGE` variables to the same `vX.Y.Z` release.
+- Boot against a fresh Postgres database and confirm the app logs show database
+  migrations followed by bootstrap seed.
+- Confirm:
+  - app `/api/health` is healthy;
+  - transform `/health/ready` is healthy;
+  - worker `/health/ready` is healthy;
+  - docs `/health` is healthy;
+  - the seeded super admin can sign in;
+  - an allowlisted transform returns `MISS` and then `HIT`;
+  - the canonical managed CDN path works through the edge;
+  - the application hostname does not expose public managed delivery.
+- Record image digests, deployment id, rollback target, and screenshots or a
+  short recording for user-visible changes in the release pull request.
 
-- [ ] `docker pull ghcr.io/lord007tn/keenpix:vX.Y.Z`
-- [ ] Boot it against a fresh Postgres, e.g.
-      `KEENPIX_IMAGE=ghcr.io/lord007tn/keenpix:vX.Y.Z docker compose up -d`.
-- [ ] **Migrations + seed ran:** `docker compose logs app` shows
-      `Applying database migrations` then `Seeding bootstrap data`. The entrypoint runs
-      `prisma migrate deploy` and `prisma db seed` unless `KEENPIX_RUN_MIGRATIONS` /
-      `KEENPIX_RUN_SEED` are `false`.
-- [ ] **Health route:** `curl -fsS http://localhost:3000/api/health` returns
-      `{"ok":true,…}` with `checks.database.ok` true. Compose also gates the container on
-      this endpoint.
-- [ ] **Sign-in:** log in as `KEENPIX_SUPER_ADMIN_EMAIL`.
-- [ ] **Transform:** request an allowlisted `/img/…` URL — expect `200`, a `MISS` on the
-      first request and a `HIT` on the second.
+## Rollback
 
-## Notes
-
-- A pre-release tag (`vX.Y.Z-rc.1`) builds and publishes `:vX.Y.Z` / `:vX.Y` the same way.
-  It does not move `:latest`, which only tracks `master`.
-- `package.json` `version` should match the tag you push. Keep release-worthy changes in
-  Conventional Commits so changelogithub can categorize them.
+Roll back all four service image variables to the previously verified release as
+one unit. Do not mix app, transform, worker, and docs versions unless a release
+note explicitly documents compatibility. Preserve the database and cache
+volumes, verify the previous schema is still supported, redeploy, and repeat the
+health and transform checks.
