@@ -1,10 +1,11 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
+import { JsonLd } from '@/components/app/json-ld'
 import { COMPARISONS } from '@/features/compare/comparison-data'
 import { ComparisonPage } from '@/features/compare/comparison-page'
 import { isCloud } from '@/server/deployment'
-import { absoluteUrl, seo } from '@/shared/seo'
+import { absoluteUrl, comparisonPageJsonLd, seo } from '@/shared/seo'
 
 // The comparison content itself is a static module shared by server and
 // client; the server fn only contributes what the client can't know — the
@@ -18,7 +19,24 @@ const compareMetaFn = createServerFn({ method: 'GET' })
       throw notFound()
     }
     const selfHost = !isCloud()
+    const canonicalUrl = absoluteUrl(`/compare/${comparison.slug}`)
     return {
+      jsonLd: selfHost
+        ? null
+        : comparisonPageJsonLd({
+            dateModified: comparison.verifiedAt,
+            description: comparison.metaDescription,
+            name: comparison.title,
+            path: [
+              { name: 'Keenpix', url: absoluteUrl('/') },
+              { name: 'Compare', url: absoluteUrl('/compare') },
+              {
+                name: `Keenpix vs ${comparison.competitor}`,
+                url: canonicalUrl,
+              },
+            ],
+            url: canonicalUrl,
+          }),
       slug,
       selfHost,
     }
@@ -55,10 +73,15 @@ export const Route = createFileRoute('/compare/$slug')({
 })
 
 function Compare() {
-  const { slug } = Route.useLoaderData()
+  const { jsonLd, slug } = Route.useLoaderData()
   const comparison = COMPARISONS[slug]
   if (!comparison) {
     return null
   }
-  return <ComparisonPage comparison={comparison} />
+  return (
+    <>
+      {jsonLd ? <JsonLd data={jsonLd} /> : null}
+      <ComparisonPage comparison={comparison} />
+    </>
+  )
 }

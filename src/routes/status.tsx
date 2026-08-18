@@ -6,9 +6,9 @@ export const Route = createFileRoute('/status')({
   head: () => ({
     links: [{ rel: 'canonical', href: absoluteUrl('/status') }],
     meta: seo({
-      title: 'Keenpix cloud service status',
+      title: 'Keenpix Image CDN Service Status',
       description:
-        'Current Keenpix cloud health guidance, incident reporting, and the limits of point-in-time health checks.',
+        'Check current Keenpix cloud health guidance, incident-reporting channels, operational dependencies, and the limits of point-in-time service checks.',
       url: absoluteUrl('/status'),
     }),
   }),

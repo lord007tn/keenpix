@@ -12,6 +12,44 @@ const ANALYTICS_CONSENT_EVENT = 'keenpix:analytics-consent'
 
 export type AnalyticsConsent = 'granted' | 'denied'
 
+export function getPublicContentGroup(pathname: string) {
+  if (pathname === '/') {
+    return 'home'
+  }
+  if (pathname === '/pricing') {
+    return 'pricing'
+  }
+  if (pathname === '/self-hosted-image-cdn') {
+    return 'self_hosted'
+  }
+  if (pathname.startsWith('/compare')) {
+    return 'comparison'
+  }
+  if (pathname.startsWith('/blog')) {
+    return 'editorial'
+  }
+  if (pathname.startsWith('/docs')) {
+    return 'documentation'
+  }
+  if (pathname === '/about' || pathname === '/security') {
+    return 'trust'
+  }
+  if (pathname.startsWith('/legal')) {
+    return 'legal'
+  }
+  if (
+    pathname === '/login' ||
+    pathname === '/signup' ||
+    pathname === '/forgot-password'
+  ) {
+    return 'authentication'
+  }
+  if (pathname.startsWith('/app')) {
+    return 'product'
+  }
+  return 'other'
+}
+
 function pushGoogleConsent(
   command: 'default' | 'update',
   consent: AnalyticsConsent,
@@ -169,6 +207,7 @@ function trackAcquisitionContext() {
     }
   }
   trackFunnelMilestone('acquisition_landing', {
+    content_group: getPublicContentGroup(window.location.pathname),
     landing_path: window.location.pathname,
     referrer_origin: referrerOrigin,
     utm_source: search.get('utm_source')?.slice(0, 100),

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   blogListingJsonLd,
   blogPostingJsonLd,
+  comparisonListingJsonLd,
+  comparisonPageJsonLd,
   docsJsonLd,
   homePageJsonLd,
   organizationJsonLd,
@@ -63,9 +65,42 @@ describe('SEO entity graphs', () => {
     })
 
     expect(article.inLanguage).toBe('ar')
-    expect(blogListingJsonLd([], 'ar').url).toBe(
-      'http://localhost:3000/blog/ar',
-    )
+    const listing = blogListingJsonLd([], 'ar')
+    expect(listing.url).toBe('http://localhost:3000/blog/ar')
+    expect(listing['@id']).toBe('http://localhost:3000/blog/ar#blog')
+  })
+
+  it('builds a sourced comparison graph without FAQ rich-result markup', () => {
+    const graph = comparisonPageJsonLd({
+      dateModified: '2026-08-18',
+      description: 'A source-backed product comparison.',
+      name: 'Keenpix vs Example',
+      path: [
+        { name: 'Keenpix', url: 'http://localhost:3000/' },
+        { name: 'Compare', url: 'http://localhost:3000/compare' },
+      ],
+      url: 'http://localhost:3000/compare/example-alternative',
+    })
+
+    expect(graph[0]).toMatchObject({
+      '@type': 'WebPage',
+      dateModified: '2026-08-18',
+      url: 'http://localhost:3000/compare/example-alternative',
+    })
+    expect(JSON.stringify(graph)).not.toContain('FAQPage')
+  })
+
+  it('lists every comparison as a CollectionPage item', () => {
+    const graph = comparisonListingJsonLd([
+      {
+        name: 'Keenpix vs Example',
+        url: 'http://localhost:3000/compare/example-alternative',
+      },
+    ])
+    const list = graph.find((node) => node['@type'] === 'ItemList')
+
+    expect(graph[0]).toMatchObject({ '@type': 'CollectionPage' })
+    expect(list).toMatchObject({ numberOfItems: 1 })
   })
 
   it('publishes the real social-image MIME type after removing version queries', () => {

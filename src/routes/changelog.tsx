@@ -19,7 +19,7 @@ export const Route = createFileRoute('/changelog')({
       links: [{ rel: 'canonical', href: canonicalUrl }],
       meta: [
         ...seo({
-          title: 'Changelog - Keenpix',
+          title: 'Keenpix Image CDN Product Changelog',
           description:
             'Every notable Keenpix release — new features, changes, and fixes for the image optimization engine and managed cloud, straight from the changelog.',
           url: canonicalUrl,
