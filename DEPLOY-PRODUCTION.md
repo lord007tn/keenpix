@@ -1,11 +1,15 @@
 # Deploying Keenpix production on Coolify
 
 **This compose file runs the production keenpix.com deployment** (Coolify
-application `keenpix` under the **Raed** project, built from `master` with
-manual redeploys). The application has no GitHub webhook: pushing `master` does
-not deploy production. The stack includes the app, Postgres, ClickHouse, an
-S3-compatible cache, Mailpit (used only as a non-production email sink), the
-hourly usage cron, and a daily Postgres backup job.
+application `keenpix` under the **Raed** project, deployed manually from
+`master`). The app is built locally because its public URL and analytics IDs are
+browser build-time configuration. Transform, worker, and docs pull the released
+GHCR images selected by `KEENPIX_RUNTIME_IMAGE_TAG` instead of rebuilding the
+monorepo three more times on the production host. The application has no GitHub
+webhook: pushing `master` does not deploy production. The stack includes the
+app, Postgres, ClickHouse, an S3-compatible cache, Mailpit (used only as a
+non-production email sink), the hourly usage cron, and a daily Postgres backup
+job.
 
 ## Coolify resource
 
@@ -21,6 +25,12 @@ hourly usage cron, and a daily Postgres backup job.
 After a reviewed change reaches `master`, manually redeploy that exact commit in
 Coolify and record the deployment id. The repository's GitHub Actions run on
 `ubuntu-latest`; no Blacksmith runner is configured.
+
+Set `KEENPIX_RUNTIME_IMAGE_TAG` to the matching published release tag (for
+example, `v0.3.0`) before deploying a release. The three runtime images are
+published only by the manual Docker workflow; pull and manifest verification
+must pass before production is updated. The default is `v0.3.0` for the first
+monorepo release.
 
 Coolify's Docker Compose docs say to route non-80 app ports by assigning the
 domain to the service with the container port. This compose file uses
