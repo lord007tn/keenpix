@@ -9,7 +9,7 @@ export const Route = createFileRoute('/legal/dpa')({
     meta: seo({
       title: 'Data Processing Addendum - Keenpix',
       description:
-        'The data processing terms under which Keenpix processes personal data on your behalf.',
+        'Review the data-processing terms, controller and processor roles, security measures, subprocessors, transfers, and deletion duties for Keenpix cloud.',
       url: absoluteUrl('/legal/dpa'),
     }),
   }),

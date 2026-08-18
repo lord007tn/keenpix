@@ -8,7 +8,7 @@ export const Route = createFileRoute('/security')({
     meta: seo({
       title: 'Keenpix security and data handling',
       description:
-        'Keenpix security controls, data handling, deployment boundaries, and claims the product does not make.',
+        'Review Keenpix security controls, origin allowlists, signed URLs, data handling, deployment boundaries, and the claims the image CDN does not make.',
       url: absoluteUrl('/security'),
     }),
   }),

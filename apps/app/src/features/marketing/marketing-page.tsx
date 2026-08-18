@@ -250,7 +250,7 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
                 from one URL — with one honest, published price. No pooled
                 credits, no per-transform or per-seat pricing, and one proper
                 managed-delivery meter from edge to client. Or self-host the
-                whole thing, free.
+                AGPL engine with no Keenpix license fee.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
@@ -273,6 +273,9 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
                   Self-host
                 </a>
               </div>
+              <p className="mt-3 text-white/60 text-xs">
+                14-day trial · card required · trial usage is never billed
+              </p>
               <p className="mt-5 text-sm text-white/60">
                 JoodCMS includes a first-party Keenpix image-delivery
                 integration —{' '}
@@ -346,6 +349,10 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
                       </span>
                       <span className="text-white">480 KB · 77% smaller</span>
                     </div>
+                    <p className="mt-2 text-[11px] text-white/60 leading-relaxed">
+                      Illustrative example; output varies by source, dimensions,
+                      format, quality, and encoder settings.
+                    </p>
                   </div>
                 </div>
               </div>

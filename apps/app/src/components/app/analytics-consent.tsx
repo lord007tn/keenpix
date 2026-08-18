@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { clientEnv } from '@/env/client'
 import {
   getAnalyticsConsent,
+  getPublicContentGroup,
   loadGoogleAnalytics,
   setAnalyticsConsent,
   trackEvent,
@@ -60,6 +61,7 @@ export function AnalyticsConsent() {
       pagePath = '/admin/customers/:organization'
     }
     trackEvent('page_view', {
+      content_group: getPublicContentGroup(pagePath),
       page_location: `${window.location.origin}${pagePath}`,
       page_path: pagePath,
       page_title: document.title,
@@ -82,6 +84,7 @@ export function AnalyticsConsent() {
       const url = new URL(link.href, window.location.origin)
       if (url.origin === window.location.origin && url.pathname === '/signup') {
         trackEvent('primary_cta_click', {
+          content_group: getPublicContentGroup(window.location.pathname),
           cta_label: link.textContent?.trim().slice(0, 80),
           source_path: window.location.pathname,
         })
@@ -103,16 +106,14 @@ export function AnalyticsConsent() {
   return (
     <aside
       aria-label="Analytics privacy choices"
-      className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-h-[min(32rem,calc(100svh-1.5rem))] max-w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-y-auto overscroll-contain rounded-lg border bg-background p-4 shadow-lg sm:max-w-2xl sm:flex-row sm:items-center"
+      className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-h-[min(24rem,calc(100svh-1.5rem))] max-w-[calc(100vw-1.5rem)] flex-col gap-2 overflow-y-auto overscroll-contain rounded-lg border bg-background p-3 shadow-lg sm:max-w-2xl sm:flex-row sm:items-center"
     >
-      <p className="min-w-0 flex-1 break-words text-muted-foreground text-sm leading-relaxed">
-        Keenpix uses optional Google Analytics cookies to understand which pages
-        lead to signups and successful setup. We do not use advertising cookies
-        or send account, image, or project data. Cloudflare's separate,
-        cookie-free performance measurement does not depend on this choice. See
-        our{' '}
+      <p className="min-w-0 flex-1 break-words text-muted-foreground text-xs leading-relaxed sm:text-sm">
+        Optional analytics helps us understand which pages lead to successful
+        setup. We use no advertising cookies and send no account, image, or
+        project data. See our{' '}
         <a
-          className="inline-flex min-h-12 items-center rounded-sm text-foreground underline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+          className="inline-flex min-h-11 items-center rounded-sm text-foreground underline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
           href="/legal/privacy"
         >
           privacy policy
@@ -121,7 +122,7 @@ export function AnalyticsConsent() {
       </p>
       <div className="flex w-full shrink-0 flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
         <Button
-          className="min-h-12 flex-1 touch-manipulation sm:flex-none"
+          className="min-h-11 flex-1 touch-manipulation sm:flex-none"
           onClick={() => {
             setAnalyticsConsent('denied')
             setTrackingEnabled(false)
@@ -132,7 +133,7 @@ export function AnalyticsConsent() {
           Decline
         </Button>
         <Button
-          className="min-h-12 flex-1 touch-manipulation sm:flex-none"
+          className="min-h-11 flex-1 touch-manipulation sm:flex-none"
           onClick={() => {
             setAnalyticsConsent('granted')
             setTrackingEnabled(true)
