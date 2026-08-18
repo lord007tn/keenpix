@@ -15,6 +15,11 @@ const config = defineConfig({
   server: {
     port: 3000,
   },
+  ssr: {
+    // These dependencies load package-relative runtime assets or CommonJS
+    // entrypoints that cannot be relocated into Nitro's ESM chunks.
+    external: ['bullmq', 'svgo'],
+  },
   plugins: [
     mdx(),
     devtools(),

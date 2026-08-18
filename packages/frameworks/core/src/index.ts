@@ -107,11 +107,12 @@ export function buildImageUrl(
 ) {
   const configuredBaseUrl = config.baseUrl.replace(TRAILING_SLASHES, '')
   const configuredHostname = new URL(configuredBaseUrl).hostname.toLowerCase()
-  const managedFirstParty = [
-    'cdn.keenpix.com',
-    'keenpix.com',
-    'www.keenpix.com',
-  ].includes(configuredHostname)
+  if (['keenpix.com', 'www.keenpix.com'].includes(configuredHostname)) {
+    throw new Error(
+      'Managed Keenpix delivery requires createManagedKeenpixConfig(projectId).',
+    )
+  }
+  const managedFirstParty = configuredHostname === 'cdn.keenpix.com'
   const baseUrl = managedFirstParty
     ? MANAGED_DELIVERY_ORIGIN
     : configuredBaseUrl

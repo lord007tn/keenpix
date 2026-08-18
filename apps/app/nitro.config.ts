@@ -42,6 +42,10 @@ export default defineNitroConfig({
   },
   rollupConfig: {
     external: [
+      // BullMQ's ESM Postgres loader references CommonJS globals. Loading the
+      // package through Node preserves its CJS entrypoint; bundling it into the
+      // Nitro ESM chunk makes the app crash before it can serve health checks.
+      'bullmq',
       'undici',
       'svgo',
       'css-tree',

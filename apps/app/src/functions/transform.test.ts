@@ -35,7 +35,7 @@ describe('transform request routing', () => {
     })
   })
 
-  it('retires a legacy cloud URL with its canonical replacement', async () => {
+  it('does not expose managed delivery from the app hostname', async () => {
     const response = await handleTransformRequest(
       new Request(
         `https://keenpix.com/img/${encodedSource}?project=project_123&w=800&sig=signed`,
@@ -43,18 +43,14 @@ describe('transform request routing', () => {
       encodedSource,
     )
 
-    const canonical = `https://cdn.keenpix.com/p/project_123/img/${encodedSource}?w=800&sig=signed`
-    expect(response.status).toBe(410)
-    expect(response.headers.get('deprecation')).toBe('true')
-    expect(response.headers.get('link')).toBe(
-      `<${canonical}>; rel="successor-version"`,
-    )
-    await expect(response.text()).resolves.toContain(canonical)
+    expect(response.status).toBe(404)
+    expect(response.headers.has('deprecation')).toBe(false)
+    expect(response.headers.has('link')).toBe(false)
     expect(optimizeProjectImage).not.toHaveBeenCalled()
     expect(resolveCustomDomainProject).not.toHaveBeenCalled()
   })
 
-  it('retires the first-party www legacy hostname with the same replacement', async () => {
+  it('does not expose managed delivery from the www app hostname', async () => {
     const response = await handleTransformRequest(
       new Request(
         `https://www.keenpix.com/img/${encodedSource}?project=project_123&w=800`,
@@ -62,10 +58,8 @@ describe('transform request routing', () => {
       encodedSource,
     )
 
-    expect(response.status).toBe(410)
-    expect(response.headers.get('link')).toBe(
-      `<https://cdn.keenpix.com/p/project_123/img/${encodedSource}?w=800>; rel="successor-version"`,
-    )
+    expect(response.status).toBe(404)
+    expect(response.headers.has('link')).toBe(false)
   })
 
   it('serves a trusted first-party Worker request without redirecting', async () => {
