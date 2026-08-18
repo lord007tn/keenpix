@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/app",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "The Keenpix TanStack application, API, transform runtime, and background workflows.",
   "type": "module",
