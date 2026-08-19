@@ -5,8 +5,19 @@ import { fileURLToPath } from 'node:url'
 
 const semanticVersionPattern =
   /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
-const changelogVersionHeadingPattern = /^## \d+\.\d+\.\d+/m
+const disallowedReleaseNoteReferencePattern = /\bchangelog\b/i
+const releaseNotePlaceholderPattern = /\{\{[^}]+\}\}/
+const releaseNotePackageHeadingPattern = /^### `(@keenpix\/[a-z0-9-]+)`$/gm
+const releaseNoteRequiredSections = [
+  '## Highlights',
+  '## Platform',
+  '## Public packages',
+  '## Published components',
+  '## Upgrade notes',
+  '## Contributors',
+]
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
+const releaseNotesDirectory = join(repositoryRoot, '.github', 'release-notes')
 const platformPackagePaths = [
   'apps/app/package.json',
   'apps/custom-domain-edge/package.json',
@@ -147,73 +158,122 @@ const publishPackages = async (version) => {
   }
 }
 
-const getChangelogEntry = ({ directory, manifest }, version) => {
-  const changelogPath = join(directory, 'CHANGELOG.md')
-
-  if (!existsSync(changelogPath)) {
-    return `- ${manifest.description ?? `Released ${manifest.name}.`}\n- Aligned with the unified Keenpix v${version} line.`
-  }
-
-  const changelog = readFileSync(changelogPath, 'utf8')
-  const exactHeading = `## ${version}`
-  let start = changelog.indexOf(exactHeading)
-
-  if (start < 0) {
-    start = changelog.search(changelogVersionHeadingPattern)
-  }
-
-  if (start < 0) {
-    return `- ${manifest.description ?? `Released ${manifest.name}.`}\n- Aligned with the unified Keenpix v${version} line.`
-  }
-
-  const contentStart = changelog.indexOf('\n', start) + 1
-  const nextHeading = changelog
-    .slice(contentStart)
-    .search(changelogVersionHeadingPattern)
-  const content = changelog
-    .slice(
-      contentStart,
-      nextHeading < 0 ? undefined : contentStart + nextHeading,
-    )
-    .trim()
-    .replace(/^### /gm, '#### ')
-
-  return (
-    content ||
-    `- ${manifest.description ?? `Released ${manifest.name}.`}\n- Aligned with the unified Keenpix v${version} line.`
-  )
-}
-
 const buildReleaseNotes = (version) => {
-  const sections = [
-    `# Keenpix v${version}`,
-    '',
-    `The platform, Docker images, SDK, and framework packages share this version and the single \`v${version}\` repository tag.`,
-    '',
-    '## Platform',
-  ]
+  const tag = `v${version}`
+  const releaseNotesPath = join(releaseNotesDirectory, `${tag}.md`)
 
-  for (const packageEntry of platformPackages) {
-    sections.push(
-      '',
-      `### ${packageEntry.manifest.name}`,
-      '',
-      getChangelogEntry(packageEntry, version),
+  if (!existsSync(releaseNotesPath)) {
+    throw new Error(
+      `Create .github/release-notes/${tag}.md before publishing ${tag}.`,
     )
   }
 
-  sections.push('', '## Public packages')
+  const source = readFileSync(releaseNotesPath, 'utf8')
 
-  for (const packageEntry of getOrderedPublicPackages()) {
-    sections.push(
-      '',
-      `### ${packageEntry.manifest.name}`,
-      '',
-      getChangelogEntry(packageEntry, version),
+  if (!source.startsWith(`# Keenpix ${tag}\n`)) {
+    throw new Error(`Release notes must start with "# Keenpix ${tag}".`)
+  }
+
+  for (const heading of releaseNoteRequiredSections) {
+    if (!source.includes(`\n${heading}\n`)) {
+      throw new Error(`Release notes are missing the "${heading}" section.`)
+    }
+  }
+
+  if (disallowedReleaseNoteReferencePattern.test(source)) {
+    throw new Error('Release notes must be self-contained.')
+  }
+
+  const documentedPackages = [
+    ...source.matchAll(releaseNotePackageHeadingPattern),
+  ].map((match) => match[1])
+  const releasePackageNames = releasePackages.map(
+    ({ manifest }) => manifest.name,
+  )
+  const unknownPackages = documentedPackages.filter(
+    (name) => !releasePackageNames.includes(name),
+  )
+  const duplicatePackages = documentedPackages.filter(
+    (name, index) => documentedPackages.indexOf(name) !== index,
+  )
+
+  if (documentedPackages.length === 0) {
+    throw new Error(
+      'Release notes must document at least one changed component.',
     )
   }
 
-  return `${sections.join('\n')}\n`
+  if (unknownPackages.length > 0) {
+    throw new Error(
+      `Release notes contain unknown components: ${unknownPackages.join(', ')}.`,
+    )
+  }
+
+  if (duplicatePackages.length > 0) {
+    throw new Error(
+      `Release notes repeat component sections for: ${[...new Set(duplicatePackages)].join(', ')}.`,
+    )
+  }
+
+  const tagResult = spawnSync(
+    'git',
+    ['rev-parse', '--verify', '--quiet', `refs/tags/${tag}`],
+    {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+    },
+  )
+  const previousTagResult = spawnSync(
+    'git',
+    [
+      'describe',
+      '--tags',
+      '--match',
+      'v[0-9]*',
+      '--abbrev=0',
+      tagResult.status === 0 ? `${tag}^` : 'HEAD',
+    ],
+    {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+    },
+  )
+
+  if (previousTagResult.status !== 0) {
+    throw new Error(`Could not determine the repository tag before ${tag}.`)
+  }
+
+  const previousTag = previousTagResult.stdout.trim()
+  const repository = process.env.GITHUB_REPOSITORY ?? 'lord007tn/keenpix'
+  const versionMatrix = [
+    '| Component | Kind | Version |',
+    '| --- | --- | --- |',
+    ...platformPackages.map(
+      ({ manifest }) => `| \`${manifest.name}\` | Platform | \`${version}\` |`,
+    ),
+    ...getOrderedPublicPackages().map(
+      ({ manifest }) =>
+        `| \`${manifest.name}\` | Public package | \`${version}\` |`,
+    ),
+  ].join('\n')
+  const replacements = {
+    '{{compare_url}}': `https://github.com/${repository}/compare/${previousTag}...${tag}`,
+    '{{previous_tag}}': previousTag,
+    '{{tag}}': tag,
+    '{{version}}': version,
+    '{{version_matrix}}': versionMatrix,
+  }
+  let notes = source
+
+  for (const [placeholder, value] of Object.entries(replacements)) {
+    notes = notes.replaceAll(placeholder, value)
+  }
+
+  if (releaseNotePlaceholderPattern.test(notes)) {
+    throw new Error('Release notes contain an unsupported placeholder.')
+  }
+
+  return `${notes.trim()}\n`
 }
 
 const command = process.argv[2]

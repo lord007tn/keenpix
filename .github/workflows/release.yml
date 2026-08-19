@@ -27,7 +27,7 @@ jobs:
             exit 1
           fi
 
-      # changelogithub derives the previous tag from history, so fetch everything.
+      # Release notes resolve the previous repository tag for the full-diff link.
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
@@ -54,14 +54,14 @@ jobs:
       - name: Verify unified release version
         run: pnpm release:verify "${GITHUB_REF_NAME}"
 
+      - name: Validate and build structured release notes
+        run: pnpm --silent release:notes "${GITHUB_REF_NAME}" > "${RUNNER_TEMP}/release-notes.md"
+
       - name: Publish public packages
         run: pnpm release:packages "${GITHUB_REF_NAME}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_IGNORE_SCRIPTS: "true"
-
-      - name: Build grouped release notes
-        run: pnpm --silent release:notes "${GITHUB_REF_NAME}" > "${RUNNER_TEMP}/release-notes.md"
 
       - name: Publish one GitHub release
         run: |
