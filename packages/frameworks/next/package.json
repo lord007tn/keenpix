@@ -2,6 +2,12 @@
   "name": "@keenpix/next",
   "version": "0.2.0",
   "description": "Keenpix loader and image helpers for Next.js.",
+  "homepage": "https://keenpix.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lord007tn/keenpix.git",
+    "directory": "packages/frameworks/next"
+  },
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
