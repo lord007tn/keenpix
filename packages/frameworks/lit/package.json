@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/lit",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "description": "Keenpix image primitives for Lit.",
   "homepage": "https://keenpix.com",
   "repository": {

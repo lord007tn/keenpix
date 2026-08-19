@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/vite",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "description": "Keenpix configuration and virtual-module plugin for Vite.",
   "keywords": [
     "keenpix",
