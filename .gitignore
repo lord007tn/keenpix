@@ -24,6 +24,11 @@ todos.json
 playwright-report
 test-results
 dogfood-output
+output/*
+!output/playwright/
+output/playwright/*
+!output/playwright/seo-pr/
+!output/playwright/seo-pr/**
 *.log
 .claude/launch.json
 body*.txt
