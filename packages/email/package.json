@@ -17,7 +17,8 @@
     "clean": "git clean -xdf dist node_modules"
   },
   "dependencies": {
-    "nodemailer": "^8.0.10"
+    "nodemailer": "^8.0.10",
+    "resend": "6.20.0"
   },
   "devDependencies": {
     "@types/node": "^22.19.15",

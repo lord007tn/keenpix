@@ -12,3 +12,11 @@ trustPolicyExclude:
   - undici-types@6.21.0
   - reselect@5.1.1
   - semver@6.3.1
+  # Already present in the lockfile; these exact releases shipped with provenance
+  # attestation only instead of the earlier trusted-publisher evidence.
+  - "@effect/platform-node-shared@4.0.0-beta.70"
+  - effect@4.0.0-beta.70
+  # Resend stopped publishing provenance attestations after 6.18.0.
+  - resend@6.20.0
+minimumReleaseAgeExclude:
+  - resend
