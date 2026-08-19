@@ -141,8 +141,8 @@ const publishPackages = async (version) => {
 
     console.log(`Publishing ${name}@${version}.`)
     const result = spawnSync(
-      process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
-      ['publish', '--access', 'public', '--no-git-checks', '--provenance'],
+      process.platform === 'win32' ? 'npm.cmd' : 'npm',
+      ['publish', '--access', 'public'],
       {
         cwd: packageEntry.directory,
         env: process.env,
