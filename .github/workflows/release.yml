@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -37,13 +38,37 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
+          registry-url: https://registry.npmjs.org
 
-      # Generates the GitHub release notes from conventional commits since the
-      # previous tag and publishes the release for this tag.
-      - name: Publish release notes
-        run: pnpm release:notes
+      - run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0
+
+      - run: pnpm db:generate
+
+      - run: pnpm health
+
+      - run: pnpm release:check
+
+      - name: Verify unified release version
+        run: pnpm release:verify "${GITHUB_REF_NAME}"
+
+      - name: Publish public packages
+        run: pnpm release:packages "${GITHUB_REF_NAME}"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_IGNORE_SCRIPTS: "true"
+
+      - name: Build grouped release notes
+        run: pnpm --silent release:notes "${GITHUB_REF_NAME}" > "${RUNNER_TEMP}/release-notes.md"
+
+      - name: Publish one GitHub release
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release edit "${GITHUB_REF_NAME}" --title "Keenpix ${GITHUB_REF_NAME}" --notes-file "${RUNNER_TEMP}/release-notes.md"
+          else
+            gh release create "${GITHUB_REF_NAME}" --verify-tag --title "Keenpix ${GITHUB_REF_NAME}" --notes-file "${RUNNER_TEMP}/release-notes.md"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

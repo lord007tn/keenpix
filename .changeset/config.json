@@ -4,6 +4,11 @@
   "commit": false,
   "fixed": [
     [
+      "@keenpix/app",
+      "@keenpix/custom-domain-edge",
+      "@keenpix/docs",
+      "@keenpix/transform-app",
+      "@keenpix/worker",
       "@keenpix/angular",
       "@keenpix/analog",
       "@keenpix/astro",
@@ -32,11 +37,16 @@
       "@keenpix/vite",
       "@keenpix/vitepress",
       "@keenpix/vue",
-      "@keenpix/waku"
+      "@keenpix/waku",
+      "@keenpix/sdk"
     ]
   ],
   "access": "public",
   "baseBranch": "master",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": [],
+  "privatePackages": {
+    "version": true,
+    "tag": false
+  }
 }
