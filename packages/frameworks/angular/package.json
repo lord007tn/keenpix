@@ -2,6 +2,12 @@
   "name": "@keenpix/angular",
   "version": "0.2.0",
   "description": "Keenpix image loader for Angular NgOptimizedImage.",
+  "homepage": "https://keenpix.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lord007tn/keenpix.git",
+    "directory": "packages/frameworks/angular"
+  },
   "type": "module",
   "license": "MIT",
   "sideEffects": false,

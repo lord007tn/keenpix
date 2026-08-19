@@ -2,6 +2,12 @@
   "name": "@keenpix/remix",
   "version": "0.2.0",
   "description": "Keenpix image loaders for Remix and React Router applications.",
+  "homepage": "https://keenpix.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lord007tn/keenpix.git",
+    "directory": "packages/frameworks/remix"
+  },
   "type": "module",
   "license": "MIT",
   "sideEffects": false,

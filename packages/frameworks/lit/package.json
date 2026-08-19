@@ -2,6 +2,12 @@
   "name": "@keenpix/lit",
   "version": "0.2.0",
   "description": "Keenpix image primitives for Lit.",
+  "homepage": "https://keenpix.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lord007tn/keenpix.git",
+    "directory": "packages/frameworks/lit"
+  },
   "type": "module",
   "license": "MIT",
   "sideEffects": false,

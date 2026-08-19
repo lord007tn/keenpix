@@ -2,6 +2,12 @@
   "name": "@keenpix/docusaurus",
   "version": "0.2.0",
   "description": "Keenpix image primitives for Docusaurus.",
+  "homepage": "https://keenpix.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lord007tn/keenpix.git",
+    "directory": "packages/frameworks/docusaurus"
+  },
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
