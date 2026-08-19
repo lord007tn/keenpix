@@ -2,6 +2,12 @@
   "name": "@keenpix/react-native",
   "version": "0.2.0",
   "description": "Keenpix image sources for React Native.",
+  "homepage": "https://keenpix.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lord007tn/keenpix.git",
+    "directory": "packages/frameworks/react-native"
+  },
   "type": "module",
   "license": "MIT",
   "sideEffects": false,

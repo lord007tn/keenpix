@@ -2,6 +2,12 @@
   "name": "@keenpix/ember",
   "version": "0.2.0",
   "description": "Keenpix image primitives for Ember.",
+  "homepage": "https://keenpix.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lord007tn/keenpix.git",
+    "directory": "packages/frameworks/ember"
+  },
   "type": "module",
   "license": "MIT",
   "sideEffects": false,

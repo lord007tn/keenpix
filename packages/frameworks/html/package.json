@@ -2,6 +2,12 @@
   "name": "@keenpix/html",
   "version": "0.2.0",
   "description": "Keenpix responsive HTML image helpers.",
+  "homepage": "https://keenpix.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lord007tn/keenpix.git",
+    "directory": "packages/frameworks/html"
+  },
   "type": "module",
   "license": "MIT",
   "sideEffects": false,

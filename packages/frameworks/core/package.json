@@ -2,6 +2,12 @@
   "name": "@keenpix/core",
   "version": "0.2.0",
   "description": "Framework-agnostic Keenpix image URL, loader, and responsive image primitives.",
+  "homepage": "https://keenpix.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lord007tn/keenpix.git",
+    "directory": "packages/frameworks/core"
+  },
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
