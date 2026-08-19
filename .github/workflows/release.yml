@@ -43,6 +43,9 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
           registry-url: https://registry.npmjs.org
 
+      - name: Set up npm trusted publishing
+        run: npm install --global npm@11.19.0
+
       - run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0
 
       - run: pnpm db:generate
@@ -60,7 +63,6 @@ jobs:
       - name: Publish public packages
         run: pnpm release:packages "${GITHUB_REF_NAME}"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_IGNORE_SCRIPTS: "true"
 
       - name: Publish one GitHub release
