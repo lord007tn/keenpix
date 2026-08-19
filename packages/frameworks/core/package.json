@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/core",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "description": "Framework-agnostic Keenpix image URL, loader, and responsive image primitives.",
   "homepage": "https://keenpix.com",
   "repository": {

@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/sveltekit",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "description": "Isomorphic Keenpix image attributes and loaders for SvelteKit.",
   "keywords": [
     "keenpix",

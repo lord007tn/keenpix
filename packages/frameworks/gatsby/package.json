@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/gatsby",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "description": "Keenpix image data for Gatsby's dynamic GatsbyImage component.",
   "homepage": "https://keenpix.com",
   "repository": {

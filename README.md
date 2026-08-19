@@ -394,13 +394,13 @@ Failure modes:
 
 ## Releases and Docker Images
 
-Keenpix application releases use semantic version tags (`vMAJOR.MINOR.PATCH`, e.g. `v0.3.0`). Before tagging, add a matching section to [CHANGELOG.md](./CHANGELOG.md) and align the five private app/edge package versions. Pushing the tag creates the GitHub release through [release.yml](./.github/workflows/release.yml). Docker builds and publishing are intentionally manual-only: run [docker.yml](./.github/workflows/docker.yml) on the reviewed tag and explicitly enable its publish input to push all four GHCR images as `vX.Y.Z` and `vX.Y`.
+Keenpix releases use one semantic version tag (`vMAJOR.MINOR.PATCH`, e.g. `v0.3.1`) for the platform, Docker images, SDK, and every public framework package. Before tagging, add a matching section to [CHANGELOG.md](./CHANGELOG.md) and align the five private app/edge package versions plus the public package versions. Pushing the tag validates and publishes the public packages, then creates one GitHub Release with notes grouped by component through [release.yml](./.github/workflows/release.yml). Package-specific tags and GitHub Releases are not used. Docker builds and publishing remain intentionally manual-only: run [docker.yml](./.github/workflows/docker.yml) on the reviewed tag and explicitly enable its publish input to push all four GHCR images as `vX.Y.Z` and `vX.Y`.
 
 Public `@keenpix/*` integration packages use Changesets and are released independently from the application image. Run `pnpm changeset` for a package-facing change. The package family is versioned together so adapters cannot drift away from the shared core contract.
 
 ```bash
-git tag v0.3.0
-git push origin v0.3.0
+git tag v0.3.1
+git push origin v0.3.1
 ```
 
 See [RELEASE.md](./RELEASE.md) for the full maintainer checklist. Compose defaults to the `keenpix-app`, `keenpix-transform`, `keenpix-worker`, and `keenpix-docs` GHCR images; pin all four to the same tag or digest.

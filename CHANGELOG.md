@@ -2,6 +2,23 @@
 
 All notable changes to Keenpix are documented here.
 
+## [v0.3.1] - 2026-08-19
+
+### Changed
+
+- Unified the platform apps, SDK, and framework packages on one release version
+  and one repository tag.
+- Package publication now runs only from a reviewed `vMAJOR.MINOR.PATCH` tag.
+- GitHub publishes one release whose notes are grouped by platform component and
+  public package instead of creating a release for every package.
+
+### Fixed
+
+- Added deterministic, idempotent npm publishing without package-specific Git
+  tags.
+- Added repository metadata required for npm provenance across every public
+  package.
+
 ## [v0.3.0] - 2026-08-18
 
 ### Added

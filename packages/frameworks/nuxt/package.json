@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/nuxt",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "description": "Keenpix custom provider for Nuxt Image.",
   "keywords": [
     "keenpix",
