@@ -4,6 +4,7 @@ import { MarketingPage } from '@/features/marketing/marketing-page'
 import { SelfHostHome } from '@/features/marketing/self-host-home'
 import { getPublicConfigFn } from '@/functions/config'
 import { getPlanPricingFn } from '@/functions/pricing'
+import { getPublicStatsFn } from '@/functions/public-stats'
 import { absoluteUrl, SITE_DESCRIPTION, SITE_TITLE, seo } from '@/shared/seo'
 
 export const Route = createFileRoute('/')({
@@ -11,8 +12,13 @@ export const Route = createFileRoute('/')({
     const config = await getPublicConfigFn()
     // Marketing (and its live pricing) is cloud-only; skip the Polar-backed
     // pricing call entirely in self-host.
-    const pricing = config.cloud ? await getPlanPricingFn() : null
-    return { config, pricing }
+    const [pricing, publicStats] = config.cloud
+      ? await Promise.all([
+          getPlanPricingFn(),
+          getPublicStatsFn().catch(() => null),
+        ])
+      : [null, null]
+    return { config, pricing, publicStats }
   },
   head: ({ loaderData }) => {
     if (!loaderData?.config.cloud) {
@@ -53,14 +59,17 @@ export const Route = createFileRoute('/')({
 })
 
 function Home() {
-  const { config, pricing } = Route.useLoaderData()
+  const { config, pricing, publicStats } = Route.useLoaderData()
   if (!config.cloud) {
     return <SelfHostHome />
   }
   return (
     <>
       {config.jsonLd ? <JsonLd data={config.jsonLd} /> : null}
-      <MarketingPage pricing={pricing} />
+      <MarketingPage
+        deliveredImages={publicStats?.deliveredImages ?? null}
+        pricing={pricing}
+      />
     </>
   )
 }
