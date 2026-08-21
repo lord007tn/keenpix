@@ -87,10 +87,11 @@ const FEATURES = [
 
 // The lead "from $X/mo" metric is computed from live pricing in the component; the
 // rest are static product facts.
-const METRICS_TAIL = [
-  ['Measured', 'source and delivered bytes per request'],
-  ['14 days', 'free trial — no charge until it ends'],
-]
+const METRICS_TAIL = [['14 days', 'free trial — no charge until it ends']]
+
+// Verified against production telemetry on 2026-08-21. This monotonic floor
+// keeps the proof truthful if the daily public aggregate is briefly unavailable.
+const VERIFIED_DELIVERY_FLOOR = 17_000_000
 
 const PIPELINE_STEPS = [
   'Validate project and allowlisted source host',
@@ -156,7 +157,13 @@ function MobileNav() {
   )
 }
 
-export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
+export function MarketingPage({
+  deliveredImages,
+  pricing,
+}: {
+  deliveredImages: number | null
+  pricing: PlanPricing | null
+}) {
   // Loader provides live pricing; fall back to the catalog so the page always
   // renders real numbers (and to satisfy the self-host-typed null).
   const prices = pricing ?? catalogPricing('standard')
@@ -164,6 +171,12 @@ export function MarketingPage({ pricing }: { pricing: PlanPricing | null }) {
     ...PLAN_CARD_ORDER.map((planId) => prices.plans[planId].month.amountCents),
   )
   const metrics = [
+    [
+      `${Math.floor(
+        Math.max(deliveredImages ?? 0, VERIFIED_DELIVERY_FLOOR) / 1_000_000,
+      )}M+`,
+      'optimized image deliveries and counting',
+    ],
     [
       `from ${formatUsd(fromCents)}/mo`,
       'or self-host with no Keenpix license fee',

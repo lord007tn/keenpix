@@ -52,6 +52,27 @@ export async function deliveredBytesSince(
   }
 }
 
+// Public proof uses the same once-only managed-delivery definition as billing:
+// successful application responses plus successful edge offloads. The
+// application rollup's cached/optimized columns are incremented only for 2xx
+// responses, while edge rows need an explicit status guard.
+export async function getPlatformSuccessfulDeliveryCount() {
+  const [application, edge] = await Promise.all([
+    prisma.analyticsRollupHourly.aggregate({
+      _sum: { cachedRequests: true, optimizedRequests: true },
+    }),
+    prisma.projectEdgeRollupHourly.aggregate({
+      where: { stage: 'edge', status: { gte: 200, lt: 300 } },
+      _sum: { requests: true },
+    }),
+  ])
+  return (
+    (application._sum.cachedRequests ?? 0) +
+    (application._sum.optimizedRequests ?? 0) +
+    (edge._sum.requests ?? 0)
+  )
+}
+
 // Period usage for the billing panel: delivered bytes since the period start,
 // plus every resource count that a plan limits. Pending, unexpired invitations
 // reserve seats so the displayed number matches invitation enforcement.
