@@ -17,6 +17,17 @@ icon: HeartPulse
 
 Use liveness to restart a stuck process. Use readiness to decide whether it should receive traffic.
 
+The transform and worker probes are service-local operator endpoints on ports
+`3002` and `3001`. The bundled Compose files keep both ports on the private
+network, so `/health/live` and `/health/ready` on the public app or delivery
+hostname are expected to return `404`. Run the probes inside their containers:
+
+```bash
+docker compose exec transform curl --fail --silent http://127.0.0.1:3002/health/live
+docker compose exec transform curl --fail --silent http://127.0.0.1:3002/health/ready
+docker compose exec worker node -e "fetch('http://127.0.0.1:3001/health/ready').then(r => { if (!r.ok) process.exit(1) })"
+```
+
 ## Workbench
 
 Workbench is hosted by `apps/worker` and shows queue state, jobs, retries, and failures. It uses HTTP basic auth from `KEENPIX_WORKBENCH_USERNAME` and `KEENPIX_WORKBENCH_PASSWORD`. Coolify generates credentials automatically.

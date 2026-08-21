@@ -22,6 +22,8 @@ icon: Boxes
 | Docs | `/health` | `/health` |
 
 Liveness answers “is the process running?” Readiness also probes required dependencies and should control load-balancer admission.
+Transform and worker probes are private, service-local endpoints. The public app
+and delivery hostnames do not proxy `/health/*`; a `404` there is expected.
 
 ## Transform request ownership
 
