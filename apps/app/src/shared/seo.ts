@@ -125,7 +125,9 @@ export function noIndexPageHead(title: string, description: string) {
 
 export function absoluteUrl(path = '/') {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  return `${getAppUrl()}${normalizedPath}`
+  const origin =
+    typeof window === 'undefined' ? getAppUrl() : window.location.origin
+  return `${origin}${normalizedPath}`
 }
 
 // Stable @id anchors so the Organization, WebSite, and SoftwareApplication
