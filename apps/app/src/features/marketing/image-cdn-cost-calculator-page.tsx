@@ -69,7 +69,7 @@ export function ImageCdnCostCalculatorPage({
       <SiteHeader />
       <main id="main-content">
         <section className="border-b bg-muted/30">
-          <div className="mx-auto grid max-w-7xl gap-2 px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div className="mx-auto grid max-w-7xl gap-2 px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:py-2">
             <div>
               <Badge className="hidden sm:inline-flex" variant="secondary">
                 Source-dated cost model
