@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { COMPARISONS } from './comparison-data'
 
 const comparisonIntentPattern = /alternative|vs/
-const earliestCurrentVerificationDate = '2026-08-05'
+const earliestCurrentVerificationDate = '2026-08-22'
 
 describe('comparison data', () => {
   it('publishes the intended evidence-led competitor set', () => {
@@ -12,6 +12,7 @@ describe('comparison data', () => {
         'cloudflare-images-alternative',
         'bunny-optimizer-alternative',
         'imgix-alternative',
+        'imgproxy-alternative',
         'imagekit-alternative',
         'gumlet-alternative',
         'vercel-image-optimization-alternative',

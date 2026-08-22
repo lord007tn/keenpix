@@ -18,6 +18,8 @@ import { Route as SecurityRouteImport } from './routes/security'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as OpenapiDotjsonRouteImport } from './routes/openapi[.]json'
+import { Route as ImageCdnPricingDotjsonRouteImport } from './routes/image-cdn-pricing[.]json'
+import { Route as ImageCdnCostCalculatorRouteImport } from './routes/image-cdn-cost-calculator'
 import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as ChangelogRouteImport } from './routes/changelog'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
@@ -117,6 +119,16 @@ const PricingRoute = PricingRouteImport.update({
 const OpenapiDotjsonRoute = OpenapiDotjsonRouteImport.update({
   id: '/openapi.json',
   path: '/openapi.json',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImageCdnPricingDotjsonRoute = ImageCdnPricingDotjsonRouteImport.update({
+  id: '/image-cdn-pricing.json',
+  path: '/image-cdn-pricing.json',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImageCdnCostCalculatorRoute = ImageCdnCostCalculatorRouteImport.update({
+  id: '/image-cdn-cost-calculator',
+  path: '/image-cdn-cost-calculator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DevelopersRoute = DevelopersRouteImport.update({
@@ -402,6 +414,8 @@ export interface FileRoutesByFullPath {
   '/accept-invite': typeof AcceptInviteRoute
   '/changelog': typeof ChangelogRoute
   '/developers': typeof DevelopersRoute
+  '/image-cdn-cost-calculator': typeof ImageCdnCostCalculatorRoute
+  '/image-cdn-pricing.json': typeof ImageCdnPricingDotjsonRoute
   '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -465,6 +479,8 @@ export interface FileRoutesByTo {
   '/accept-invite': typeof AcceptInviteRoute
   '/changelog': typeof ChangelogRoute
   '/developers': typeof DevelopersRoute
+  '/image-cdn-cost-calculator': typeof ImageCdnCostCalculatorRoute
+  '/image-cdn-pricing.json': typeof ImageCdnPricingDotjsonRoute
   '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -531,6 +547,8 @@ export interface FileRoutesById {
   '/accept-invite': typeof AcceptInviteRoute
   '/changelog': typeof ChangelogRoute
   '/developers': typeof DevelopersRoute
+  '/image-cdn-cost-calculator': typeof ImageCdnCostCalculatorRoute
+  '/image-cdn-pricing.json': typeof ImageCdnPricingDotjsonRoute
   '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -598,6 +616,8 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/changelog'
     | '/developers'
+    | '/image-cdn-cost-calculator'
+    | '/image-cdn-pricing.json'
     | '/openapi.json'
     | '/pricing'
     | '/robots.txt'
@@ -661,6 +681,8 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/changelog'
     | '/developers'
+    | '/image-cdn-cost-calculator'
+    | '/image-cdn-pricing.json'
     | '/openapi.json'
     | '/pricing'
     | '/robots.txt'
@@ -726,6 +748,8 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/changelog'
     | '/developers'
+    | '/image-cdn-cost-calculator'
+    | '/image-cdn-pricing.json'
     | '/openapi.json'
     | '/pricing'
     | '/robots.txt'
@@ -792,6 +816,8 @@ export interface RootRouteChildren {
   AcceptInviteRoute: typeof AcceptInviteRoute
   ChangelogRoute: typeof ChangelogRoute
   DevelopersRoute: typeof DevelopersRoute
+  ImageCdnCostCalculatorRoute: typeof ImageCdnCostCalculatorRoute
+  ImageCdnPricingDotjsonRoute: typeof ImageCdnPricingDotjsonRoute
   OpenapiDotjsonRoute: typeof OpenapiDotjsonRoute
   PricingRoute: typeof PricingRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -897,6 +923,20 @@ declare module '@tanstack/react-router' {
       path: '/openapi.json'
       fullPath: '/openapi.json'
       preLoaderRoute: typeof OpenapiDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/image-cdn-pricing.json': {
+      id: '/image-cdn-pricing.json'
+      path: '/image-cdn-pricing.json'
+      fullPath: '/image-cdn-pricing.json'
+      preLoaderRoute: typeof ImageCdnPricingDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/image-cdn-cost-calculator': {
+      id: '/image-cdn-cost-calculator'
+      path: '/image-cdn-cost-calculator'
+      fullPath: '/image-cdn-cost-calculator'
+      preLoaderRoute: typeof ImageCdnCostCalculatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/developers': {
@@ -1340,6 +1380,8 @@ const rootRouteChildren: RootRouteChildren = {
   AcceptInviteRoute: AcceptInviteRoute,
   ChangelogRoute: ChangelogRoute,
   DevelopersRoute: DevelopersRoute,
+  ImageCdnCostCalculatorRoute: ImageCdnCostCalculatorRoute,
+  ImageCdnPricingDotjsonRoute: ImageCdnPricingDotjsonRoute,
   OpenapiDotjsonRoute: OpenapiDotjsonRoute,
   PricingRoute: PricingRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,

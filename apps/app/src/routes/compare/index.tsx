@@ -30,7 +30,7 @@ export const Route = createFileRoute('/compare/')({
         ...seo({
           title: 'How Keenpix compares — honest image CDN comparisons',
           description:
-            'Compare Keenpix with Cloudinary, imgix, ImageKit, Gumlet, Cloudflare, Bunny, and Vercel using dated pricing, feature matrices, and best-fit guidance.',
+            'Compare Keenpix with Cloudinary, imgix, imgproxy, ImageKit, Gumlet, Cloudflare, Bunny, and Vercel using dated pricing and best-fit guidance.',
           url: canonicalUrl,
         }),
         ...(loaderData?.selfHost

@@ -196,6 +196,6 @@ export const imgixComparison = {
   ],
   pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
-  verifiedAt: '2026-08-05',
+  verifiedAt: '2026-08-22',
   nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData
