@@ -34,35 +34,35 @@ export function ImageCdnCostCalculatorPage({
   const [inputs, setInputs] = useState(() => initialInputs)
   const [copied, setCopied] = useState(false)
   const results = calculateImageCdnCosts(inputs)
-  const comparisonRows = results
-    .map((result) => {
-      const costRange =
-        'monthlyHigh' in result
-          ? {
-              chartValue: result.monthlyHigh,
-              monthlyHigh: result.monthlyHigh,
-            }
-          : { chartValue: result.monthly, monthlyHigh: null }
-      return {
-        ...result,
-        ...costRange,
-        vendor: IMAGE_CDN_PRICING.vendors.find(
-          (vendor) => vendor.id === result.id,
-        ),
-      }
-    })
-    .sort(
-      (left, right) =>
-        (left.monthly ?? Number.POSITIVE_INFINITY) -
-        (right.monthly ?? Number.POSITIVE_INFINITY),
-    )
+  const comparisonRows = results.map((result) => {
+    const costRange =
+      'monthlyHigh' in result
+        ? {
+            chartValue: result.monthlyHigh,
+            monthlyHigh: result.monthlyHigh,
+          }
+        : { chartValue: result.monthly, monthlyHigh: null }
+    return {
+      ...result,
+      ...costRange,
+      vendor: IMAGE_CDN_PRICING.vendors.find(
+        (vendor) => vendor.id === result.id,
+      ),
+    }
+  })
   const chartMaximum = Math.max(
     1,
     ...comparisonRows.map((result) => result.chartValue ?? 0),
   )
-  const lowestComparable = comparisonRows.find(
-    (result) => result.status === 'comparable' && result.monthly !== null,
-  )
+  const lowestComparable = comparisonRows
+    .filter(
+      (result) => result.status === 'comparable' && result.monthly !== null,
+    )
+    .sort(
+      (left, right) =>
+        (left.monthly ?? Number.POSITIVE_INFINITY) -
+        (right.monthly ?? Number.POSITIVE_INFINITY),
+    )[0]
 
   return (
     <div className="min-h-svh bg-background">
@@ -281,7 +281,7 @@ export function ImageCdnCostCalculatorPage({
                       All ten providers, one view
                     </h2>
                     <p className="mt-1 text-muted-foreground text-xs sm:text-sm">
-                      Ranked by published estimate. Longer bars cost more.
+                      Fixed editorial order. Bars scale to this scenario.
                     </p>
                   </div>
                 </div>
@@ -311,23 +311,45 @@ export function ImageCdnCostCalculatorPage({
               >
                 {comparisonRows.map((result) => {
                   let monthlyLabel = 'Quote'
+                  let coverageLabel = 'Quote required'
+                  let coverageClassName = 'font-medium'
+                  let priceStatus = 'quote'
                   if (result.monthly !== null) {
                     monthlyLabel = `$${result.monthly.toFixed(2)}`
                     if (result.monthlyHigh !== null) {
                       monthlyLabel += `–$${result.monthlyHigh.toFixed(2)}`
                     }
                   }
+                  if (result.status === 'comparable') {
+                    coverageLabel = 'Estimated'
+                    coverageClassName = 'font-medium text-primary'
+                    priceStatus = 'estimate'
+                  } else if (result.status === 'partial') {
+                    coverageLabel = 'Partial only'
+                    coverageClassName = 'font-medium text-destructive'
+                    priceStatus = 'partial'
+                  }
                   return (
                     <li
-                      className="grid min-h-9 grid-cols-[6.75rem_minmax(0,1fr)_4.75rem] items-center gap-2 py-1 sm:grid-cols-[10rem_minmax(0,1fr)_7rem] sm:gap-3"
+                      className={`grid min-h-9 grid-cols-[8.75rem_minmax(2rem,1fr)_4.25rem] items-center gap-2 py-1 sm:grid-cols-[18rem_minmax(0,1fr)_6.5rem] sm:gap-3 ${
+                        result.id === 'keenpix'
+                          ? 'relative z-10 -mx-1 rounded-md bg-primary/5 px-1 ring-1 ring-primary/50'
+                          : ''
+                      }`}
                       key={result.id}
                     >
                       <div className="min-w-0">
                         <div className="truncate font-medium text-xs sm:text-sm">
                           {result.vendor?.name}
                         </div>
-                        <div className="truncate text-[10px] text-muted-foreground sm:text-xs">
-                          {result.plan}
+                        <div
+                          className="truncate text-[10px] text-muted-foreground sm:text-xs"
+                          title={result.detail}
+                        >
+                          <span className={coverageClassName}>
+                            {coverageLabel}
+                          </span>{' '}
+                          · {result.detail}
                         </div>
                       </div>
                       <div className="relative h-3 overflow-hidden rounded-full bg-muted">
@@ -354,7 +376,7 @@ export function ImageCdnCostCalculatorPage({
                           {monthlyLabel.replaceAll('.00', '')}
                         </div>
                         <div className="hidden text-[10px] text-muted-foreground sm:block">
-                          {result.status}
+                          {priceStatus}
                         </div>
                       </div>
                     </li>

@@ -16,14 +16,14 @@ describe('calculateImageCdnCosts', () => {
     expect(results.map((result) => result.id)).toEqual([
       'keenpix',
       'cloudinary',
-      'imgix',
+      'twicpics',
       'imagekit',
       'gumlet',
-      'twicpics',
-      'cloudflare',
+      'imgix',
       'bunny',
       'vercel',
       'imgproxy',
+      'cloudflare',
     ])
     expect(results.find((result) => result.id === 'keenpix')?.monthly).toBe(9)
     expect(results.find((result) => result.id === 'cloudinary')?.monthly).toBe(
@@ -31,6 +31,31 @@ describe('calculateImageCdnCosts', () => {
     )
     expect(results.find((result) => result.id === 'imgproxy')?.status).toBe(
       'partial',
+    )
+  })
+
+  it('keeps the editorial order when scenario prices change', () => {
+    const smallScenario = calculateImageCdnCosts({
+      customDomains: 0,
+      deliveredGb: 10,
+      projects: 1,
+      region: 'eu-na',
+      requests: 10_000,
+      sourceStorageGb: 2,
+      uniqueTransforms: 1000,
+    })
+    const largeScenario = calculateImageCdnCosts({
+      customDomains: 12,
+      deliveredGb: 3000,
+      projects: 30,
+      region: 'mea',
+      requests: 10_000_000,
+      sourceStorageGb: 1000,
+      uniqueTransforms: 500_000,
+    })
+
+    expect(largeScenario.map((result) => result.id)).toEqual(
+      smallScenario.map((result) => result.id),
     )
   })
 
