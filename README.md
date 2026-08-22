@@ -270,29 +270,28 @@ Authorization: Bearer <KEY>
 X-Keenpix-Api-Key: <KEY>
 ```
 
-All SDK endpoints live under `/api/sdk`, return JSON, and use `Cache-Control: no-store`. The self-host build currently uses the default org (`org_default`) for SDK project operations.
+All SDK endpoints live under `/api/sdk/v1`, return JSON, and use `Cache-Control: no-store`. The legacy unversioned paths remain compatibility aliases. The self-host build currently uses the default org (`org_default`) for SDK project operations. Authentication intentionally uses API keys: Keenpix does not operate an OAuth authorization server, separate API sandbox, or official CLI. Use the REST API or `@keenpix/sdk`.
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/api/sdk/projects` | List projects visible to the key. All-project keys see all default-org projects; project-scoped keys receive only their project. |
-| `POST` | `/api/sdk/projects` | Create a project. All-project write key required. Body: `name`, `origin`, `env`, optional `allowedOrigins`. |
-| `GET` | `/api/sdk/projects/<projectId>` | Fetch one project. |
-| `GET` | `/api/sdk/projects/<projectId>/configuration` | Fetch integration-safe image configuration for clients such as JoodCMS. |
-| `PATCH` | `/api/sdk/projects/<projectId>/settings` | Update transform defaults. Body may include `autoFormat`, `stripMetadata`, and/or `defaultQuality`. |
-| `POST` | `/api/sdk/projects/<projectId>/prewarm` | Queue cache prewarming for uploaded or newly published source images. |
-| `POST` | `/api/sdk/projects/<projectId>/domains` | Add an allowed source host. Body: `{ "host": "cdn.example.com" }`. Use a hostname, not a URL. |
-| `DELETE` | `/api/sdk/projects/<projectId>/domains?host=<host>` | Remove an allowed source host. A JSON body `{ "host": "cdn.example.com" }` is also accepted. |
+| `GET` | `/api/sdk/v1/projects` | List projects visible to the key. All-project keys see all default-org projects; project-scoped keys receive only their project. |
+| `POST` | `/api/sdk/v1/projects` | Create a project. All-project write key required. Body: `name`, `origin`, optional `allowedOrigins`. |
+| `GET` | `/api/sdk/v1/projects/<projectId>` | Fetch one project. |
+| `GET` | `/api/sdk/v1/projects/<projectId>/configuration` | Fetch integration-safe image configuration for clients such as JoodCMS. |
+| `PATCH` | `/api/sdk/v1/projects/<projectId>/settings` | Update transform defaults. Body may include `autoFormat`, `stripMetadata`, and/or `defaultQuality`. |
+| `POST` | `/api/sdk/v1/projects/<projectId>/prewarm` | Queue cache prewarming for uploaded or newly published source images. |
+| `POST` | `/api/sdk/v1/projects/<projectId>/domains` | Add an allowed source host. Body: `{ "host": "cdn.example.com" }`. Use a hostname, not a URL. |
+| `DELETE` | `/api/sdk/v1/projects/<projectId>/domains?host=<host>` | Remove an allowed source host. A JSON body `{ "host": "cdn.example.com" }` is also accepted. |
 
 Create a project:
 
 ```bash
-curl -X POST "https://keenpix.example.com/api/sdk/projects" \
+curl -X POST "https://keenpix.example.com/api/sdk/v1/projects" \
   -H "Authorization: Bearer $KEENPIX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Storefront",
     "origin": "https://cdn.example.com",
-    "env": "production",
     "allowedOrigins": ["cdn.example.com"]
   }'
 ```
@@ -300,7 +299,7 @@ curl -X POST "https://keenpix.example.com/api/sdk/projects" \
 Read the project configuration that JoodCMS stores and displays:
 
 ```bash
-curl "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/configuration" \
+curl "https://keenpix.example.com/api/sdk/v1/projects/$PROJECT_ID/configuration" \
   -H "Authorization: Bearer $KEENPIX_API_KEY"
 ```
 
@@ -337,12 +336,12 @@ Response shape:
 Manage domains and settings:
 
 ```bash
-curl -X POST "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/domains" \
+curl -X POST "https://keenpix.example.com/api/sdk/v1/projects/$PROJECT_ID/domains" \
   -H "Authorization: Bearer $KEENPIX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "host": "assets.customer.com" }'
 
-curl -X PATCH "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/settings" \
+curl -X PATCH "https://keenpix.example.com/api/sdk/v1/projects/$PROJECT_ID/settings" \
   -H "Authorization: Bearer $KEENPIX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "autoFormat": true, "defaultQuality": 82, "stripMetadata": true }'
@@ -351,7 +350,7 @@ curl -X PATCH "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/settings
 Prewarm uploaded images from a trusted integration. This endpoint returns `202` after queuing work; it does not wait for every transform and does not write user-delivery latency rows.
 
 ```bash
-curl -X POST "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/prewarm" \
+curl -X POST "https://keenpix.example.com/api/sdk/v1/projects/$PROJECT_ID/prewarm" \
   -H "Authorization: Bearer $KEENPIX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{

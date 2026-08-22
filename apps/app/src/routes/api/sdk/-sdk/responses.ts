@@ -5,8 +5,20 @@ export function json(body: unknown, init?: ResponseInit) {
   })
 }
 
-export function jsonError(message: string, status: number) {
-  return json({ error: message }, { status })
+export function jsonError(
+  message: string,
+  status: number,
+  details: { code: string; resolutionHint: string },
+) {
+  return json(
+    {
+      error: message,
+      code: details.code,
+      message,
+      resolution_hint: details.resolutionHint,
+    },
+    { status },
+  )
 }
 
 export async function readJson(request: Request) {

@@ -43,7 +43,11 @@ export async function createProjectResource(
 ) {
   const access = await verifySdkApiKey(request, 'write', undefined, activity)
   if (access.projectId) {
-    return jsonError('API key cannot create projects', 403)
+    return jsonError('API key cannot create projects', 403, {
+      code: 'operation_not_allowed',
+      resolutionHint:
+        'Create projects in the managed dashboard; self-hosted installations may use an all-project write key.',
+    })
   }
   const input = internalCreateProjectSchema.parse(await readJson(request))
   const project = await createProject(access.orgId, input)
@@ -57,7 +61,7 @@ export async function getProjectResource(
 ) {
   const access = await verifySdkApiKey(request, 'read', projectId, activity)
   const project = await getProject(access.orgId, projectId)
-  return project ? json({ project }) : jsonError('Project not found', 404)
+  return project ? json({ project }) : projectNotFound()
 }
 
 export async function getProjectConfiguration(
@@ -68,7 +72,7 @@ export async function getProjectConfiguration(
   const access = await verifySdkApiKey(request, 'read', projectId, activity)
   const project = await getProject(access.orgId, projectId)
   if (!project) {
-    return jsonError('Project not found', 404)
+    return projectNotFound()
   }
 
   const publicBaseUrl = getPublicBaseUrl(request)
@@ -161,7 +165,7 @@ export async function updateProjectSettingsResource(
     await readJson(request),
   )
   const project = await updateProjectSettings(access.orgId, projectId, patch)
-  return project ? json({ project }) : jsonError('Project not found', 404)
+  return project ? json({ project }) : projectNotFound()
 }
 
 export async function prewarmProjectImagesResource(
@@ -173,7 +177,7 @@ export async function prewarmProjectImagesResource(
   // Ensure the project belongs to the key's org before warming its cache.
   const target = await getProject(access.orgId, projectId)
   if (!target) {
-    return jsonError('Project not found', 404)
+    return projectNotFound()
   }
   const input = projectPrewarmSchema.parse(await readJson(request))
   const sources = [...(input.sources ?? []), ...(input.src ? [input.src] : [])]
@@ -208,7 +212,7 @@ export async function addProjectDomain(
     .object({ host: allowedHostValueSchema })
     .parse(await readJson(request))
   const project = await addAllowedHost(access.orgId, projectId, host)
-  return project ? json({ project }) : jsonError('Project not found', 404)
+  return project ? json({ project }) : projectNotFound()
 }
 
 export async function removeProjectDomain(
@@ -222,7 +226,15 @@ export async function removeProjectDomain(
     projectId,
     await getProjectDomainFromRequest(request),
   )
-  return project ? json({ project }) : jsonError('Project not found', 404)
+  return project ? json({ project }) : projectNotFound()
+}
+
+function projectNotFound() {
+  return jsonError('Project not found', 404, {
+    code: 'project_not_found',
+    resolutionHint:
+      'List projects visible to this API key and retry with one of those project identifiers.',
+  })
 }
 
 async function getProjectDomainFromRequest(request: Request) {

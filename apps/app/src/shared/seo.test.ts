@@ -60,6 +60,13 @@ describe('SEO entity graphs', () => {
     expect(organizationJsonLd().founder.sameAs).toContain(
       'https://x.com/raedbahriworld',
     )
+    expect(organizationJsonLd().contactPoint).toEqual(
+      expect.objectContaining({
+        email: 'hi@raedbahri.com',
+        telephone: '+21626765990',
+        url: 'https://wa.me/21626765990',
+      }),
+    )
   })
 
   it('emits the matching Open Graph and JSON-LD language for Arabic posts', () => {

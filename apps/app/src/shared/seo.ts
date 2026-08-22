@@ -10,6 +10,8 @@ import {
   FOUNDER,
   getAuthor,
   SUPPORT_EMAIL,
+  SUPPORT_WHATSAPP_NUMBER,
+  SUPPORT_WHATSAPP_URL,
 } from '@/shared/authors'
 
 export const SITE_NAME = 'Keenpix'
@@ -182,6 +184,8 @@ export function organizationJsonLd() {
       '@type': 'ContactPoint',
       contactType: 'customer support',
       email: SUPPORT_EMAIL,
+      telephone: SUPPORT_WHATSAPP_NUMBER,
+      url: SUPPORT_WHATSAPP_URL,
     },
     description: SITE_DESCRIPTION,
     founder: {
