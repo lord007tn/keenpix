@@ -15,7 +15,10 @@ interface Author {
 // can share them without dragging server/env code into the client bundle.
 export const SOCIAL_X_URL = 'https://x.com/raedbahriworld'
 export const BRAND_X_URL = 'https://x.com/getkeenpix'
-export const SUPPORT_EMAIL = 'fariq@keenpix.com'
+export const SUPPORT_EMAIL = 'hi@raedbahri.com'
+export const SUPPORT_WHATSAPP_NUMBER = '+21626765990'
+export const SUPPORT_WHATSAPP_LABEL = '+216 26 765 990'
+export const SUPPORT_WHATSAPP_URL = 'https://wa.me/21626765990'
 
 export const FOUNDER: Author = {
   name: 'Raed Bahri',

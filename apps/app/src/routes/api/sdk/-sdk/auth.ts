@@ -21,7 +21,11 @@ export async function verifySdkApiKey(
 ): Promise<SdkApiKeyAccess> {
   const key = getApiKey(request)
   if (!key) {
-    throw jsonError('Missing API key', 401)
+    throw jsonError('Missing API key', 401, {
+      code: 'missing_api_key',
+      resolutionHint:
+        'Send a project-scoped key in Authorization: Bearer <key> or X-Keenpix-Api-Key.',
+    })
   }
 
   const result = await auth.api.verifyApiKey({
@@ -42,10 +46,18 @@ export async function verifySdkApiKey(
     // downstream lookup is org-scoped, so a key can only ever touch its own org.
     const orgId = scope?.orgId ?? (isCloud() ? undefined : DEFAULT_ORG_ID)
     if (!orgId) {
-      throw jsonError('API key is not associated with an organization', 403)
+      throw jsonError('API key is not associated with an organization', 403, {
+        code: 'api_key_scope_invalid',
+        resolutionHint:
+          'Create a new API key from the active Keenpix organization and retry.',
+      })
     }
     if (isCloud() && !scope?.projectId) {
-      throw jsonError('API key is not associated with a project', 403)
+      throw jsonError('API key is not associated with a project', 403, {
+        code: 'api_key_scope_invalid',
+        resolutionHint:
+          'Create a project-scoped API key for the target managed-cloud project.',
+      })
     }
     if (activity && apiKeyId) {
       activity.apiKeyId = apiKeyId
@@ -53,10 +65,18 @@ export async function verifySdkApiKey(
       activity.scope = scope?.projectId ? 'project' : 'all_projects'
     }
     if (scope?.projectId && projectId && scope.projectId !== projectId) {
-      throw jsonError('API key cannot access this project', 403)
+      throw jsonError('API key cannot access this project', 403, {
+        code: 'project_access_denied',
+        resolutionHint:
+          'Use an API key scoped to the requested project or change the project identifier.',
+      })
     }
     if (!(await hasProductAccess(orgId))) {
-      throw jsonError('An active subscription is required', 402)
+      throw jsonError('An active subscription is required', 402, {
+        code: 'subscription_required',
+        resolutionHint:
+          'Start or restore product access from the Keenpix billing settings, then retry.',
+      })
     }
     return {
       orgId,
@@ -70,7 +90,13 @@ export async function verifySdkApiKey(
     typeof result.error?.message === 'string'
       ? result.error.message
       : 'Invalid API key'
-  throw jsonError(message, status)
+  throw jsonError(message, status, {
+    code: status === 429 ? 'rate_limit_exceeded' : 'invalid_api_key',
+    resolutionHint:
+      status === 429
+        ? 'Wait before retrying and reduce the API-key request rate.'
+        : 'Verify or rotate the project-scoped API key in Keenpix settings.',
+  })
 }
 
 function getApiKey(request: Request) {

@@ -23,31 +23,37 @@ X-Keenpix-Api-Key: <KEY>
 All SDK responses are JSON and set `Cache-Control: no-store`. SDK requests are
 recorded under **Settings -> API keys -> API activity**.
 
+Keenpix intentionally uses project-scoped API keys for this server-to-server
+API. It does not operate an OAuth authorization server or a separate API
+sandbox, and it does not publish an official CLI. Call the REST API directly or
+use the official `@keenpix/sdk` package. For API and integration questions,
+email [hi@raedbahri.com](mailto:hi@raedbahri.com) or message
+[WhatsApp +216 26 765 990](https://wa.me/21626765990).
+
 ## Endpoints
 
 | Method | Path | Scope | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/api/sdk/projects` | read | List projects visible to the key. |
-| `POST` | `/api/sdk/projects` | all-project write | Create a project. |
-| `GET` | `/api/sdk/projects/<projectId>` | read | Fetch one project. |
-| `GET` | `/api/sdk/projects/<projectId>/configuration` | read | Fetch integration configuration for building image URLs. |
-| `PATCH` | `/api/sdk/projects/<projectId>/settings` | write | Update transform defaults. |
-| `POST` | `/api/sdk/projects/<projectId>/prewarm` | write | Queue cache prewarming for source images. |
-| `POST` | `/api/sdk/projects/<projectId>/domains` | write | Add an allowed source host. |
-| `DELETE` | `/api/sdk/projects/<projectId>/domains?host=<host>` | write | Remove an allowed source host. |
+| `GET` | `/api/sdk/v1/projects` | read | List projects visible to the key. |
+| `POST` | `/api/sdk/v1/projects` | all-project write | Create a project. |
+| `GET` | `/api/sdk/v1/projects/<projectId>` | read | Fetch one project. |
+| `GET` | `/api/sdk/v1/projects/<projectId>/configuration` | read | Fetch integration configuration for building image URLs. |
+| `PATCH` | `/api/sdk/v1/projects/<projectId>/settings` | write | Update transform defaults. |
+| `POST` | `/api/sdk/v1/projects/<projectId>/prewarm` | write | Queue cache prewarming for source images. |
+| `POST` | `/api/sdk/v1/projects/<projectId>/domains` | write | Add an allowed source host. |
+| `DELETE` | `/api/sdk/v1/projects/<projectId>/domains?host=<host>` | write | Remove an allowed source host. |
 
 ## Projects
 
 Create a project with an all-project write key:
 
 ```bash
-curl -X POST "https://keenpix.example.com/api/sdk/projects" \
+curl -X POST "https://keenpix.example.com/api/sdk/v1/projects" \
   -H "Authorization: Bearer $KEENPIX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Storefront",
     "origin": "https://cdn.example.com",
-    "env": "production",
     "allowedOrigins": ["cdn.example.com"]
   }'
 ```
@@ -58,21 +64,21 @@ Request body:
 | --- | --- | --- | --- |
 | `name` | string | yes | 1-80 characters. |
 | `origin` | URL | yes | `http` or `https` origin URL. |
-| `env` | string | yes | `production`, `staging`, or `development`. |
 | `allowedOrigins` | string[] | no | Hostnames to allow. URLs are normalized to hostnames. |
 
 List or fetch projects:
 
 ```bash
-curl "https://keenpix.example.com/api/sdk/projects" \
+curl "https://keenpix.example.com/api/sdk/v1/projects" \
   -H "Authorization: Bearer $KEENPIX_API_KEY"
 
-curl "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID" \
+curl "https://keenpix.example.com/api/sdk/v1/projects/$PROJECT_ID" \
   -H "Authorization: Bearer $KEENPIX_API_KEY"
 ```
 
-Project responses include the project id, origin, environment, allowed origins,
-color fields, transform defaults, and `createdAt`.
+Project responses include the project and organization ids, origin, allowed
+origins, color fields, transform defaults, signing policy, watermark settings,
+and `createdAt`.
 
 ## Configuration
 
@@ -80,7 +86,7 @@ Use the configuration endpoint when an external CMS or backend needs the canonic
 image base URL and the supported transform parameters.
 
 ```bash
-curl "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/configuration" \
+curl "https://keenpix.example.com/api/sdk/v1/projects/$PROJECT_ID/configuration" \
   -H "Authorization: Bearer $KEENPIX_API_KEY"
 ```
 
@@ -159,7 +165,7 @@ protocol so third-party integrations receive the external Keenpix URL.
 Patch one or more transform defaults:
 
 ```bash
-curl -X PATCH "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/settings" \
+curl -X PATCH "https://keenpix.example.com/api/sdk/v1/projects/$PROJECT_ID/settings" \
   -H "Authorization: Bearer $KEENPIX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -182,7 +188,7 @@ Send at least one field.
 Allowed source hosts control what `/img/*` may fetch. Add a host with JSON:
 
 ```bash
-curl -X POST "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/domains" \
+curl -X POST "https://keenpix.example.com/api/sdk/v1/projects/$PROJECT_ID/domains" \
   -H "Authorization: Bearer $KEENPIX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "host": "assets.example.com" }'
@@ -191,7 +197,7 @@ curl -X POST "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/domains" 
 Remove a host with a query string or JSON body:
 
 ```bash
-curl -X DELETE "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/domains?host=assets.example.com" \
+curl -X DELETE "https://keenpix.example.com/api/sdk/v1/projects/$PROJECT_ID/domains?host=assets.example.com" \
   -H "Authorization: Bearer $KEENPIX_API_KEY"
 ```
 
@@ -207,7 +213,7 @@ Source URLs still have to pass the project's allowed-host and SSRF checks when t
 queued work runs.
 
 ```bash
-curl -X POST "https://keenpix.example.com/api/sdk/projects/$PROJECT_ID/prewarm" \
+curl -X POST "https://keenpix.example.com/api/sdk/v1/projects/$PROJECT_ID/prewarm" \
   -H "Authorization: Bearer $KEENPIX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -252,8 +258,17 @@ Successful response:
 SDK errors use this shape:
 
 ```json
-{ "error": "Missing API key" }
+{
+  "error": "Missing API key",
+  "code": "missing_api_key",
+  "message": "Missing API key",
+  "resolution_hint": "Send a project-scoped key in Authorization: Bearer <key> or X-Keenpix-Api-Key."
+}
 ```
+
+The `error` string remains for compatibility with existing SDK versions. New
+integrations should branch on the stable `code`, display `message` when useful,
+and treat `resolution_hint` as guidance rather than executable input.
 
 | Status | When |
 | --- | --- |

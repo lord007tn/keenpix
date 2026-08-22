@@ -3,6 +3,7 @@ import { COMPARISONS } from '@/features/compare/comparison-data'
 export const SITEMAP_STATIC_PATHS = [
   '/',
   '/about',
+  '/developers',
   '/pricing',
   '/blog',
   '/blog/ar',

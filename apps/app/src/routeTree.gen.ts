@@ -17,6 +17,8 @@ import { Route as SelfHostedImageCdnRouteImport } from './routes/self-hosted-ima
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as OpenapiDotjsonRouteImport } from './routes/openapi[.]json'
+import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as ChangelogRouteImport } from './routes/changelog'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AboutRouteImport } from './routes/about'
@@ -41,6 +43,7 @@ import { Route as BlogSplatRouteImport } from './routes/blog/$'
 import { Route as AuthorsRaedBahriRouteImport } from './routes/authors/raed-bahri'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as DotwellKnownSecurityDottxtRouteImport } from './routes/[.]well-known/security[.]txt'
 import { Route as authVerifyEmailRouteImport } from './routes/(auth)/verify-email'
 import { Route as authSignupRouteImport } from './routes/(auth)/signup'
@@ -109,6 +112,16 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpenapiDotjsonRoute = OpenapiDotjsonRouteImport.update({
+  id: '/openapi.json',
+  path: '/openapi.json',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevelopersRoute = DevelopersRouteImport.update({
+  id: '/developers',
+  path: '/developers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChangelogRoute = ChangelogRouteImport.update({
@@ -229,6 +242,11 @@ const ApiSearchRoute = ApiSearchRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSplatRoute = ApiSplatRouteImport.update({
+  id: '/api/$',
+  path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DotwellKnownSecurityDottxtRoute =
@@ -383,6 +401,8 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/changelog': typeof ChangelogRoute
+  '/developers': typeof DevelopersRoute
+  '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/security': typeof SecurityRoute
@@ -397,6 +417,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof authSignupRoute
   '/verify-email': typeof authVerifyEmailRoute
   '/.well-known/security.txt': typeof DotwellKnownSecurityDottxtRoute
+  '/api/$': typeof ApiSplatRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
   '/authors/raed-bahri': typeof AuthorsRaedBahriRoute
@@ -443,6 +464,8 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/changelog': typeof ChangelogRoute
+  '/developers': typeof DevelopersRoute
+  '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/security': typeof SecurityRoute
@@ -457,6 +480,7 @@ export interface FileRoutesByTo {
   '/signup': typeof authSignupRoute
   '/verify-email': typeof authVerifyEmailRoute
   '/.well-known/security.txt': typeof DotwellKnownSecurityDottxtRoute
+  '/api/$': typeof ApiSplatRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
   '/authors/raed-bahri': typeof AuthorsRaedBahriRoute
@@ -506,6 +530,8 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/changelog': typeof ChangelogRoute
+  '/developers': typeof DevelopersRoute
+  '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/security': typeof SecurityRoute
@@ -520,6 +546,7 @@ export interface FileRoutesById {
   '/(auth)/signup': typeof authSignupRoute
   '/(auth)/verify-email': typeof authVerifyEmailRoute
   '/.well-known/security.txt': typeof DotwellKnownSecurityDottxtRoute
+  '/api/$': typeof ApiSplatRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
   '/authors/raed-bahri': typeof AuthorsRaedBahriRoute
@@ -570,6 +597,8 @@ export interface FileRouteTypes {
     | '/about'
     | '/accept-invite'
     | '/changelog'
+    | '/developers'
+    | '/openapi.json'
     | '/pricing'
     | '/robots.txt'
     | '/security'
@@ -584,6 +613,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/verify-email'
     | '/.well-known/security.txt'
+    | '/api/$'
     | '/api/health'
     | '/api/search'
     | '/authors/raed-bahri'
@@ -630,6 +660,8 @@ export interface FileRouteTypes {
     | '/about'
     | '/accept-invite'
     | '/changelog'
+    | '/developers'
+    | '/openapi.json'
     | '/pricing'
     | '/robots.txt'
     | '/security'
@@ -644,6 +676,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/verify-email'
     | '/.well-known/security.txt'
+    | '/api/$'
     | '/api/health'
     | '/api/search'
     | '/authors/raed-bahri'
@@ -692,6 +725,8 @@ export interface FileRouteTypes {
     | '/about'
     | '/accept-invite'
     | '/changelog'
+    | '/developers'
+    | '/openapi.json'
     | '/pricing'
     | '/robots.txt'
     | '/security'
@@ -706,6 +741,7 @@ export interface FileRouteTypes {
     | '/(auth)/signup'
     | '/(auth)/verify-email'
     | '/.well-known/security.txt'
+    | '/api/$'
     | '/api/health'
     | '/api/search'
     | '/authors/raed-bahri'
@@ -755,6 +791,8 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AcceptInviteRoute: typeof AcceptInviteRoute
   ChangelogRoute: typeof ChangelogRoute
+  DevelopersRoute: typeof DevelopersRoute
+  OpenapiDotjsonRoute: typeof OpenapiDotjsonRoute
   PricingRoute: typeof PricingRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SecurityRoute: typeof SecurityRoute
@@ -769,6 +807,7 @@ export interface RootRouteChildren {
   authSignupRoute: typeof authSignupRoute
   authVerifyEmailRoute: typeof authVerifyEmailRoute
   DotwellKnownSecurityDottxtRoute: typeof DotwellKnownSecurityDottxtRoute
+  ApiSplatRoute: typeof ApiSplatRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSearchRoute: typeof ApiSearchRoute
   AuthorsRaedBahriRoute: typeof AuthorsRaedBahriRoute
@@ -851,6 +890,20 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/openapi.json': {
+      id: '/openapi.json'
+      path: '/openapi.json'
+      fullPath: '/openapi.json'
+      preLoaderRoute: typeof OpenapiDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developers': {
+      id: '/developers'
+      path: '/developers'
+      fullPath: '/developers'
+      preLoaderRoute: typeof DevelopersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/changelog': {
@@ -1019,6 +1072,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/$': {
+      id: '/api/$'
+      path: '/api/$'
+      fullPath: '/api/$'
+      preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/security.txt': {
@@ -1279,6 +1339,8 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AcceptInviteRoute: AcceptInviteRoute,
   ChangelogRoute: ChangelogRoute,
+  DevelopersRoute: DevelopersRoute,
+  OpenapiDotjsonRoute: OpenapiDotjsonRoute,
   PricingRoute: PricingRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SecurityRoute: SecurityRoute,
@@ -1293,6 +1355,7 @@ const rootRouteChildren: RootRouteChildren = {
   authSignupRoute: authSignupRoute,
   authVerifyEmailRoute: authVerifyEmailRoute,
   DotwellKnownSecurityDottxtRoute: DotwellKnownSecurityDottxtRoute,
+  ApiSplatRoute: ApiSplatRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSearchRoute: ApiSearchRoute,
   AuthorsRaedBahriRoute: AuthorsRaedBahriRoute,

@@ -13,7 +13,7 @@ describe('sitemap static paths', () => {
 
   it('includes both blog language indexes without duplicate URLs', () => {
     expect(SITEMAP_STATIC_PATHS).toEqual(
-      expect.arrayContaining(['/blog', '/blog/ar']),
+      expect.arrayContaining(['/blog', '/blog/ar', '/developers']),
     )
     expect(new Set(SITEMAP_STATIC_PATHS).size).toBe(SITEMAP_STATIC_PATHS.length)
   })
