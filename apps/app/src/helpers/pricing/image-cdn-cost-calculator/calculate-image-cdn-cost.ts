@@ -160,7 +160,7 @@ export function calculateImageCdnCosts(inputs: ImageCdnCostInputs) {
       plan: keenpix?.plan ?? 'Contact Keenpix',
       status: keenpix ? 'comparable' : 'quote',
       detail:
-        'Managed delivery, published overage, and eligible custom-domain packs.',
+        'Published Keenpix plan, managed delivery overage, and eligible custom-domain packs.',
     },
     {
       id: 'cloudinary',
@@ -170,11 +170,12 @@ export function calculateImageCdnCosts(inputs: ImageCdnCostInputs) {
       detail: `${money(cloudinaryCredits)} estimated pooled credits across delivery, storage, and transforms.`,
     },
     {
-      id: 'imgix',
-      monthly: imgix?.monthly ?? null,
-      plan: imgix?.plan ?? 'Custom quote',
-      status: imgix ? 'partial' : 'quote',
-      detail: `${money(imgixCredits)} delivery and management credits; feature-specific transform credits excluded.`,
+      id: 'twicpics',
+      monthly: twicPics ? money(twicPics.monthly) : null,
+      plan: twicPics?.plan ?? 'Enterprise quote',
+      status: twicPics ? 'comparable' : 'quote',
+      detail:
+        'Published CDN bandwidth, workspace, and domain allowances; feature value is excluded.',
     },
     {
       id: 'imagekit',
@@ -191,23 +192,11 @@ export function calculateImageCdnCosts(inputs: ImageCdnCostInputs) {
       detail: 'Public Gumlet Image bandwidth plan; video is excluded.',
     },
     {
-      id: 'twicpics',
-      monthly: twicPics ? money(twicPics.monthly) : null,
-      plan: twicPics?.plan ?? 'Enterprise quote',
-      status: twicPics ? 'comparable' : 'quote',
-      detail:
-        'Published CDN bandwidth, workspace, and domain allowances; feature value is excluded.',
-    },
-    {
-      id: 'cloudflare',
-      monthly: money(
-        (Math.max(0, inputs.uniqueTransforms - 5000) / 1000) * 0.5,
-      ),
-      plan:
-        inputs.uniqueTransforms <= 5000 ? 'Free transforms' : 'Paid transforms',
-      status: 'partial',
-      detail:
-        'Remote-origin unique transforms only; hosted storage and delivery excluded.',
+      id: 'imgix',
+      monthly: imgix?.monthly ?? null,
+      plan: imgix?.plan ?? 'Custom quote',
+      status: imgix ? 'partial' : 'quote',
+      detail: `${money(imgixCredits)} delivery and management credits; feature-specific transform credits excluded.`,
     },
     {
       id: 'bunny',
@@ -235,6 +224,17 @@ export function calculateImageCdnCosts(inputs: ImageCdnCostInputs) {
       status: 'partial',
       detail:
         'Infrastructure, CDN, storage, monitoring, and operations are not publicly reducible to one total.',
+    },
+    {
+      id: 'cloudflare',
+      monthly: money(
+        (Math.max(0, inputs.uniqueTransforms - 5000) / 1000) * 0.5,
+      ),
+      plan:
+        inputs.uniqueTransforms <= 5000 ? 'Free transforms' : 'Paid transforms',
+      status: 'partial',
+      detail:
+        'Remote-origin unique transforms only; hosted storage and delivery excluded.',
     },
   ] as const
 }
