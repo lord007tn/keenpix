@@ -62,7 +62,7 @@ export function CompareHub() {
               </h2>
               <p className="mt-2 max-w-3xl text-muted-foreground leading-relaxed">
                 Use the same delivery, request, storage, transform, project,
-                domain, and region inputs across nine source-dated provider
+                domain, and region inputs across ten source-dated provider
                 models.
               </p>
             </div>

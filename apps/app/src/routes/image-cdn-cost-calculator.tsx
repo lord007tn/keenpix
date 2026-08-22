@@ -38,9 +38,9 @@ export const Route = createFileRoute('/image-cdn-cost-calculator')({
     return {
       links: [{ rel: 'canonical', href: canonicalUrl }],
       meta: seo({
-        title: 'Image CDN Cost Calculator: Compare 9 Providers | Keenpix',
+        title: 'Image CDN Cost Calculator: Compare 10 Providers | Keenpix',
         description:
-          'Compare source-dated image CDN cost estimates for Keenpix, Cloudinary, imgix, ImageKit, Gumlet, Cloudflare, Bunny, Vercel, and imgproxy.',
+          'Compare source-dated image CDN cost estimates for Keenpix, Cloudinary, imgix, ImageKit, Gumlet, TwicPics, Cloudflare, Bunny, Vercel, and imgproxy.',
         url: canonicalUrl,
       }),
     }

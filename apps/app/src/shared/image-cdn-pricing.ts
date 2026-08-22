@@ -36,6 +36,12 @@ export const IMAGE_CDN_PRICING = {
       note: 'Image-only public plans; video products are outside this comparison.',
     },
     {
+      id: 'twicpics',
+      name: 'TwicPics',
+      source: 'https://www.twicpics.com/pricing',
+      note: 'Published CDN-bandwidth plans; video and smart-media features are not separately modeled.',
+    },
+    {
       id: 'cloudflare',
       name: 'Cloudflare Images',
       source: 'https://developers.cloudflare.com/images/pricing/',
@@ -70,6 +76,10 @@ export const IMAGE_CDN_CALCULATOR_FAQ = [
   {
     q: 'How are Cloudinary credits estimated?',
     a: 'The model adds delivered GB, source-storage GB, and one credit per 1,000 unique transforms, then selects the smallest published self-serve credit package that covers the total. Other Cloudinary products and negotiated terms are excluded.',
+  },
+  {
+    q: 'How is the TwicPics estimate calculated?',
+    a: 'The model selects the lowest eligible public plan using delivered CDN bandwidth, project/workspace count, and custom-domain count. Free includes 3 GB, Business includes 40 GB with $0.50/GB overage, and Business Plus includes 250 GB with $0.40/GB overage. Enterprise and plan-specific media features require vendor review.',
   },
   {
     q: 'Does the lowest number mean the best product?',
