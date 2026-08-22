@@ -1,18 +1,57 @@
 import { defineHandler, redirect } from 'nitro/h3'
 
 const DELIVERY_PATH_PREFIXES = ['/api/', '/cdn-cgi/', '/img/', '/og/', '/p/']
+const PUBLIC_PAGE_PREFIXES = [
+  '/about',
+  '/authors',
+  '/blog',
+  '/changelog',
+  '/compare',
+  '/developers',
+  '/docs',
+  '/image-cdn-cost-calculator',
+  '/legal',
+  '/methodology',
+  '/pricing',
+  '/security',
+  '/self-hosted-image-cdn',
+  '/status',
+  '/support',
+]
+const REPEATED_SLASHES = /\/{2,}/g
+
+function isPublicPagePath(pathname: string) {
+  return (
+    pathname === '/' ||
+    PUBLIC_PAGE_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    )
+  )
+}
 
 export function getCanonicalRedirect(method: string, url: URL) {
   if (
     (method !== 'GET' && method !== 'HEAD') ||
-    url.pathname === '/' ||
-    !url.pathname.endsWith('/') ||
     DELIVERY_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))
   ) {
     return
   }
 
-  return `${url.pathname.slice(0, -1)}${url.search}`
+  const collapsedPathname = url.pathname.replace(REPEATED_SLASHES, '/')
+  const publicPathname = collapsedPathname.toLowerCase()
+  let canonicalPathname = isPublicPagePath(publicPathname)
+    ? publicPathname
+    : url.pathname
+
+  if (canonicalPathname !== '/' && canonicalPathname.endsWith('/')) {
+    canonicalPathname = canonicalPathname.slice(0, -1)
+  }
+
+  if (canonicalPathname === url.pathname) {
+    return
+  }
+
+  return `${canonicalPathname}${url.search}`
 }
 
 export default defineHandler((event) => {

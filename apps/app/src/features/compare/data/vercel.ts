@@ -185,7 +185,7 @@ export const vercelComparison = {
     { label: 'Vercel pricing', url: 'https://vercel.com/pricing' },
     {
       label: 'Vercel image cost guidance',
-      url: 'https://examples.vercel.com/docs/image-optimization/managing-image-optimization-costs',
+      url: 'https://vercel.com/docs/image-optimization/limits-and-pricing',
     },
     {
       label: 'Vercel image pricing changelog',
@@ -195,6 +195,6 @@ export const vercelComparison = {
   ],
   pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
-  verifiedAt: '2026-08-05',
+  verifiedAt: '2026-08-22',
   nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

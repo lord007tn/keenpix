@@ -347,6 +347,13 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
               <a className="text-foreground underline" href="/compare">
                 how Keenpix compares to Cloudinary, imgix, and others
               </a>
+              , or{' '}
+              <a
+                className="text-foreground underline"
+                href="/image-cdn-cost-calculator"
+              >
+                model your workload in the image CDN cost calculator
+              </a>
               .
             </p>
           </div>

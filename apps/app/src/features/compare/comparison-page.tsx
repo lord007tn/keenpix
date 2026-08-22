@@ -26,6 +26,7 @@ import { COMPARISONS, type ComparisonPageData } from './comparison-data'
 
 const sectionLinks = [
   { href: '#verdict', label: 'Verdict' },
+  { href: '#worksheet', label: 'Worksheet' },
   { href: '#pricing', label: 'Pricing' },
   { href: '#features', label: 'Features' },
   { href: '#tradeoffs', label: 'Trade-offs' },
@@ -95,6 +96,15 @@ export function ComparisonPage({
                   href="/docs/self-hosting"
                 >
                   Self-host
+                </a>
+                <a
+                  className={buttonVariants({
+                    className: 'min-h-11 touch-manipulation px-5',
+                    variant: 'outline',
+                  })}
+                  href="/image-cdn-cost-calculator"
+                >
+                  Compare costs
                 </a>
               </div>
             </div>
@@ -224,6 +234,122 @@ export function ComparisonPage({
                 ))}
               </ul>
             </div>
+          </div>
+        </section>
+
+        <section className="scroll-mt-24 border-b" id="worksheet">
+          <div className="mx-auto max-w-5xl px-6 py-14 sm:py-16">
+            <span className="font-medium text-primary text-sm">
+              Decision worksheet
+            </span>
+            <h2 className="mt-2 max-w-3xl font-semibold text-3xl tracking-tight">
+              How to compare {comparison.competitor} and Keenpix with your own
+              workload
+            </h2>
+            <p className="mt-4 max-w-4xl text-muted-foreground leading-relaxed">
+              A headline plan price is not a total-cost comparison. Use one
+              representative month, preserve every excluded meter, and test the
+              product boundary before deciding. The five checks below are the
+              same ones Keenpix uses for its source-dated calculator and
+              comparison reviews. Save the inputs, official source URLs,
+              response headers, and test date with the decision so a later
+              pricing or cache-policy change can be audited instead of
+              remembered.
+            </p>
+            <div className="mt-8 grid gap-4">
+              <article className="rounded-xl border bg-card p-6 shadow-sm">
+                <h3 className="font-semibold text-lg">
+                  1. Capture the workload before choosing units
+                </h3>
+                <p className="mt-3 text-muted-foreground leading-relaxed">
+                  Record delivered image GB after optimization, request count,
+                  source storage, unique generated variants, projects or sites,
+                  custom domains, delivery regions, source-change frequency, and
+                  cache hit behavior. Use a normal month and a peak month. Do
+                  not start by translating one vendor unit into another: a
+                  credit, transformation, cache read, worker, stored image, and
+                  delivered GB describe different work. If a required input is
+                  unavailable, label the resulting estimate partial instead of
+                  replacing it with zero.
+                </p>
+              </article>
+              <article className="rounded-xl border bg-card p-6 shadow-sm">
+                <h3 className="font-semibold text-lg">
+                  2. Normalize the product boundary, not only the invoice
+                </h3>
+                <p className="mt-3 text-muted-foreground leading-relaxed">
+                  List what {comparison.competitor} includes that Keenpix does
+                  not and what your team would need to replace. That may include
+                  source storage, DAM workflows, video, a hosting platform, a
+                  bundled CDN, AI operations, upload widgets, support, or a
+                  self-hosted engine. Then list what sits outside each public
+                  price: transfer, requests, infrastructure, observability,
+                  additional domains, plan minimums, and operator time. A lower
+                  partial subtotal is not automatically a lower complete bill,
+                  and a broader platform can be worth paying for when you use
+                  its breadth.
+                </p>
+              </article>
+              <article className="rounded-xl border bg-card p-6 shadow-sm">
+                <h3 className="font-semibold text-lg">
+                  3. Test cache and failure behavior
+                </h3>
+                <p className="mt-3 text-muted-foreground leading-relaxed">
+                  Run a representative URL set through both options. Measure a
+                  cold transform, a warm generated-variant hit, an edge hit, an
+                  expired source, an invalid signature, an unavailable origin,
+                  and a request above the usage allowance. Confirm which layer
+                  records billable usage and whether browser or customer-owned
+                  CDN hits reach it. Document cache keys, invalidation, stale
+                  behavior, retry limits, and the response users receive at a
+                  limit. Provider documentation is necessary, but a canary with
+                  your headers, URLs, and origins is the stronger acceptance
+                  test.
+                </p>
+              </article>
+              <article className="rounded-xl border bg-card p-6 shadow-sm">
+                <h3 className="font-semibold text-lg">
+                  4. Price ownership and security work
+                </h3>
+                <p className="mt-3 text-muted-foreground leading-relaxed">
+                  Identify who owns origin allowlists, SSRF protection, signing
+                  keys, abuse controls, TLS, DNS, capacity, updates,
+                  vulnerability response, dashboards, logs, alerts, backups,
+                  incident response, and cost anomalies. A managed service moves
+                  some of those responsibilities to a vendor; a self-hosted or
+                  platform-native option may keep them with your existing team.
+                  Compare the architecture you will actually operate, including
+                  on-call and recovery expectations, rather than valuing
+                  engineering time at zero or assuming a managed boundary
+                  eliminates every integration task.
+                </p>
+              </article>
+              <article className="rounded-xl border bg-card p-6 shadow-sm">
+                <h3 className="font-semibold text-lg">
+                  5. Define migration and rollback before the winner
+                </h3>
+                <p className="mt-3 text-muted-foreground leading-relaxed">
+                  Inventory production transformation options and save visual
+                  fixtures before translating URLs. Decide whether originals
+                  move, whether both services can read the same origin, how
+                  signatures and custom domains change, and how long old URLs
+                  must remain valid. Canary a measurable traffic slice and set
+                  acceptance thresholds for output dimensions, visual crops,
+                  content type, cache behavior, latency, errors, and projected
+                  cost. Keep the old path available until a complete traffic
+                  cycle passes. The right choice is the one that meets those
+                  thresholds and has a credible rollback, not the one with the
+                  longest feature column.
+                </p>
+              </article>
+            </div>
+            <a
+              className="mt-6 inline-flex items-center gap-1.5 font-medium text-primary text-sm hover:underline"
+              href="/image-cdn-cost-calculator"
+            >
+              Model this workload in the cost calculator
+              <ArrowRightIcon className="size-4" />
+            </a>
           </div>
         </section>
 

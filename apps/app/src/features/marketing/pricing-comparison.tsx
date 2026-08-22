@@ -165,7 +165,7 @@ export function PricingComparison({ pricing }: { pricing: PlanPricing }) {
         </div>
         <p className="mt-4 max-w-4xl text-muted-foreground text-xs leading-relaxed">
           Public self-service prices checked against vendor-owned pricing pages
-          on August 5, 2026. Products are not identical: ImageKit includes DAM
+          on August 22, 2026. Products are not identical: ImageKit includes DAM
           and video capabilities, imgix uses shared credits, and Bunny charges
           its CDN separately. Taxes, annual discounts, enterprise contracts, and
           regional CDN charges are excluded.

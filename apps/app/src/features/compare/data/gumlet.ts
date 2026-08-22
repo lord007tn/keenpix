@@ -193,6 +193,6 @@ export const gumletComparison = {
   ],
   pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
-  verifiedAt: '2026-08-18',
+  verifiedAt: '2026-08-22',
   nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

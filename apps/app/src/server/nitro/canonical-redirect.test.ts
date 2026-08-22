@@ -12,9 +12,27 @@ describe('getCanonicalRedirect', () => {
     expect(
       getCanonicalRedirect('HEAD', new URL('https://keenpix.com/docs/')),
     ).toBe('/docs')
+    expect(
+      getCanonicalRedirect(
+        'GET',
+        new URL('https://keenpix.com/BLOG//What-Is-An-Image-CDN?ref=search'),
+      ),
+    ).toBe('/blog/what-is-an-image-cdn?ref=search')
+    expect(
+      getCanonicalRedirect(
+        'GET',
+        new URL('https://keenpix.com//compare//cloudinary-alternative'),
+      ),
+    ).toBe('/compare/cloudinary-alternative')
+    expect(
+      getCanonicalRedirect(
+        'GET',
+        new URL('https://keenpix.com/IMAGE-CDN-COST-CALCULATOR/'),
+      ),
+    ).toBe('/image-cdn-cost-calculator')
   })
 
-  it('leaves the root, non-idempotent requests, and delivery paths untouched', () => {
+  it('leaves the root, non-idempotent requests, and opaque paths untouched', () => {
     expect(
       getCanonicalRedirect('GET', new URL('https://keenpix.com/')),
     ).toBeUndefined()
@@ -31,6 +49,12 @@ describe('getCanonicalRedirect', () => {
       getCanonicalRedirect(
         'GET',
         new URL('https://keenpix.com/api/keenpix/https://example.com/'),
+      ),
+    ).toBeUndefined()
+    expect(
+      getCanonicalRedirect(
+        'GET',
+        new URL('https://keenpix.com/invite/CaseSensitiveToken'),
       ),
     ).toBeUndefined()
   })
