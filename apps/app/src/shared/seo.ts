@@ -515,7 +515,7 @@ export function imageCdnCalculatorJsonLd() {
       applicationCategory: 'BusinessApplication',
       browserRequirements: 'Requires JavaScript',
       description:
-        'A source-dated calculator for comparing image CDN cost boundaries across nine providers.',
+        'A source-dated calculator for comparing image CDN cost boundaries across ten providers.',
       isAccessibleForFree: true,
       name: 'Image CDN Cost Calculator',
       offers: {

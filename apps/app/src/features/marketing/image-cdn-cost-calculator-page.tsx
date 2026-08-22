@@ -41,7 +41,7 @@ export function ImageCdnCostCalculatorPage({
               Image CDN cost calculator
             </h1>
             <p className="mt-5 max-w-3xl text-pretty text-lg text-muted-foreground leading-relaxed sm:text-xl">
-              Model the same workload across nine image-delivery options. Every
+              Model the same workload across ten image-delivery options. Every
               row shows its boundary, source, and whether the result is fully
               comparable, partial, or needs a quote.
             </p>

@@ -15,6 +15,7 @@ describe('comparison data', () => {
         'imgproxy-alternative',
         'imagekit-alternative',
         'gumlet-alternative',
+        'twicpics-alternative',
         'vercel-image-optimization-alternative',
       ]),
     )

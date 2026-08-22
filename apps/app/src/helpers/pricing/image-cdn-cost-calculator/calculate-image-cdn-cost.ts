@@ -106,6 +106,30 @@ export function calculateImageCdnCosts(inputs: ImageCdnCostInputs) {
     },
   ].reduce((best, plan) => (plan.monthly < best.monthly ? plan : best))
 
+  const twicPicsOptions = [
+    {
+      monthly: 0,
+      plan: 'Free',
+      valid:
+        inputs.deliveredGb <= 3 &&
+        inputs.projects <= 1 &&
+        inputs.customDomains === 0,
+    },
+    {
+      monthly: 19 + Math.max(0, inputs.deliveredGb - 40) * 0.5,
+      plan: 'Business',
+      valid: inputs.projects <= 1 && inputs.customDomains <= 2,
+    },
+    {
+      monthly: 99 + Math.max(0, inputs.deliveredGb - 250) * 0.4,
+      plan: 'Business Plus',
+      valid: inputs.projects <= 3 && inputs.customDomains <= 9,
+    },
+  ].filter((plan) => plan.valid)
+  const twicPics = twicPicsOptions.sort(
+    (left, right) => left.monthly - right.monthly,
+  )[0]
+
   const bunnyRate = {
     'eu-na': 0.01,
     asia: 0.03,
@@ -165,6 +189,14 @@ export function calculateImageCdnCosts(inputs: ImageCdnCostInputs) {
       plan: gumlet.plan,
       status: 'comparable',
       detail: 'Public Gumlet Image bandwidth plan; video is excluded.',
+    },
+    {
+      id: 'twicpics',
+      monthly: twicPics ? money(twicPics.monthly) : null,
+      plan: twicPics?.plan ?? 'Enterprise quote',
+      status: twicPics ? 'comparable' : 'quote',
+      detail:
+        'Published CDN bandwidth, workspace, and domain allowances; feature value is excluded.',
     },
     {
       id: 'cloudflare',

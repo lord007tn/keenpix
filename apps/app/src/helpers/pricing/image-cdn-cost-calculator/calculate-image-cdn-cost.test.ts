@@ -19,6 +19,7 @@ describe('calculateImageCdnCosts', () => {
       'imgix',
       'imagekit',
       'gumlet',
+      'twicpics',
       'cloudflare',
       'bunny',
       'vercel',
@@ -78,5 +79,32 @@ describe('calculateImageCdnCosts', () => {
       0,
     )
     expect(results.find((result) => result.id === 'imagekit')?.monthly).toBe(0)
+    expect(results.find((result) => result.id === 'twicpics')?.monthly).toBe(19)
+  })
+
+  it('models TwicPics bandwidth tiers and domain limits', () => {
+    const business = calculateImageCdnCosts({
+      customDomains: 1,
+      deliveredGb: 100,
+      projects: 1,
+      region: 'eu-na',
+      requests: 100_000,
+      sourceStorageGb: 10,
+      uniqueTransforms: 5000,
+    }).find((result) => result.id === 'twicpics')
+    const enterprise = calculateImageCdnCosts({
+      customDomains: 10,
+      deliveredGb: 100,
+      projects: 4,
+      region: 'eu-na',
+      requests: 100_000,
+      sourceStorageGb: 10,
+      uniqueTransforms: 5000,
+    }).find((result) => result.id === 'twicpics')
+
+    expect(business?.plan).toBe('Business')
+    expect(business?.monthly).toBe(49)
+    expect(enterprise?.status).toBe('quote')
+    expect(enterprise?.monthly).toBeNull()
   })
 })
