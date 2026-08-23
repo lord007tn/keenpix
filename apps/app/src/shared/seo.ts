@@ -10,7 +10,13 @@ import {
   FOUNDER,
   getAuthor,
   SUPPORT_EMAIL,
+  SUPPORT_WHATSAPP_NUMBER,
+  SUPPORT_WHATSAPP_URL,
 } from '@/shared/authors'
+import {
+  IMAGE_CDN_CALCULATOR_FAQ,
+  IMAGE_CDN_PRICING,
+} from '@/shared/image-cdn-pricing'
 
 export const SITE_NAME = 'Keenpix'
 export const SITE_TITLE = 'Image optimization CDN with honest pricing | Keenpix'
@@ -125,7 +131,9 @@ export function noIndexPageHead(title: string, description: string) {
 
 export function absoluteUrl(path = '/') {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  return `${getAppUrl()}${normalizedPath}`
+  const origin =
+    typeof window === 'undefined' ? getAppUrl() : window.location.origin
+  return `${origin}${normalizedPath}`
 }
 
 // Stable @id anchors so the Organization, WebSite, and SoftwareApplication
@@ -180,6 +188,8 @@ export function organizationJsonLd() {
       '@type': 'ContactPoint',
       contactType: 'customer support',
       email: SUPPORT_EMAIL,
+      telephone: SUPPORT_WHATSAPP_NUMBER,
+      url: SUPPORT_WHATSAPP_URL,
     },
     description: SITE_DESCRIPTION,
     founder: {
@@ -488,6 +498,71 @@ export function comparisonListingJsonLd(
           '@type': 'ListItem',
           item: url,
           name: 'Compare',
+          position: 2,
+        },
+      ],
+    },
+  ]
+}
+
+export function imageCdnCalculatorJsonLd() {
+  const url = absoluteUrl('/image-cdn-cost-calculator')
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      '@id': `${url}#calculator`,
+      applicationCategory: 'BusinessApplication',
+      browserRequirements: 'Requires JavaScript',
+      description:
+        'A source-dated calculator for comparing image CDN cost boundaries across ten providers.',
+      isAccessibleForFree: true,
+      name: 'Image CDN Cost Calculator',
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD',
+      },
+      operatingSystem: 'Any',
+      url,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      '@id': `${url}#webpage`,
+      dateModified: IMAGE_CDN_PRICING.verifiedAt,
+      description:
+        'Compare source-dated image CDN cost estimates while preserving vendor-specific billing boundaries and limitations.',
+      inLanguage: 'en',
+      isPartOf: { '@id': WEBSITE_ID },
+      mainEntity: { '@id': `${url}#calculator` },
+      name: 'Image CDN Cost Calculator',
+      publisher: { '@id': ORGANIZATION_ID },
+      url,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: IMAGE_CDN_CALCULATOR_FAQ.map((item) => ({
+        '@type': 'Question',
+        acceptedAnswer: { '@type': 'Answer', text: item.a },
+        name: item.q,
+      })),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          item: absoluteUrl('/'),
+          name: 'Keenpix',
+          position: 1,
+        },
+        {
+          '@type': 'ListItem',
+          item: url,
+          name: 'Image CDN Cost Calculator',
           position: 2,
         },
       ],

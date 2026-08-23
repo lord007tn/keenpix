@@ -1,3 +1,4 @@
+import { Resend } from 'resend'
 import type { EmailConfig, MailInput } from './types'
 
 export async function sendResendMail(
@@ -7,22 +8,15 @@ export async function sendResendMail(
   if (!(config.token && config.from)) {
     throw new Error('Resend is not configured')
   }
-  const response = await fetch('https://api.resend.com/emails', {
-    body: JSON.stringify({
-      from: config.from,
-      html: input.html,
-      subject: input.subject,
-      text: input.text,
-      to: input.to,
-    }),
-    headers: {
-      Authorization: `Bearer ${config.token}`,
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-    signal: AbortSignal.timeout(15_000),
+  const resend = new Resend(config.token)
+  const { error } = await resend.emails.send({
+    from: config.from,
+    html: input.html,
+    subject: input.subject,
+    text: input.text,
+    to: input.to,
   })
-  if (!response.ok) {
-    throw new Error(`Resend send failed (${response.status})`)
+  if (error) {
+    throw new Error(`Resend send failed (${error.statusCode ?? error.name})`)
   }
 }

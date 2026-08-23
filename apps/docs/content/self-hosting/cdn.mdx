@@ -176,7 +176,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
 
         proxy_cache       keenpix;
-        proxy_cache_key   "$scheme$request_method$host$request_uri";
+        proxy_cache_key   "$scheme$host$request_uri";
         proxy_cache_valid 200 30d;   # safety net; Keenpix already sends immutable
         proxy_cache_use_stale error timeout updating;
         add_header        X-Cache-Status $upstream_cache_status;

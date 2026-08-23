@@ -1,0 +1,245 @@
+---
+title: "Vercel Image Optimization to Keenpix Migration"
+description: Move next/image from Vercel's optimizer to a Keenpix custom loader with config mapping, canary rollout, cache and origin checks, and rollback.
+date: "2026-08-23"
+author: Raed Bahri
+competitor: Vercel Image Optimization
+tags: [vercel, nextjs, migration, image-cdn, implementation]
+image: /og/blog/migrate-vercel-image-optimization-to-keenpix.png?v=2026-08-23
+imageAlt: Next.js image candidates switching from Vercel optimization to a Keenpix custom loader
+---
+
+Do not rewrite cached `/_next/image` URLs in place. Keep `next/image`, add a Keenpix custom loader, canary it on selected components with the per-image `loader` prop, and only then make it the application-wide `loaderFile`. Next.js continues to generate responsive `srcset` candidates; Keenpix replaces the service that fetches and transforms each candidate.
+
+Your application can stay on Vercel. Deployments, routing, previews, functions, and pages do not need to move. This change is only appropriate when the value of a separate image-delivery layer justifies another hostname, origin policy, cache, failure mode, and vendor relationship.
+
+Keep Vercel Image Optimization when its integrated behavior already meets your requirements. It can be the simpler or cheaper choice, especially if you already pay for a plan, rely on Vercel's source-image cache purge, want one support boundary, or do not want a separate image service.
+
+## Prerequisites: record the current Next.js contract
+
+Before adding a loader, inventory the parts of `next/image` that influence generated URLs and user-visible behavior:
+
+1. Record the Next.js version and read its matching Image documentation. Next.js 16 requires an `images.qualities` allowlist.
+2. Inventory every `<Image>`, per-image `loader`, `unoptimized`, `overrideSrc`, static import, remote URL, data URL, fill layout, placeholder, priority/preload, and `sizes` value.
+3. Save the current `images.remotePatterns`, `localPatterns`, `deviceSizes`, `imageSizes`, `qualities`, `formats`, `minimumCacheTTL`, and custom `path` configuration.
+4. Identify the real source behind every relative `src`. A Keenpix loader needs an absolute HTTP(S) URL that its servers can fetch.
+5. Separate public assets from sources that require cookies, bearer tokens, or request headers. The default Next.js optimizer does not forward source-request headers, and Keenpix's current transform fetcher does not accept arbitrary origin auth headers either.
+6. Capture rendered `<img>` markup and network requests on representative desktop and mobile pages. Include the likely LCP image, responsive cards, transparent assets, static imports, animation, and one expected failure.
+7. Keep the current Next.js configuration in version control so rollback is one deploy, not a manual dashboard reconstruction.
+
+The browser usually sees a Vercel/Next URL shaped like this:
+
+```text
+/_next/image?url=%2Fproducts%2Fbag.jpg&w=828&q=75
+```
+
+That URL is an output of the default loader, not a durable source URL. The migration input is the component's original `src`, width, and quality.
+
+## Understand what stays and what moves
+
+Next.js still owns component layout and candidate generation:
+
+- `width`, `height`, and `fill` reserve layout space;
+- `sizes` tells the browser how wide the slot will be;
+- `deviceSizes` and `imageSizes` bound the generated width candidates;
+- `qualities` bounds allowed quality values;
+- lazy loading, preload/fetch priority, placeholders, alt text, and `overrideSrc` remain component concerns.
+
+The custom loader receives `{ src, width, quality }` and returns a URL. Keenpix then owns source fetching, format negotiation, transformation, and its caches. A loader does not automatically copy Vercel or Next.js origin restrictions into Keenpix.
+
+## Map the configuration deliberately
+
+| Next.js / Vercel behavior | Keenpix migration | Compatibility note |
+| --- | --- | --- |
+| `/_next/image?url=...&w=828&q=75` | `/img/ENCODED_ABSOLUTE_SOURCE?w=828&q=75&fmt=auto` | Build from the original `src`; do not wrap the old optimizer URL. |
+| `deviceSizes` and `imageSizes` | Keep them in `next.config` | Next.js still chooses candidate widths. Remove redundant widths only after inspecting real layouts and byte deltas. |
+| `qualities` | Keep the allowlist; pass the selected quality as `q` | Keenpix accepts 30–100. Values outside that range or Next's allowlist need an explicit policy. |
+| `images.formats` / `Accept` negotiation | Keenpix project Auto-format plus `fmt=auto` | Codec selection and output bytes need not match Vercel. Test AVIF, WebP, and JPEG fallback. |
+| `remotePatterns` | Add required source hosts to Keenpix Allowed hosts | Not equivalent: Next patterns can restrict protocol, port, pathname, and search; Keenpix's project boundary is hostname-based. Preserve narrower path policy in application code or signing. |
+| `localPatterns` | Resolve the relative path against a stable public origin | Keenpix has no equivalent local-path allowlist. Do not expose unintended application paths through a broad origin. |
+| static image import | Keep the import and let Next pass its emitted path to the loader | Confirm the absolute origin serves the hashed asset in production and previews. Intrinsic dimensions and generated blur data can remain Next features. |
+| `minimumCacheTTL` | No loader setting maps directly | Keenpix returns one-year immutable responses. Version source URLs when bytes change. |
+| Vercel source-image purge | No direct documented Keenpix public equivalent | Keenpix's current public API documents prewarm, not per-asset purge. Version the source and handle any outer-CDN purge separately. |
+| `unoptimized` | Keep it for assets that should bypass the loader | Test the emitted `src`; it may point directly at the application origin. |
+| `overrideSrc` | Keep it when you need a stable `src` while `srcset` uses optimized candidates | Inspect rendered HTML and image-search requirements. Do not assume it rewrites every candidate. |
+| authenticated remote source | No automatic equivalent | Neither default Next optimization nor Keenpix forwards arbitrary auth headers. Use an intentional public/gateway source or retain the existing protected path. |
+
+Vercel documents a cache key based on the source, width, quality, and normalized `Accept` value, with distinct behavior for local content hashes. Keenpix keys its transform cache by project, complete source URL, and effective transform object. Those models are similar enough to migrate responsive candidates, but they are not cache-compatible.
+
+## Add the Keenpix loader
+
+Create `keenpix-loader.js` at the Next.js project root:
+
+```js
+'use client'
+
+export default function keenpixLoader({ src, width, quality }) {
+  const baseUrl = process.env.NEXT_PUBLIC_KEENPIX_BASE_URL
+  const project = process.env.NEXT_PUBLIC_KEENPIX_PROJECT
+  const origin = process.env.NEXT_PUBLIC_IMAGE_ORIGIN
+
+  if (!baseUrl || !origin) {
+    throw new Error('Keenpix image environment variables are missing')
+  }
+
+  const source = src.startsWith('http') ? src : new URL(src, origin).href
+  const params = new URLSearchParams({ fmt: 'auto', w: String(width) })
+
+  if (project) params.set('project', project)
+  if (quality) params.set('q', String(quality))
+
+  return `${baseUrl.replace(/\/$/, '')}/img/${encodeURIComponent(source)}?${params}`
+}
+```
+
+For managed Keenpix, put the public project id in the delivery path:
+
+```dotenv
+NEXT_PUBLIC_KEENPIX_BASE_URL=https://cdn.keenpix.com/p/YOUR_PROJECT_ID
+NEXT_PUBLIC_IMAGE_ORIGIN=https://www.example.com
+```
+
+For self-hosting, use your image host as the base and keep the project in the query:
+
+```dotenv
+NEXT_PUBLIC_KEENPIX_BASE_URL=https://images.example.com
+NEXT_PUBLIC_KEENPIX_PROJECT=YOUR_PROJECT_ID
+NEXT_PUBLIC_IMAGE_ORIGIN=https://www.example.com
+```
+
+These values describe public routing and may be browser-visible. A signing secret is different: never prefix it with `NEXT_PUBLIC_` or put it in this loader. If the project requires signed URLs, generate the URL on a server or build step with the [Keenpix signing contract](/docs/concepts/signed-urls).
+
+Add every legitimate absolute source host to the Keenpix project allowlist. If relative sources resolve to `www.example.com`, allowlist that hostname—not the Vercel optimizer hostname. Never set the source to `/_next/image`; that would put one optimizer behind another and preserve the old billing/cache boundary.
+
+## Canary before setting a global loader
+
+Next.js supports a `loader` prop on individual images. Use it to migrate a small, representative component while the rest of the application keeps the default optimizer:
+
+```jsx
+import Image from 'next/image'
+import keenpixLoader from '../../keenpix-loader'
+
+export function ProductCard({ product }) {
+  return (
+    <Image
+      alt={product.name}
+      height={900}
+      loader={keenpixLoader}
+      sizes="(max-width: 768px) 50vw, 25vw"
+      src={product.image}
+      width={1200}
+    />
+  )
+}
+```
+
+This is a better canary than randomly choosing a provider inside the loader. A stable component or route creates reproducible URLs and lets both caches warm normally.
+
+After the canary passes, configure the application-wide loader:
+
+```js
+// next.config.js
+module.exports = {
+  images: {
+    loader: 'custom',
+    loaderFile: './keenpix-loader.js',
+    qualities: [60, 75, 85],
+  },
+}
+```
+
+Preserve your existing `deviceSizes`, `imageSizes`, and any other still-relevant Image configuration. Do not copy the example quality list unless those values already match your components and visual review.
+
+## Handle production, preview, and local origins
+
+A relative Next.js `src` is easy for the default optimizer because it runs with the application. A separate image service needs an absolute origin it can reach.
+
+- Use a stable production asset hostname when possible. It avoids coupling image identity to deployment URLs.
+- Decide what preview builds should display. Pointing every preview at the production origin is stable but cannot preview newly added local assets. Pointing at an ephemeral preview hostname changes cache identity and may require allowlist updates.
+- Do not use `localhost` as a remotely fetched origin. Keenpix blocks loopback and private/internal addresses by design.
+- Ensure the public origin path returns the original file, not an HTML error page, auth redirect, or another optimizer URL.
+- If a source includes a token query, encode the complete source. Confirm token lifetime, cache exposure, and logs before using it; a short-lived source can fail on a later cold request.
+
+The current Keenpix fetcher follows only validated redirects and rejects redirects to private or unapproved hosts. Test your application's static-asset redirects and canonical hostname before launch.
+
+## Verify rendered HTML and the network
+
+Run the Next.js build and open representative pages at desktop and mobile widths. Inspect the final `<img>` rather than the React props:
+
+1. Confirm `srcset` contains multiple Keenpix URLs with different `w` values.
+2. Confirm `sizes` matches the actual rendered slot and the browser selects a sensible candidate.
+3. Check that relative, remote, and static-import sources resolve to the intended absolute origin.
+4. Verify `unoptimized` and `overrideSrc` cases separately.
+5. Check that the LCP image retains the intended eager/preload/fetch-priority behavior.
+6. Confirm alt text, intrinsic dimensions, and placeholder behavior did not change.
+
+Check the transform response with explicit `Accept` headers:
+
+```bash
+curl -sS -D /tmp/keenpix-avif.headers -o /tmp/keenpix-avif.image \
+  -H 'Accept: image/avif,image/webp,image/*,*/*' \
+  'https://cdn.keenpix.com/p/PROJECT_ID/img/ENCODED_SOURCE?w=828&q=75&fmt=auto'
+
+curl -sS -D /tmp/keenpix-jpeg.headers -o /tmp/keenpix-jpeg.image \
+  -H 'Accept: image/jpeg,*/*' \
+  'https://cdn.keenpix.com/p/PROJECT_ID/img/ENCODED_SOURCE?w=828&q=75&fmt=auto'
+
+file /tmp/keenpix-avif.image /tmp/keenpix-jpeg.image
+```
+
+Review HTTP status, `Content-Type`, `Cache-Control`, and `Vary`. Keenpix currently returns one-year immutable transform responses and varies automatic format by `Accept`. Every cache in front must keep those format variants separate; otherwise use explicit formats in `<picture>` sources.
+
+Verify the deny path:
+
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' \
+  'https://cdn.keenpix.com/p/PROJECT_ID/img/https%3A%2F%2Funapproved.example%2Fphoto.jpg?w=828&q=75'
+# Expected: 403
+```
+
+Test a missing origin object, an origin timeout, a source larger than the configured cap, and a saturated transform service. Your component needs an appropriate fallback or error design; neither Next.js nor Keenpix can infer the product experience you want during an image outage.
+
+## Stage rollout and rollback
+
+Use gates that can be reversed independently:
+
+1. **Baseline:** save Vercel request URLs, rendered candidates, visual fixtures, page-level loading measurements, and current image-usage data for the same routes and period.
+2. **Per-image canary:** use the `loader` prop on one low-risk but representative component. Exercise preview and production-like origins.
+3. **Route or content-class expansion:** move responsive cards, then content images, then the LCP path only after its own mobile/desktop review.
+4. **Global configuration:** set `loaderFile` after every exceptional `Image` usage has an explicit disposition.
+5. **Overlap:** keep Keenpix and Vercel image paths available. Old pages and browser caches can request either service after a deploy.
+6. **Operational handoff:** document source versioning, allowlist ownership, signing, outer-CDN cache keys, incident fallback, and which team watches each provider.
+
+Choose a deterministic cohort and a risk-appropriate observation window; one universal percentage or duration would be false precision. Define rollback triggers first: unexpected image errors, wrong sources in previews, format mixing, visible quality/crop changes, origin load, cache fragmentation, or a representative mobile/desktop loading regression.
+
+For a per-image canary, rollback removes the `loader` prop. After global cutover, revert `images.loader` and `loaderFile`, redeploy, and keep Keenpix active for existing documents that still contain Keenpix URLs. Rolling back the app does not recall already-rendered HTML or purge browser caches.
+
+## Cache and invalidation checks
+
+Vercel added source-image cache invalidation for teams on its newer image-optimization pricing path in November 2025. If that purge workflow is important to your publishing system, record it as a Vercel win: Keenpix's current public API documents prewarming but not an equivalent public per-source purge.
+
+For Keenpix:
+
+- use a content hash or stable version on any source that can change;
+- keep the complete transform query in the CDN cache key;
+- avoid arbitrary width and quality values outside Next's bounded lists;
+- do not add per-request tracking parameters to image URLs;
+- verify `Vary: Accept` handling for `fmt=auto`;
+- purge a customer-owned outer CDN when your runbook requires it;
+- rotate signing secrets as a credential change plus outer-cache purge, not as revocation of bytes already in a browser.
+
+Prewarming is optional. Use it only for known widths and formats on critical assets, from trusted server automation. A large speculative matrix creates origin and cache work without proving a user benefit.
+
+## Honest incompatibilities and Vercel wins
+
+Vercel Image Optimization remains the stronger choice when you want one integrated deployment and support boundary, its cache invalidation workflow, framework-native defaults with no extra service, or an incremental cost that is lower than a separate managed plan for your actual usage. It also avoids absolute-origin and preview-host planning for local assets.
+
+Keenpix can be a fit when you deliberately want image delivery separated from the application host, one URL grammar across frameworks, its managed-delivery model, or a future move between managed and self-hosted Keenpix. It is not universally faster or cheaper. Compare transformations, cache reads and writes, data transfer, delivered bytes, origin traffic, failure behavior, and engineering time from the same workload.
+
+## Conversion bridge: migrate one component
+
+Start with the maintained [Next.js integration guide](/docs/frameworks/nextjs) and the focused [custom-loader implementation article](/blog/nextjs-custom-image-cdn-loader). Add a Keenpix project, allowlist one public origin, and canary one component with the per-image loader. Review the broader [Keenpix vs Vercel Image Optimization](/compare/vercel-image-optimization-alternative) decision page, then compare [managed pricing](/pricing) or [self-hosting](/docs/self-hosting) only after you have your own candidate counts, cache behavior, delivered bytes, and operational requirements.
+
+## Sources and verification
+
+Competitor and framework behavior was re-verified on August 23, 2026 against the official [Next.js Image component reference](https://nextjs.org/docs/app/api-reference/components/image), including custom loader, width, quality, `sizes`, and `overrideSrc` behavior; Vercel's [Image Optimization architecture and URL format](https://vercel.com/docs/image-optimization); [usage-management guidance](https://vercel.com/docs/image-optimization/managing-image-optimization-costs); and [source-image cache invalidation announcement](https://vercel.com/changelog/you-can-now-invalidate-the-cdn-cache-by-providing-a-source-image). Keenpix behavior is based on the current [Next.js guide](/docs/frameworks/nextjs), [endpoint](/docs/reference/endpoint), [caching](/docs/concepts/caching), and [security](/docs/concepts/security). Vercel account pricing mode, negotiated terms, traffic, and application-specific cache behavior remain unknown until checked in the migrating account.

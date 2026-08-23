@@ -38,14 +38,27 @@ export async function handleSdkRequest(
       response = jsonError(
         error.issues[0]?.message ?? 'Invalid request body',
         400,
+        {
+          code: 'invalid_request',
+          resolutionHint:
+            'Review the operation request schema in /openapi.json and correct the rejected field.',
+        },
       )
       return response
     }
     if (error instanceof SyntaxError) {
-      response = jsonError('Invalid JSON request body', 400)
+      response = jsonError('Invalid JSON request body', 400, {
+        code: 'invalid_json',
+        resolutionHint:
+          'Send a valid JSON document with Content-Type: application/json.',
+      })
       return response
     }
-    response = jsonError('SDK API request failed', 500)
+    response = jsonError('SDK API request failed', 500, {
+      code: 'internal_error',
+      resolutionHint:
+        'Retry the request with the returned X-Request-Id, then contact Keenpix support if the failure continues.',
+    })
     return response
   } finally {
     await addSdkApiActivity(request, activity, response, startedAt)
@@ -59,7 +72,7 @@ function routeSdkRequest(
   activity: SdkApiActivityContext,
 ) {
   if (segments[0] !== 'projects') {
-    return jsonError('Not found', 404)
+    return sdkEndpointNotFound()
   }
 
   if (segments.length === 1) {
@@ -69,31 +82,31 @@ function routeSdkRequest(
     if (method === 'POST') {
       return createProjectResource(request, activity)
     }
-    return jsonError('Not found', 404)
+    return sdkEndpointNotFound()
   }
 
   if (segments.length === 2) {
     return method === 'GET'
       ? getProjectResource(request, segments[1], activity)
-      : jsonError('Not found', 404)
+      : sdkEndpointNotFound()
   }
 
   if (segments.length === 3 && segments[2] === 'configuration') {
     return method === 'GET'
       ? getProjectConfiguration(request, segments[1], activity)
-      : jsonError('Not found', 404)
+      : sdkEndpointNotFound()
   }
 
   if (segments.length === 3 && segments[2] === 'settings') {
     return method === 'PATCH'
       ? updateProjectSettingsResource(request, segments[1], activity)
-      : jsonError('Not found', 404)
+      : sdkEndpointNotFound()
   }
 
   if (segments.length === 3 && segments[2] === 'prewarm') {
     return method === 'POST'
       ? prewarmProjectImagesResource(request, segments[1], activity)
-      : jsonError('Not found', 404)
+      : sdkEndpointNotFound()
   }
 
   if (segments.length === 3 && segments[2] === 'domains') {
@@ -105,5 +118,13 @@ function routeSdkRequest(
     }
   }
 
-  return jsonError('Not found', 404)
+  return sdkEndpointNotFound()
+}
+
+function sdkEndpointNotFound() {
+  return jsonError('SDK API endpoint not found', 404, {
+    code: 'endpoint_not_found',
+    resolutionHint:
+      'Review the versioned paths and methods published in /openapi.json.',
+  })
 }

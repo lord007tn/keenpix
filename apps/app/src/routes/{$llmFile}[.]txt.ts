@@ -2,6 +2,11 @@ import { createFileRoute } from '@tanstack/react-router'
 import { llms } from 'fumadocs-core/source'
 import { COMPARISONS } from '@/features/compare/comparison-data'
 import { getAppUrl, isCloud } from '@/server/deployment'
+import {
+  SUPPORT_EMAIL,
+  SUPPORT_WHATSAPP_LABEL,
+  SUPPORT_WHATSAPP_URL,
+} from '@/shared/authors'
 import { blogSource, listBlogPosts } from '@/shared/blog-source'
 import { source } from '@/shared/docs-source'
 import { MARKETING_FAQ } from '@/shared/marketing-faq'
@@ -89,6 +94,18 @@ function llmsIndex() {
 - [Image CDN pricing](${baseUrl}/pricing): current managed plan allowances, overage rates, trial terms, and billing boundary.
 - [Self-hosted image CDN](${baseUrl}/self-hosted-image-cdn): Docker deployment, architecture, operational responsibilities, limitations, and alternatives.
 - [Comparison hub](${baseUrl}/compare): dated, source-backed vendor comparisons and best-fit guidance.
+
+## Developer resources
+
+- [Keenpix developer resources](${baseUrl}/developers): API discovery, authentication, onboarding, SDK, and machine-readable references.
+- [OpenAPI specification](${baseUrl}/openapi.json): OpenAPI 3.1 contract with unique operation IDs, typed parameters and schemas, response definitions, and API-key security schemes.
+- [SDK API documentation](${baseUrl}/docs/reference/sdk-api): versioned JSON control-plane API for trusted backend integrations.
+- [Node SDK package](${baseUrl}/docs/reference/sdk-package): official \`@keenpix/sdk\` client published on npm.
+- [Public API health](${baseUrl}/api/health): unauthenticated JSON health for the Keenpix app.
+
+Control-plane operations use project-scoped API keys. Keenpix does not operate an OAuth authorization server, separate API sandbox, or official CLI. Integrations can call the REST API directly or use \`@keenpix/sdk\`.
+
+API contact: [${SUPPORT_EMAIL}](mailto:${SUPPORT_EMAIL}) or [WhatsApp ${SUPPORT_WHATSAPP_LABEL}](${SUPPORT_WHATSAPP_URL}).
 
 ${generator.index()}
 

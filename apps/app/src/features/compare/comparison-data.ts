@@ -4,6 +4,8 @@ import { cloudinaryComparison } from './data/cloudinary'
 import { gumletComparison } from './data/gumlet'
 import { imagekitComparison } from './data/imagekit'
 import { imgixComparison } from './data/imgix'
+import { imgproxyComparison } from './data/imgproxy'
+import { twicpicsComparison } from './data/twicpics'
 import { vercelComparison } from './data/vercel'
 
 export interface ComparisonPageData {
@@ -35,7 +37,9 @@ export const COMPARISONS: Record<string, ComparisonPageData> = {
   [cloudflareImagesComparison.slug]: cloudflareImagesComparison,
   [bunnyOptimizerComparison.slug]: bunnyOptimizerComparison,
   [imgixComparison.slug]: imgixComparison,
+  [imgproxyComparison.slug]: imgproxyComparison,
   [imagekitComparison.slug]: imagekitComparison,
   [gumletComparison.slug]: gumletComparison,
+  [twicpicsComparison.slug]: twicpicsComparison,
   [vercelComparison.slug]: vercelComparison,
 }

@@ -186,6 +186,9 @@ For a full rebuild: create fresh volumes, start only `postgres`, copy a dump in
 ## After deploy
 
 - App health: open the generated app URL and `/api/health`.
+- Transform: verify `/health/live` and `/health/ready` inside the transform
+  container on port `3002`. These operator probes are not routed through the
+  public app or delivery hostname, where `404` is expected.
 - Worker: verify `/health/live`, `/health/ready`, and `/health/details` inside
   the worker container. If operators need Workbench, assign the worker service
   an access-controlled domain on port `3001` and sign in with Coolify's generated

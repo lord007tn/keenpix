@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  absoluteUrl,
   blogListingJsonLd,
   blogPostingJsonLd,
   comparisonListingJsonLd,
@@ -12,7 +13,21 @@ import {
   softwareApplicationJsonLd,
 } from './seo'
 
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
 describe('SEO entity graphs', () => {
+  it('uses the browser origin when route metadata hydrates', () => {
+    vi.stubGlobal('window', {
+      location: { origin: 'https://preview.keenpix.example' },
+    })
+
+    expect(absoluteUrl('/pricing')).toBe(
+      'https://preview.keenpix.example/pricing',
+    )
+  })
+
   it('uses article-specific image alt text for Open Graph and Twitter', () => {
     const meta = seo({
       title: 'Article title',
@@ -44,6 +59,13 @@ describe('SEO entity graphs', () => {
     expect(organizationJsonLd().sameAs).toContain('https://x.com/getkeenpix')
     expect(organizationJsonLd().founder.sameAs).toContain(
       'https://x.com/raedbahriworld',
+    )
+    expect(organizationJsonLd().contactPoint).toEqual(
+      expect.objectContaining({
+        email: 'hi@raedbahri.com',
+        telephone: '+21626765990',
+        url: 'https://wa.me/21626765990',
+      }),
     )
   })
 

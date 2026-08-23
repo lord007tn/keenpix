@@ -55,6 +55,28 @@ export function CompareHub() {
         </section>
 
         <section className="border-b">
+          <div className="mx-auto grid max-w-6xl gap-6 px-6 py-10 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+            <div>
+              <h2 className="font-semibold text-2xl tracking-tight">
+                Model your workload before choosing a plan
+              </h2>
+              <p className="mt-2 max-w-3xl text-muted-foreground leading-relaxed">
+                Use the same delivery, request, storage, transform, project,
+                domain, and region inputs across ten source-dated provider
+                models.
+              </p>
+            </div>
+            <a
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-primary px-4 font-medium text-primary-foreground text-sm transition-colors hover:bg-primary/90"
+              href="/image-cdn-cost-calculator"
+            >
+              Open cost calculator
+              <ArrowRightIcon className="size-4" />
+            </a>
+          </div>
+        </section>
+
+        <section className="border-b">
           <div className="mx-auto max-w-6xl px-6 py-14 sm:py-16">
             <span className="font-medium text-primary text-sm">
               Compare the right category

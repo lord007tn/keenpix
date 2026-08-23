@@ -26,6 +26,27 @@ test('public pages and health endpoint respond', async ({ page, request }) => {
   await page.goto('/')
   await expect(page).toHaveTitle(TITLE_RE)
 
+  await page.goto('/pricing')
+  const pricingOrigin = new URL(page.url()).origin
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(1)
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    `${pricingOrigin}/pricing`,
+  )
+  await expect(page.locator('meta[property="og:url"]')).toHaveCount(1)
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+    'content',
+    `${pricingOrigin}/pricing`,
+  )
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+    'content',
+    `${pricingOrigin}/brand/keenpix-og-card.png`,
+  )
+  await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute(
+    'content',
+    `${pricingOrigin}/brand/keenpix-og-card.png`,
+  )
+
   await page.goto('/docs')
   await expect(
     page.getByRole('heading', { exact: true, name: 'Documentation' }),

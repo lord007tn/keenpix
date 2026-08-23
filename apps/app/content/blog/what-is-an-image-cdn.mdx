@@ -2,6 +2,7 @@
 title: What is an image CDN? How optimization and delivery work
 description: An image CDN fetches, transforms, caches, and delivers image variants close to users. Learn the request lifecycle, tradeoffs, and when you need one.
 date: "2026-07-11"
+updated: "2026-08-22"
 author: Raed Bahri
 tags: [image-cdn, fundamentals, performance]
 image: /og/blog/what-is-an-image-cdn.png?v=2026-07-11
@@ -23,6 +24,14 @@ A typical request follows five steps:
 5. **The result is cached and delivered.** Later requests for the same normalized transformation can reuse the generated variant. An edge CDN can cache it again closer to users.
 
 The [web.dev image CDN guide](https://web.dev/articles/image-cdns) describes the same basic split: transformation happens according to URL parameters, while a CDN reduces delivery distance and repeat work. Exact behavior varies by provider, so cache keys and invalidation rules belong in any production evaluation.
+
+## What does “CDN for images” mean in practice?
+
+People searching for a **CDN for images** may mean three different things: a general CDN carrying prebuilt image files, an image transformation service behind an existing CDN, or a managed image CDN that bundles both responsibilities. The URL alone does not reveal which architecture is in use.
+
+Trace one cache miss to identify the boundary. Ask which system validates the source, creates the requested width and format, stores the generated variant, answers the next request, and records billable usage. A general CDN may answer only the repeat-delivery step. A focused transform engine may create the variant but leave edge delivery and observability to your team. A managed image CDN may combine those steps under one product and bill.
+
+This distinction prevents two common purchasing mistakes. The first is comparing a CDN bandwidth price with a managed image-service price while ignoring transformation, cache, and operations. The second is treating a free self-hosted license as a complete delivery cost while omitting compute, egress, monitoring, upgrades, and incident response.
 
 ## What does an image CDN optimize?
 
@@ -91,8 +100,8 @@ The answer should be product documentation, a configuration you can inspect, or 
 
 An image CDN is usually worth evaluating when you serve a changing image catalog, support multiple screen sizes, pull from origins you already operate, or need one transformation grammar across frameworks. It may be unnecessary for a small static site whose build already emits correct formats and responsive widths.
 
-For the category distinction, continue with [image CDN vs traditional CDN](/blog/image-cdn-vs-traditional-cdn). For implementation, see the [responsive image CDN guide](/blog/responsive-image-cdn-guide). If you are choosing between infrastructure ownership and a service, use the [self-hosted vs managed decision framework](/blog/self-host-vs-managed-image-optimization).
+For the category distinction, continue with [image CDN vs traditional CDN](/blog/image-cdn-vs-traditional-cdn). For implementation, see the [responsive image CDN guide](/blog/responsive-image-cdn-guide). If you are choosing between infrastructure ownership and a service, use the [self-hosted vs managed decision framework](/blog/self-host-vs-managed-image-optimization). To compare public pricing boundaries with your own delivery inputs, use the [image CDN cost calculator](/image-cdn-cost-calculator).
 
 ## Sources and verification
 
-This explainer was checked on July 11, 2026 against [web.dev's image CDN guidance](https://web.dev/articles/image-cdns), [MDN's responsive images guide](https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Responsive_images), and the [HTTP `Accept` header reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Accept). Examples are illustrative; they are not benchmark results.
+This explainer was last reviewed on August 22, 2026 against [web.dev's image CDN guidance](https://web.dev/articles/image-cdns), [MDN's responsive images guide](https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Responsive_images), and the [HTTP `Accept` header reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Accept). Examples are illustrative; they are not benchmark results.

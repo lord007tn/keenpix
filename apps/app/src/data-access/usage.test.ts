@@ -17,6 +17,7 @@ vi.mock('@keenpix/database', () => ({
 const { deliveredBytesSince, listUsageBillingCustomers } = await import(
   './usage'
 )
+const { getPlatformSuccessfulDeliveryCount } = await import('./usage')
 
 describe('deliveredBytesSince', () => {
   it('adds successful managed-edge offloads to application delivery once', async () => {
@@ -61,6 +62,21 @@ describe('listUsageBillingCustomers', () => {
         polarCustomerId: true,
         lastUsageReportAt: true,
       },
+    })
+  })
+})
+
+describe('getPlatformSuccessfulDeliveryCount', () => {
+  it('counts successful application delivery and edge offloads once', async () => {
+    analyticsAggregate.mockResolvedValue({
+      _sum: { cachedRequests: 3_000_000, optimizedRequests: 2_000_000 },
+    })
+    edgeAggregate.mockResolvedValue({ _sum: { requests: 12_100_000 } })
+
+    await expect(getPlatformSuccessfulDeliveryCount()).resolves.toBe(17_100_000)
+    expect(edgeAggregate).toHaveBeenCalledWith({
+      where: { stage: 'edge', status: { gte: 200, lt: 300 } },
+      _sum: { requests: true },
     })
   })
 })

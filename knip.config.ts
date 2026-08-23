@@ -11,6 +11,7 @@ const config: KnipConfig = {
     'apps/app': {
       entry: [
         'src/router.tsx',
+        'src/server.ts',
         'src/routes/**/*.{ts,tsx}',
         'src/functions/**/*.ts',
         'src/actions/**/*.ts',

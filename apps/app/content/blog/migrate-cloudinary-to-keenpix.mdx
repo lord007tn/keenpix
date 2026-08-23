@@ -1,0 +1,183 @@
+---
+title: "Cloudinary to Keenpix Migration Guide"
+description: Migrate Cloudinary image URLs to Keenpix with an explicit parameter map, origin plan, canary rollout, cache checks, and tested rollback.
+date: "2026-08-23"
+author: Raed Bahri
+competitor: Cloudinary
+tags: [cloudinary, migration, image-cdn, implementation]
+image: /og/blog/migrate-cloudinary-to-keenpix.png?v=2026-08-23
+imageAlt: Cloudinary image URLs moving through a staged Keenpix migration and rollback path
+---
+
+You can migrate Cloudinary image delivery to Keenpix without changing every image at once. Keep Cloudinary serving production, choose an origin Keenpix can fetch, translate only the transformations Keenpix actually supports, and canary the new URLs behind a reversible application flag.
+
+The first decision is asset ownership. If the originals already live in S3, R2, or a web origin you control, point Keenpix there. If the only copy is in Cloudinary's Media Library, either export it to storage you control or temporarily use the public, untransformed Cloudinary delivery URL as Keenpix's source. The temporary path still depends on Cloudinary and can incur Cloudinary delivery, so it is an overlap strategy, not a completed exit.
+
+This guide covers images. Keep Cloudinary when you depend on its video pipeline, DAM workflows, upload processing, generative features, face/object-aware crops, arbitrary transformation chains, or authenticated asset delivery and cannot replace those capabilities separately.
+
+## Prerequisites: inventory before rewriting URLs
+
+Do not begin with a regular expression over production HTML. Build a migration manifest first:
+
+1. List every Cloudinary cloud name, delivery hostname, asset type, delivery type, and URL-generating SDK or helper.
+2. Separate `image/upload` assets from `image/fetch`, `private`, `authenticated`, video, raw files, and client-side upload flows.
+3. Count transformation strings by traffic or page importance. Expand named transformations and record chained steps, variables, overlays, conditional transforms, and AI add-ons.
+4. Identify the authoritative original for each asset. Record its versioned URL, content type, dimensions, and a checksum when you can retrieve the bytes.
+5. Record security controls: Strict Transformations, signed delivery URLs, allowed fetch domains, token or cookie access, and custom delivery hostnames.
+6. Choose a small, representative canary: fixed-width thumbnails, responsive content images, transparent PNGs, animated assets, and at least one expected failure.
+7. Keep the existing Cloudinary URL generator deployable until the rollback window closes.
+
+Cloudinary's URL structure varies by asset and delivery type. Its current default form is `/<asset_type>/<delivery_type>/<transformations>/<version>/<public_id>.<extension>`. Do not assume every URL matching `res.cloudinary.com` is a public uploaded image.
+
+## Choose the source topology
+
+### Originals already live on your origin
+
+This is the cleanest path. Keep the original URL stable, add its hostname under **Settings → Security → Allowed hosts**, and make Keenpix URLs from that absolute source. The project allowlist is checked before cache lookup; an empty list blocks every request.
+
+```text
+Original:
+https://assets.example.com/catalog/bag-v17.jpg
+
+Managed Keenpix:
+https://cdn.keenpix.com/p/PROJECT_ID/img/https%3A%2F%2Fassets.example.com%2Fcatalog%2Fbag-v17.jpg?w=800&q=75&fmt=auto
+```
+
+### Originals exist only in Cloudinary
+
+A public `image/upload` URL without a transformation component can be a temporary source:
+
+```text
+https://res.cloudinary.com/CLOUD/image/upload/v1720000000/catalog/bag.jpg
+```
+
+Allowlist `res.cloudinary.com`, encode that complete URL as the Keenpix source, and retain the Cloudinary version segment. Test that the URL returns the original you expect; a format extension or upload-time transformation may mean it is not byte-identical to a separate master.
+
+This topology preserves a Cloudinary dependency. Keenpix cache misses fetch through Cloudinary, and Cloudinary remains the system that stores or delivers the original. Export to an owned origin before calling the provider migration complete.
+
+### Private, authenticated, or header-protected originals
+
+Stop and redesign this path before canarying. Keenpix's current public transform fetcher sends a normal HTTP(S) request with its own user agent; it does not accept arbitrary origin authorization headers or Cloudinary credentials. Cloudinary `/s--...--/` delivery signatures and Keenpix `sig=` signatures are different protocols and are not interchangeable.
+
+Provide a source URL Keenpix can fetch safely, such as a deliberately public asset host or a server-generated, stable source URL whose expiry exceeds the complete transform and cache-fill window. Do not make a private Cloudinary asset public merely to finish the migration. If authenticated media is a product requirement, Cloudinary may remain the correct delivery layer.
+
+## Map URLs explicitly
+
+Start from the semantic transformation, not from punctuation. Cloudinary separates comma-delimited qualifiers and slash-delimited transformation stages; Keenpix has one query object and a fixed processing order.
+
+| Cloudinary URL concept | Keenpix equivalent | Migration note |
+| --- | --- | --- |
+| `w_800` | `w=800` | Keenpix accepts 1–5000 and clamps out-of-range values. |
+| `h_600` | `h=600` | Verify the result together with `fit`; dimensions alone do not define crop behavior. |
+| `q_75` | `q=75` | Numeric values map, but encoder implementations can produce different bytes. Compare visually. |
+| `q_auto` | Project default quality or an explicit `q` | No exact policy mapping. Pick a measured numeric value or keep the Keenpix project default. |
+| `f_auto` | Omit `fmt` or use `fmt=auto` | Keenpix negotiates AVIF/WebP/JPEG only when project Auto-format is enabled. Codec choice need not match Cloudinary's. |
+| `f_webp`, `f_avif`, `f_jpg`, `f_png` | `fmt=webp`, `fmt=avif`, `fmt=jpeg`, `fmt=png` | Use explicit formats when an outer CDN cannot vary safely by `Accept`. |
+| `c_fill,w_800,h_600` | `w=800&h=600&fit=cover` | Both fill a box by cropping, but inspect crop and upscaling behavior. |
+| `c_fit` or `c_limit` | Usually `fit=inside` | Keenpix does not enlarge by default. Confirm both dimensions and transparent padding expectations. |
+| `c_pad` plus `b_*` | `fit=contain&background=...` | Check color parsing, alpha, and the final canvas dimensions. |
+| `c_scale` with unlike width and height | `fit=fill` | This may distort the image. Treat it as an intentional exception. |
+| `g_center`, `g_north`, `g_south_east` | `position=centre`, `position=north`, `position=southeast` | Keenpix accepts compass anchors; spelling and crop output still need visual checks. |
+| `g_auto`, `g_face`, object gravity | No exact equivalent | `position=attention` and `position=entropy` are libvips heuristics, not face/object-aware Cloudinary crops. Preserve Cloudinary or author crops manually. |
+| `dpr_2` | `dpr=2` | Keenpix supports 1–3. Do not also double the requested width in `srcset`. |
+| `e_blur:VALUE` | `blur=VALUE` | Numeric scales and processing order are not compatibility promises. Recalibrate against approved fixtures. |
+| `fl_no_overflow` | Default Keenpix behavior | Keenpix does not upscale unless `enlarge=1` is present. |
+| `t_NAME` | Expand and assess manually | Keenpix v0.3 has no named transformation presets. Unsupported steps block parity. |
+| overlays, text, variables, conditionals, AI, video | No general equivalent | Do not silently drop a watermark, entitlement mark, crop rule, or moderation result. |
+
+Cloudinary may treat two differently ordered transformation strings as separate derived transformations even when their visible result looks similar. Keenpix normalizes known parameters into its effective transform object. That difference can change cache cardinality, but it does not prove a lower bill or faster output; measure your own workload.
+
+## Build a small, owned URL generator
+
+Avoid a generic Cloudinary parser that quietly ignores unknown steps. Translate approved presets in application code and fail closed for everything else:
+
+```js
+const keenpixPresets = {
+  productCard: { fit: 'cover', height: 600, quality: 75, width: 800 },
+  productThumb: { fit: 'cover', height: 240, quality: 75, width: 240 },
+}
+
+export function keenpixImageUrl(source, presetName) {
+  const preset = keenpixPresets[presetName]
+  if (!preset) throw new Error(`Unmapped image preset: ${presetName}`)
+
+  const params = new URLSearchParams({
+    fit: preset.fit,
+    fmt: 'auto',
+    h: String(preset.height),
+    q: String(preset.quality),
+    w: String(preset.width),
+  })
+
+  return `https://cdn.keenpix.com/p/PROJECT_ID/img/${encodeURIComponent(source)}?${params}`
+}
+```
+
+If the source contains its own query string or fragment, encode the entire source as shown. Alternatively, use Keenpix's `/img/?url=...` form and let `URLSearchParams` encode it. Never concatenate an unescaped source query with transform parameters.
+
+## Validate visual and protocol parity
+
+Make expected differences explicit. A changed JPEG encoder, automatic-quality policy, crop heuristic, color profile, animation default, or SVG handling can alter bytes without being a defect. A removed watermark, wrong crop, lost animation, or changed entitlement is a defect.
+
+Use fixtures with approved reference images and inspect the response, not only the browser preview:
+
+```bash
+curl -sS -D /tmp/keenpix-headers.txt \
+  -H 'Accept: image/avif,image/webp,image/*,*/*' \
+  -o /tmp/keenpix-output \
+  'https://cdn.keenpix.com/p/PROJECT_ID/img/ENCODED_SOURCE?w=800&h=600&fit=cover&q=75&fmt=auto'
+
+cat /tmp/keenpix-headers.txt
+file /tmp/keenpix-output
+sha256sum /tmp/keenpix-output
+```
+
+Then exercise the security boundary:
+
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' \
+  'https://cdn.keenpix.com/p/PROJECT_ID/img/https%3A%2F%2Funapproved.example%2Fimage.jpg?w=800'
+# Expected: 403
+```
+
+For every representative page, check intrinsic dimensions, transparent backgrounds, animation, orientation, crop focus, `Content-Type`, `Cache-Control`, and `Vary`. Compare transferred bytes and user-visible loading on your pages; do not borrow a compression percentage from another catalog.
+
+## Check cache identity and origin security
+
+Successful Keenpix transforms currently return `Cache-Control: public, max-age=31536000, immutable`. The cache key includes the project, complete source URL, and effective transform object. That makes source versioning part of correctness.
+
+- If an image can change in place, add a stable content version to its path or query before migration. Do not use a timestamp that changes on every request.
+- Cache the full Keenpix query string. Dropping `w`, `h`, `q`, or `fmt` from an outer cache key can serve the wrong image.
+- With `fmt=auto`, verify every outer cache separates variants by `Accept`; otherwise use explicit format URLs.
+- Keep the source allowlist as narrow as possible. Keenpix also blocks private/internal IPs, pins the resolved IP, and rechecks redirects, but the allowlist is still the project boundary.
+- Enable Keenpix HMAC URLs only when transform tampering or cache-busting is a real risk. Generate signatures on a server; a browser-visible Cloudinary API secret or Keenpix signing secret is a credential leak.
+- A valid signed URL can be replayed. Signing controls parameter tampering, not reader identity.
+
+Keenpix's current public API documents prewarming but not a public per-asset purge endpoint. Prefer versioned source URLs for changed content, and include any customer-owned CDN purge in the runbook. If you prewarm, do it from trusted server automation with a project-scoped API key, never from client code.
+
+## Stage the rollout, canary, and rollback
+
+Use one reversible flag around the URL generator. The exact percentages and observation window depend on your traffic and risk; the important property is that the cohort is stable and rollback does not require another migration.
+
+1. **Shadow validation:** generate both URLs in tests or logs without changing user responses. Reject every unmapped preset.
+2. **Internal canary:** enable Keenpix for staff, preview deployments, or a fixed asset list. Exercise cold cache, warm cache, origin timeout, unsupported input, and denied origin cases.
+3. **Production canary:** route a stable low-risk cohort to Keenpix. Do not randomize on every request, because that destroys cache comparability and makes failures hard to reproduce.
+4. **Expand by content class:** move simple resize/quality URLs before crops, animation, SVG, or source topologies that still depend on Cloudinary.
+5. **Hold overlap:** keep Cloudinary credentials, URLs, and account configuration intact until existing HTML, browser caches, crawlers, emails, and third-party embeds have aged through the agreed rollback window.
+6. **Finish the asset exit separately:** if Cloudinary is the temporary origin, copy masters and metadata to the owned origin, checksum them, update only the source portion of the Keenpix URL, canary again, and retain the previous source version for rollback.
+
+Define rollback triggers before canarying: unexpected image 4xx/5xx, origin saturation, material crop or color mismatches, missing security marks, cache-variant mixing, or a user-facing loading regression on representative pages. Roll back by disabling the Keenpix flag and redeploying the existing Cloudinary generator. Keep Keenpix available long enough for old pages that still contain its URLs; a deploy cannot recall HTML already cached by clients.
+
+## Honest incompatibilities and Cloudinary wins
+
+Cloudinary is the better fit when the migration would require rebuilding a DAM, upload widget, video pipeline, moderation flow, enterprise support process, AI transformation, authenticated delivery system, or complex named/chained transformations. It is also lower risk when Cloudinary URLs are a public contract used by customers and you cannot keep a compatibility hostname.
+
+Keenpix is narrower: it fetches images from origins you operate or deliberately expose, transforms them through its documented query grammar, and can run as managed cloud or a self-hosted AGPL release. That narrower boundary is useful only if it matches the job you need done.
+
+## Conversion bridge: prove one image class first
+
+If the compatibility audit passes, create a Keenpix project, allowlist one non-sensitive origin, and migrate one named application preset—not the whole Cloudinary account. Use the [transform parameter reference](/docs/reference/parameters), [signed URL guide](/docs/concepts/signed-urls), and [responsive image checklist](/blog/responsive-image-cdn-guide) during the canary. Compare the architecture and vendor-fit tradeoffs in [Keenpix vs Cloudinary](/compare/cloudinary-alternative), then review [managed pricing](/pricing) or the [self-hosting path](/docs/self-hosting) with your measured traffic.
+
+## Sources and verification
+
+Competitor behavior in this guide was re-verified on August 23, 2026 against Cloudinary's official [transformation URL reference](https://cloudinary.com/documentation/transformation_reference), [remote fetch documentation](https://cloudinary.com/documentation/fetch_remote_images), [named transformation behavior](https://cloudinary.com/documentation/named_transformations), [media access controls](https://cloudinary.com/documentation/control_access_to_media), and [migration guide](https://cloudinary.com/documentation/migration). Keenpix behavior is based on the current [endpoint](/docs/reference/endpoint), [parameters](/docs/reference/parameters), [caching](/docs/concepts/caching), and [security](/docs/concepts/security) documentation. Unknown account-specific Cloudinary contracts, add-ons, transformations, and origin access rules must be verified in your own environment.
