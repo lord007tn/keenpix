@@ -28,6 +28,7 @@ const config: KnipConfig = {
       ignoreDependencies: [
         '@keenpix/docs',
         'bullmq',
+        'lru-cache',
         'shadcn',
         'svgo',
         'tailwindcss',
