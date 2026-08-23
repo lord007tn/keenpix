@@ -43,6 +43,16 @@
     "billing:configure-benefits": "pnpm --filter @keenpix/app billing:configure-benefits",
     "billing:configure-catalog": "pnpm --filter @keenpix/app billing:configure-catalog"
   },
+  "reactDoctor": {
+    "rules": {
+      "react-doctor/react-compiler-no-manual-memoization": "warn",
+      "react-hooks-js/immutability": "warn",
+      "react-hooks-js/incompatible-library": "warn",
+      "react-hooks-js/set-state-in-effect": "warn",
+      "react-hooks-js/static-components": "warn",
+      "react-hooks-js/todo": "warn"
+    }
+  },
   "pnpm": {
     "onlyBuiltDependencies": [
       "@prisma/client",

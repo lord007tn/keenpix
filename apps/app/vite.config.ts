@@ -36,7 +36,7 @@ const config = defineConfig({
     }),
     viteReact(),
     babel({
-      presets: [reactCompilerPreset()],
+      presets: [reactCompilerPreset({ compilationMode: 'annotation' })],
     }),
   ],
 })

@@ -164,6 +164,8 @@ export function MarketingPage({
   deliveredImages: number | null
   pricing: PlanPricing | null
 }) {
+  'use memo'
+
   // Loader provides live pricing; fall back to the catalog so the page always
   // renders real numbers (and to satisfy the self-host-typed null).
   const prices = pricing ?? catalogPricing('standard')
