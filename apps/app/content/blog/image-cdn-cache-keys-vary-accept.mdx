@@ -1,0 +1,206 @@
+---
+title: "Image CDN cache keys: tame Vary: Accept"
+description: Design image cache keys that keep AVIF, WebP, and JPEG correct without multiplying variants for every raw Accept header or query permutation.
+date: "2026-08-23"
+author: Raed Bahri
+language: en
+tags: [caching, image-formats, operations]
+image: /og/blog/image-cdn-cache-keys-vary-accept.png?v=2026-08-23
+imageAlt: Image requests grouped into bounded AVIF, WebP, and JPEG cache variants
+---
+
+An image CDN cache key should identify the bytes that can change, not every spelling of the request that produced them. Put the source identity and effective transform parameters in the key. When one URL negotiates AVIF, WebP, or JPEG, add one normalized output-format dimension—or use an explicit `fmt` value in the URL. Do not blindly key on the entire raw `Accept` string.
+
+That answer has two parts because there are two caches. Keenpix builds an internal transform key after it has resolved the output format and Client Hints. A CDN in front of Keenpix sees the public URL and request headers. Both layers must agree about representation identity, but they do not have to serialize the key the same way.
+
+## The minimum safe identity
+
+For a deterministic image transform, start with this model:
+
+```text
+source identity
+  + tenant or project boundary
+  + effective width, height, DPR, fit, crop, quality, format, and effects
+  + configuration that changes pixels, such as a watermark
+= one reusable representation
+```
+
+The request method and target URI are the minimum HTTP cache key under [RFC 9111](https://www.rfc-editor.org/rfc/rfc9111.html#section-2). A stored response carrying `Vary: Accept` may be reused only when the selecting request field matches as defined by the RFC. `Vary` protects correctness; it does not promise that a particular CDN will store the response, normalize equivalent values, or keep the number of variants small.
+
+| Key choice | Correctness | Cardinality risk | Operational use |
+| --- | --- | --- | --- |
+| Full path and normalized query + explicit `fmt` | Strong and easy to inspect | Bounded by the URL variants you emit | Preferred when the CDN cannot prove image negotiation |
+| Full path and query + normalized AVIF/WebP/JPEG bucket | Strong if edge and origin use the same negotiation rule | Three format buckets per transform | Useful at a programmable edge |
+| Full path and query + raw `Accept` | Usually correct when `Vary` is honored | Many syntactically different headers can select the same bytes | Diagnose before accepting the storage cost |
+| URL only while origin uses `fmt=auto` | Unsafe | Looks efficient because variants collide | Can serve AVIF bytes to a browser that needs JPEG |
+| URL with query ignored | Unsafe for transforms | Widths, qualities, crops, and signatures collide | Never use for `/img/*` |
+
+## Observation: what Keenpix keys today
+
+Verified against the public repository on August 23, 2026: Keenpix parses the request first, resolves `fmt=auto` to `avif`, `webp`, or `jpeg`, rounds automatic Client Hints to bounded ladders, then hashes this object with SHA-256:
+
+```text
+projectId + source URL + full effective transform options
+```
+
+The effective options include the resolved output format, dimensions, DPR, quality, crop and effects, metadata policy, and project watermark configuration. A signature is checked before the internal cache lookup but is not part of this transform key. Two valid signed URLs for the same effective transform can therefore share internal bytes.
+
+The current automatic ladders contain 12 widths (`320` through `5000`) and seven DPR values (`1` through `3`). Before other options, that creates a theoretical ceiling of 252 header-derived width/DPR/format combinations for one source: `12 × 7 × 3`. A project maximum width and the browser population usually reduce that set. The number is a code-derived upper-bound model, not a measured Keenpix production count.
+
+Every successful transform response currently sends:
+
+```http
+Cache-Control: public, max-age=31536000, immutable
+Accept-CH: Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width
+Vary: Accept, Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width, DPR, Width, Viewport-Width
+```
+
+Those headers describe every request field that can affect the response. They do not configure your outer CDN for you. Read the [Keenpix caching reference](/docs/concepts/caching) and [parameter bounds](/docs/reference/parameters) before changing the edge key.
+
+## Why raw Accept can multiply storage
+
+These request headers all select AVIF in the current Keenpix parser:
+
+```http
+Accept: image/avif,image/webp,image/*
+Accept: image/avif,image/webp,*/*;q=0.8
+Accept: image/webp,image/avif,image/png,*/*
+```
+
+Keenpix collapses them internally because it stores the resolved `avif` format in the transform options. An intermediary that retains a separate object for each raw header value may store three copies of identical bytes. Browser versions, embedded webviews, crawlers, and application fetches create more spellings over time.
+
+There is another important limit: the current Keenpix negotiation code checks whether the header contains `image/avif`, then `image/webp`; it does not rank media-type quality values. A custom edge normalizer for Keenpix must mirror that exact rule until the origin parser changes. A general-purpose media server that honors `q=0` or quality ordering needs a real `Accept` parser instead. Never deploy a cache normalizer whose selection logic differs from the origin.
+
+## Recommendation: make the format explicit when possible
+
+An explicit URL is the easiest cache contract to operate:
+
+```html
+<picture>
+  <source
+    srcset="https://images.example.com/img/https://assets.example.com/hero.jpg?project=store&w=1200&fmt=avif"
+    type="image/avif"
+  />
+  <source
+    srcset="https://images.example.com/img/https://assets.example.com/hero.jpg?project=store&w=1200&fmt=webp"
+    type="image/webp"
+  />
+  <img
+    alt="Product team reviewing an image delivery dashboard"
+    height="675"
+    src="https://images.example.com/img/https://assets.example.com/hero.jpg?project=store&w=1200&fmt=jpeg"
+    width="1200"
+  />
+</picture>
+```
+
+The browser chooses a supported `<source>`, and each resulting URL has one format. Keep the width ladder finite and generated from actual layout slots. Do not create an arbitrary integer width endpoint merely because the transform service accepts one.
+
+Use `fmt=auto` when a single URL matters and the CDN has documented, tested image-variant support. Cloudflare's official Vary for Images feature parses `Accept` into image variants, but it requires a configured variants rule and a compatible image extension in the path. Cloudflare also documents that custom request-header cache keys are Enterprise-only. Returning `Vary: Accept` by itself is not equivalent to enabling either feature.
+
+## A bounded Nginx cache example
+
+The safest Nginx example uses explicit `fmt` URLs, so no request-header normalization is needed:
+
+```nginx
+proxy_cache_path /var/cache/nginx/keenpix levels=1:2 keys_zone=keenpix:20m
+                 max_size=20g inactive=30d use_temp_path=off;
+
+server {
+    listen 443 ssl;
+    server_name images.example.com;
+
+    location /img/ {
+        proxy_pass http://keenpix_transform;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_cache keenpix;
+        proxy_cache_key "$scheme$request_method$host$request_uri";
+        proxy_cache_valid 200 30d;
+        add_header X-Cache-Status $upstream_cache_status always;
+    }
+}
+```
+
+`$request_uri` retains the complete path and query. Do not switch to `$uri` alone, do not enable an ignore-query-string mode, and do not exclude `sig` from an outer key unless the edge verifies that signature before cache lookup. The [signed URL guide](/docs/concepts/signed-urls) explains why an unverified cache hit can bypass origin enforcement.
+
+For `fmt=auto`, first prove that your Nginx version and configuration retain distinct `Vary` variants. If you instead add an explicit format bucket to `proxy_cache_key`, make the bucket logic identical to the origin and test fallback requests with no `Accept` header. A copied regex that looks only for `webp` can collapse AVIF and WebP into the wrong entry.
+
+## Canonicalize what is semantically unordered
+
+Query order can fragment an outer cache even when the application parser treats these URLs identically:
+
+```text
+?project=store&w=1200&q=80&fmt=webp
+?fmt=webp&q=80&w=1200&project=store
+```
+
+Generate one canonical order in your application. If the CDN offers query sorting, enable it only after confirming that no endpoint under the rule assigns meaning to duplicate-parameter order. Cloudflare documents Query String Sort as a way to increase hit rate, but the cache rule must remain scoped to the image endpoint.
+
+Do not remove “unknown” parameters at the CDN to improve hit rate when URLs are signed. Keenpix signs every query parameter except `sig`; changing the public query after signing makes the request invalid. Prefer a strict URL builder that never emits tracking or cache-buster parameters on transform URLs.
+
+## Production verification matrix
+
+Use one source and one transform URL. Purge that object or use a new versioned source path before the test. Then run each row twice from the same edge region:
+
+| Request | Expected MIME type | Expected second-request evidence |
+| --- | --- | --- |
+| `Accept: image/avif,image/webp,image/*` | `image/avif` | Outer cache hit for AVIF bucket |
+| `Accept: image/webp,image/*` | `image/webp` | Outer cache hit for WebP bucket |
+| `Accept: image/jpeg,image/*` | `image/jpeg` | Outer cache hit for fallback bucket |
+| Explicit `fmt=webp`, any `Accept` | `image/webp` | Same URL remains WebP |
+| Same params in a different query order | Same bytes | Same hit only if sorting is intentionally enabled |
+| Change `w=1200` to `w=640` | New dimensions | Separate object |
+
+Example probe:
+
+```bash
+curl --fail --silent --show-error \
+  --dump-header - \
+  --output /dev/null \
+  --header 'Accept: image/webp,image/*' \
+  'https://images.example.com/img/https://assets.example.com/hero.jpg?project=store&w=1200&fmt=auto'
+```
+
+Check `Content-Type`, `Vary`, `Cache-Control`, `Age`, the CDN's cache-status header, and Keenpix's `X-Keenpix-Cache`. `CF-Cache-Status: HIT` means the request did not reach Keenpix; `X-Keenpix-Cache: HIT` describes the internal layer only when the request did reach the origin. They are different observations.
+
+## Failure signals and likely causes
+
+| Signal | Likely cache-key failure | First check |
+| --- | --- | --- |
+| WebP browser receives AVIF bytes | `Accept` omitted or normalized incorrectly | CDN key and Vary/variant feature |
+| Correct MIME type but repeated outer `MISS` | URL/query fragmentation or object not eligible | Exact URL, query order, cache rule, response cookies |
+| Many objects with the same byte hash | Raw `Accept` or unnecessary headers in key | Variant inventory by normalized format |
+| Origin `MISS` rises after adding Client Hints | Unbounded hint values or changed ladder | Effective width/DPR buckets |
+| Signed URLs return `403` after canonicalization | Query changed after signing | URL builder and edge rewrite order |
+| Cloudflare returns `BYPASS` for auto format | Vary for Images rule or extension contract not met | Cloudflare variant configuration |
+
+Do not diagnose a low hit ratio from one layer's metric. Edge hits never contact the origin, so an origin-only dashboard cannot count them. The [self-hosting CDN guide](/docs/self-hosting/cdn) describes that measurement boundary.
+
+## Production checklist
+
+- [ ] Cache only `/img/*`; exclude dashboard, auth, API, and health routes.
+- [ ] Include scheme, host, complete path, and the full normalized transform query.
+- [ ] Use explicit `fmt` or prove a bounded `Accept` variant mechanism with three cold/warm tests.
+- [ ] Keep automatic widths and DPRs on a finite ladder; do not key on arbitrary raw hint strings.
+- [ ] Ensure watermark and other project-level pixel changes reach the internal key.
+- [ ] Preserve `sig` in the outer key unless the edge verifies it before lookup.
+- [ ] Canonicalize query order before signing and cache lookup.
+- [ ] Record edge and Keenpix-origin cache statuses separately.
+- [ ] Alert on wrong `Content-Type`, repeated misses, variant-count growth, and origin-transform growth.
+- [ ] Test purge behavior for every format variant before relying on emergency invalidation.
+
+## Explicit limits
+
+This guide does not claim that three formats mean only three total cached images. Width, DPR, quality, crop, source version, watermark configuration, and other transforms remain legitimate dimensions. It also does not claim a universal CDN implementation for `Vary`; verify the provider and plan you operate.
+
+The current Keenpix internal format set for automatic negotiation is exactly AVIF, WebP, or JPEG. Explicit format parameters add PNG, GIF, HEIF, TIFF, and SVG paths. Automatic Client Hint bucketing is bounded in repository code, but explicit numeric parameters can still create many valid variants. Use [signed URLs](/blog/signed-image-urls-hmac) when callers should not be able to manufacture new parameter combinations.
+
+## Continue the operations cluster
+
+Next, read [how to defend image pipelines against SSRF and image bombs](/blog/secure-image-pipelines-ssrf-image-bombs) and [how to prevent cache stampedes and size transform capacity](/blog/image-transform-cache-stampedes-capacity). For codec-specific testing, use [AVIF vs WebP in production](/blog/avif-vs-webp-production-caching). To activate Keenpix, follow the [managed cloud quickstart](/docs/getting-started/cloud-quickstart) or the [self-hosting guide](/docs/self-hosting).
+
+## Sources and verification
+
+Verified August 23, 2026 against [RFC 9111 HTTP Caching](https://www.rfc-editor.org/rfc/rfc9111.html), [RFC 9110 Vary semantics](https://www.rfc-editor.org/rfc/rfc9110.html#name-vary), [Cloudflare Vary for Images](https://developers.cloudflare.com/cache/advanced-configuration/vary-for-images/), [Cloudflare cache keys](https://developers.cloudflare.com/cache/how-to/cache-keys/), [Cloudflare Query String Sort](https://developers.cloudflare.com/cache/advanced-configuration/query-string-sort/), and the official [Nginx proxy cache directives](https://nginx.org/en/docs/http/ngx_http_proxy_module.html). Keenpix observations were checked against the current public [parameter parser](https://github.com/lord007tn/keenpix/blob/master/packages/transform/src/params.ts), [cache coordinator](https://github.com/lord007tn/keenpix/blob/master/packages/cache/src/index.ts), [transform runtime](https://github.com/lord007tn/keenpix/blob/master/apps/transform/src/transform.ts), and their tests. Recommendations are operating patterns, not measured Keenpix performance claims.

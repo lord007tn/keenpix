@@ -1,0 +1,232 @@
+---
+title: "Secure image pipelines: SSRF to image bombs"
+description: Defend image fetch and transform services with origin allowlists, redirect revalidation, byte and pixel ceilings, timeouts, and observable failures.
+date: "2026-08-23"
+author: Raed Bahri
+language: en
+tags: [security, ssrf, operations]
+image: /og/blog/secure-image-pipelines-ssrf-image-bombs.png?v=2026-08-23
+imageAlt: Layered image pipeline defenses from URL validation through bounded decoding
+---
+
+Treat every remote image as an untrusted network request followed by an untrusted decoder input. A safe pipeline validates the source host, resolves and rejects internal addresses, pins the checked address to the connection, disables automatic redirects, revalidates every redirect target, caps bytes while streaming, limits decoded pixels and frames, bounds output dimensions, and runs inside a resource-limited process.
+
+No single check covers the chain. A hostname allowlist without IP validation can reach internal services through DNS. A `Content-Length` check without a streaming ceiling trusts a header the origin controls. A 5 MB compressed file can still expand into a huge bitmap. A pixel ceiling does not replace a request timeout or a memory limit.
+
+## The defense sequence
+
+```text
+untrusted URL
+    │
+    ├─ parse with a URL library; allow only http/https
+    ├─ require an exact host or deliberate subdomain allowlist match
+    ├─ resolve DNS; reject private, loopback, link-local, multicast, metadata ranges
+    ├─ connect to the address that was checked
+    │
+    ├─ receive redirect? ── yes ──> resolve relative Location and repeat every check
+    │                              stop after a small fixed hop limit
+    │
+    ├─ enforce timeout and streamed byte ceiling
+    ├─ decode with pixel/page/channel safety limits
+    ├─ apply bounded dimensions and expensive-operation policy
+    └─ encode, cache, observe, and release resources
+```
+
+Add network egress policy around the process. Application checks reduce risk, but a container or VM that cannot route to metadata and private control-plane ranges gives you another independent boundary.
+
+## Threats and the control that actually stops them
+
+| Threat | What the attacker changes | Required control | Observable rejection |
+| --- | --- | --- | --- |
+| Basic SSRF | URL points at localhost, metadata, or a private service | Protocol/host validation plus public-IP enforcement | `400` or `403`; blocked target class in security log |
+| DNS rebinding | Allowed name resolves differently between validation and connect | Pin the validated address or use a trusted egress proxy | Resolution/connect mismatch or blocked IP |
+| Redirect pivot | Public URL redirects to an internal target | Disable automatic following; validate each `Location` | Redirect-policy failure with hop number |
+| Oversized transfer | Missing or false `Content-Length`, endless body | Streaming byte counter and timeout | `413` or `504`; bytes read before abort |
+| Decompression bomb | Small file declares enormous dimensions | Decode-time pixel/channel/page ceilings | Decoder limit error; no process OOM |
+| Animated-image bomb | Many frames multiply work and memory | Disable animation by default; cap pages/work when enabled | Rejected animation or bounded frame count |
+| Variant abuse | Valid source with changing expensive transforms | Parameter bounds, finite ladders, signed URLs, rate limits | `403` signature failure, throttling, miss-cardinality alert |
+| Decoder exploit | Malformed bytes target a library bug | Patched decoder, sandbox, least privilege, no secrets | Crash/restart alert and quarantined source |
+
+## Observation: Keenpix's current request path
+
+Verified against repository code and tests on August 23, 2026, Keenpix currently applies these controls before a cold transform:
+
+1. It parses the source with the platform `URL` implementation and accepts only `http:` and `https:`.
+2. It fails closed when a project has no allowed origins. A host must equal an allowed name or be its subdomain.
+3. It resolves a preferred IPv4 address, falling back to the resolver result, and rejects the private/routed classes implemented in `safe-origin.ts`, including loopback, RFC 1918, link-local, CGNAT, multicast/reserved IPv4, IPv6 unique-local/link-local/multicast, and mapped IPv4 forms.
+4. It pins that selected address into the HTTP or HTTPS agent lookup so the connect does not perform a second unconstrained DNS decision.
+5. It disables automatic redirects. Every accepted redirect is resolved relative to the current URL and passed through the complete origin validation again.
+6. It checks declared length when present and always counts streamed bytes, aborting after the configured ceiling.
+7. It passes raster bytes to Sharp with `limitInputPixels` and `failOn: 'truncated'`, then caps output dimensions inside the transform steps.
+
+The allowlist is checked before the internal cache read. A previously cached object does not let a source hostname bypass a later allowlist decision. Optional [signed URLs](/docs/concepts/signed-urls) are also verified before the cache lookup.
+
+These are code observations, not a claim that the system is immune to SSRF, denial of service, or decoder vulnerabilities. The selected-address lookup is not the same as enumerating every A and AAAA answer, and application checks are not a substitute for egress controls.
+
+## Current repository defaults and hard stops
+
+Self-hosted operators can override environment defaults, so record the effective values for each deployment instead of assuming these are active everywhere.
+
+| Boundary | Repository default/current rule | Failure behavior |
+| --- | --- | --- |
+| Origin body | 50 MiB streamed maximum | `413 Origin image too large` |
+| Origin request | 10 seconds per attempt | `504 Origin timed out` |
+| Redirects | Up to three redirects followed to a final fourth request | Another redirect ends as `502 Too many redirects` |
+| Raster input | 50,000,000 decoded pixels | Sharp rejects the input; Keenpix returns a safe `502` message |
+| Output dimension | 4096 pixels runtime maximum | Resize is capped by runtime/project policy |
+| SVG input | 2 MiB hard limit in the SVG optimizer | Rejected before optimization |
+| Watermark body | 5 MiB origin maximum | `413` when exceeded |
+| Sharp worker threads | One libvips thread per image in current setup | Reduces per-transform thread multiplication; codec libraries may add threads |
+| Truncated raster data | `failOn: 'truncated'` | Decode fails instead of accepting partial pixels |
+
+The origin byte limit bounds the buffer Keenpix reads before decoding; it does not predict decoded memory. The pixel limit bounds declared width × height; it does not turn a 50-million-pixel image into a cheap transform. Animation, color profiles, codec behavior, intermediate operations, and output buffers still consume CPU and memory.
+
+## Safe fetch pseudocode
+
+The important property is ordering. Do not resolve safely and then call a client that performs its own unrelated lookup or follows redirects automatically.
+
+```ts
+async function fetchUntrustedImage(rawUrl: string) {
+  let current = await resolveAllowedPublicTarget(rawUrl)
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const response = await requestPinnedAddress(current, {
+      followRedirects: false,
+      maxBodyBytes: 20 * 1024 * 1024,
+      timeoutMs: 8_000,
+    })
+
+    if (response.isRedirect) {
+      if (attempt === 3) throw new Error('redirect limit exceeded')
+      current = await resolveAllowedPublicTarget(
+        new URL(response.location, current.url).toString(),
+      )
+      continue
+    }
+
+    if (!response.ok) throw new Error(`origin returned ${response.status}`)
+    return response.readWithHardByteCeiling()
+  }
+
+  throw new Error('unreachable')
+}
+```
+
+`resolveAllowedPublicTarget` must use a URL parser, not a regular expression; compare normalized hostnames against an allowlist; reject credentials and unexpected ports if your product does not need them; inspect IPv4 and IPv6; and return the checked address for the connection. The pseudocode leaves library-specific TLS/SNI details to the implementation. Copying it without a pinned, certificate-valid HTTPS connection is not sufficient.
+
+OWASP recommends disabling redirect following to prevent redirect-based validation bypasses. If product requirements need redirects, manual revalidation like the sequence above is the safer contract.
+
+## Byte limits and image bombs are different gates
+
+A body ceiling answers “how much compressed data will I buffer?” A pixel ceiling answers “how large a raster will I permit the decoder to construct?” Enforce both:
+
+```ts
+import sharp from 'sharp'
+
+const output = await sharp(untrustedBytes, {
+  animated: false,
+  failOn: 'warning',
+  limitInputChannels: 4,
+  limitInputPixels: 40_000_000,
+  sequentialRead: true,
+})
+  .resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true })
+  .webp({ quality: 80 })
+  .toBuffer()
+```
+
+Sharp's official constructor documentation recommends its default `failOn: 'warning'` level for untrusted input and documents pixel, channel, page, and “unlimited” safety options. Keenpix currently uses `failOn: 'truncated'`; that is a repository observation, not the stricter general recommendation shown above.
+
+Leave animation off unless the product needs it. If animation is required, test inputs with many frames and enforce an explicit page/work budget around the decoder. A width × height check alone does not express total animated work.
+
+Do not set Sharp's `unlimited: true` for an internet-facing transform service. Keep the decoder and its native dependencies patched, run as a non-root user, mount a read-only filesystem where possible, remove cloud credentials from the transform process, and place temporary storage on a bounded volume.
+
+## Redirect policy needs a business decision
+
+Redirects are not automatically safe or unsafe. Decide what your pipeline needs:
+
+| Policy | Benefit | Cost |
+| --- | --- | --- |
+| Reject every redirect | Smallest attack surface and simplest logs | Breaks signed object redirects and some asset migrations |
+| Allow same-host redirects only | Supports path/version changes | Does not support deliberate CDN host changes |
+| Allow redirects within the project allowlist | Flexible and auditable | Every hop still needs DNS/IP validation and a fixed limit |
+| Follow anything the HTTP client accepts | Convenient | Reopens SSRF and unbounded-loop risk |
+
+Keenpix currently uses the third policy. A redirect to a different host succeeds only if that host is also allowed and resolves to an accepted public address. Keep redirect targets out of logs when URLs can contain tokens; log the normalized host, path class, hop count, and rejection reason instead.
+
+## Network controls behind the application
+
+Recommended production boundaries:
+
+- deny routes from the transform workload to cloud metadata, loopback, private subnets, cluster control planes, and database networks;
+- allow DNS only through the resolver you monitor;
+- route public origin traffic through an egress proxy when you need one enforcement and audit point;
+- separate the image data plane from control-plane credentials;
+- run decoder work in a container or sandbox with CPU, memory, process, file, and temporary-storage limits;
+- keep the transform health endpoints private, as described in [health and operations](/docs/self-hosting/health-and-operations).
+
+Network policy should fail independently from URL validation. Test both. A unit test that mocks DNS does not prove a production container cannot reach `169.254.169.254`.
+
+## Production test cases
+
+Use hosts and fixtures you control. Never probe third-party internal ranges.
+
+| Test fixture | Expected result |
+| --- | --- |
+| Allowed public JPEG under every limit | Successful transform and later cache hit |
+| Disallowed public hostname | `403` before origin fetch |
+| Allowed name resolving to a private test address | `403` before connect |
+| Public host redirecting to a disallowed host | `403` on redirect validation |
+| Four-redirect chain | Fixed redirect-limit failure |
+| False small `Content-Length`, body above ceiling | Stream aborted at the real byte limit |
+| Slow body exceeding attempt timeout | `504` without an accumulating socket |
+| Tiny compressed image declaring too many pixels | Decode rejection without container restart |
+| Truncated image | Deterministic decoder rejection |
+| Animated fixture above the chosen work policy | Rejected or animation disabled |
+| Tampered signed width/source | `403` before cache and transform work |
+
+Capture response status, normalized rejection category, total duration, bytes read, redirect hops, decoder failure class, process RSS, restart count, and whether the request reached the origin. Do not log source query secrets or signing keys.
+
+## Failure signals worth alerting on
+
+- a rise in `403` private-address or disallowed-host failures;
+- redirect-limit failures or a new redirect target host;
+- `413` responses and origin bodies ending exactly at the configured ceiling;
+- `504` responses, open-socket growth, or origins approaching the timeout;
+- decoder failures clustered by source host or file format;
+- process OOM kills, native crashes, restart loops, or sustained RSS growth after requests complete;
+- high cache-miss cardinality with normal source traffic;
+- egress-deny logs for metadata, database, or cluster ranges;
+- a patch release from Sharp/libvips or an image codec that addresses a security issue.
+
+An HTTP `502` for an invalid image is expected input rejection, not proof that the service crashed. A healthy liveness probe after every request is also insufficient: correlate rejection status with memory and restart telemetry.
+
+## Production checklist
+
+- [ ] Allow only `http` and `https`; reject credentials and unused ports.
+- [ ] Fail closed when no source hosts are configured.
+- [ ] Normalize and allowlist hosts without substring matching mistakes.
+- [ ] Validate public IPv4 and IPv6 results and connect to the checked address.
+- [ ] Disable automatic redirects; revalidate each hop and cap the chain.
+- [ ] Enforce both declared-length and streamed-byte ceilings.
+- [ ] Set per-attempt and total-request deadlines.
+- [ ] Limit decoded pixels, channels, pages/frames, output dimensions, and expensive operations.
+- [ ] Keep animation disabled unless it has a measured product requirement.
+- [ ] Run patched native decoders with least privilege and bounded resources.
+- [ ] Add network egress denies for metadata and internal networks.
+- [ ] Require [signed image URLs](/blog/signed-image-urls-hmac) when callers must not create arbitrary variants.
+- [ ] Test the rejection paths in the deployed network, not only in unit tests.
+
+## Explicit limits and non-guarantees
+
+An origin allowlist does not authenticate the bytes at that host. A signed transform URL prevents query tampering; it does not make an origin private, stop replay, or patch a decoder. DNS pinning closes one time-of-check/time-of-use window but does not replace inspection of all relevant addresses and egress policy.
+
+The defaults listed here come from the current public Keenpix source. They may be overridden in a self-hosted deployment, and this article does not assert the effective managed-cloud values. Review [Keenpix security and data handling](/security), the [security concept reference](/docs/concepts/security), [parameters](/docs/reference/parameters), and your own deployment configuration.
+
+## Continue the operations cluster
+
+Pair these input controls with [a bounded cache-key design](/blog/image-cdn-cache-keys-vary-accept) and [cache-stampede and transform-capacity planning](/blog/image-transform-cache-stampedes-capacity). To run the stack yourself, use the [self-hosting operations guide](/docs/self-hosting/health-and-operations) and [Docker production checklist](/blog/self-host-image-cdn-docker). To use the managed path, start with the [cloud quickstart](/docs/getting-started/cloud-quickstart) or [create a trial](/signup).
+
+## Sources and verification
+
+Verified August 23, 2026 against the official [OWASP SSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html), [Sharp constructor and safety options](https://sharp.pixelplumbing.com/api-constructor/), and current Keenpix [origin validation](https://github.com/lord007tn/keenpix/blob/master/packages/transform/src/origin/safe-origin.ts), [pinned fetch and redirect handling](https://github.com/lord007tn/keenpix/blob/master/packages/transform/src/origin/fetch-image.ts), [Sharp pipeline](https://github.com/lord007tn/keenpix/blob/master/packages/transform/src/sharp/pipeline.ts), [runtime defaults](https://github.com/lord007tn/keenpix/blob/master/apps/transform/src/env.ts), and transform tests. The defense-in-depth recommendations go beyond current application code and are labeled accordingly; no security guarantee is implied.

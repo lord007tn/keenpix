@@ -1,0 +1,254 @@
+---
+title: "Stop cache stampedes in image transformation"
+description: Coalesce cold image transforms, serve stale safely, shed overload, and size CPU and memory capacity from measured service time and working sets.
+date: "2026-08-23"
+author: Raed Bahri
+language: en
+tags: [caching, capacity, operations]
+image: /og/blog/image-transform-cache-stampedes-capacity.png?v=2026-08-23
+imageAlt: Many cold image requests coalesced into one bounded transform and cache fill
+---
+
+Prevent an image cache stampede at three boundaries: let the outer cache collapse a cold fill, coalesce identical work inside the transform service, and admit only as many distinct cold transforms as the CPU and memory budget can finish safely. Serve stale bytes during refresh when the image contract permits it. Reject excess cold work quickly instead of building an unbounded queue.
+
+A single-flight map solves “100 requests for the same key.” It does not solve “100 requests for 100 different widths,” a multi-replica cold start, or a purge that invalidates a large catalog. Capacity planning starts where key-level coalescing ends.
+
+## The desired cold-request path
+
+```text
+clients
+   │
+   ▼
+edge cache ── warm/stale ───────────────────────────────> bytes
+   │ cold key
+   ▼
+shared cache-fill lock ── followers wait with a deadline
+   │ leader
+   ▼
+origin shield / Keenpix cache ── hit ───────────────────> bytes
+   │ distinct cold transform
+   ▼
+bounded admission ── full ──> 503 + short Retry-After
+   │ admitted
+   ▼
+fetch within byte/time limits → decode/transform → durable cache write → bytes
+```
+
+The lock is per effective representation, while admission is global or tenant-partitioned. Mixing them is a common mistake. A thousand unique cold keys pass through a thousand independent locks and can still overload the host.
+
+## Observation: what Keenpix does today
+
+Verified from the public repository on August 23, 2026:
+
+- Keenpix checks memory, then Dragonfly when configured, then S3-compatible object storage; local development can use disk instead. Lower-tier hits are promoted upward, and writes go to the durable tier before hot tiers.
+- A stale internal entry is returned immediately. One background refresh starts when the current process has no refresh for that key.
+- A missing key is stored in an in-process `Map` while fetch, transform, and cache write run. Other requests for the same hash await that promise instead of repeating the transform.
+- The key contains project id, source URL, and full effective transform options. Different widths, formats, qualities, crops, or watermark configuration are deliberately different work.
+- The Sharp wrapper sets `sharp.concurrency(1)`, limiting libvips to one worker thread per image. Sharp documents that some codec libraries, including AVIF encoders, can create additional threads independently.
+- `KEENPIX_WORKER_CONCURRENCY` controls durable prewarm jobs. It does not bound normal synchronous HTTP image transforms.
+
+The current single-flight map is process-local. Two transform replicas can both miss shared storage and perform the same transform. The current public HTTP transform path also has no application-level global semaphore or bounded wait queue. Health readiness can return `503` for failed dependencies, but that is not general overload shedding.
+
+Those are explicit product limits, not measured incidents. The recommendations below describe how an operator can add the missing outer/shared and admission boundaries without claiming that Keenpix already supplies them.
+
+## Four different stampedes
+
+| Event | Key pattern | Why one in-process lock is insufficient | Primary control |
+| --- | --- | --- | --- |
+| Viral cold image | Many requests, one key, one process | Usually sufficient locally; replicas may duplicate | Edge fill lock plus local single-flight |
+| Deploy or restart | Many hot keys absent from memory | Distinct keys bypass one another | Durable shared cache, prewarm budget, admission limit |
+| Purge or terminal expiry | Many previously warm keys become cold together | Invalidation synchronizes demand | Versioned URLs, staged purge, stale serving |
+| Variant attack or bad responsive config | Many unique widths/qualities/queries | Every request owns a different key | Bounded ladders, signing, rate limits, cardinality alerts |
+
+The first response is not “add more retries.” Retries multiply load unless they are limited, delayed, and jittered. If a transform returns `503`, the caller should retry only when the request still matters, honor `Retry-After`, use exponential backoff with jitter, and cap attempts.
+
+## Add a cache-fill lock at the proxy
+
+Nginx documents `proxy_cache_lock` specifically to allow one request at a time to populate a new cache element while followers wait for the cached response or a lock timeout.
+
+```nginx
+proxy_cache_path /var/cache/nginx/keenpix levels=1:2 keys_zone=keenpix:20m
+                 max_size=20g inactive=30d use_temp_path=off;
+
+location /img/ {
+    proxy_pass http://keenpix_transform;
+
+    proxy_cache keenpix;
+    proxy_cache_key "$scheme$request_method$host$request_uri";
+    proxy_cache_lock on;
+    proxy_cache_lock_timeout 3s;
+    proxy_cache_lock_age 15s;
+
+    proxy_cache_background_update on;
+    proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+
+    add_header X-Cache-Status $upstream_cache_status always;
+}
+```
+
+This example assumes explicit output formats or separately proven `Vary: Accept` behavior. Read the [cache-key and Vary guide](/blog/image-cdn-cache-keys-vary-accept) before copying it.
+
+`proxy_cache_lock_timeout` must be shorter than the user-facing deadline. `proxy_cache_lock_age` is an escape hatch: after it expires, Nginx may allow another origin fill. Set it above the normal high-percentile cold-transform duration, then alert when it is exercised. An unlimited lock wait merely moves the unbounded queue into the proxy.
+
+`proxy_cache_use_stale updating` and background update can keep serving a previous image while one refresh runs. RFC 5861 defines the same availability pattern through `stale-while-revalidate` and `stale-if-error`. Use stale delivery only when the URL is versioned or the business accepts temporary old bytes. Do not serve a stale private or revoked image merely to improve availability.
+
+## Bound distinct cold work
+
+Use a semaphore or proxy/orchestrator admission limit around cold transforms, not around cache hits. A practical policy has three outcomes:
+
+```text
+warm hit       -> serve immediately
+cold + slot    -> transform
+cold + no slot -> wait for a very short bounded interval, then 503
+```
+
+At Nginx, a simple connection boundary can shed excess requests while you implement a cold-aware application gate:
+
+```nginx
+limit_conn_zone $server_name zone=keenpix_transform_conn:10m;
+
+location /img/ {
+    limit_conn keenpix_transform_conn 16;
+    limit_conn_status 503;
+
+    proxy_connect_timeout 2s;
+    proxy_read_timeout 20s;
+    proxy_send_timeout 20s;
+    proxy_pass http://keenpix_transform;
+}
+```
+
+This counts proxied connections, so it is less efficient than a gate that distinguishes an internal cache hit from a cold transform. It is still a safer emergency ceiling than allowing memory to determine the limit through an OOM kill. Preserve a separate lightweight health route outside the limit.
+
+Do not reuse `KEENPIX_WORKER_CONCURRENCY` as if it controlled HTTP traffic. Reduce or pause prewarm concurrency during a live cold-miss surge; background warming should yield to user requests.
+
+## Capacity is constrained by CPU, memory, and origins
+
+Benchmark on the same CPU architecture, container limits, Sharp/libvips build, and formats used in production. Build a representative fixture set:
+
+- small JPEG thumbnails;
+- large camera JPEGs near the pixel ceiling;
+- transparent PNG product images;
+- WebP and AVIF inputs;
+- animated inputs only if enabled;
+- watermark and expensive crop/effect combinations;
+- slow and fast origin responses.
+
+For every fixture, record cold service time, CPU time, peak RSS delta, origin bytes, output bytes, format, dimensions, and whether the durable cache write completed. Do not publish a universal “transforms per second” number from one synthetic image.
+
+Use two starting calculations:
+
+```text
+memory-bound slots = floor((container memory limit - baseline RSS - safety headroom)
+                           / measured p95 peak RSS delta per transform)
+
+CPU-bound slots ≈ floor(usable CPU cores / measured p95 core demand per transform)
+```
+
+Choose the lower result, then lower it again if origin sockets, object-storage writes, or tail latency fail first. These are planning formulas, not queueing guarantees. Workloads overlap imperfectly, native memory is not always returned immediately, and format libraries can use threads outside Sharp's configured libvips concurrency.
+
+Keep explicit headroom for the runtime, memory cache, network buffers, native allocator fragmentation, logging, and health checks. Kubernetes documents that CPU limits throttle CPU time while exceeding a memory limit can invoke the OOM subsystem and terminate the process. A memory limit is a final containment boundary, not an admission algorithm.
+
+## Run a stepped load test, not one maximum blast
+
+1. Warm the durable cache and measure the hit path separately.
+2. Purge only the controlled fixture keys.
+3. Send one cold request at a time to establish service-time and memory baselines.
+4. Increase distinct-key concurrency in small steps: `1, 2, 4, 6, 8...`.
+5. Hold each step long enough to observe steady CPU, RSS, queue depth, and p95/p99 latency.
+6. Stop before OOM, sustained CPU throttling, growing queues, origin saturation, or readiness failure.
+7. Repeat with identical-key bursts to verify coalescing independently.
+8. Repeat across two replicas to expose duplicate work that a process-local map cannot prevent.
+
+Capacity is the highest step that meets the error and latency objective with headroom, not the last step before the container dies. Document the fixture mix and build identifiers alongside the result.
+
+## Metrics that reveal overload early
+
+| Signal | Healthy interpretation | Overload/stampede signal |
+| --- | --- | --- |
+| Edge cache status | Repeat traffic becomes `HIT` | Burst of `MISS`/`EXPIRED` across many keys |
+| Keenpix cache status | Outer misses often hit the shield | Internal `MISS` rises with edge misses |
+| In-flight unique keys | Bounded and returns to baseline | Grows continuously or tracks request concurrency |
+| Coalesced followers | Brief spikes on popular keys | High waits plus lock timeouts |
+| Transform duration | Stable by format/dimension class | p95/p99 rises before throughput does |
+| Sharp queue/process counters | Queue drains after bursts | Queue grows while process count stays saturated |
+| CPU throttling | Low under target load | Sustained throttling and tail-latency growth |
+| RSS / OOM / restarts | RSS returns near baseline | High-water growth, OOM kill, restart loop |
+| Origin fetch time/errors | Within source-specific objective | Socket growth, `504`, or one host dominates slots |
+| Durable cache write failures | Rare and recoverable | Repeated recomputation because fills never persist |
+| Prewarm queue age | Drains without affecting live traffic | Oldest job grows while live cold latency degrades |
+
+Keenpix exposes transform liveness/readiness and a separate worker Workbench for prewarm jobs. Keep those service-local operator surfaces private. See [health and operations](/docs/self-hosting/health-and-operations) for the probe boundary.
+
+## Failure patterns and first actions
+
+### One hot key, many origin fetches
+
+Confirm that the public cache key is identical, query order is canonical, and format variation is bounded. Then test the same burst against one process and multiple replicas. If one process coalesces but two do not, add an outer cache-fill lock or a distributed lease with a short expiry and owner token.
+
+### Many unique misses after a frontend release
+
+Inspect emitted widths, DPRs, qualities, and query parameters. Roll back an unbounded responsive ladder, not the cache. Enable [signed URLs](/docs/concepts/signed-urls) if untrusted callers can manufacture variants.
+
+### RSS climbs while CPU is not saturated
+
+Reduce admission concurrency, inspect input pixels/animation and Sharp cache statistics, and verify container memory limits. Do not raise the memory limit until the fixture identifies whether the increase is expected working set, native fragmentation, or retained data.
+
+### CPU is saturated and latency grows
+
+Reduce cold slots or scale replicas only if the shared cache and origin can support them. More replicas without an outer fill lock may multiply identical cold work. Prefer explicit WebP/JPEG during an incident if AVIF encoding is the dominant cost and that format change is compatible with the URL contract.
+
+### Cache writes fail
+
+Serve the completed response if policy allows, but alert immediately: every subsequent request may recompute the same key. Check Dragonfly/object-storage readiness, credentials, capacity, latency, and whether the durable tier is written before hot-tier promotion.
+
+## Safe retry contract
+
+When admission is full, return a short response:
+
+```http
+HTTP/1.1 503 Service Unavailable
+Cache-Control: no-store
+Retry-After: 2
+Content-Type: text/plain; charset=utf-8
+
+Image transform capacity is temporarily full.
+```
+
+Do not cache the overload response under the image's long immutable policy. At clients or prewarm workers, cap retries and add jitter:
+
+```ts
+const delayMs = Math.min(8_000, 250 * 2 ** attempt)
+const jitteredMs = Math.round(delayMs * (0.5 + Math.random()))
+```
+
+Interactive browser image loads may not implement application retries at all; the CDN's stale/error policy is usually the better availability mechanism. Durable prewarm work can retry later because it is not on the user path.
+
+## Production checklist
+
+- [ ] Use a correct, bounded cache key before optimizing hit rate.
+- [ ] Enable one cache-fill leader per outer-cache key with a finite wait and lock age.
+- [ ] Serve stale during refresh only for content whose freshness policy allows it.
+- [ ] Coalesce identical work inside each process and test cleanup after success and failure.
+- [ ] Add a global or tenant-aware limit for distinct cold transforms.
+- [ ] Keep the waiting queue short and return `503`/`Retry-After` before memory exhaustion.
+- [ ] Measure representative cold transforms on the production CPU and memory boundary.
+- [ ] Set concurrency from the lower CPU/memory/origin constraint with explicit headroom.
+- [ ] Reserve live capacity; pause or reduce prewarm work during demand spikes.
+- [ ] Version URLs and stage purges instead of invalidating an entire hot catalog at once.
+- [ ] Monitor edge and internal cache status, unique in-flight keys, Sharp counters, CPU throttling, RSS, OOMs, origin failures, and cache-write failures.
+- [ ] Test one process and multiple replicas; document where duplicate work can occur.
+
+## Explicit limits and non-guarantees
+
+Keenpix currently coalesces identical requests and refreshes stale internal entries within a process. It does not currently promise a distributed single-flight lock, a configurable HTTP transform semaphore, or a universal `503` overload response. `KEENPIX_WORKER_CONCURRENCY` is limited to prewarm workers.
+
+This guide provides no Keenpix throughput, latency, cache-hit, or memory guarantee. The safe slot count depends on sources, pixels, formats, effects, native libraries, hardware, container limits, and traffic mix. Use the [parameter reference](/docs/reference/parameters) and [input-security guide](/blog/secure-image-pipelines-ssrf-image-bombs) to bound the worst cases before load testing.
+
+## Continue the operations cluster
+
+Start with [image CDN cache keys and Vary: Accept](/blog/image-cdn-cache-keys-vary-accept), then apply [SSRF, redirect, byte, and image-bomb defenses](/blog/secure-image-pipelines-ssrf-image-bombs). The [AVIF vs WebP production guide](/blog/avif-vs-webp-production-caching) covers format-specific cache testing. For activation, follow the [managed cloud quickstart](/docs/getting-started/cloud-quickstart), [start a trial](/signup), or use the [self-host deployment path](/docs/self-hosting).
+
+## Sources and verification
+
+Verified August 23, 2026 against the official [Nginx proxy cache lock and stale directives](https://nginx.org/en/docs/http/ngx_http_proxy_module.html), [RFC 5861 stale-while-revalidate and stale-if-error](https://www.rfc-editor.org/rfc/rfc5861.html), [Sharp queue, cache, counters, and concurrency documentation](https://sharp.pixelplumbing.com/api-utility/), [AWS overload mitigation guidance](https://docs.aws.amazon.com/prescriptive-guidance/latest/resilience-analysis-framework/mitigation-strategies.html), and [Kubernetes container resource behavior](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). Keenpix observations were checked against the current public [transform runtime](https://github.com/lord007tn/keenpix/blob/master/apps/transform/src/transform.ts), [cache coordinator](https://github.com/lord007tn/keenpix/blob/master/packages/cache/src/index.ts), [Sharp wrapper](https://github.com/lord007tn/keenpix/blob/master/packages/transform/src/sharp/index.ts), [prewarm worker](https://github.com/lord007tn/keenpix/blob/master/packages/bullmq/src/workers/prewarm.ts), and tests. Capacity formulas and limits are recommendations to validate, not product benchmarks.
