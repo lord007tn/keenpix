@@ -34,10 +34,10 @@ const config = defineConfig({
         routeFileIgnorePattern: '\\.test\\.[cm]?[jt]sx?$',
       },
     }),
+    viteReact(),
     babel({
       presets: [reactCompilerPreset()],
     }),
-    viteReact(),
   ],
 })
 

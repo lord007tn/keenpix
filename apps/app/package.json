@@ -88,9 +88,11 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.0",
     "@playwright/test": "^1.60.0",
     "@rolldown/plugin-babel": "^0.2.3",
     "@tanstack/devtools-vite": "^0.6.0",
+    "@types/babel__core": "^7.20.5",
     "@types/mdx": "^2.0.13",
     "@types/node": "^22.19.15",
     "@types/pg": "^8.20.0",
