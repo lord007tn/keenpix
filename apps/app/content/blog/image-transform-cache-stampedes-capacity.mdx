@@ -74,7 +74,7 @@ location /img/ {
     proxy_pass http://keenpix_transform;
 
     proxy_cache keenpix;
-    proxy_cache_key "$scheme$request_method$host$request_uri";
+    proxy_cache_key "$scheme$host$request_uri";
     proxy_cache_lock on;
     # Illustrative only: replace these from measured cold-fill latency and the
     # end-to-end client deadline. Do not copy them as universal safe values.
