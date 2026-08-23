@@ -1,0 +1,213 @@
+---
+title: "ImageKit to Keenpix Migration Guide"
+description: Move ImageKit transforms and origins to Keenpix with a compatibility table, asset-export gate, canary plan, cache checks, and rollback.
+date: "2026-08-23"
+author: Raed Bahri
+competitor: ImageKit
+tags: [imagekit, migration, image-cdn, implementation]
+image: /og/blog/migrate-imagekit-to-keenpix.png?v=2026-08-23
+imageAlt: ImageKit transformations and origins being mapped into a staged Keenpix rollout
+---
+
+An ImageKit-to-Keenpix migration is straightforward only when your originals already live on an origin Keenpix can fetch and your URL grammar uses common image transforms. If assets live only in ImageKit's Media Library, move them to storage you control first. If you use ImageKit origin fallback, video, DAM workflows, named transformations, layers, AI operations, C2PA, or private-file delivery, treat those as separate compatibility projects—not query-string substitutions.
+
+The safe rollout keeps ImageKit online, creates an explicit transform map, points a stable canary cohort at Keenpix, and preserves the old URL generator until source checks, cache behavior, and rollback have been exercised in production-like conditions.
+
+## Prerequisites: classify assets, origins, and transforms
+
+Build a manifest before changing an endpoint:
+
+1. Export or enumerate every ImageKit URL endpoint, attached origin, origin-preference order, custom domain, and Media Library path.
+2. Identify the authoritative copy of each asset: your S3-compatible bucket, web server, ImageKit Media Library, or another attached origin.
+3. Inventory transformation strings from both path syntax (`/tr:w-400,q-80/`) and query syntax (`?tr=w-400,q-80`). Expand every `n-NAME` named transformation.
+4. Separate still images from video, adaptive streaming, overlays, AI transforms, generated media, and non-media files delivered through ImageKit.
+5. Record security behavior: signed URLs, expiry, private files, restrictions on unnamed transforms, referrer/IP rules, and any origin credentials stored in ImageKit.
+6. Record invalidation behavior: purge calls, wildcard purges, origin cache headers, version query parameters, and assets that overwrite the same path.
+7. Choose representative fixtures and keep the ImageKit URL generator ready for rollback.
+
+Do not infer the source URL by removing `ik.imagekit.io` from an arbitrary request. An ImageKit URL endpoint can search the Media Library and multiple attached origins in order. Keenpix instead receives one absolute source URL per transform request.
+
+## Decide whether the origin can move
+
+### Your own storage is already the source of truth
+
+Point Keenpix directly at the original asset URL and allowlist its hostname under **Settings → Security → Allowed hosts**:
+
+```text
+ImageKit delivery:
+https://ik.imagekit.io/ACCOUNT/tr:w-800,q-75,f-auto/catalog/bag.jpg
+
+Owned origin:
+https://assets.example.com/catalog/bag.jpg?v=17
+
+Managed Keenpix:
+https://cdn.keenpix.com/p/PROJECT_ID/img/https%3A%2F%2Fassets.example.com%2Fcatalog%2Fbag.jpg%3Fv%3D17?w=800&q=75&fmt=auto
+```
+
+Keep the source version inside the encoded URL. It becomes part of Keenpix's cache identity and gives you a deterministic way to publish changed bytes.
+
+### Assets live only in ImageKit Media Library
+
+Keenpix has no asset library or upload store. Copy the originals, directory structure, required metadata, and any application identifiers to a durable origin you control. ImageKit's current upload documentation lists Rclone as a bulk migration option, but the exact command, supported metadata, and account permissions depend on your environment. Test an export sample before relying on it for the full library.
+
+For the sample and the final copy:
+
+- compare asset counts by path and content type;
+- checksum bytes where byte preservation matters;
+- verify Unicode, case-sensitive paths, spaces, and duplicate names;
+- preserve application-level IDs separately from provider file IDs;
+- confirm EXIF, color profiles, animation, and metadata requirements;
+- make the new origin readable by Keenpix without exposing credentials in public URLs.
+
+Do not close or delete ImageKit storage until old URLs, emails, feeds, browser caches, and third-party embeds have passed the rollback window.
+
+### One ImageKit URL endpoint searches multiple origins
+
+There is no direct Keenpix equivalent to ImageKit's sequential origin preference. Choose the source in your application, consolidate the files behind one canonical origin, or build a controlled origin gateway that owns fallback behavior. A silent fallback can mask missing files during migration, so verify which origin actually served every canary asset.
+
+### ImageKit holds private origin credentials
+
+Keenpix's current transform fetcher does not accept arbitrary per-project authorization headers or ImageKit origin credentials. It fetches an explicit HTTP(S) source URL after host and SSRF checks. Provide a source it can legitimately read, or keep ImageKit for that protected path. Short-lived presigned source URLs can expire before a cold transform or revalidation workflow; do not adopt them without an expiry and cache-failure design.
+
+## Map ImageKit transformation semantics
+
+ImageKit supports path and query transformation syntax. Normalize both into semantic presets first; then generate Keenpix query parameters. Do not pass the `tr` string through unchanged.
+
+| ImageKit transform | Keenpix equivalent | Compatibility note |
+| --- | --- | --- |
+| `w-400` | `w=400` | Both accept a width, but source caps and upscaling defaults can differ. |
+| `h-300` | `h=300` | Evaluate together with fit/crop behavior. |
+| `q-80` | `q=80` | Numeric quality is not byte-identical across encoders. Reapprove visual quality. |
+| `f-auto` | Omit `fmt` or use `fmt=auto` | Keenpix negotiates AVIF/WebP/JPEG when project Auto-format is enabled; the selected codec may differ. |
+| `f-webp`, `f-avif`, `f-jpg`, `f-png` | `fmt=webp`, `fmt=avif`, `fmt=jpeg`, `fmt=png` | Explicit format disables automatic negotiation for that URL. |
+| `dpr-2` | `dpr=2` | Keenpix supports 1–3; ImageKit documents a wider DPR range. Values outside Keenpix's range need a new width strategy. |
+| `cm-pad_resize` plus `bg-*` | Usually `fit=contain&background=...` | Confirm output canvas, alpha, and color syntax with fixtures. |
+| fixed `w` + `h` crop | Usually `fit=cover` | ImageKit crop mode and focus determine the real equivalent; dimensions alone are insufficient. |
+| `fo-left`, `fo-right`, compass focus | `position=left`, `position=right`, or a compass value | Check accepted Keenpix spelling and visual output. |
+| automatic/object/face focus | No exact equivalent | `position=attention` and `position=entropy` are libvips heuristics, not ImageKit smart or object-aware crops. |
+| `rt-90` | `rotate=90` | Validate orientation and processing order. |
+| `bl-10` | `blur=10` | Parameter names resemble each other, but numeric effect and ordering are not a parity guarantee. |
+| `e-grayscale` | `grayscale=1` | Compare color-profile handling and output format. |
+| `n-NAME` | Expand and assess manually | Keenpix v0.3 has no named transformation presets. Fail closed if an expanded step is unsupported. |
+| chained transforms | No general one-to-one map | Keenpix applies a documented fixed pipeline; order-dependent ImageKit chains require fixture-level review. |
+| image/text/video layers | No general equivalent | A watermark may be configured at the Keenpix project level, but that is not a generic layer parser. |
+| video, AI, conditional transforms, C2PA | No general equivalent | Keep ImageKit or replace each workflow with a separately verified system. |
+
+ImageKit's `w-auto`, arithmetic expressions, named transforms, and URL Endpoint Functions can encode application logic that a table cannot preserve. If a transform is not in the approved map, return an error during development and keep its production URL on ImageKit.
+
+## Replace provider strings with application presets
+
+The migration boundary should be small enough to test. Keep source selection and visual intent in application-owned data:
+
+```js
+const imagePresets = {
+  card: { fit: 'cover', height: 600, quality: 75, width: 800 },
+  logo: { fit: 'inside', quality: 85, width: 320 },
+}
+
+export function keenpixUrl(source, presetName) {
+  const preset = imagePresets[presetName]
+  if (!preset) throw new Error(`Unsupported image preset: ${presetName}`)
+
+  const params = new URLSearchParams({
+    fit: preset.fit,
+    fmt: 'auto',
+    q: String(preset.quality),
+    w: String(preset.width),
+  })
+  if (preset.height) params.set('h', String(preset.height))
+
+  return `https://cdn.keenpix.com/p/PROJECT_ID/img/${encodeURIComponent(source)}?${params}`
+}
+```
+
+Do not convert `ik-s` and `ik-t` into Keenpix parameters. ImageKit and Keenpix sign different canonical messages with different secrets. When a Keenpix project requires signatures, generate `sig`, `kid`, and any configured `iat`/`exp` fields on a trusted server with the [Keenpix SDK signing helper](/docs/concepts/signed-urls).
+
+## Cache migration is a content-version migration
+
+ImageKit documents dashboard/API purging and recommends stable version query parameters for changed resources. Keenpix transform responses are currently `public, max-age=31536000, immutable`, and its cache key includes the complete source URL plus effective transform options.
+
+That creates a simple rule: **new source bytes need a new source URL**.
+
+- Preserve an existing stable `?v=17` value inside the encoded source URL.
+- If an asset is overwritten, advance the version once at publish time. Never use the current timestamp on each request.
+- Keep the full Keenpix transform query in every outer CDN cache key.
+- With `fmt=auto`, confirm the outer CDN honors the `Vary: Accept` boundary. If it cannot, emit explicit AVIF/WebP/JPEG sources.
+- Do not treat an ImageKit purge response as a Keenpix purge. They are independent caches.
+- Keenpix's current public API documents prewarming but does not document a public per-asset purge endpoint. Use versioned URLs as the primary update path and document any customer-owned CDN purge separately.
+
+Prewarm only bounded, real variants. Generating every possible width can fragment caches and load the origin without improving a page:
+
+```bash
+curl -X POST 'https://keenpix.example.com/api/sdk/v1/projects/PROJECT_ID/prewarm' \
+  -H 'Authorization: Bearer PROJECT_SCOPED_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "sources": ["https://assets.example.com/catalog/bag.jpg?v=17"],
+    "widths": [400, 800, 1200],
+    "formats": ["avif", "webp"],
+    "quality": 75,
+    "fit": "cover"
+  }'
+```
+
+The API key belongs in trusted automation, never in a frontend bundle.
+
+## Verify origin safety and response behavior
+
+Keenpix checks the allowed source host before its transform cache, blocks private/internal IP ranges, pins DNS resolution into the connection, and revalidates redirect hops. An allowlisted hostname is not permission to proxy any host it redirects to.
+
+Verify the happy path with more than one `Accept` value:
+
+```bash
+curl -sS -D /tmp/avif.headers -o /tmp/avif.image \
+  -H 'Accept: image/avif,image/webp,image/*,*/*' \
+  'https://cdn.keenpix.com/p/PROJECT_ID/img/ENCODED_SOURCE?w=800&q=75&fmt=auto'
+
+curl -sS -D /tmp/jpeg.headers -o /tmp/jpeg.image \
+  -H 'Accept: image/jpeg,*/*' \
+  'https://cdn.keenpix.com/p/PROJECT_ID/img/ENCODED_SOURCE?w=800&q=75&fmt=auto'
+
+file /tmp/avif.image /tmp/jpeg.image
+```
+
+Check status, `Content-Type`, `Cache-Control`, `Vary`, pixel dimensions, alpha, orientation, animation, and decoded appearance. Repeat an identical request and inspect the Keenpix request logs or your outer CDN to confirm reuse at the layer you intend to operate.
+
+Verify denial as a release gate:
+
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' \
+  'https://cdn.keenpix.com/p/PROJECT_ID/img/https%3A%2F%2Funapproved.example%2Fphoto.jpg?w=400'
+# Expected: 403
+```
+
+Also test an absent object, slow origin, redirect, oversized input, and unsupported format. Keenpix currently documents `502` for origin failure, `504` for origin timeout, `413` for an over-size origin, and `503` when transform concurrency is saturated. Your UI needs an explicit fallback or error state; a provider change does not create one automatically.
+
+## Canary by origin and preset, not random request
+
+Use a stable feature flag or routing rule:
+
+1. **Export rehearsal:** copy a representative Media Library folder or verify a representative owned-origin folder. Prove counts, paths, and byte integrity before rewriting URLs.
+2. **Shadow URL generation:** generate ImageKit and Keenpix URLs together in tests or non-user-visible diagnostics. Fail on every unrecognized transform.
+3. **Internal canary:** route staff or preview traffic for one simple preset to Keenpix. Test cold/warm cache, denied hosts, origin failure, animation, and format fallbacks.
+4. **Production canary:** choose a deterministic page, tenant, asset list, or user cohort. Random per-request switching makes cache and error comparisons noisy.
+5. **Expand by risk:** common width/quality formats first; then crop/pad/rotation; keep smart crops, named chains, layers, private files, and video on ImageKit until they have an owned replacement.
+6. **Hold provider overlap:** preserve ImageKit endpoints, credentials, custom domains, purge automation, and originals through the agreed rollback period.
+
+Define rollback triggers before enabling production traffic: unexpected image 4xx/5xx, missing objects after origin consolidation, visible crop/color/alpha mismatch, source saturation, incorrect format mixing, lost security controls, or a page-level loading regression on your representative routes.
+
+Rollback is the old URL generator plus the original source topology. Disable the Keenpix flag and deploy. Keep Keenpix serving during the overlap because already-rendered pages, browser caches, and external consumers may still request its URLs. If files were copied out of ImageKit, do not delete the new copy during rollback; deletion makes later reconciliation harder.
+
+## Honest incompatibilities and ImageKit wins
+
+ImageKit remains the better fit when you need a browsable DAM, upload widgets, Media Library collaboration, video transformation or streaming, origin preference, advanced URL rewriting/functions, private-file semantics, named-transform restrictions, AI operations, layers, C2PA, or a mature unified media platform. Its free managed tier can also be the better economic choice for a workload that stays within the current allowance and enforcement rules.
+
+Keenpix is an image transform and delivery layer for origins you operate. It does not replace those media-management features, and moving to it adds a new service boundary even if your application continues to use the same framework and storage.
+
+## Conversion bridge: test the owned-origin path
+
+If your manifest shows common image transforms and an origin you control, create one Keenpix project and migrate one application preset. Use the [Keenpix endpoint](/docs/reference/endpoint), [parameter reference](/docs/reference/parameters), and [cache guide](/docs/concepts/caching) to review the generated request. Read [Keenpix vs ImageKit](/compare/imagekit-alternative) for the broader vendor decision, compare the related [Cloudinary migration](/blog/migrate-cloudinary-to-keenpix) when origins overlap, and evaluate [managed pricing](/pricing) or [self-hosting](/docs/self-hosting) only with your measured delivery and operating costs.
+
+## Sources and verification
+
+Competitor details were re-verified on August 23, 2026 against ImageKit's official [transformation URL guide](https://imagekit.io/docs/transformations), [resize and crop reference](https://imagekit.io/docs/image-resize-and-crop), [external storage and URL endpoint documentation](https://imagekit.io/docs/integration/connect-external-storage), [basic security features](https://imagekit.io/docs/media-delivery-basic-security), [CDN caching and purging guide](https://imagekit.io/docs/cdn-caching-and-purging), and [asset upload/export options](https://imagekit.io/docs/dam/upload-assets). Keenpix behavior is based on the current [parameters](/docs/reference/parameters), [responses](/docs/reference/responses), [security](/docs/concepts/security), and [SDK API](/docs/reference/sdk-api). Account-specific ImageKit origin functions, transformations, DAM metadata, contracts, and export behavior remain unknown until verified in the migrating account.
