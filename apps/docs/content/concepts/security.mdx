@@ -32,8 +32,13 @@ Even for an allowed host, Keenpix refuses to become a proxy into your private ne
 ## Denial-of-service guards
 
 - Origin responses are **size-capped** (streamed with a byte ceiling → `413`).
-- Concurrent transforms are bounded; excess load sheds with `503` rather than OOM.
 - sharp runs with a `limitInputPixels` ceiling and `failOn: 'truncated'`.
+
+The HTTP transform runtime coalesces identical in-flight work within one process,
+but it does not currently expose a global transform-concurrency setting. Operators
+should add bounded admission control at the proxy or orchestrator and shed excess
+cold work before the host reaches its memory limit. See the
+[cache stampede and capacity guide](/blog/image-transform-cache-stampedes-capacity).
 
 ## Hotlink and cache-busting protection
 

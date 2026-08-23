@@ -25,7 +25,7 @@ icon: ListChecks
 | `404`  | Unknown `project`                                                   |
 | `413`  | Origin image exceeds the size cap (`KEENPIX_MAX_ORIGIN_BYTES`)      |
 | `502`  | Origin fetch failed                                                 |
-| `503`  | Transform concurrency limit reached — retry shortly                 |
+| `503`  | A proxy admission limit or an unhealthy service dependency refused the request; inspect `Retry-After` and private readiness checks |
 | `504`  | Origin request timed out (`KEENPIX_ORIGIN_TIMEOUT_MS`)              |
 
 <Callout type="warn">

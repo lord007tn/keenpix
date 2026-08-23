@@ -133,7 +133,7 @@ The entrypoint applies database migrations. Keep the previous image reference an
 
 ## Capacity choices you still own
 
-The default Compose cache cap is 8 GB. Set `KEENPIX_CACHE_MAX_BYTES` from the actual disk budget, then watch eviction behavior. Set transform concurrency near the CPU capacity and keep a bounded queue so cold traffic sheds with `503` before the host runs out of memory.
+The default Compose cache cap is 8 GB. Set `KEENPIX_CACHE_MAX_BYTES` from the actual disk budget, then watch eviction behavior. The HTTP transform runtime does not currently expose a global concurrency setting; add bounded admission control at the proxy or orchestrator so cold traffic sheds before the host runs out of memory. Use the [cache stampede and transform capacity guide](/blog/image-transform-cache-stampedes-capacity) to measure a safe limit.
 
 Horizontal self-hosted replicas do not share Keenpix's local disk cache. The bundled stack uses MaxIO for its shared object-storage tier; production operators can replace it with R2 or another S3-compatible service. Put a CDN in front of the transform service. PostgreSQL also needs a deliberate high-availability and backup plan if the service matters to production traffic.
 
