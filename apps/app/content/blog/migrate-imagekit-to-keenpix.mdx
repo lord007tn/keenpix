@@ -181,7 +181,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' \
 # Expected: 403
 ```
 
-Also test an absent object, slow origin, redirect, oversized input, and unsupported format. Keenpix currently documents `502` for origin failure, `504` for origin timeout, `413` for an over-size origin, and `503` when transform concurrency is saturated. Your UI needs an explicit fallback or error state; a provider change does not create one automatically.
+Also test an absent object, slow origin, redirect, oversized input, and unsupported format. Keenpix currently documents `502` for origin failure, `504` for origin timeout, and `413` for an over-size origin. The current HTTP transform path has no global concurrency semaphore or bounded queue, so it does not provide a built-in `503` overload response. If you need overload shedding, add admission control at your reverse proxy or another operator-owned edge and test its thresholds and retry behavior. Separately, `/api/health` returns `503` when a required dependency is unhealthy or the instance is draining; that health response is not a transform overload response. Your UI needs an explicit fallback or error state; a provider change does not create one automatically.
 
 ## Canary by origin and preset, not random request
 
