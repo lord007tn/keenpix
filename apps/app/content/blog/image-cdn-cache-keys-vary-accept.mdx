@@ -116,16 +116,24 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
 
         proxy_cache keenpix;
-        proxy_cache_key "$scheme$request_method$host$request_uri";
-        proxy_cache_valid 200 30d;
+        proxy_cache_methods GET HEAD;
+        proxy_cache_convert_head on;
+        proxy_cache_key "$scheme$host$request_uri";
+        proxy_cache_valid 200 30d; # Fallback when the origin sends no cache lifetime.
         add_header X-Cache-Status $upstream_cache_status always;
     }
 }
 ```
 
+Nginx enables `proxy_cache_convert_head` by default, converting `HEAD` to `GET` for caching. Omitting the request method from this key deliberately lets `HEAD` reuse the `GET` representation. If you disable that conversion, follow the official directive guidance and include `$request_method` so responses from different methods cannot collide.
+
 `$request_uri` retains the complete path and query. Do not switch to `$uri` alone, do not enable an ignore-query-string mode, and do not exclude `sig` from an outer key unless the edge verifies that signature before cache lookup. The [signed URL guide](/docs/concepts/signed-urls) explains why an unverified cache hit can bypass origin enforcement.
 
-For `fmt=auto`, first prove that your Nginx version and configuration retain distinct `Vary` variants. If you instead add an explicit format bucket to `proxy_cache_key`, make the bucket logic identical to the origin and test fallback requests with no `Accept` header. A copied regex that looks only for `webp` can collapse AVIF and WebP into the wrong entry.
+`proxy_cache_valid 200 30d` is only a fallback lifetime. Nginx gives origin `X-Accel-Expires` or, when it is absent, `Expires` and `Cache-Control` response headers higher priority than that directive. Keenpix's current `Cache-Control: public, max-age=31536000, immutable` therefore takes precedence unless an operator explicitly disables header processing. Do not add `proxy_ignore_headers Cache-Control Expires Vary` to this example.
+
+Nginx 1.7.7 and later do not cache `Vary: *`; for other `Vary` values, Nginx caches the response while taking the named request fields into account. This example deliberately retains that behavior. Even an explicit `fmt` URL can retain conservative header variants because Keenpix currently advertises `Vary` on every successful transform. Measure that cardinality before overriding it, and never ignore `Vary` unless every named header has been proven unable to change the bytes.
+
+For `fmt=auto`, verify cold and warm requests for AVIF, WebP, and fallback clients on the exact Nginx version and configuration you operate. If you instead add an explicit format bucket to `proxy_cache_key`, make the bucket logic identical to the origin and test fallback requests with no `Accept` header. A copied regex that looks only for `webp` can collapse AVIF and WebP into the wrong entry.
 
 ## Canonicalize what is semantically unordered
 

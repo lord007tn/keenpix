@@ -42,7 +42,7 @@ Add network egress policy around the process. Application checks reduce risk, bu
 | DNS rebinding | Allowed name resolves differently between validation and connect | Pin the validated address or use a trusted egress proxy | Resolution/connect mismatch or blocked IP |
 | Redirect pivot | Public URL redirects to an internal target | Disable automatic following; validate each `Location` | Redirect-policy failure with hop number |
 | Oversized transfer | Missing or false `Content-Length`, endless body | Streaming byte counter and timeout | `413` or `504`; bytes read before abort |
-| Decompression bomb | Small file declares enormous dimensions | Decode-time pixel/channel/page ceilings | Decoder limit error; no process OOM |
+| Decompression bomb | Small file declares enormous dimensions | Decode-time pixel/channel/page ceilings | Decoder-limit rejection plus memory, OOM, and restart monitoring |
 | Animated-image bomb | Many frames multiply work and memory | Disable animation by default; cap pages/work when enabled | Rejected animation or bounded frame count |
 | Variant abuse | Valid source with changing expensive transforms | Parameter bounds, finite ladders, signed URLs, rate limits | `403` signature failure, throttling, miss-cardinality alert |
 | Decoder exploit | Malformed bytes target a library bug | Patched decoder, sandbox, least privilege, no secrets | Crash/restart alert and quarantined source |

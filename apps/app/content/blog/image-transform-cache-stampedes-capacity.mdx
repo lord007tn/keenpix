@@ -76,8 +76,10 @@ location /img/ {
     proxy_cache keenpix;
     proxy_cache_key "$scheme$request_method$host$request_uri";
     proxy_cache_lock on;
-    proxy_cache_lock_timeout 3s;
-    proxy_cache_lock_age 15s;
+    # Illustrative only: replace these from measured cold-fill latency and the
+    # end-to-end client deadline. Do not copy them as universal safe values.
+    proxy_cache_lock_timeout 20s;
+    proxy_cache_lock_age 30s;
 
     proxy_cache_background_update on;
     proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
@@ -88,7 +90,9 @@ location /img/ {
 
 This example assumes explicit output formats or separately proven `Vary: Accept` behavior. Read the [cache-key and Vary guide](/blog/image-cdn-cache-keys-vary-accept) before copying it.
 
-`proxy_cache_lock_timeout` must be shorter than the user-facing deadline. `proxy_cache_lock_age` is an escape hatch: after it expires, Nginx may allow another origin fill. Set it above the normal high-percentile cold-transform duration, then alert when it is exercised. An unlimited lock wait merely moves the unbounded queue into the proxy.
+The `20s`/`30s` values are placeholders, not Keenpix defaults. Set `proxy_cache_lock_timeout` above the measured high-percentile cold-fill duration plus margin and below the end-to-end client deadline. Nginx documents that a waiter whose lock timeout expires is passed to the upstream and its response is not cached. If many waiters expire together, they can fan out into duplicate transforms. `proxy_cache_lock_age` is a separate escape hatch: when the active fill exceeds that age, Nginx may pass one more request upstream.
+
+Therefore, a cache lock is not an admission controller. Pair it with the bounded cold-work gate in the next section before production, and alert on lock timeouts and age releases. If no timeout fits between measured cold latency and the client deadline, fail or serve stale at a real admission boundary instead of relying on the lock to protect capacity. An unlimited wait merely moves an unbounded queue into the proxy.
 
 `proxy_cache_use_stale updating` and background update can keep serving a previous image while one refresh runs. RFC 5861 defines the same availability pattern through `stale-while-revalidate` and `stale-if-error`. Use stale delivery only when the URL is versioned or the business accepts temporary old bytes. Do not serve a stale private or revoked image merely to improve availability.
 
