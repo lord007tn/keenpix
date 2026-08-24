@@ -1,5 +1,5 @@
 import { MoonIcon, SunIcon } from 'lucide-react'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@/components/theme/theme-provider'
 import { Button } from '@/components/ui/button'
 
 export function ModeToggle({ className }: { className?: string }) {
