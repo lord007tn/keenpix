@@ -12,8 +12,8 @@ import {
   TagIcon,
   UserIcon,
 } from 'lucide-react'
-import { useTheme } from 'next-themes'
 import { useState } from 'react'
+import { useTheme } from '@/components/theme/theme-provider'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {

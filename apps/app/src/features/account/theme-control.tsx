@@ -1,6 +1,5 @@
 import { MonitorIcon, MoonIcon, SunIcon } from 'lucide-react'
-import { useTheme } from 'next-themes'
-import { useEffect, useState } from 'react'
+import { useTheme } from '@/components/theme/theme-provider'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 const THEMES = [
@@ -11,20 +10,17 @@ const THEMES = [
 
 export function ThemeControl() {
   const { theme, setTheme } = useTheme()
-  // next-themes resolves on the client only; gate to avoid a hydration mismatch.
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
 
   return (
     <ToggleGroup
       onValueChange={(v: string[]) => {
         const next = v[0]
-        if (next) {
+        if (next === 'light' || next === 'dark' || next === 'system') {
           setTheme(next)
         }
       }}
       size="sm"
-      value={mounted ? [theme ?? 'system'] : []}
+      value={[theme]}
       variant="outline"
     >
       {THEMES.map((t) => (
