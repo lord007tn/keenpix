@@ -19,16 +19,16 @@ todos.json
 .keenpix-cache-*/
 .seo-cache/
 .agents
-.playwright-mcp
-.playwright-cli
-playwright-report
-test-results
+.playwright/
+.playwright-mcp/
+.playwright-cli/
+**/playwright/.auth/
+**/playwright/.cache/
+playwright-report/
+blob-report/
+test-results/
 dogfood-output
-output/*
-!output/playwright/
-output/playwright/*
-!output/playwright/seo-pr/
-!output/playwright/seo-pr/**
+output/
 *.log
 .claude/launch.json
 body*.txt
@@ -42,3 +42,11 @@ tools/candidate-names*.txt
 tools/check-domains.ps1
 tools/setup-keenpix-db.mjs
 tools/sweep-domains.ps1
+
+# local temporary files and directories
+*.tmp
+*.temp
+.tmp/
+.temp/
+tmp/
+temp/
