@@ -30,7 +30,7 @@ The deployable apps use the product version, while public SDK/framework
 packages are versioned through Changesets.
 
 - Set the versions of `@keenpix/app`, `@keenpix/transform-app`,
-  `@keenpix/worker`, `@keenpix/docs`, and `@keenpix/custom-domain-edge` to the
+  `@keenpix/worker`, `@keenpix/docs`, and `@keenpix/delivery-edge` to the
   release version.
 - Run `pnpm changeset status` and confirm every public package change has an
   intentional changeset.

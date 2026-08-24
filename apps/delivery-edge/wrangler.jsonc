@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
-  "name": "keenpix-custom-domain-edge",
+  "name": "keenpix-delivery-edge",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-13",
   "workers_dev": false,

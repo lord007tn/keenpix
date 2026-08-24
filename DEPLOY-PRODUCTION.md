@@ -110,23 +110,32 @@ CLOUDFLARE_HOST=keenpix.com
 ```
 
 Managed custom delivery domains use a separate write-capable Cloudflare for
-SaaS token. Deploy `apps/custom-domain-edge`, configure the zone's
-originless fallback origin, and set the application variables together:
+SaaS token. Deploy `apps/delivery-edge` as `keenpix-delivery-edge`, configure
+the zone's originless fallback origin, and set the application variables
+together:
 
 ```dotenv
 CLOUDFLARE_SAAS_API_TOKEN=...
 CLOUDFLARE_SAAS_ZONE_ID=...
 CLOUDFLARE_SAAS_CNAME_TARGET=customers.keenpix.com
-CLOUDFLARE_SAAS_WORKER_SCRIPT=keenpix-custom-domain-edge
 CLOUDFLARE_SAAS_EDGE_SECRET=<same random 32+ byte value as the Worker's EDGE_SECRET>
 ```
 
-The provisioning token needs **Zone → SSL and Certificates → Edit** and **Zone
-→ Workers Routes → Edit**. The Worker deployment identity additionally needs
-**Account → Workers Scripts → Edit**, but that permission does not belong in the
-application token. Keep the analytics token read-only and separate. Customers
+The application provisioning token needs only **Zone → SSL and Certificates →
+Edit**. The separate Worker deployment identity needs **Account → Workers
+Scripts → Edit** and **Zone → Workers Routes → Edit** so Wrangler can own the
+single `*/*` route. Keep the analytics token read-only and separate. Customers
 create a DNS-only CNAME to the target shown in Settings → Custom domains;
-Cloudflare provisions TLS and Keenpix installs an exact Worker route.
+Cloudflare provisions TLS and the wildcard route handles every verified custom
+hostname.
+
+When migrating from `keenpix-custom-domain-edge`, deploy
+`keenpix-delivery-edge` with the same `EDGE_SECRET`, confirm Wrangler has moved
+the wildcard route to the new script, and smoke-test first-party plus customer
+delivery. Retain the old script until those checks pass; it can then be removed
+without changing customer DNS or Custom Hostname records. Remove the obsolete
+`CLOUDFLARE_SAAS_WORKER_SCRIPT` application variable and drop **Workers Routes
+→ Edit** from the application provisioning token; neither is used at runtime.
 
 For callback verification without a webhook subdomain, point Polar sandbox at
 `https://keenpix.com/api/auth/polar/sandbox-webhooks` and set that endpoint's

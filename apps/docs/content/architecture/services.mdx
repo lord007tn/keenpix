@@ -10,7 +10,7 @@ icon: Boxes
 | `apps/transform` | `3002` | `GET`/`HEAD /img/*`, origin safety, Sharp/SVG work, cache and transform analytics | CPU, memory, or transform latency grows |
 | `apps/worker` | `3001` | BullMQ prewarm jobs, retries, concurrency, and Workbench | Queue depth or job age grows |
 | `apps/docs` | `3003` | TanStack Start + Fumadocs documentation and search | Documentation traffic grows |
-| `apps/custom-domain-edge` | Cloudflare Workers | Customer hostname routing and edge analytics | Cloudflare handles scaling |
+| `apps/delivery-edge` | Cloudflare Workers | First-party and customer hostname routing, cache partitioning, and edge analytics | Cloudflare handles scaling |
 
 ## Health endpoints
 

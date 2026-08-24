@@ -29,7 +29,6 @@ const CLOUD_KEYS = [
   'CLOUDFLARE_SAAS_API_TOKEN',
   'CLOUDFLARE_SAAS_ZONE_ID',
   'CLOUDFLARE_SAAS_CNAME_TARGET',
-  'CLOUDFLARE_SAAS_WORKER_SCRIPT',
   'CLOUDFLARE_SAAS_EDGE_SECRET',
 ]
 
@@ -192,6 +191,6 @@ describe('cloud config env validation', () => {
       CLOUDFLARE_SAAS_CNAME_TARGET: 'customers.keenpix.com',
       CLOUDFLARE_SAAS_EDGE_SECRET: 'a'.repeat(32),
     })
-    expect(env.CLOUDFLARE_SAAS_WORKER_SCRIPT).toBe('keenpix-custom-domain-edge')
+    expect(env.CLOUDFLARE_SAAS_EDGE_SECRET).toBe('a'.repeat(32))
   })
 })

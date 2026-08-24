@@ -35,7 +35,7 @@ const config: KnipConfig = {
         'tw-animate-css',
       ],
     },
-    'apps/custom-domain-edge': {
+    'apps/delivery-edge': {
       project: ['src/**/*.ts'],
     },
     'apps/worker': {

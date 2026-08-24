@@ -20,7 +20,7 @@ const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const releaseNotesDirectory = join(repositoryRoot, '.github', 'release-notes')
 const platformPackagePaths = [
   'apps/app/package.json',
-  'apps/custom-domain-edge/package.json',
+  'apps/delivery-edge/package.json',
   'apps/docs/package.json',
   'apps/transform/package.json',
   'apps/worker/package.json',

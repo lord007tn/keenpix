@@ -5,7 +5,7 @@
   "fixed": [
     [
       "@keenpix/app",
-      "@keenpix/custom-domain-edge",
+      "@keenpix/delivery-edge",
       "@keenpix/docs",
       "@keenpix/transform-app",
       "@keenpix/worker",

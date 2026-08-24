@@ -122,8 +122,7 @@ All via environment variables (see `.env.example`):
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM_EMAIL` / `SMTP_FROM_NAME` | – | SMTP connection (when `EMAIL_PROVIDER=smtp`; `SMTP_HOST` + `SMTP_FROM_EMAIL` required). |
 | `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_ZONE_ID` | – | Cloudflare edge analytics fallback when Settings → CDN cache is not enabled. All four are required in cloud mode so billable, project-attributed edge delivery is captured before usage watermarks advance; they remain optional when self-hosting. Use zone **Analytics → Read** for `CLOUDFLARE_API_TOKEN` and account **Account Analytics → Read** for `CLOUDFLARE_ACCOUNT_API_TOKEN`. |
 | `CLOUDFLARE_HOST` | – | Optional hostname filter for Cloudflare edge analytics when one zone serves multiple `/img/*` hosts. |
-| `CLOUDFLARE_SAAS_API_TOKEN` / `CLOUDFLARE_SAAS_ZONE_ID` / `CLOUDFLARE_SAAS_CNAME_TARGET` / `CLOUDFLARE_SAAS_EDGE_SECRET` | – | Managed-cloud custom delivery domains. Configure the fallback origin and edge Worker first. The token needs zone **SSL and Certificates → Edit** and **Workers Routes → Edit**. |
-| `CLOUDFLARE_SAAS_WORKER_SCRIPT` | `keenpix-custom-domain-edge` | Worker that securely forwards exact customer-hostname routes to the canonical Keenpix origin. |
+| `CLOUDFLARE_SAAS_API_TOKEN` / `CLOUDFLARE_SAAS_ZONE_ID` / `CLOUDFLARE_SAAS_CNAME_TARGET` / `CLOUDFLARE_SAAS_EDGE_SECRET` | – | Managed-cloud custom delivery domains. Configure the fallback origin and `apps/delivery-edge` first. The application token needs zone **SSL and Certificates → Edit**; the separate Worker deployment identity owns the wildcard route. |
 | `KEENPIX_MODE` | – | `selfhost` (default) or `cloud`. Self-host is single-tenant with no public marketing site, self-signup, or billing. |
 | `KEENPIX_RUN_MIGRATIONS` / `KEENPIX_RUN_SEED` | – | Docker entrypoint controls for running migrations and bootstrap seed before app start. Defaults to `true`. |
 | `KEENPIX_CACHE_DIR` | – | Disk cache location (default `./.keenpix-cache`). |
@@ -422,7 +421,7 @@ apps/
   docs/                standalone TanStack Start and Fumadocs application
   transform/           independently scaled image transformation data plane
   worker/              independently scaled BullMQ prewarm consumer
-  custom-domain-edge/  independently deployed Cloudflare Worker
+  delivery-edge/       independently deployed Cloudflare delivery Worker
 packages/
   analytics/           buffered transform analytics collection
   auth/                shared Better Auth configuration primitives

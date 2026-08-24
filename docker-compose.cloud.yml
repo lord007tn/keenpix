@@ -156,11 +156,10 @@ services:
       - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:?set Cloudflare account ID}
       - CLOUDFLARE_ZONE_ID=${CLOUDFLARE_ZONE_ID:?set Cloudflare zone ID}
       - CLOUDFLARE_HOST=${CLOUDFLARE_HOST:-}
-      # Cloudflare for SaaS customer delivery domains (all four secrets together).
+      # Cloudflare for SaaS customer delivery domains (all four values together).
       - CLOUDFLARE_SAAS_API_TOKEN=${CLOUDFLARE_SAAS_API_TOKEN:-}
       - CLOUDFLARE_SAAS_ZONE_ID=${CLOUDFLARE_SAAS_ZONE_ID:-}
       - CLOUDFLARE_SAAS_CNAME_TARGET=${CLOUDFLARE_SAAS_CNAME_TARGET:-}
-      - CLOUDFLARE_SAAS_WORKER_SCRIPT=${CLOUDFLARE_SAAS_WORKER_SCRIPT:-keenpix-custom-domain-edge}
       - CLOUDFLARE_SAAS_EDGE_SECRET=${CLOUDFLARE_SAAS_EDGE_SECRET:-}
       # resend:
       - RESEND_API_KEY=${RESEND_API_KEY:-}
