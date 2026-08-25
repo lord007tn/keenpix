@@ -68,10 +68,10 @@ portable reference stack; the live Coolify resource uses the volume-compatible
      `pnpm billing:configure-benefits -- --server=production`, followed by the
      same command with `--apply`. The script preserves any existing benefits,
      refuses ambiguous catalogs, and never prints the access token.
-4. **Custom delivery domains** — enable Cloudflare for SaaS and create an
-   originless fallback such as `fallback.keenpix.com` (the Worker handles the
-   request before that placeholder origin). Deploy `apps/delivery-edge` as
-   `keenpix-delivery-edge`, set its `EDGE_SECRET`, and keep
+4. **Custom delivery domains** — enable Cloudflare for SaaS and create a
+   proxied, originless fallback such as `fallback.keenpix.com` (the Worker
+   handles the request before that placeholder origin). Deploy
+   `apps/delivery-edge` as `keenpix-delivery-edge`, set its `EDGE_SECRET`, and keep
    `TRANSFORM_ORIGIN=https://transform.keenpix.com`. Create
    `customers.keenpix.com` as the CNAME target customers use. The application
    token needs only **Zone → SSL and Certificates → Edit**. Use a separate Worker
@@ -79,10 +79,14 @@ portable reference stack; the live Coolify resource uses the volume-compatible
    Workers Routes → Edit**. Set
    `CLOUDFLARE_SAAS_API_TOKEN`, `CLOUDFLARE_SAAS_ZONE_ID`,
    `CLOUDFLARE_SAAS_CNAME_TARGET`, and `CLOUDFLARE_SAAS_EDGE_SECRET` together.
-   The zone's single `*/*` Worker route handles every verified custom hostname,
-   so Coolify never needs arbitrary customer hostnames or certificates. Keep the
-   more-specific no-Worker routes for Keenpix's app and origin hostnames. Cache
-   rules for custom hosts should match `/img/*` by path rather than one host.
+   Manage the zone's complete route table through the Cloudflare dashboard or
+   API as its single source of truth; Wrangler deliberately does not declare
+   routes. Assign `*/*` to `keenpix-delivery-edge` and add more-specific
+   no-Worker routes for Keenpix's app and origin hostnames. Verify that route
+   table after every Worker deployment. The wildcard handles every verified
+   custom hostname, so Coolify never needs arbitrary customer hostnames or
+   certificates. Cache rules for custom hosts should match `/img/*` by path
+   rather than one host.
 5. **Edge analytics for billing** — create a zone-scoped token with **Zone →
    Analytics → Read** and a separate account-scoped token with **Account →
    Account Analytics → Read**. Set `CLOUDFLARE_API_TOKEN`,

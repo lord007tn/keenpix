@@ -53,7 +53,7 @@ export async function handleTransformRequest(
   if (!validateCustomDomainCachePartition(searchParams, edgeHostname)) {
     return new Response(
       edgeHostname
-        ? 'Invalid custom-domain edge request'
+        ? 'Invalid delivery-edge request'
         : 'Reserved query parameter',
       { status: 400 },
     )

@@ -439,7 +439,7 @@ packages/
     react, next, vue, nuxt, svelte, sveltekit, astro, remix, ...
 ```
 
-Inside `apps/app`, the one-way server layers remain **route → function → action → data-access**. Image delivery runs in `apps/transform`, which owns the HTTP data-plane lifecycle while delegating reusable Sharp, SSRF, origin, signing, SVG, cache, and analytics behavior to flat packages. The control plane proxies self-hosted transform requests during the migration, while the custom-domain edge Worker targets the transform origin directly. Durable SDK prewarm work has its own scaling lifecycle in `apps/worker`; every BullMQ connection, queue, job contract, and worker factory lives in `packages/bullmq`. Transactional delivery lives in `packages/email`, and all Node runtimes share evlog through `packages/logger`.
+Inside `apps/app`, the one-way server layers remain **route → function → action → data-access**. Image delivery runs in `apps/transform`, which owns the HTTP data-plane lifecycle while delegating reusable Sharp, SSRF, origin, signing, SVG, cache, and analytics behavior to flat packages. The control plane proxies self-hosted transform requests during the migration, while the delivery-edge Worker targets the transform origin directly. Durable SDK prewarm work has its own scaling lifecycle in `apps/worker`; every BullMQ connection, queue, job contract, and worker factory lives in `packages/bullmq`. Transactional delivery lives in `packages/email`, and all Node runtimes share evlog through `packages/logger`.
 
 The app, transform service, worker, and docs site each have an independent Docker image. Dragonfly backs BullMQ, while image caching is configured separately so queue storage and transformed-image storage cannot accidentally share an eviction policy.
 

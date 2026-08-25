@@ -27,7 +27,7 @@ and delivery hostnames do not proxy `/health/*`; a `404` there is expected.
 
 ## Transform request ownership
 
-Hosted delivery and the custom-domain edge target `apps/transform` directly. In self-host mode, `apps/app` can proxy transform requests to preserve the traditional single public hostname while the data plane remains independently scalable.
+Hosted delivery and the delivery edge target `apps/transform` directly. In self-host mode, `apps/app` can proxy transform requests to preserve the traditional single public hostname while the data plane remains independently scalable.
 
 ## Worker and Workbench
 

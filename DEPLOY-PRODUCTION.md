@@ -111,8 +111,8 @@ CLOUDFLARE_HOST=keenpix.com
 
 Managed custom delivery domains use a separate write-capable Cloudflare for
 SaaS token. Deploy `apps/delivery-edge` as `keenpix-delivery-edge`, configure
-the zone's originless fallback origin, and set the application variables
-together:
+the zone's proxied, originless fallback origin, and set the application
+variables together:
 
 ```dotenv
 CLOUDFLARE_SAAS_API_TOKEN=...
@@ -123,19 +123,26 @@ CLOUDFLARE_SAAS_EDGE_SECRET=<same random 32+ byte value as the Worker's EDGE_SEC
 
 The application provisioning token needs only **Zone → SSL and Certificates →
 Edit**. The separate Worker deployment identity needs **Account → Workers
-Scripts → Edit** and **Zone → Workers Routes → Edit** so Wrangler can own the
-single `*/*` route. Keep the analytics token read-only and separate. Customers
-create a DNS-only CNAME to the target shown in Settings → Custom domains;
-Cloudflare provisions TLS and the wildcard route handles every verified custom
-hostname.
+Scripts → Edit** and **Zone → Workers Routes → Edit**. Manage the complete
+zone route table through the Cloudflare dashboard or API as its single source
+of truth; Wrangler deliberately does not declare routes. Assign `*/*` to
+`keenpix-delivery-edge`, add more-specific no-Worker routes for Keenpix's app
+and origin hostnames, and verify the production route table after every Worker
+deployment. Keep the analytics token read-only and separate. Customers create a
+DNS-only CNAME to the target shown in Settings → Custom domains; Cloudflare
+provisions TLS and the wildcard route handles every verified custom hostname.
 
 When migrating from `keenpix-custom-domain-edge`, deploy
-`keenpix-delivery-edge` with the same `EDGE_SECRET`, confirm Wrangler has moved
-the wildcard route to the new script, and smoke-test first-party plus customer
-delivery. Retain the old script until those checks pass; it can then be removed
-without changing customer DNS or Custom Hostname records. Remove the obsolete
-`CLOUDFLARE_SAAS_WORKER_SCRIPT` application variable and drop **Workers Routes
-→ Edit** from the application provisioning token; neither is used at runtime.
+`keenpix-delivery-edge` with the same `EDGE_SECRET`, then enumerate the zone's
+Worker routes. Reassign `*/*` and every legacy exact route owned by
+`keenpix-custom-domain-edge` to `keenpix-delivery-edge`, or delete an exact
+route when an existing no-Worker exclusion should win. Confirm the complete
+route table, then verify that first-party delivery and a customer hostname both
+reach `keenpix-delivery-edge`. Retain the old script until those checks pass; it
+can then be removed without changing customer DNS or Custom Hostname records.
+Remove the obsolete `CLOUDFLARE_SAAS_WORKER_SCRIPT` application variable and
+drop **Workers Routes → Edit** from the application provisioning token; neither
+is used at runtime.
 
 For callback verification without a webhook subdomain, point Polar sandbox at
 `https://keenpix.com/api/auth/polar/sandbox-webhooks` and set that endpoint's

@@ -311,7 +311,7 @@ export async function handleTransformRequest(
   }
   const edge = getTrustedEdgeRequest(request, env.CLOUDFLARE_SAAS_EDGE_SECRET)
   if (!validateEdgePartition(searchParams, edge?.hostname)) {
-    return new Response('Invalid custom-domain edge request', { status: 400 })
+    return new Response('Invalid delivery-edge request', { status: 400 })
   }
   let projectId = edge?.projectId ?? searchParams.get('project') ?? undefined
   if (!projectId && edge?.hostname) {

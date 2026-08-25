@@ -1,8 +1,9 @@
 # Releasing Keenpix
 
-Keenpix v0.3 ships four deployable services, a GitHub release, and a family of
-public npm packages. Docker publishing is always manual; pull requests, pushes,
-and tag creation never build or publish container images automatically.
+Keenpix v0.3 ships four container services, one Cloudflare Worker, a GitHub
+release, and a family of public npm packages. Docker and Worker deployments are
+always manual; pull requests, pushes, and tag creation never build, publish, or
+deploy these runtimes automatically.
 
 ## 1. Prepare the release pull request
 
@@ -16,6 +17,8 @@ and tag creation never build or publish container images automatically.
   - `apps/transform/Dockerfile`
   - `apps/worker/Dockerfile`
   - `apps/docs/Dockerfile`
+- Run `pnpm --filter @keenpix/delivery-edge build` to bundle the Worker without
+  publishing or deploying it.
 - Boot the self-host Compose stack with locally built images and verify
   migrations, seed, health endpoints, sign-in, one transform miss, and the
   following cache hit.
@@ -71,6 +74,15 @@ should update the `master` and `latest` tags. Never add `push` or `pull_request`
 Docker build triggers. Leave the publish input disabled for a build-only
 verification run.
 
+Deploy `keenpix-delivery-edge` separately and manually from the reviewed tag or
+commit with `pnpm --filter @keenpix/delivery-edge deploy`. Its deployment
+identity must provide the existing `EDGE_SECRET` and have permission to publish
+the Worker. Wrangler deliberately does not declare routes: keep the Cloudflare
+zone route table in the dashboard or API as the single source of truth, assign
+`*/*` to `keenpix-delivery-edge`, and preserve more-specific no-Worker routes
+for Keenpix's application and origin hosts. Record the new Worker version ID and
+the previous verified version ID as its rollback target.
+
 ## 5. Post-release verification
 
 - Pin all four `KEENPIX_*_IMAGE` variables to the same `vX.Y.Z` release.
@@ -83,7 +95,10 @@ verification run.
   - docs `/health` is healthy;
   - the seeded super admin can sign in;
   - an allowlisted transform returns `MISS` and then `HIT`;
-  - the canonical managed CDN path works through the edge;
+  - the `*/*` route is owned by `keenpix-delivery-edge` and the no-Worker
+    exclusions still exist;
+  - the canonical managed CDN path works through `keenpix-delivery-edge`;
+  - a verified customer delivery hostname works through `keenpix-delivery-edge`;
   - the application hostname does not expose public managed delivery.
 - Record image digests, deployment id, rollback target, and screenshots or a
   short recording for user-visible changes in the release pull request.
@@ -95,3 +110,10 @@ one unit. Do not mix app, transform, worker, and docs versions unless a release
 note explicitly documents compatibility. Preserve the database and cache
 volumes, verify the previous schema is still supported, redeploy, and repeat the
 health and transform checks.
+
+Roll back `keenpix-delivery-edge` with
+`pnpm --filter @keenpix/delivery-edge exec wrangler rollback <VERSION_ID>` using
+the recorded previously verified version. Confirm `EDGE_SECRET` is still bound,
+retain the same `*/*` and no-Worker route table, then repeat the first-party and
+customer delivery smoke tests. Do not delete the previous Worker script or
+version until rollback has been rehearsed successfully.
