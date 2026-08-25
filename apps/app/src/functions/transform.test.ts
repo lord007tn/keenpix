@@ -135,6 +135,34 @@ describe('transform request routing', () => {
     )
   })
 
+  it('verifies a signed customer hostname without a project query', async () => {
+    const secret = 'customer-signing-secret'
+    const signingParams = new URLSearchParams({ w: '400' })
+    signingParams.set(
+      'sig',
+      signTransformRequest(secret, source, signingParams),
+    )
+    resolveCustomDomainProject.mockResolvedValue('customer_project')
+
+    const response = await handleTransformRequest(
+      new Request(
+        `https://images.customer.com/img/${encodedSource}?${signingParams}`,
+      ),
+      encodedSource,
+    )
+
+    expect(response.status).toBe(200)
+    const input = optimizeProjectImage.mock.calls[0]?.[0]
+    if (!input) {
+      throw new Error('Expected the transform action to be called.')
+    }
+    expect(input.projectId).toBe('customer_project')
+    expect(input.searchParams.has('project')).toBe(false)
+    expect(verifyTransformSignature(secret, source, input.searchParams)).toBe(
+      true,
+    )
+  })
+
   it('rejects a conflicting project on a verified customer hostname', async () => {
     resolveCustomDomainProject.mockResolvedValue('customer_project')
 

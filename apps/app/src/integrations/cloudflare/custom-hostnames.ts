@@ -37,7 +37,6 @@ export function customDomainsConfigured() {
     env.CLOUDFLARE_SAAS_API_TOKEN &&
       env.CLOUDFLARE_SAAS_ZONE_ID &&
       env.CLOUDFLARE_SAAS_CNAME_TARGET &&
-      env.CLOUDFLARE_SAAS_WORKER_SCRIPT &&
       env.CLOUDFLARE_SAAS_EDGE_SECRET,
   )
 }

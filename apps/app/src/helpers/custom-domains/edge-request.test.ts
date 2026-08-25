@@ -12,7 +12,7 @@ import {
 
 const secret = 'a-secure-edge-secret-that-is-long-enough'
 
-describe('trusted custom-domain edge request', () => {
+describe('trusted delivery-edge request', () => {
   it('accepts the Worker hostname when the shared secret matches', () => {
     const request = new Request('https://keenpix.com/img/source', {
       headers: {

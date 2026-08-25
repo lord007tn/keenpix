@@ -12,7 +12,7 @@ const env = {
   TRANSFORM_ORIGIN: 'https://transform.keenpix.com',
 } as const
 
-describe('custom-domain edge Worker', () => {
+describe('delivery edge Worker', () => {
   it('routes a customer hostname to the fixed transform origin', () => {
     const result = createOriginRequest(
       new Request('https://images.customer.com/img/source?q=80'),
