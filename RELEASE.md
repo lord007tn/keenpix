@@ -41,10 +41,9 @@ packages are versioned through Changesets.
   aligned with the shipped behavior.
 - Commit the version changes as `chore(release): vX.Y.Z`.
 
-After the release pull request is merged, the Packages workflow uses Changesets
-to open or update the package-version pull request. Merging that generated pull
-request publishes the public `@keenpix/*` packages to npm. Confirm the repository
-has a valid `NPM_TOKEN` before merging it.
+The release tag publishes public `@keenpix/*` packages directly through
+`.github/workflows/release.yml` and npm trusted publishing. There is no separate
+package-version pull request or long-lived `NPM_TOKEN`.
 
 ## 3. Tag and publish the GitHub release
 
@@ -55,8 +54,10 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-The tag triggers `.github/workflows/release.yml`, which validates semver and
-publishes the GitHub release notes. It does not build Docker images.
+The tag triggers `.github/workflows/release.yml`, which validates semver, runs
+the repository and package release gates, verifies the unified version,
+publishes public packages through npm trusted publishing, and publishes the
+GitHub release notes. It does not build Docker images or deploy the Worker.
 
 ## 4. Build and publish Docker images manually
 
@@ -75,13 +76,17 @@ Docker build triggers. Leave the publish input disabled for a build-only
 verification run.
 
 Deploy `keenpix-delivery-edge` separately and manually from the reviewed tag or
-commit with `pnpm --filter @keenpix/delivery-edge deploy`. Its deployment
-identity must provide the existing `EDGE_SECRET` and have permission to publish
-the Worker. Wrangler deliberately does not declare routes: keep the Cloudflare
-zone route table in the dashboard or API as the single source of truth, assign
-`*/*` to `keenpix-delivery-edge`, and preserve more-specific no-Worker routes
-for Keenpix's application and origin hosts. Record the new Worker version ID and
-the previous verified version ID as its rollback target.
+commit with `pnpm --filter @keenpix/delivery-edge deploy`. Before the first route
+cutover, run
+`pnpm --filter @keenpix/delivery-edge exec wrangler secret put EDGE_SECRET --name keenpix-delivery-edge`,
+enter the value used by `CLOUDFLARE_SAAS_EDGE_SECRET`, and verify its name with
+`wrangler secret list --name keenpix-delivery-edge`. The deployment identity
+must have permission to publish the Worker. Wrangler deliberately does not
+declare routes: keep the Cloudflare zone route table in the dashboard or API as
+the single source of truth, assign `*/*` to `keenpix-delivery-edge` only after
+the secret is present, and preserve more-specific no-Worker routes for Keenpix's
+application and origin hosts. Record the new Worker version ID and the previous
+verified version ID as its rollback target.
 
 ## 5. Post-release verification
 

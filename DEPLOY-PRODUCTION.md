@@ -110,9 +110,9 @@ CLOUDFLARE_HOST=keenpix.com
 ```
 
 Managed custom delivery domains use a separate write-capable Cloudflare for
-SaaS token. Deploy `apps/delivery-edge` as `keenpix-delivery-edge`, configure
-the zone's proxied, originless fallback origin, and set the application
-variables together:
+SaaS token. Configure the zone's proxied, originless
+`fallback.keenpix.com` record and a proxied `customers.keenpix.com` CNAME that
+points to it, then set the application variables together:
 
 ```dotenv
 CLOUDFLARE_SAAS_API_TOKEN=...
@@ -129,12 +129,22 @@ of truth; Wrangler deliberately does not declare routes. Assign `*/*` to
 `keenpix-delivery-edge`, add more-specific no-Worker routes for Keenpix's app
 and origin hostnames, and verify the production route table after every Worker
 deployment. Keep the analytics token read-only and separate. Customers create a
-DNS-only CNAME to the target shown in Settings → Custom domains; Cloudflare
-provisions TLS and the wildcard route handles every verified custom hostname.
+DNS-only CNAME to `customers.keenpix.com`, the target shown in Settings → Custom
+domains; Cloudflare provisions TLS and the wildcard route handles every verified
+custom hostname.
 
-When migrating from `keenpix-custom-domain-edge`, deploy
-`keenpix-delivery-edge` with the same `EDGE_SECRET`, then enumerate the zone's
-Worker routes. Reassign `*/*` and every legacy exact route owned by
+When migrating from `keenpix-custom-domain-edge`, first deploy the new script
+without assigning it any routes:
+
+```bash
+pnpm --filter @keenpix/delivery-edge deploy
+pnpm --filter @keenpix/delivery-edge exec wrangler secret put EDGE_SECRET --name keenpix-delivery-edge
+```
+
+Enter the same value as `CLOUDFLARE_SAAS_EDGE_SECRET`, then confirm
+`wrangler secret list --name keenpix-delivery-edge` includes `EDGE_SECRET`.
+Only then enumerate the zone's Worker routes. Reassign `*/*` and every legacy
+exact route owned by
 `keenpix-custom-domain-edge` to `keenpix-delivery-edge`, or delete an exact
 route when an existing no-Worker exclusion should win. Confirm the complete
 route table, then verify that first-party delivery and a customer hostname both

@@ -72,9 +72,10 @@ portable reference stack; the live Coolify resource uses the volume-compatible
    proxied, originless fallback such as `fallback.keenpix.com` (the Worker
    handles the request before that placeholder origin). Deploy
    `apps/delivery-edge` as `keenpix-delivery-edge`, set its `EDGE_SECRET`, and keep
-   `TRANSFORM_ORIGIN=https://transform.keenpix.com`. Create
-   `customers.keenpix.com` as the CNAME target customers use. The application
-   token needs only **Zone → SSL and Certificates → Edit**. Use a separate Worker
+   `TRANSFORM_ORIGIN=https://transform.keenpix.com`. Create a proxied CNAME from
+   `customers.keenpix.com` to `fallback.keenpix.com`; customers point their
+   DNS-only CNAME records at `customers.keenpix.com`. The application token
+   needs only **Zone → SSL and Certificates → Edit**. Use a separate Worker
    deployment identity with **Account → Workers Scripts → Edit** and **Zone →
    Workers Routes → Edit**. Set
    `CLOUDFLARE_SAAS_API_TOKEN`, `CLOUDFLARE_SAAS_ZONE_ID`,
