@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button'
 import { clientEnv } from '@/env/client'
 import {
   getAnalyticsConsent,
+  getAnalyticsPathname,
   getPublicContentGroup,
   loadGoogleAnalytics,
   setAnalyticsConsent,
+  trackComparisonCta,
   trackEvent,
   trackFunnelMilestone,
 } from '@/lib/analytics/client'
@@ -54,12 +56,7 @@ export function AnalyticsConsent() {
       return
     }
     previousPath.current = pathname
-    let pagePath = pathname
-    if (pagePath.startsWith('/invite/')) {
-      pagePath = '/invite/:token'
-    } else if (pagePath.startsWith('/admin/customers/')) {
-      pagePath = '/admin/customers/:organization'
-    }
+    const pagePath = getAnalyticsPathname(pathname)
     trackEvent('page_view', {
       content_group: getPublicContentGroup(pagePath),
       page_location: `${window.location.origin}${pagePath}`,
@@ -82,11 +79,16 @@ export function AnalyticsConsent() {
         return
       }
       const url = new URL(link.href, window.location.origin)
+      const comparisonSlug = link.dataset.analyticsComparisonCta
+      if (comparisonSlug && url.origin === window.location.origin) {
+        trackComparisonCta(comparisonSlug, url.pathname)
+      }
       if (url.origin === window.location.origin && url.pathname === '/signup') {
+        const sourcePath = getAnalyticsPathname(window.location.pathname)
         trackEvent('primary_cta_click', {
-          content_group: getPublicContentGroup(window.location.pathname),
+          content_group: getPublicContentGroup(sourcePath),
           cta_label: link.textContent?.trim().slice(0, 80),
-          source_path: window.location.pathname,
+          source_path: sourcePath,
         })
       }
     }

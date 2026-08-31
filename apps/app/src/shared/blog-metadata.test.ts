@@ -131,4 +131,16 @@ describe('blog search metadata', () => {
       expect(languages.sort(), translationKey).toEqual(['ar', 'en'])
     }
   })
+
+  it('routes comparison-intent links to the dedicated canonical owners', () => {
+    const directory = join(process.cwd(), 'content', 'blog')
+    const content = globSync('**/*.mdx', { cwd: directory })
+      .map((file) => readFileSync(join(directory, file), 'utf8'))
+      .join('\n')
+
+    expect(content).toContain('](/compare/cloudinary-alternative)')
+    expect(content).toContain('](/compare/imgix-alternative)')
+    expect(content).not.toContain('](/blog/keenpix-vs-cloudinary)')
+    expect(content).not.toContain('](/blog/keenpix-vs-imgix)')
+  })
 })

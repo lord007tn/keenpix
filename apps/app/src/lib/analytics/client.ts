@@ -9,6 +9,9 @@ declare global {
 const ANALYTICS_CONSENT_KEY = 'keenpix.analytics-consent.v1'
 const ANALYTICS_CONSENT_COOKIE = 'keenpix_analytics_consent'
 const ANALYTICS_CONSENT_EVENT = 'keenpix:analytics-consent'
+const ACTIVATION_CONTEXT_KEY = 'keenpix.activation-context.v1'
+const ACTIVATION_CONTEXT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
+const SAFE_COMPARISON_SLUG = /[^a-z0-9-]/g
 
 export type AnalyticsConsent = 'granted' | 'denied'
 
@@ -48,6 +51,71 @@ export function getPublicContentGroup(pathname: string) {
     return 'product'
   }
   return 'other'
+}
+
+export function getAnalyticsPathname(pathname: string) {
+  if (pathname.startsWith('/invite/')) {
+    return '/invite/:token'
+  }
+  if (pathname.startsWith('/admin/customers/')) {
+    return '/admin/customers/:organization'
+  }
+  return pathname
+}
+
+function getActivationContext() {
+  try {
+    const stored = window.localStorage.getItem(ACTIVATION_CONTEXT_KEY)
+    if (!stored) {
+      return {}
+    }
+    const parsed: unknown = JSON.parse(stored)
+    if (typeof parsed !== 'object' || parsed === null) {
+      return {}
+    }
+    const recordedAt = Reflect.get(parsed, 'recorded_at')
+    if (
+      typeof recordedAt !== 'number' ||
+      !Number.isFinite(recordedAt) ||
+      Date.now() - recordedAt > ACTIVATION_CONTEXT_MAX_AGE_MS
+    ) {
+      window.localStorage.removeItem(ACTIVATION_CONTEXT_KEY)
+      return {}
+    }
+    const context: Record<string, string> = {}
+    for (const key of [
+      'activation_source_group',
+      'activation_source_path',
+      'activation_comparison',
+      'activation_destination',
+    ]) {
+      const value = Reflect.get(parsed, key)
+      if (typeof value === 'string') {
+        context[key] = value.slice(0, 120)
+      }
+    }
+    return context
+  } catch {
+    return {}
+  }
+}
+
+function rememberActivationContext(context: Record<string, string>) {
+  if (getAnalyticsConsent() !== 'granted') {
+    return
+  }
+  try {
+    window.localStorage.setItem(
+      ACTIVATION_CONTEXT_KEY,
+      JSON.stringify({
+        ...getActivationContext(),
+        ...context,
+        recorded_at: Date.now(),
+      }),
+    )
+  } catch {
+    // Funnel events still work without durable attribution context.
+  }
 }
 
 function pushGoogleConsent(
@@ -121,6 +189,11 @@ export function setAnalyticsConsent(consent: AnalyticsConsent) {
   })
 
   if (consent === 'denied') {
+    try {
+      window.localStorage.removeItem(ACTIVATION_CONTEXT_KEY)
+    } catch {
+      // Storage may be unavailable; analytics remains disabled regardless.
+    }
     for (const cookie of document.cookie.split(';')) {
       const name = cookie.split('=')[0]?.trim()
       if (name?.startsWith('_ga')) {
@@ -206,9 +279,17 @@ function trackAcquisitionContext() {
       referrerOrigin = 'unknown'
     }
   }
+  const landingPath = getAnalyticsPathname(window.location.pathname)
+  const contentGroup = getPublicContentGroup(landingPath)
+  if (contentGroup !== 'authentication' && contentGroup !== 'product') {
+    rememberActivationContext({
+      activation_source_group: contentGroup,
+      activation_source_path: landingPath,
+    })
+  }
   trackFunnelMilestone('acquisition_landing', {
-    content_group: getPublicContentGroup(window.location.pathname),
-    landing_path: window.location.pathname,
+    content_group: contentGroup,
+    landing_path: landingPath,
     referrer_origin: referrerOrigin,
     utm_source: search.get('utm_source')?.slice(0, 100),
     utm_medium: search.get('utm_medium')?.slice(0, 100),
@@ -231,6 +312,34 @@ export function trackEvent(
   }
 }
 
+export function trackComparisonCta(
+  comparisonSlug: string,
+  destination: string,
+) {
+  if (getAnalyticsConsent() !== 'granted') {
+    return
+  }
+  const comparison = comparisonSlug
+    .toLowerCase()
+    .replace(SAFE_COMPARISON_SLUG, '')
+    .slice(0, 100)
+  const destinationPath = getAnalyticsPathname(
+    new URL(destination, window.location.origin).pathname,
+  )
+  const sourcePath = getAnalyticsPathname(window.location.pathname)
+  rememberActivationContext({
+    activation_source_group: 'comparison',
+    activation_source_path: sourcePath,
+    activation_comparison: comparison,
+    activation_destination: destinationPath,
+  })
+  trackEvent('comparison_cta_click', {
+    comparison_slug: comparison,
+    cta_destination: destinationPath,
+    source_path: sourcePath,
+  })
+}
+
 export function trackFunnelMilestone(
   event: string,
   parameters: Record<string, boolean | number | string | undefined> = {},
@@ -247,5 +356,12 @@ export function trackFunnelMilestone(
   } catch {
     return
   }
-  trackEvent(event, parameters)
+  trackEvent(event, { ...getActivationContext(), ...parameters })
+  if (event === 'first_image_served') {
+    try {
+      window.localStorage.removeItem(ACTIVATION_CONTEXT_KEY)
+    } catch {
+      // The milestone has already been emitted; storage cleanup is best-effort.
+    }
+  }
 }

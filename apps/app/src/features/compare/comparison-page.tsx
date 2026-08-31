@@ -83,9 +83,12 @@ export function ComparisonPage({
                   className={buttonVariants({
                     className: 'min-h-11 touch-manipulation px-5',
                   })}
-                  to="/signup"
+                  data-analytics-comparison-cta={
+                    comparison.activation ? comparison.slug : undefined
+                  }
+                  to={comparison.activation?.destination ?? '/signup'}
                 >
-                  Start free trial
+                  {comparison.activation?.label ?? 'Start free trial'}
                   <ArrowRightIcon data-icon="inline-end" />
                 </Link>
                 <a
@@ -350,6 +353,37 @@ export function ComparisonPage({
               Model this workload in the cost calculator
               <ArrowRightIcon className="size-4" />
             </a>
+            {comparison.evaluationChecks ? (
+              <div className="mt-8 rounded-xl border bg-card p-6 shadow-sm">
+                <h3 className="font-semibold text-xl tracking-tight">
+                  Reproduce this {comparison.competitor} review
+                </h3>
+                <p className="mt-3 text-muted-foreground leading-relaxed">
+                  The linked public sources, this review method, and the cited
+                  Keenpix v0.3.1 behavior were last checked on{' '}
+                  <time dateTime={comparison.verifiedAt}>
+                    {comparison.verifiedAt}
+                  </time>
+                  . Save the inputs, outputs, headers, account tier, and test
+                  date so another reviewer can repeat the decision.
+                </p>
+                <ol className="mt-5 grid gap-3">
+                  {comparison.evaluationChecks.map((check, index) => (
+                    <li
+                      className="grid grid-cols-[1.75rem_minmax(0,1fr)] gap-3 text-sm leading-relaxed"
+                      key={check}
+                    >
+                      <span className="flex size-7 items-center justify-center rounded-full bg-primary/10 font-mono text-primary text-xs">
+                        {index + 1}
+                      </span>
+                      <span className="pt-1 text-muted-foreground">
+                        {check}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : null}
           </div>
         </section>
 

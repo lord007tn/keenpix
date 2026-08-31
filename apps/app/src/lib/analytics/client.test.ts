@@ -13,10 +13,13 @@ vi.mock('@/env/client', () => ({ clientEnv }))
 
 import {
   getAnalyticsConsent,
+  getAnalyticsPathname,
   getPublicContentGroup,
   loadGoogleAnalytics,
   setAnalyticsConsent,
+  trackComparisonCta,
   trackEvent,
+  trackFunnelMilestone,
 } from './client'
 
 describe('consent-aware Google analytics', () => {
@@ -55,6 +58,16 @@ describe('consent-aware Google analytics', () => {
       'documentation',
     )
     expect(getPublicContentGroup('/pricing')).toBe('pricing')
+  })
+
+  it('removes sensitive route identifiers before analytics use', () => {
+    expect(getAnalyticsPathname('/invite/private-token')).toBe('/invite/:token')
+    expect(getAnalyticsPathname('/admin/customers/org_private')).toBe(
+      '/admin/customers/:organization',
+    )
+    expect(getAnalyticsPathname('/compare/imgix-alternative')).toBe(
+      '/compare/imgix-alternative',
+    )
   })
 
   it('remembers a consent decision when local storage is unavailable later', () => {
@@ -119,5 +132,77 @@ describe('consent-aware Google analytics', () => {
     trackEvent('project_created')
 
     expect(window.dataLayer).toContainEqual({ event: 'project_created' })
+  })
+
+  it('carries comparison context into later activation milestones without query data', () => {
+    clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
+    window.history.replaceState({}, '', '/blog/best-image-cdns-2026')
+    setAnalyticsConsent('granted')
+    window.history.replaceState(
+      {},
+      '',
+      '/compare/cloudinary-alternative?private=do-not-send',
+    )
+
+    trackComparisonCta(
+      'cloudinary-alternative',
+      '/signup?redirect=/private/project',
+    )
+    trackFunnelMilestone('project_created')
+
+    expect(window.dataLayer).toContainEqual({
+      event: 'comparison_cta_click',
+      comparison_slug: 'cloudinary-alternative',
+      cta_destination: '/signup',
+      source_path: '/compare/cloudinary-alternative',
+    })
+    expect(window.dataLayer).toContainEqual({
+      event: 'project_created',
+      activation_source_group: 'comparison',
+      activation_source_path: '/compare/cloudinary-alternative',
+      activation_comparison: 'cloudinary-alternative',
+      activation_destination: '/signup',
+    })
+    expect(JSON.stringify(window.dataLayer)).not.toContain('private')
+  })
+
+  it('expires abandoned comparison context after 30 days', () => {
+    clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
+    setAnalyticsConsent('granted')
+    window.localStorage.setItem(
+      'keenpix.activation-context.v1',
+      JSON.stringify({
+        activation_source_group: 'comparison',
+        activation_comparison: 'imgix-alternative',
+        recorded_at: Date.now() - 31 * 24 * 60 * 60 * 1000,
+      }),
+    )
+
+    trackFunnelMilestone('project_created')
+
+    expect(window.dataLayer).toContainEqual({ event: 'project_created' })
+    expect(
+      window.localStorage.getItem('keenpix.activation-context.v1'),
+    ).toBeNull()
+  })
+
+  it('clears comparison context after the activation journey completes', () => {
+    clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
+    setAnalyticsConsent('granted')
+    window.history.replaceState({}, '', '/compare/imgix-alternative')
+    trackComparisonCta('imgix-alternative', '/signup')
+
+    trackFunnelMilestone('first_image_served')
+
+    expect(window.dataLayer).toContainEqual({
+      event: 'first_image_served',
+      activation_source_group: 'comparison',
+      activation_source_path: '/compare/imgix-alternative',
+      activation_comparison: 'imgix-alternative',
+      activation_destination: '/signup',
+    })
+    expect(
+      window.localStorage.getItem('keenpix.activation-context.v1'),
+    ).toBeNull()
   })
 })

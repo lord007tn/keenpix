@@ -3,12 +3,16 @@ import type { ComparisonPageData } from '../comparison-data'
 export const imgixComparison = {
   slug: 'imgix-alternative',
   competitor: 'imgix',
+  activation: {
+    destination: '/signup',
+    label: 'Start a 14-day imgix canary',
+  },
   title: 'imgix Alternative: Keenpix vs imgix (2026)',
   metaDescription:
     "Compare Keenpix and imgix after imgix's 2025 credit switch: one delivery meter, published rates, an AGPL self-host option, and a URL migration map.",
   heroHeadline: 'Keenpix vs imgix: a predictable image CDN alternative',
   heroSubhead:
-    'Keenpix bills optimized bytes delivered through managed cloud — no credits, management meter, request fees, or seat charges. Published v0.3.0 is AGPL-3.0 and can be self-hosted without a Keenpix license fee, or used as a managed service from $9/month.',
+    'Keenpix bills optimized bytes delivered through managed cloud — no credits, management meter, request fees, or seat charges. Published v0.3.1 is AGPL-3.0 and can be self-hosted without a Keenpix license fee, or used as a managed service from $9/month.',
   verdict:
     "imgix has a broader rendering API — if you lean on face-aware cropping, text overlays, video, or its long tail of advanced parameters, Keenpix won't replace that today, and a mature vendor with enterprise support may matter more to you than price. imgix's credit model draws delivery and cached-storage management from one pool, with published self-serve packages from $25 Starter through $500 Growth Plus. Keenpix charges for managed delivery, publishes self-serve overage rates, and includes analytics on every tier. For core resize, crop, quality, and modern-format delivery, compare both services on your own traffic during the trial; do not assume feature or output parity.",
   pricingRows: [
@@ -40,7 +44,8 @@ export const imgixComparison = {
     },
     {
       scenario: 'Transformations',
-      competitor: 'Rendering included; delivery + management billed in credits',
+      competitor:
+        'Credit use varies by feature; delivery and management also draw credits',
       keenpix: 'Unlimited on every plan — managed delivery is the only meter',
     },
   ],
@@ -62,7 +67,7 @@ export const imgixComparison = {
     },
     {
       feature: 'Transformations',
-      competitor: 'Unlimited renders; delivery draws credits',
+      competitor: 'Feature-dependent credit use; verify the operation mix',
       keenpix: 'Unlimited, never metered',
     },
     {
@@ -83,7 +88,7 @@ export const imgixComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No',
-      keenpix: 'v0.3.0: AGPL-3.0 with Docker deployment files',
+      keenpix: 'v0.3.1: AGPL-3.0 with Docker deployment files',
     },
     {
       feature: 'Signed URLs',
@@ -133,9 +138,9 @@ export const imgixComparison = {
         'imgix publishes credit allowances, but teams should confirm current overage and enforcement behavior directly for their plan. Keenpix continues paid delivery at its published per-GB rate and shows projected charges throughout the billing period.',
     },
     {
-      title: 'An AGPL self-host option in v0.3.0',
+      title: 'An AGPL self-host option in v0.3.1',
       detail:
-        'The published v0.3.0 release is AGPL-3.0 and includes Docker/Coolify deployment files. You can operate it in-house while owning infrastructure and routing. imgix is managed-only.',
+        'The published v0.3.1 release is AGPL-3.0 and includes Docker/Coolify deployment files. You can operate it in-house while owning infrastructure and routing. imgix is managed-only.',
     },
     {
       title: 'Analytics on every plan, not a premium add-on',
@@ -178,12 +183,18 @@ export const imgixComparison = {
     },
     {
       q: 'Can I self-host Keenpix instead of paying for cloud?',
-      a: 'The published v0.3.0 release is licensed AGPL-3.0 and includes Docker and Coolify deployment files. Self-hosting has no Keenpix license fee, but you operate the infrastructure.',
+      a: 'The published v0.3.1 release is licensed AGPL-3.0 and includes Docker and Coolify deployment files. Self-hosting has no Keenpix license fee, but you operate the infrastructure.',
     },
     {
       q: 'What does Keenpix not do?',
       a: 'No video, storage, or DAM: Keenpix transforms and delivers from origins you already have. Managed custom domains are included on Pro and Business. It is also a young product from a solo founder, so buyers should weigh vendor maturity and support needs.',
     },
+  ],
+  evaluationChecks: [
+    'Export one normal and one peak month of imgix delivery GB, managed-media GB, and every transformation class that consumes credits; do not substitute package maximums for measured use.',
+    'Run the same allowlisted source images through both services for resize, crop, quality, DPR, format negotiation, and each advanced imgix operation you rely on. Record output dimensions, content type, response headers, and visual fixtures.',
+    'Request every test URL cold and warm, then compare cache behavior, failure responses, signing, invalidation, observability, and the exact credit or managed-delivery units recorded by each dashboard.',
+    'Canary one bounded route for a complete traffic cycle. Accept only if output, errors, latency, projected cost, and rollback meet thresholds written before the test.',
   ],
   sources: [
     { label: 'imgix pricing', url: 'https://www.imgix.com/pricing' },
@@ -191,11 +202,27 @@ export const imgixComparison = {
       label: 'imgix credit pricing FAQ',
       url: 'https://www.imgix.com/pricing-faq',
     },
+    {
+      label: 'imgix credit consumption guide',
+      url: 'https://www.imgix.com/credit-consumption',
+    },
+    {
+      label: 'imgix rendering API',
+      url: 'https://docs.imgix.com/en-US/apis/rendering/overview',
+    },
     { label: 'imgix payment policy', url: 'https://www.imgix.com/payments' },
     { label: 'Keenpix pricing', url: '/pricing' },
+    {
+      label: 'Keenpix transform parameters',
+      url: '/docs/reference/parameters',
+    },
+    {
+      label: 'Keenpix v0.3.1 release',
+      url: 'https://github.com/lord007tn/keenpix/releases/tag/v0.3.1',
+    },
   ],
-  pricingAsOf: 'August 2026',
+  pricingAsOf: 'August 31, 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
-  verifiedAt: '2026-08-22',
+  verifiedAt: '2026-08-31',
   nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData
