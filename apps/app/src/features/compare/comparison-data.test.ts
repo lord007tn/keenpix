@@ -54,4 +54,16 @@ describe('comparison data', () => {
     expect(content).not.toContain('serves every image on joodlab.com')
     expect(content).not.toContain('full ipx-parity')
   })
+
+  it('gives Cloudinary and imgix one consent-safe activation path and reproducible review', () => {
+    for (const slug of ['cloudinary-alternative', 'imgix-alternative']) {
+      const comparison = COMPARISONS[slug]
+
+      expect(comparison.activation?.destination).toBe('/signup')
+      expect(comparison.activation?.label).toContain('14-day')
+      expect(comparison.evaluationChecks).toHaveLength(4)
+      expect(comparison.verifiedAt).toBe('2026-08-31')
+      expect(comparison.sources.length).toBeGreaterThanOrEqual(6)
+    }
+  })
 })

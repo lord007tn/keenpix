@@ -9,7 +9,12 @@ import { twicpicsComparison } from './data/twicpics'
 import { vercelComparison } from './data/vercel'
 
 export interface ComparisonPageData {
+  activation?: {
+    destination: '/signup'
+    label: string
+  }
   competitor: string
+  evaluationChecks?: string[]
   faq: Array<{ q: string; a: string }>
   featureRows: Array<{ feature: string; competitor: string; keenpix: string }>
   heroHeadline: string

@@ -2,7 +2,7 @@
 title: "imgix Credits Explained: Delivery and Storage Pricing"
 description: Learn how imgix credit packages combine managed media and delivery allowances, then compare the meter with Keenpix managed-delivery pricing.
 date: "2026-07-04"
-updated: "2026-08-22"
+updated: "2026-08-31"
 author: Raed Bahri
 competitor: imgix
 tags: [comparison, pricing, image-cdn]
@@ -10,7 +10,7 @@ image: /og/blog/keenpix-vs-imgix.png?v=2026-07-11
 imageAlt: Abstract comparison of transformation controls and transparent delivery pricing
 ---
 
-imgix publishes a broad rendering API and packages managed media with delivery credits. This guide focuses on those billing mechanics. If you are actively selecting a vendor, use the sourced [Keenpix vs imgix decision guide](/compare/imgix-alternative) for feature fit, migration steps, and cases where imgix is the better choice.
+imgix publishes a broad rendering API and uses credits across managed media, delivery, and feature-dependent transformations. This guide focuses on those billing mechanics. If you are actively selecting a vendor, use the sourced [Keenpix vs imgix decision guide](/compare/imgix-alternative) for feature fit, migration steps, and cases where imgix is the better choice.
 
 ## Two different meters
 
@@ -21,13 +21,13 @@ Keenpix meters **optimized bytes delivered through managed cloud** and does not 
 | | Keenpix | imgix |
 | --- | --- | --- |
 | Billing unit | Keenpix managed delivery (GB) | Credit package with media and delivery allowances |
-| Transformations | Unlimited, free | Included in rendering |
+| Transformations | Unlimited, free | Credit use varies by feature |
 | Large image catalog | No origin-image count | Managed-media allowance applies |
 | Overage | One linear published rate | Plan-dependent |
 | Self-host option | Yes (open source, AGPL) | No |
 | Entry price | $9/mo | $25/mo for Starter (100 credits) |
 
-*Re-verified August 22, 2026 against imgix's [current credit packages and costs](https://www.imgix.com/faq-categories/purchasing-credits-and-costs) and [pricing page](https://www.imgix.com/pricing). Published monthly packages run from $25 Starter (100 credits) through $500 Growth Plus (3,570 credits), with $75 Basic, $150 Midrange, and $300 Growth between them. Annual packages are about 17% lower.*
+*Re-verified August 31, 2026 against imgix's [current credit packages and costs](https://www.imgix.com/faq-categories/purchasing-credits-and-costs), [pricing page](https://www.imgix.com/pricing), and [credit consumption guide](https://www.imgix.com/credit-consumption). Published monthly packages run from $25 Starter (100 credits) through $500 Growth Plus (3,570 credits), with $75 Basic, $150 Midrange, and $300 Growth between them. Annual packages are about 17% lower. Transformation credit use varies by feature, so model the operations you actually call.*
 
 ## Free, unlimited transforms
 
@@ -45,7 +45,7 @@ imgix has years of edge-network maturity and a deep rendering feature set. If yo
 
 ## Related comparisons
 
-- [Keenpix vs Cloudinary](/blog/keenpix-vs-cloudinary) — pooled credits versus managed delivery.
+- [Keenpix vs Cloudinary](/compare/cloudinary-alternative) — pooled credits versus managed delivery.
 - [Keenpix vs ImageKit](/blog/keenpix-vs-imagekit) — two delivery-pricing models, compared.
 - [How the Keenpix managed-delivery meter works](/blog/transparent-image-cdn-pricing) — including its cache boundary.
 - [Keenpix pricing](/pricing) — current plan limits and application-meter details.

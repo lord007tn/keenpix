@@ -3,6 +3,10 @@ import type { ComparisonPageData } from '../comparison-data'
 export const cloudinaryComparison = {
   slug: 'cloudinary-alternative',
   competitor: 'Cloudinary',
+  activation: {
+    destination: '/signup',
+    label: 'Start a 14-day Cloudinary canary',
+  },
   title: 'Cloudinary Alternative: Keenpix vs Cloudinary (2026)',
   metaDescription:
     'Keenpix vs Cloudinary (August 2026): pooled credits vs one managed-delivery meter. Honest pricing, migration steps, and when each wins.',
@@ -10,7 +14,7 @@ export const cloudinaryComparison = {
   heroSubhead:
     'Cloudinary bundles transformations, storage, and bandwidth into credits. Keenpix bills exactly one thing: optimized bytes delivered through managed cloud, with unlimited transforms and team members plus always-on paid overage.',
   verdict:
-    'If you need video transcoding, a full digital asset manager, or AI-powered transforms today, pick Cloudinary — its breadth is real and Keenpix AI extensions are only coming soon. If what you use Cloudinary for is resizing and delivering images, Keenpix offers one managed-delivery meter, unlimited transformations and team members, managed custom domains, always-on paid usage, and an AGPL-3.0 v0.3.0 self-host path. Be aware of what you give up: Keenpix is a young solo-founder product with no video or storage. As of August 2026, 400 GB/month is $29 at Keenpix; Cloudinary bandwidth draws from the Advanced plan’s pooled credits alongside transforms and storage.',
+    'If you need video transcoding, a full digital asset manager, or AI-powered transforms today, pick Cloudinary — its breadth is real and Keenpix does not offer those capabilities. If what you use Cloudinary for is resizing and delivering images, Keenpix offers one managed-delivery meter, unlimited transformations and team members, managed custom domains, always-on paid usage, and an AGPL-3.0 v0.3.1 self-host path. Be aware of what you give up: Keenpix is a young solo-founder product with no video or storage. As of August 31, 2026, the Keenpix standard catalog lists 400 GB/month at $29; Cloudinary bandwidth draws from the Advanced plan’s pooled credits alongside transforms and storage.',
   pricingRows: [
     {
       scenario: 'Credits → GB translation',
@@ -74,7 +78,7 @@ export const cloudinaryComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No',
-      keenpix: 'v0.3.0: AGPL-3.0 with Docker deployment files',
+      keenpix: 'v0.3.1: AGPL-3.0 with Docker deployment files',
     },
     {
       feature: 'Analytics',
@@ -99,7 +103,7 @@ export const cloudinaryComparison = {
     {
       feature: 'AI features',
       competitor: 'Yes — tagging, gen fill, smart crop',
-      keenpix: 'Coming soon; separate transparent meter planned',
+      keenpix: 'Not available',
     },
     {
       feature: 'Custom domain (CNAME)',
@@ -136,7 +140,7 @@ export const cloudinaryComparison = {
     {
       title: 'An open-source escape hatch',
       detail:
-        'The published v0.3.0 release is AGPL-3.0 and includes Docker/Coolify deployment files. Moving in-house still requires infrastructure, operations, and a hostname/routing plan. Cloudinary has no self-host path.',
+        'The published v0.3.1 release is AGPL-3.0 and includes Docker/Coolify deployment files. Moving in-house still requires infrastructure, operations, and a hostname/routing plan. Cloudinary has no self-host path.',
     },
     {
       title: 'Core analytics on every Keenpix tier',
@@ -179,24 +183,42 @@ export const cloudinaryComparison = {
     },
     {
       q: 'Is the self-hosted version feature-limited?',
-      a: 'The published v0.3.0 release provides the engine under AGPL-3.0 and includes the transform pipeline, caching, and analytics. Self-hosting still requires your own infrastructure and operations.',
+      a: 'The published v0.3.1 release provides the engine under AGPL-3.0 and includes the transform pipeline, caching, and analytics. Self-hosting still requires your own infrastructure and operations.',
     },
     {
       q: 'Is there a free tier?',
       a: 'The managed cloud has a 14-day free trial (card required), with plans starting at $9/month for 100 GB of optimized managed delivery. A released open-source version can be self-hosted without a Keenpix license fee, but you pay for and operate the infrastructure.',
     },
   ],
+  evaluationChecks: [
+    'Export one normal and one peak 30-day window of delivered image GB, managed storage GB, first-time derived transforms, and any separately billed add-ons. Keep video and DAM workload separate when Keenpix would not replace it.',
+    'Run the same allowlisted source images through both services for resize, crop, quality, and format negotiation. Record output dimensions, content type, response headers, visual fixtures, and every Cloudinary operation with no Keenpix equivalent.',
+    'Request every test URL cold and warm, then compare cache behavior, failure responses, signing, invalidation, observability, and the exact pooled credits or managed-delivery units recorded by each dashboard.',
+    'Canary one bounded route for a complete traffic cycle. Accept only if output, errors, latency, projected cost, and rollback meet thresholds written before the test.',
+  ],
   sources: [
     { label: 'Cloudinary pricing', url: 'https://cloudinary.com/pricing' },
+    {
+      label: 'Cloudinary plan comparison and limits',
+      url: 'https://cloudinary.com/pricing/compare-plans',
+    },
     {
       label: 'Cloudinary credit documentation',
       url: 'https://cloudinary.com/documentation/developer_onboarding_faq_credits',
     },
     { label: 'Cloudinary plan-limit FAQ', url: 'https://cloudinary.com/faq' },
     { label: 'Keenpix pricing', url: '/pricing' },
+    {
+      label: 'Keenpix transform parameters',
+      url: '/docs/reference/parameters',
+    },
+    {
+      label: 'Keenpix v0.3.1 release',
+      url: 'https://github.com/lord007tn/keenpix/releases/tag/v0.3.1',
+    },
   ],
-  pricingAsOf: 'August 2026',
+  pricingAsOf: 'August 31, 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
-  verifiedAt: '2026-08-22',
+  verifiedAt: '2026-08-31',
   nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData
