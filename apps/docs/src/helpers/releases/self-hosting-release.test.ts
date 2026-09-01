@@ -37,6 +37,15 @@ describe('self-hosting release commands', () => {
     }
   })
 
+  it('replaces both required inter-service secrets with independent values', () => {
+    expect(selfHostingDeployCommand).toContain(
+      'echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" >> .env',
+    )
+    expect(selfHostingDeployCommand).toContain(
+      'echo "KEENPIX_WORKER_SECRET=$(openssl rand -hex 32)" >> .env',
+    )
+  })
+
   it('keeps hard-coded release versions out of the self-hosting page', () => {
     expect(selfHostingPage).toContain('{selfHostingDeployCommand}')
     expect(selfHostingPage).not.toMatch(hardCodedReleasePattern)
