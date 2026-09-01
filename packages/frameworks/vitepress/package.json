@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/vitepress",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Keenpix Vue image and theme integration for VitePress.",
   "keywords": [
     "keenpix",

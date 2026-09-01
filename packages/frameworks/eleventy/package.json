@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/eleventy",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Keenpix image primitives for Eleventy.",
   "homepage": "https://keenpix.com",
   "repository": {

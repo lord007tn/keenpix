@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/analog",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Keenpix NgOptimizedImage loader for Analog and Angular.",
   "keywords": [
     "keenpix",

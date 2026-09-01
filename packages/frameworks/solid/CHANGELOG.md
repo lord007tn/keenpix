@@ -1,5 +1,11 @@
 # @keenpix/solid
 
+## 0.3.2
+
+### Patch Changes
+
+- @keenpix/core@0.3.2
+
 ## 0.2.0
 
 ### Patch Changes
