@@ -2,6 +2,30 @@
 
 All notable changes to Keenpix are documented here.
 
+## [v0.3.2] - 2026-09-01
+
+### Added
+
+- Added evidence-led comparison and migration content plus a measurable path
+  from comparison pages to image activation.
+- Added the image CDN cost calculator and expanded machine-readable product
+  and API discovery surfaces.
+
+### Changed
+
+- Renamed and clarified the managed delivery edge runtime and its Cloudflare
+  for SaaS ownership boundary.
+- Replaced the application theme bootstrap with the native TanStack Start
+  provider and enabled the React Compiler.
+
+### Fixed
+
+- Made the self-hosting deploy command derive its Git and image tags from the
+  unified release version so the four services cannot drift independently.
+- Added generated required secrets to the self-hosting setup command and
+  regression coverage for release and secret consistency.
+- Updated production runtime defaults to the immutable `v0.3.2` image set.
+
 ## [v0.3.1] - 2026-08-19
 
 ### Changed

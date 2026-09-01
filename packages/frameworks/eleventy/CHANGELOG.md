@@ -1,5 +1,12 @@
 # @keenpix/eleventy
 
+## 0.3.2
+
+### Patch Changes
+
+- @keenpix/core@0.3.2
+- @keenpix/html@0.3.2
+
 ## 0.2.0
 
 ### Patch Changes
