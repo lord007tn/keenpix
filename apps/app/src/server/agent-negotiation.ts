@@ -3,6 +3,7 @@ import {
   SUPPORT_WHATSAPP_LABEL,
   SUPPORT_WHATSAPP_URL,
 } from '@/shared/authors'
+import { getMarkdownPathname } from '@/shared/markdown-discovery'
 
 const DOCUMENT_REPRESENTATIONS = ['text/html', 'text/markdown']
 const FILE_PATH_PATTERN = /\/[^/]+\.[^/]+$/
@@ -167,15 +168,41 @@ This Keenpix page does not have a Markdown representation. Request \`text/html\`
 `
 }
 
-export function markdownResponse(body: string, method: string, status = 200) {
+export function markdownResponse(
+  body: string,
+  method: string,
+  status = 200,
+  canonicalPathname?: string,
+) {
+  const link = canonicalPathname
+    ? `<${getMarkdownPathname(canonicalPathname)}>; rel="alternate"; type="text/markdown", </llms.txt>; rel="describedby"`
+    : undefined
   return new Response(method === 'HEAD' ? null : body, {
     headers: {
       'cache-control': status === 200 ? 'public, max-age=300' : 'no-store',
       'content-type': 'text/markdown; charset=utf-8',
+      ...(link ? { link } : {}),
       vary: 'Accept',
     },
     status,
   })
+}
+
+export function withMarkdownDiscovery(
+  response: Response,
+  canonicalPathname: string,
+) {
+  const headers = new Headers(response.headers)
+  const discovery = `<${getMarkdownPathname(canonicalPathname)}>; rel="alternate"; type="text/markdown", </llms.txt>; rel="describedby"`
+  const existing = headers.get('link')
+  headers.set('link', existing ? `${existing}, ${discovery}` : discovery)
+  return varyByAccept(
+    new Response(response.body, {
+      headers,
+      status: response.status,
+      statusText: response.statusText,
+    }),
+  )
 }
 
 export function varyByAccept(response: Response) {

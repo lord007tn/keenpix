@@ -1,0 +1,145 @@
+---
+title: "How to measure image CDN performance reproducibly"
+description: "Build a repeatable image delivery test that separates cold transforms, warm caches, transfer, decoding, rendering, and field experience."
+date: "2026-09-02"
+updated: "2026-09-02"
+language: en
+author: Raed Bahri
+tags:
+  - Performance
+  - Measurement
+  - Core Web Vitals
+image: /og/blog/reproducible-image-performance-measurement.png?v=2026-09-02
+imageAlt: "Measurement worksheet separating cold and warm image delivery timings"
+---
+
+An image CDN benchmark is reproducible only when it fixes the source bytes, requested output, cache state, client, network, region, run order, and acceptance thresholds. Report cold transform and warm delivery separately. A single Lighthouse score, one `curl` duration, or a provider's published compression percentage cannot establish how your application will perform.
+
+## Decide the question before the tool
+
+Different questions need different evidence:
+
+| Question | Evidence |
+| --- | --- |
+| Does the transform output meet the visual requirement? | fixed source set, decoded dimensions, visual review, objective metric only if its limits are understood |
+| Is warm delivery fast in a target region? | repeated exact URL, verified cache signal, connection and transfer timing |
+| Is a cold transform within the product budget? | new deterministic variant, transform-region timing, memory and error telemetry |
+| Does the page improve for users? | controlled page test plus field Core Web Vitals segmented by route/device/region |
+| Will origin load fall? | origin request and byte counts before and after, matched to delivered traffic |
+
+Do not convert one answer into another. A smaller file can still be discovered late, decoded slowly, or served from a distant cache. A faster laboratory run does not prove a field improvement.
+
+## Build the representative corpus
+
+Include enough variation to expose different encoder and decoder behavior:
+
+- photographic hero images with texture and gradients;
+- product images with sharp edges and transparent backgrounds;
+- screenshots with small text;
+- portraits or subject-sensitive crops;
+- large-dimension inputs near your accepted limits;
+- animated inputs if the product supports them;
+- already-compressed inputs and incorrect MIME metadata.
+
+Store a checksum for every source. Record the license or ownership basis for the fixtures. Never benchmark with private customer assets unless the test environment and publication terms explicitly permit it.
+
+## Freeze the request contract
+
+For every output, record:
+
+```json
+{
+  "sourceSha256": "...",
+  "sourceBytes": 0,
+  "sourceWidth": 0,
+  "sourceHeight": 0,
+  "outputWidth": 0,
+  "outputHeight": 0,
+  "fit": "cover",
+  "position": "centre",
+  "quality": 80,
+  "format": "webp",
+  "accept": "image/webp,image/*",
+  "region": "named test location",
+  "client": "browser and version",
+  "networkProfile": "declared or unthrottled"
+}
+```
+
+Use explicit formats for encoder comparisons. Test `fmt=auto` separately because the `Accept` header and cache variation become part of the experiment.
+
+## Separate the three delivery states
+
+### Cold transform
+
+Request a new, bounded variant that has never been cached. Confirm it is new through a versioned fixture or a controlled cache namespace, not an unbounded random query that pollutes production. Record DNS, connect, TLS, time to first byte, download, status, response headers, output bytes, dimensions, and server-side transform timing if available.
+
+### Warm service cache
+
+Repeat the exact URL with the exact headers. Require an explicit cache signal such as `Age`, a documented cache-status header, or server telemetry. Lower duration alone is not proof because connections, DNS, and operating-system caches also warm.
+
+### Browser page load
+
+Load a representative page and record which candidate the browser chose (`currentSrc`), when it was discovered, fetch priority, transferred bytes, decoded dimensions, render size, and whether it was the Largest Contentful Paint candidate. Run both desktop and mobile layouts.
+
+## A repeatable run protocol
+
+1. Pin the application revision, configuration revision, browser version, source corpus, and test location.
+2. Warm DNS and TLS only if the protocol says so; otherwise use a new browser context for every sample.
+3. Alternate provider or configuration order to reduce time-of-day bias.
+4. Run enough samples to show the distribution. Publish every valid run and the exclusion rule, not only the fastest result.
+5. Report median and tail values separately. Do not combine cold and warm samples.
+6. Save response headers and output checksums so an unexpectedly different format cannot masquerade as a speed improvement.
+7. Inspect failed runs. Exclude only for a predeclared reason and retain the raw record.
+
+Example acceptance table:
+
+| Measure | Acceptance threshold | Why |
+| --- | --- | --- |
+| Output dimensions | exact requested size | prevents a smaller wrong image from “winning” |
+| Visual review | no rejected crop or text artifact | protects the user-visible result |
+| Warm cache | explicit hit on repeated request | separates transform from delivery |
+| HTTP failures | zero in the declared corpus/run | exposes unsupported inputs and capacity |
+| Page candidate | no materially oversized `currentSrc` | verifies responsive markup |
+| Layout | no image-caused shift in tested viewports | protects rendering stability |
+
+Thresholds must come from your product requirement. The table is a template, not a universal benchmark.
+
+## Core Web Vitals without overclaiming
+
+Largest Contentful Paint is a page experience metric, not an image-CDN metric. Image transfer can contribute, but server response, discovery delay, render delay, fonts, JavaScript, and layout decisions also matter. Use lab tools to diagnose; use field data to understand eligible real-user experience. Segment field results before and after the change and preserve traffic, device, and geography differences as limitations.
+
+Google's current “good” LCP guidance is 2.5 seconds or less at the 75th percentile, but meeting that threshold does not prove the CDN caused the result. Review the source and date whenever publishing a volatile threshold.
+
+## Common benchmark failures
+
+- Comparing different source images or dimensions.
+- Treating `Content-Length` reduction as equivalent visual quality.
+- Timing a cold service against a warm service.
+- Omitting failed or throttled runs.
+- Using a random query parameter that bypasses normal cache identity.
+- Comparing a full media platform with a transform-only service without stating scope.
+- Reporting one geography as global performance.
+- Calling synthetic Lighthouse results “real-user Core Web Vitals.”
+- Publishing a percentage improvement without raw inputs and procedure.
+
+## Using Keenpix in the protocol
+
+Use a project with an explicit origin allowlist, a versioned test corpus, and a finite set of widths. Capture Keenpix response headers, output bytes, decoded dimensions, cold and warm timings, and the delivery analytics available to your deployment. The [endpoint reference](/docs/reference/endpoint) defines parameters; the [analytics concept](/docs/concepts/analytics) explains product telemetry.
+
+Keenpix is not the right comparison candidate if the required workload is video, DAM operations, upload processing, private origin headers, or transforms it does not support. Do not substitute an easier image workload and generalize the result.
+
+## Sources and limitations
+
+- [Largest Contentful Paint, web.dev](https://web.dev/articles/lcp), reviewed September 2, 2026.
+- [How to measure speed with the Performance panel, Chrome DevTools](https://developer.chrome.com/docs/devtools/performance/), reviewed September 2, 2026.
+- [Resource Timing Level 2, W3C](https://www.w3.org/TR/resource-timing-2/), reviewed September 2, 2026.
+- [Server Timing, W3C](https://www.w3.org/TR/server-timing/), reviewed September 2, 2026.
+
+Network conditions and provider infrastructure change. A published run is a dated observation under declared conditions, not a permanent ranking, SLA, or promise of savings.
+
+## Related guides
+
+- [AVIF vs WebP in production](/blog/avif-vs-webp-production-caching)
+- [Responsive image CDN guide](/blog/responsive-image-cdn-guide)
+- [Image CDN cost calculator](/image-cdn-cost-calculator)

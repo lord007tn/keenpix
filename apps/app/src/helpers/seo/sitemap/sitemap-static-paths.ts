@@ -6,6 +6,7 @@ export const SITEMAP_STATIC_PATHS = [
   '/developers',
   '/image-cdn-cost-calculator',
   '/pricing',
+  '/learn',
   '/blog',
   '/blog/ar',
   '/authors/raed-bahri',

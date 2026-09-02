@@ -18,6 +18,7 @@ import { Route as SecurityRouteImport } from './routes/security'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as OpenapiDotjsonRouteImport } from './routes/openapi[.]json'
+import { Route as LearnRouteImport } from './routes/learn'
 import { Route as ImageCdnPricingDotjsonRouteImport } from './routes/image-cdn-pricing[.]json'
 import { Route as ImageCdnCostCalculatorRouteImport } from './routes/image-cdn-cost-calculator'
 import { Route as DevelopersRouteImport } from './routes/developers'
@@ -119,6 +120,11 @@ const PricingRoute = PricingRouteImport.update({
 const OpenapiDotjsonRoute = OpenapiDotjsonRouteImport.update({
   id: '/openapi.json',
   path: '/openapi.json',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LearnRoute = LearnRouteImport.update({
+  id: '/learn',
+  path: '/learn',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImageCdnPricingDotjsonRoute = ImageCdnPricingDotjsonRouteImport.update({
@@ -416,6 +422,7 @@ export interface FileRoutesByFullPath {
   '/developers': typeof DevelopersRoute
   '/image-cdn-cost-calculator': typeof ImageCdnCostCalculatorRoute
   '/image-cdn-pricing.json': typeof ImageCdnPricingDotjsonRoute
+  '/learn': typeof LearnRoute
   '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -481,6 +488,7 @@ export interface FileRoutesByTo {
   '/developers': typeof DevelopersRoute
   '/image-cdn-cost-calculator': typeof ImageCdnCostCalculatorRoute
   '/image-cdn-pricing.json': typeof ImageCdnPricingDotjsonRoute
+  '/learn': typeof LearnRoute
   '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -549,6 +557,7 @@ export interface FileRoutesById {
   '/developers': typeof DevelopersRoute
   '/image-cdn-cost-calculator': typeof ImageCdnCostCalculatorRoute
   '/image-cdn-pricing.json': typeof ImageCdnPricingDotjsonRoute
+  '/learn': typeof LearnRoute
   '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -618,6 +627,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/image-cdn-cost-calculator'
     | '/image-cdn-pricing.json'
+    | '/learn'
     | '/openapi.json'
     | '/pricing'
     | '/robots.txt'
@@ -683,6 +693,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/image-cdn-cost-calculator'
     | '/image-cdn-pricing.json'
+    | '/learn'
     | '/openapi.json'
     | '/pricing'
     | '/robots.txt'
@@ -750,6 +761,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/image-cdn-cost-calculator'
     | '/image-cdn-pricing.json'
+    | '/learn'
     | '/openapi.json'
     | '/pricing'
     | '/robots.txt'
@@ -818,6 +830,7 @@ export interface RootRouteChildren {
   DevelopersRoute: typeof DevelopersRoute
   ImageCdnCostCalculatorRoute: typeof ImageCdnCostCalculatorRoute
   ImageCdnPricingDotjsonRoute: typeof ImageCdnPricingDotjsonRoute
+  LearnRoute: typeof LearnRoute
   OpenapiDotjsonRoute: typeof OpenapiDotjsonRoute
   PricingRoute: typeof PricingRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -923,6 +936,13 @@ declare module '@tanstack/react-router' {
       path: '/openapi.json'
       fullPath: '/openapi.json'
       preLoaderRoute: typeof OpenapiDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/learn': {
+      id: '/learn'
+      path: '/learn'
+      fullPath: '/learn'
+      preLoaderRoute: typeof LearnRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/image-cdn-pricing.json': {
@@ -1382,6 +1402,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevelopersRoute: DevelopersRoute,
   ImageCdnCostCalculatorRoute: ImageCdnCostCalculatorRoute,
   ImageCdnPricingDotjsonRoute: ImageCdnPricingDotjsonRoute,
+  LearnRoute: LearnRoute,
   OpenapiDotjsonRoute: OpenapiDotjsonRoute,
   PricingRoute: PricingRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,

@@ -1,10 +1,15 @@
+import mdx from 'fumadocs-mdx/vite'
 import tsConfigPaths from 'vite-tsconfig-paths'
 import { defineConfig } from 'vitest/config'
 
-// Keep unit tests on the pure Node path. TanStack Start/Nitro plugins are not
-// loaded here, which keeps security-critical pure-function tests isolated.
+// Keep unit tests on the Node path. The Fumadocs loader is included so tests can
+// verify the same processed Markdown collection used by the public server,
+// without loading TanStack Start or Nitro.
 export default defineConfig({
-  plugins: [tsConfigPaths({ projects: ['./tsconfig.json'] })],
+  plugins: [
+    mdx(undefined, { updateViteConfig: false }),
+    tsConfigPaths({ projects: ['./tsconfig.json'] }),
+  ],
   test: {
     environment: 'node',
     include: ['src/**/*.{test,spec}.ts', 'scripts/**/*.{test,spec}.ts'],

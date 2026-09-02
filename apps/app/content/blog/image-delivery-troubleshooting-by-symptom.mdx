@@ -1,0 +1,136 @@
+---
+title: "Image delivery troubleshooting: diagnose by symptom"
+description: "Trace broken, slow, stale, oversized, or incorrectly cropped images from browser selection through caches, transforms, and origin access."
+date: "2026-09-02"
+updated: "2026-09-02"
+language: en
+author: Raed Bahri
+tags:
+  - Troubleshooting
+  - Image CDN
+  - Operations
+image: /og/blog/image-delivery-troubleshooting-by-symptom.png?v=2026-09-02
+imageAlt: "Troubleshooting flow from browser symptoms to CDN cache, transformer, and origin"
+---
+
+Troubleshoot image delivery from the visible symptom backward: browser selection, response headers, delivery cache, transform service, then origin. Preserve one failing URL and one known-good URL before changing anything. Random purges and quality changes often erase the evidence without fixing the cause.
+
+## Capture a minimal evidence bundle
+
+For one failing request, record:
+
+```text
+Page URL:
+Image request URL with secrets removed:
+UTC timestamp:
+Browser and viewport:
+currentSrc:
+HTTP status:
+Content-Type:
+Cache-Control / Age / ETag / Vary:
+Decoded and natural dimensions:
+Cold and immediate-repeat timings:
+Origin object status and MIME type:
+Recent configuration or release change:
+```
+
+Do not paste API keys, signing secrets, cookies, private origin URLs, or customer data into tickets. A redacted URL must retain the hostname, path shape, parameter names, and status needed to reproduce the class of failure.
+
+## Symptom: the image is broken or returns 4xx
+
+### 400 or 422
+
+Suspect an invalid parameter, unsupported format, dimension limit, malformed source encoding, or signature input mismatch. Compare the URL against the documented parameter names and canonical order. If a signature covers the path or query, changing even an encoded slash can invalidate it.
+
+### 401 or 403
+
+Identify which layer rejected the request. A delivery signature failure, CDN firewall rule, transformer allowlist, origin authorization policy, and expired presigned URL can all return 403. Response headers and logs should name the layer without exposing credentials.
+
+### 404
+
+Check whether the delivery route exists before assuming the source is absent. Then decode the embedded source URL and request it from the transformer's network context. Object-store keys are often case-sensitive. Redirecting a missing path to an HTML error page can turn a clear 404 into a later decoder failure.
+
+### 429
+
+Determine whether the limit belongs to the edge, transform service, origin, or account. Preserve `Retry-After` if provided. Retrying every image immediately can amplify a small capacity problem into a stampede.
+
+## Symptom: 5xx, timeouts, or intermittent failures
+
+| Pattern | Likely boundary | Next check |
+| --- | --- | --- |
+| Cached assets work; new variants fail | origin fetch or transformer | request an uncached width and inspect origin reachability |
+| One region fails | regional edge, DNS, or upstream path | compare resolver, route, and response headers by region |
+| Large images fail | byte, pixel, memory, or timeout limit | test around documented input limits with safe fixtures |
+| Failure follows a release | application or configuration change | compare exact revision and configuration, then exercise rollback |
+| Immediate retry succeeds | cold capacity, race, or transient upstream | inspect queueing, connect time, and cache-fill coordination |
+
+Use bounded retries only for idempotent reads and add jitter. A transform request may be safe to retry, but a purge, key rotation, or project mutation needs its own idempotency design.
+
+## Symptom: the image is slow
+
+Split the timing into DNS, connection, TLS, time to first byte, transfer, decode, and render. A large duration alone does not tell you whether the source, transform, cache, network, or browser is responsible.
+
+1. Repeat the exact URL. If the second response is much faster, investigate cold transform and cache-fill behavior.
+2. Inspect `Age`, provider cache headers, and `Server-Timing` if present. A faster repeat without a cache signal is not proof of a hit.
+3. Request the source from the transformer's region. A fast origin from your laptop can still be slow from the service.
+4. Compare transferred bytes and decoded dimensions with the rendered slot.
+5. Check whether the image was discovered late because of CSS, client rendering, lazy loading, or an incorrect priority hint.
+6. Use the [reproducible measurement protocol](/blog/reproducible-image-performance-measurement) before comparing providers.
+
+## Symptom: the image is too large
+
+Inspect `Content-Type`, `Content-Length`, dimensions, quality, metadata, and animation. Common causes include an explicit PNG output for a photograph, a browser selecting the largest `srcset` candidate because `sizes` is wrong, format negotiation cached without `Vary`, an animated source that bypasses the intended path, or a transformer preserving dimensions the layout never uses.
+
+Do not reduce quality globally as the first fix. That can damage text and product-detail images while leaving the selection error intact.
+
+## Symptom: the crop is wrong or blurry
+
+Compare four sizes: source pixels, requested output, decoded output, and CSS-rendered box. Then check `object-fit`, aspect ratio, crop mode, focal position, device pixel ratio, and upscaling policy.
+
+- Blurry only on dense screens usually means the candidate ladder stops too early.
+- A correct desktop crop and wrong mobile crop usually means one focal rule is being reused across different aspect ratios.
+- A sharp image that shifts the layout needs explicit intrinsic dimensions or `aspect-ratio`; more pixels will not fix the shift.
+- Text or line art can look worse at a lower lossy quality even when photographs look acceptable.
+
+## Symptom: stale or inconsistent images
+
+First ask whether the URL is immutable. If the source bytes can change at the same URL, every cache between the origin and browser needs a refresh policy. Compare `ETag`, `Last-Modified`, `Age`, cache key, purge scope, and any stale-serving directive.
+
+Versioned asset URLs are usually safer than global purges:
+
+```text
+/product/hero.jpg?v=2026-09-02
+```
+
+If format negotiation is automatic, request the same URL with explicit `Accept: image/avif`, `Accept: image/webp`, and a legacy value. An AVIF response reused for a client that did not request it points to incomplete cache variation. See [cache keys and Vary](/blog/image-cdn-cache-keys-vary-accept).
+
+## Verify the fix
+
+- Reproduce the original failure before applying the change.
+- Change one boundary at a time.
+- Repeat the original URL and a new uncached variant.
+- Test a supported client, an unsupported format, an allowed source, a blocked source, a large safe fixture, and a normal fixture.
+- Check desktop and mobile `currentSrc`, output dimensions, visual crop, and layout shift.
+- Confirm logs identify the rejection layer without recording secrets.
+- Leave a rollback trigger and observation window proportional to cache lifetime.
+
+## Using Keenpix during diagnosis
+
+For Keenpix, start with the response status and documented [transform endpoint](/docs/reference/endpoint), then check project origin allowlists, signed URL configuration, and delivery analytics. Self-hosted operators should also check the [health and operations guide](/docs/self-hosting/health-and-operations). Managed users can provide a redacted failing URL and timestamp through [support](/support).
+
+Keenpix is not the right diagnostic target when the browser never requests the Keenpix URL, the origin object itself is broken, or another CDN rewrites or blocks the response first. Fix the owning layer or remove the intermediary before attributing the symptom.
+
+## Sources and limitations
+
+- [Chrome DevTools Network reference](https://developer.chrome.com/docs/devtools/network/reference/), reviewed September 2, 2026.
+- [HTTP response status codes, MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status), reviewed September 2, 2026.
+- [HTTP caching, MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching), reviewed September 2, 2026.
+- [Resource Timing Level 2, W3C](https://www.w3.org/TR/resource-timing-2/), reviewed September 2, 2026.
+
+Header names differ by CDN, and a cache hit does not prove a globally healthy service. This procedure produces a reproducible boundary diagnosis, not an uptime or performance guarantee.
+
+## Related guides
+
+- [Transform cache stampedes and capacity](/blog/image-transform-cache-stampedes-capacity)
+- [Secure image pipelines](/blog/secure-image-pipelines-ssrf-image-bombs)
+- [Safe image CDN rollouts and rollbacks](/blog/safe-image-cdn-rollouts-and-rollbacks)

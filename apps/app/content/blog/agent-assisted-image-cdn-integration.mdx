@@ -1,0 +1,134 @@
+---
+title: "Agent-assisted image CDN integration without blind trust"
+description: "Give a coding agent public, bounded contracts for image delivery, then verify generated URLs, security boundaries, responsive behavior, and rollback."
+date: "2026-09-02"
+updated: "2026-09-02"
+language: en
+author: Raed Bahri
+tags:
+  - AI agents
+  - Integration
+  - Developer tools
+image: /og/blog/agent-assisted-image-cdn-integration.png?v=2026-09-02
+imageAlt: "A coding agent reading public Markdown and OpenAPI contracts before an image CDN integration review"
+---
+
+A coding agent can accelerate an image CDN integration when it receives the exact public contract, a bounded task, representative fixtures, and explicit acceptance tests. It should not receive production secrets, private origins, customer data, browser sessions, or permission to deploy by default. Treat generated code as an untrusted change until the application, browser, delivery service, and origin behavior are verified.
+
+## Start with the smallest useful context
+
+Give the agent:
+
+1. The framework and repository instructions it must follow.
+2. The public integration guide for that framework.
+3. The transform endpoint and parameter reference.
+4. The current origin and URL patterns with secrets removed.
+5. The finite responsive width and quality policy.
+6. Security requirements: allowed origins, signed delivery, maximum dimensions, and private-asset exclusions.
+7. The exact tests and screenshots required.
+8. A hard scope boundary: no credentials, production change, deployment, indexing request, or unrelated refactor.
+
+Do not begin by feeding an agent an entire private workspace. More context can increase leakage and make the task less precise.
+
+## A public-safe integration brief
+
+```markdown
+Replace the product-card image URL builder with the documented image delivery
+endpoint. Preserve alt text, intrinsic dimensions, lazy-loading behavior, and the
+existing fallback. Use only widths 320, 640, and 960. Do not change uploads,
+storage, authentication, DNS, or deployment.
+
+Acceptance:
+- the browser selects no candidate materially larger than the rendered slot;
+- output Content-Type matches the requested/negotiated format;
+- invalid sources and dimensions fail safely;
+- the previous URL builder remains available behind the local configuration;
+- desktop and mobile screenshots show no crop or layout regression;
+- no secrets or private URLs appear in the diff or generated artifacts.
+```
+
+Replace the example widths and boundaries with your actual layout and product policy.
+
+## Use discoverable, canonical sources
+
+A useful public documentation surface offers:
+
+- a concise `llms.txt` map;
+- complete Markdown for deeper retrieval;
+- a stable `.md` form for each canonical knowledge page;
+- `Accept: text/markdown` when the same canonical can negotiate representations;
+- `rel="alternate" type="text/markdown"` pointing to the page Markdown;
+- `rel="describedby"` pointing to the covering `llms.txt`;
+- an OpenAPI document for machine-readable API boundaries.
+
+These signals improve deterministic discovery for clients that implement them. The August 2026 llms.txt v2 document is a proposal and convention, not a Google ranking factor or a promise that any crawler will ingest, cite, or rank the content. Keep normal HTML, canonicals, sitemaps, internal links, and accessible page structure healthy.
+
+## Keep public crawling separate from private tools
+
+Robots rules should allow public learning and documentation while excluding authenticated application and sensitive API routes. OpenAI's current publisher guidance says OAI-SearchBot access is required for eligibility in ChatGPT search summaries and snippets, while placement is not guaranteed. User-agent strings can be spoofed; infrastructure that makes trust decisions should verify published IP ranges or a provider's verified-bot signal rather than grant privileges from the name alone.
+
+Crawler access never authorizes an API operation. A public documentation crawler should receive the same public HTML or Markdown as any anonymous reader, not a special route into `/app/`, account data, or administrative APIs.
+
+## Require the agent to show its work
+
+The review bundle should include:
+
+- changed files and why each belongs in scope;
+- the source URL or contract used for every non-obvious behavior;
+- test results and exact commands;
+- sample generated URLs with sensitive values replaced;
+- desktop and mobile screenshots;
+- response status, `Content-Type`, cache headers, and decoded dimensions;
+- the rollback switch and a test that exercises it;
+- explicit unknowns and unsupported capabilities.
+
+Reject claims such as “faster,” “secure,” “zero downtime,” or “saves 40%” unless the task produced the corresponding evidence.
+
+## Failure modes to test
+
+| Agent mistake | Verification |
+| --- | --- |
+| Invents a parameter or endpoint | compare with the versioned endpoint/OpenAPI contract |
+| Embeds an administrative key in client code | scan built client assets and the complete diff for key patterns |
+| Sends a private source URL to a public transformer | test the documented origin-auth boundary and threat model |
+| Generates arbitrary widths | assert the finite width set and inspect browser `currentSrc` |
+| Removes intrinsic dimensions | test layout shift in desktop and mobile views |
+| Changes cache identity accidentally | compare URL normalization, `Vary`, and repeated response headers |
+| Claims success from unit tests only | run the rendered browser and HTTP acceptance checks |
+| Cannot reverse the change | exercise the old URL generator with the new path unavailable |
+
+## Using Keenpix with a coding agent
+
+Start with these public sources:
+
+- [Keenpix Learn](/learn)
+- [Framework guides](/docs/frameworks)
+- [Transform endpoint reference](/docs/reference/endpoint)
+- [OpenAPI specification](/openapi.json)
+- [Concise LLM index](/llms.txt)
+- [Complete Markdown collection](/llms-full.txt)
+
+Project operations require a project-scoped server-side key; normal image
+delivery URLs remain keyless after configuration. The public retrieval sources
+are not credentials or execution authority.
+
+Keenpix is not the right fit if the integration needs video, a DAM, a vendor-managed private origin connection, arbitrary origin authorization headers, OAuth, a public sandbox, or an official CLI. Use the product that owns those requirements, or keep the agent focused on the supported subset.
+
+## Licensing boundary
+
+Keenpix's repository license governs the source code under its terms. It does not by itself define a separate machine-readable license for all public editorial content. This tranche does not invent an RSL policy. Adopting RSL or another content-licensing declaration requires an explicit legal decision and approved text.
+
+## Sources and limitations
+
+- [The `/llms.txt` file, v2 proposal](https://llmstxt.org/), reviewed September 2, 2026.
+- [OpenAI publishers and developers FAQ](https://help.openai.com/en/articles/12627856-publishers-and-developers-faq), reviewed September 2, 2026.
+- [OpenAI SearchBot IP ranges](https://openai.com/searchbot.json), reviewed September 2, 2026.
+- [OpenAPI Specification 3.1.1](https://spec.openapis.org/oas/v3.1.1.html), reviewed September 2, 2026.
+
+Crawler, browser-agent, and proposal behavior can change. Recheck primary documentation before changing a firewall, robots policy, or public contract. This guide does not grant an agent authority beyond the user's explicit task.
+
+## Related guides
+
+- [Safe image CDN rollouts and rollbacks](/blog/safe-image-cdn-rollouts-and-rollbacks)
+- [Private origin security boundaries](/blog/private-image-origins-security-boundaries)
+- [Developer resources](/developers)

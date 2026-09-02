@@ -1,0 +1,124 @@
+---
+title: "Safe image CDN rollouts and rollbacks"
+description: "Canary image delivery changes with explicit acceptance gates, cache-aware rollback, observability, and a tested path back to the previous URL generator."
+date: "2026-09-02"
+updated: "2026-09-02"
+language: en
+author: Raed Bahri
+tags:
+  - Operations
+  - Rollback
+  - Image CDN
+image: /og/blog/safe-image-cdn-rollouts-and-rollbacks.png?v=2026-09-02
+imageAlt: "A staged rollout timeline with observe, canary, expand, and rollback gates"
+---
+
+A safe image CDN rollout changes one reversible boundary at a time and keeps the previous URL generator, configuration, and delivery path usable until the new path has survived representative traffic and cache lifetimes. “The deployment completed” is not an acceptance test. “The endpoint is healthy now” is not proof that replacement caused no interruption.
+
+## Define ownership and stop conditions
+
+Name one owner for the application URL change, one for the delivery service, and one for the source origin. Agree on a decision channel and stop conditions before the canary.
+
+Example stop conditions:
+
+- an increase in image 4xx or 5xx above the declared baseline;
+- any cross-tenant, private-origin, or signature validation defect;
+- incorrect crops or material visual artifacts in the acceptance corpus;
+- missing cache variation that can serve an unsupported format;
+- origin request or byte growth above the planned envelope;
+- tail delivery or page-render regression beyond the declared threshold;
+- inability to identify the exact running revision or configuration.
+
+Use numbers from your own baseline. Do not copy generic percentages into production policy.
+
+## Make the change reversible
+
+Prefer a URL-generation switch in the application or edge configuration:
+
+```ts
+const imageBaseUrl = config.imageDelivery === 'new'
+  ? 'https://new-images.example.com'
+  : 'https://old-images.example.com'
+```
+
+The switch must be deployable without the new service. If the new hostname is down, a control panel hosted only behind that hostname is not a rollback mechanism. Keep the old DNS, certificates, configuration, and credentials alive through the observation window.
+
+Avoid destructive migrations of source assets during the delivery cutover. Copy or read from the existing origin first. Moving masters and changing delivery in one event creates two possible causes for every failure.
+
+## Stage 0: establish a baseline
+
+Record the exact application revision, configuration, source corpus, delivery routes, browser versions, regions, and time window. Capture:
+
+- image response status by class;
+- browser-selected candidates and decoded dimensions;
+- cold and warm timing distributions;
+- cache-hit signals and origin traffic;
+- transform errors and saturation;
+- page LCP and image-caused layout shifts in lab, plus field data when available;
+- current billing units and projected cost model.
+
+Unknown evidence remains unknown. Do not record a missing metric as zero.
+
+## Stage 1: shadow and fixture validation
+
+Generate the new URLs without serving them to users. Test a versioned corpus across formats, widths, fits, crops, transparency, animation, large safe inputs, invalid parameters, blocked origins, redirects, and signed URLs. Compare output dimensions, visual result, MIME type, bytes, cache headers, and error semantics.
+
+## Stage 2: canary a bounded surface
+
+Choose a route, tenant, asset class, or deterministic traffic slice that can be identified in logs. Start small enough that rollback is quick but large enough to exercise normal cache and origin behavior. Keep monitoring split by old and new path.
+
+Do not use only the homepage if the hard cases live in product galleries, user uploads, emails, or framework-specific routes.
+
+## Stage 3: expand by evidence
+
+Expand one dimension at a time—more traffic, another region, another asset class, or another application. Hold long enough to observe cold cache fills, routine traffic peaks, background prewarming, and origin rate limits. A five-minute healthy window does not cover a 24-hour cache or daily traffic cycle.
+
+## Rollback is a new traffic change
+
+Switching URLs back stops new requests from choosing the new path, but caches and already-rendered pages can continue using it. Plan for:
+
+- browser cache and service-worker lifetime;
+- HTML or API responses containing the new URLs;
+- edge cache freshness and stale serving;
+- DNS TTL if the hostname itself changes;
+- queued prewarm jobs;
+- transformed variants written to shared storage;
+- signed URLs that remain valid.
+
+If the old path was removed or its source access revoked, rollback may fail after the switch. Exercise it before the canary and again during a controlled test.
+
+## Deployment health versus service continuity
+
+Container replacement, rolling updates, blue-green deployment, and DNS cutover have different overlap guarantees. To claim uninterrupted availability, collect continuous external probes across the full replacement window and prove that old and new capacity overlapped. Eventual 200 responses prove recovery, not zero downtime.
+
+For self-hosted stacks, health checks should separate liveness, readiness, and dependency health. A process can be alive while unable to fetch origins, write caches, or serve transforms.
+
+## Verification after rollback
+
+- New page loads emit only the old delivery URL where expected.
+- Old and new cached URLs have known behavior during their remaining lifetime.
+- Origin traffic, errors, and latency return to the expected envelope.
+- No queue or prewarm job continues expanding the failed configuration.
+- The incident record names the exact revisions, times, symptoms, decision, and remaining cleanup.
+- The failed path stays available for evidence only if doing so is safe; otherwise preserve sanitized logs and fixtures.
+
+## Using Keenpix for a controlled rollout
+
+For managed Keenpix, create the project and allowlist, validate representative transforms, then put the Keenpix URL generator behind an application configuration switch. For self-hosting, follow the [health and operations](/docs/self-hosting/health-and-operations) and [CDN configuration](/docs/self-hosting/cdn) guides, including liveness/readiness and cache-key validation. Use [symptom-first troubleshooting](/blog/image-delivery-troubleshooting-by-symptom) when a gate fails.
+
+Keenpix is not the right fit if you cannot keep an independent rollback path, require a transform or authenticated-origin capability it lacks, or do not have an owner for the CDN, origin, cache, and incident response work. A platform already integrated with your framework or media workflow may be safer.
+
+## Sources and limitations
+
+- [Docker Compose production guidance](https://docs.docker.com/compose/how-tos/production/), reviewed September 2, 2026.
+- [Kubernetes Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/), reviewed September 2, 2026.
+- [HTTP caching, MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching), reviewed September 2, 2026.
+- [Site Reliability Engineering: canarying releases, Google](https://sre.google/sre-book/reliable-product-launches/), reviewed September 2, 2026.
+
+The procedure does not guarantee zero downtime. Deployment platforms, CDNs, DNS providers, and application caches have different replacement and consistency behavior; verify the actual topology.
+
+## Related guides
+
+- [Self-host an image CDN with Docker](/blog/self-host-image-cdn-docker)
+- [Transform cache stampedes and capacity](/blog/image-transform-cache-stampedes-capacity)
+- [Bring-your-own-origin architecture](/blog/bring-your-own-origin-image-cdn-architecture)

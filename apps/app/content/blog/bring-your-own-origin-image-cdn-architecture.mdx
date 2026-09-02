@@ -1,0 +1,140 @@
+---
+title: "Bring-your-own-origin image CDN architecture"
+description: "Design an image delivery layer around source assets you already own, with explicit origin, cache, URL, security, and recovery boundaries."
+date: "2026-09-02"
+updated: "2026-09-02"
+language: en
+author: Raed Bahri
+tags:
+  - Image CDN
+  - Architecture
+  - Origins
+image: /og/blog/bring-your-own-origin-image-cdn-architecture.png?v=2026-09-02
+imageAlt: "Architecture diagram showing an application, image CDN, cache, and customer-owned origin"
+---
+
+A bring-your-own-origin image CDN leaves master assets in storage you control and puts a transformation and delivery layer in front of them. The application requests a derived URL, the delivery layer validates and fetches the source, transforms it when necessary, caches the result, and returns the optimized bytes. This model is a good fit when source ownership and reversibility matter. It is a poor fit when you actually need a digital asset manager, upload workflow, video pipeline, or editorial media library.
+
+## The five boundaries to decide first
+
+| Boundary | Decision | Failure if left implicit |
+| --- | --- | --- |
+| Source of truth | Which bucket, host, or application owns the original? | Two systems can both appear authoritative after a migration. |
+| Read access | Can the transformer read public objects, signed URLs, or a private network endpoint? | Cold transforms fail while cached images appear healthy. |
+| URL identity | Which path and parameters identify one output variant? | Cache collisions or unbounded variant growth. |
+| Delivery ownership | Who terminates TLS, caches responses, purges, and absorbs traffic spikes? | An origin or transformer becomes the accidental edge. |
+| Reversal path | How does the application return to the old delivery URL? | A failed rollout becomes an emergency rewrite. |
+
+### Prerequisites
+
+Before changing traffic, collect:
+
+1. A representative source set: photographs, transparent graphics, screenshots with text, animated images, and the largest dimensions you accept.
+2. Every current image URL pattern, including framework loaders, CSS backgrounds, social images, emails, feeds, and stored rich text.
+3. The origin's authentication model, redirect behavior, cache headers, MIME types, and maximum object size.
+4. The layout slots and device widths that determine a finite responsive width ladder.
+5. A rollback switch that does not depend on the new service being healthy.
+
+## Reference request path
+
+```text
+Browser
+  -> application markup chooses a responsive candidate
+  -> delivery hostname receives source identity + transform parameters
+  -> request policy verifies host, signature, dimensions, and format
+  -> cache looks up the complete output identity
+  -> transformer fetches the allowlisted source on a miss
+  -> decoder enforces byte, pixel, timeout, and redirect limits
+  -> encoder creates one output
+  -> cache stores the result
+  -> delivery layer returns Content-Type, Cache-Control, ETag, and Vary
+```
+
+Keep control-plane operations—creating projects, changing allowlists, rotating keys, or purging caches—separate from image delivery. A browser should not need an administrative API key to render an image. If a delivery URL must be restricted, use a purpose-built signature or application authorization layer whose expiry and cache behavior you have tested.
+
+## Choose the source access model deliberately
+
+### Public, unguessable, and private are different
+
+A public object can be fetched by anyone who knows its URL. An unguessable path reduces accidental discovery but is not authorization. A private object requires a credential, network boundary, or short-lived grant.
+
+| Model | Works well when | Main risk |
+| --- | --- | --- |
+| Public origin + strict host allowlist | Assets are intentionally public and the CDN URL is the main delivery path. | The source URL can still bypass the delivery layer unless the origin has another control. |
+| Origin allows only the delivery service | The provider offers stable egress identity or an authenticated origin request. | Rotation and regional expansion can break the allow rule. |
+| Short-lived presigned source URL | The source grant will remain valid through cold transform and retry windows. | Expiry becomes part of the cache key or fails later revalidation. |
+| Private network or service binding | Transformer and origin share controlled infrastructure. | Tighter operational coupling and harder managed-service portability. |
+
+Read the [private-origin security guide](/blog/private-image-origins-security-boundaries) before treating a signed URL or secret header as a complete architecture.
+
+## Define a finite output contract
+
+Start from rendered slots, not arbitrary numbers. For example, a 360 CSS-pixel card shown on 1× and 2× screens may need 360 and 720 pixel candidates. Add larger breakpoints only where the layout uses them.
+
+```html
+<img
+  src="https://images.example.com/hero.jpg?w=720&fmt=auto"
+  srcset="
+    https://images.example.com/hero.jpg?w=360&fmt=auto 360w,
+    https://images.example.com/hero.jpg?w=720&fmt=auto 720w,
+    https://images.example.com/hero.jpg?w=1280&fmt=auto 1280w
+  "
+  sizes="(min-width: 960px) 720px, 100vw"
+  width="1280"
+  height="720"
+  alt="Product dashboard showing image delivery analytics"
+/>
+```
+
+The cache identity must include every input that can change the bytes: normalized source, width, height, fit, crop position, quality, output format, and any watermark or version. If `fmt=auto` varies by the request `Accept` header, the delivery and every intermediate cache must either honor `Vary: Accept` or normalize supported formats into distinct cache keys. The [cache-key guide](/blog/image-cdn-cache-keys-vary-accept) covers the trade-off.
+
+## Roll out from observation to traffic
+
+1. **Inventory:** record current URLs, source hosts, formats, cache headers, and error behavior.
+2. **Shadow:** generate candidate delivery URLs without putting them in user markup. Compare status, dimensions, visual output, MIME type, and bytes.
+3. **Canary:** switch a small, identifiable route or asset class. Keep the old URL generator deployable.
+4. **Measure:** compare cold and warm behavior, origin fetches, cache-hit ratio, browser-selected candidates, layout stability, and errors.
+5. **Expand:** move one asset class or application surface at a time.
+6. **Retire carefully:** wait through the longest relevant cache and content lifetime before removing the old path.
+
+Do not call a rollout successful because one transformed URL returned 200. Use the [reproducible measurement guide](/blog/reproducible-image-performance-measurement) and the [safe rollout and rollback guide](/blog/safe-image-cdn-rollouts-and-rollbacks).
+
+## Failure modes and what they usually mean
+
+- **Warm images work; new images fail:** the transformer cannot fetch the origin, the grant expired, or a redirect target is not allowed.
+- **Wrong crop at one breakpoint:** the width ladder or `sizes` attribute does not match the rendered slot.
+- **AVIF reaches an unsupported client:** an intermediary ignored `Vary`, or format negotiation was cached under an incomplete key.
+- **Origin traffic rises after the move:** the delivery cache is bypassed, fragmented, or expiring too quickly.
+- **One source path works but another returns 403:** object policy, case sensitivity, encoding, or redirect behavior differs.
+- **Bills grow without traffic growth:** variant cardinality, duplicated delivery layers, request pricing, or transform pricing changed the unit economics.
+
+## Verification checklist
+
+- Inspect the browser's chosen `currentSrc`, decoded dimensions, and response `Content-Type`.
+- Repeat the same request and confirm the intended cache path, not just a lower duration.
+- Request unsupported dimensions and formats; confirm bounded rejection or normalization.
+- Test redirects to an allowed host, a disallowed host, loopback, and a private IP.
+- Remove origin access temporarily in a non-production environment and observe cold versus warm behavior.
+- Exercise the rollback switch while the new delivery hostname is unavailable.
+- Record the exact application revision, configuration, sample set, region, time, and acceptance thresholds.
+
+## Using Keenpix for this architecture
+
+Keenpix reads images from allowlisted HTTP(S) origins and exposes transform parameters through delivery URLs. Managed cloud provides the operated delivery path; self-hosting gives you the engine and makes CDN, network policy, upgrades, backups, and incident response your responsibility. Start with the [cloud quickstart](/docs/getting-started/cloud-quickstart) or [self-hosting architecture](/docs/self-hosting), then verify the [endpoint contract](/docs/reference/endpoint).
+
+Keenpix is not the right fit if you need a DAM, upload library, video transformations, arbitrary authenticated origin headers, or a vendor-managed private network connection that the current product does not provide. Keep those paths with a platform that supports them, or add an origin gateway you can secure and operate.
+
+## Sources and limitations
+
+- [HTTP caching, MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching), reviewed September 2, 2026.
+- [Responsive images, MDN](https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Responsive_images), reviewed September 2, 2026.
+- [Fetch Metadata Request Headers, W3C](https://www.w3.org/TR/fetch-metadata/), reviewed September 2, 2026.
+- [OWASP SSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html), reviewed September 2, 2026.
+
+This is an architecture guide, not a measured performance or security result. Validate the chosen provider, origin, CDN, framework, and region with your own representative assets.
+
+## Related guides
+
+- [What is an image CDN?](/blog/what-is-an-image-cdn)
+- [Responsive image CDN implementation](/blog/responsive-image-cdn-guide)
+- [Symptom-first image delivery troubleshooting](/blog/image-delivery-troubleshooting-by-symptom)
