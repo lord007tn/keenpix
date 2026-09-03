@@ -24,7 +24,7 @@ export function buildBlogFeed(baseUrl: string) {
         `      <link>${escapeXml(url)}</link>`,
         `      <guid isPermaLink="true">${escapeXml(url)}</guid>`,
         `      <description>${escapeXml(post.description)}</description>`,
-        `      <pubDate>${dayjs(post.date).toDate().toUTCString()}</pubDate>`,
+        `      <pubDate>${dayjs(`${post.date}T00:00:00Z`).toDate().toUTCString()}</pubDate>`,
         '    </item>',
       ].join('\n')
     })
