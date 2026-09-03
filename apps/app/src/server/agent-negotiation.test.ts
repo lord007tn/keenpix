@@ -7,6 +7,7 @@ import {
   negotiateDocumentRepresentation,
   notFoundMarkdown,
   varyByAccept,
+  withMarkdownDiscovery,
 } from './agent-negotiation'
 
 describe('agent content negotiation', () => {
@@ -52,13 +53,33 @@ describe('agent content negotiation', () => {
   })
 
   it('sets the registered Markdown type and varies by Accept', async () => {
-    const response = markdownResponse('# Keenpix', 'GET')
+    const response = markdownResponse('# Keenpix', 'GET', 200, '/pricing')
 
     expect(response.headers.get('content-type')).toBe(
       'text/markdown; charset=utf-8',
     )
     expect(response.headers.get('vary')).toBe('Accept')
+    expect(response.headers.get('link')).toContain('</pricing.md>')
+    expect(response.headers.get('link')).toContain('rel="describedby"')
     expect(await response.text()).toBe('# Keenpix')
+  })
+
+  it('advertises page Markdown and llms.txt on HTML responses', () => {
+    const response = withMarkdownDiscovery(
+      new Response('<html></html>', {
+        headers: { link: '</feed>; rel="alternate"' },
+      }),
+      '/learn',
+    )
+
+    expect(response.headers.get('link')).toContain('</feed>')
+    expect(response.headers.get('link')).toContain(
+      '</learn.md>; rel="alternate"; type="text/markdown"',
+    )
+    expect(response.headers.get('link')).toContain(
+      '</llms.txt>; rel="describedby"',
+    )
+    expect(response.headers.get('vary')).toBe('Accept')
   })
 
   it('merges Accept into existing Vary values without duplicates', () => {

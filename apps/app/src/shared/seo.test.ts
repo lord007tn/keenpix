@@ -18,10 +18,22 @@ afterEach(() => {
 })
 
 describe('SEO entity graphs', () => {
-  it('uses the browser origin when route metadata hydrates', () => {
+  it('preserves the server canonical origin when an alias hydrates', () => {
     vi.stubGlobal('window', {
       location: { origin: 'https://preview.keenpix.example' },
     })
+    vi.stubGlobal('document', {
+      querySelector: () => ({ href: 'https://keenpix.com/pricing' }),
+    })
+
+    expect(absoluteUrl('/pricing')).toBe('https://keenpix.com/pricing')
+  })
+
+  it('uses the browser origin when no server canonical is present', () => {
+    vi.stubGlobal('window', {
+      location: { origin: 'https://preview.keenpix.example' },
+    })
+    vi.stubGlobal('document', { querySelector: () => null })
 
     expect(absoluteUrl('/pricing')).toBe(
       'https://preview.keenpix.example/pricing',
@@ -69,27 +81,22 @@ describe('SEO entity graphs', () => {
     )
   })
 
-  it('emits the matching Open Graph and JSON-LD language for Arabic posts', () => {
-    expect(seo({ title: 'مقال تقني', locale: 'ar_AR' })).toContainEqual({
-      property: 'og:locale',
-      content: 'ar_AR',
-    })
-
+  it('emits English-only blog collection and article metadata', () => {
     const [article] = blogPostingJsonLd({
       author: 'Raed Bahri',
       datePublished: '2026-08-15',
-      description: 'شرح تقني',
-      image: 'https://keenpix.com/og/blog/ar/article.png',
-      language: 'ar',
+      description: 'Technical guide',
+      image: 'https://keenpix.com/og/blog/article.png',
       path: [],
-      title: 'مقال تقني',
-      url: 'https://keenpix.com/blog/ar/article',
+      title: 'Technical guide',
+      url: 'https://keenpix.com/blog/article',
     })
 
-    expect(article.inLanguage).toBe('ar')
-    const listing = blogListingJsonLd([], 'ar')
-    expect(listing.url).toBe('http://localhost:3000/blog/ar')
-    expect(listing['@id']).toBe('http://localhost:3000/blog/ar#blog')
+    expect(article.inLanguage).toBe('en')
+    const listing = blogListingJsonLd([])
+    expect(listing.inLanguage).toBe('en')
+    expect(listing.url).toBe('http://localhost:3000/blog')
+    expect(listing['@id']).toBe('http://localhost:3000/blog#blog')
   })
 
   it('builds a sourced comparison graph without FAQ rich-result markup', () => {

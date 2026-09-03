@@ -2,10 +2,11 @@
 title: "Secure image pipelines: SSRF to image bombs"
 description: Defend image fetch and transform services with origin allowlists, redirect revalidation, byte and pixel ceilings, timeouts, and observable failures.
 date: "2026-08-23"
+updated: "2026-09-03"
 author: Raed Bahri
 language: en
 tags: [security, ssrf, operations]
-image: /og/blog/secure-image-pipelines-ssrf-image-bombs.png?v=2026-08-23
+image: /og/blog/secure-image-pipelines-ssrf-image-bombs.png?v=2026-09-03
 imageAlt: Layered image pipeline defenses from URL validation through bounded decoding
 ---
 
@@ -80,6 +81,14 @@ Self-hosted operators can override environment defaults, so record the effective
 | Truncated raster data | `failOn: 'truncated'` | Decode fails instead of accepting partial pixels |
 
 The origin byte limit bounds the buffer Keenpix reads before decoding; it does not predict decoded memory. The pixel limit bounds declared width × height; it does not turn a 50-million-pixel image into a cheap transform. Animation, color profiles, codec behavior, intermediate operations, and output buffers still consume CPU and memory.
+
+## Animation limits do not provide moderation
+
+Keenpix defaults the `animated` transform option to false. When a caller explicitly enables it, the current Sharp input path enables multi-page processing, but the repository does not currently expose a separate documented maximum frame count or total animated-pixel budget. The general input-pixel, byte, timeout, output-dimension, process-memory, and capacity boundaries still apply, yet none is equivalent to a deliberate animation policy.
+
+If animated delivery is part of your product, define an ingestion-time ceiling for frame count, total decoded pixels across frames, duration, loops, and processing time. Exercise the limit with adversarial fixtures, not only a small GIF. If animation is unnecessary, reject or flatten it before publication and leave downstream animation disabled.
+
+Moderation is a separate decision again. Decoder success means the bytes are processable; it does not mean the content is acceptable. Keenpix does not currently provide upload quarantine, malware scanning, content classification, human review, or an appeals workflow. Put those gates in the system that owns uploads, and expose only approved, immutable source versions to the delivery layer. The [user-upload pipeline guide](/blog/user-upload-image-pipeline-design) shows how to keep validation, moderation, publication, and delivery as distinct states.
 
 ## Safe fetch pseudocode
 

@@ -1,0 +1,181 @@
+---
+title: "Design a user-upload image pipeline end to end"
+description: "Design image uploads from authenticated ingestion and byte validation through quarantine, moderation, durable storage, transformation, delivery, and recovery."
+date: "2026-09-03"
+updated: "2026-09-03"
+language: en
+author: Raed Bahri
+tags: [uploads, architecture, security, operations]
+image: /og/blog/user-upload-image-pipeline-design.png?v=2026-09-03
+imageAlt: "User-upload image pipeline from authenticated ingestion through moderation and delivery"
+---
+
+A reliable user-upload image pipeline is a state machine, not a single upload endpoint. Accept bytes into quarantine, verify the authenticated actor and declared intent, inspect the actual file, store an immutable original, run moderation and processing asynchronously, and publish a new asset version only after every required gate passes. Delivery should read only published objects. Failed, rejected, and pending uploads must never share a public namespace with approved media.
+
+Keenpix can transform and deliver an image after your application publishes it at an allowed origin. It does not currently provide the upload API, source storage, virus scanning, moderation queue, or digital asset library described here. That boundary is important: adding an image CDN does not make untrusted uploads safe.
+
+## Define the asset states before the endpoints
+
+Use explicit states that describe what consumers may do, rather than a loose set of booleans such as `uploaded`, `scanned`, and `approved`.
+
+| State | Meaning | Publicly deliverable? |
+| --- | --- | --- |
+| `initiated` | An authenticated actor requested an upload slot. | No |
+| `receiving` | Bytes may be arriving, but the object is incomplete. | No |
+| `quarantined` | The complete object exists in an isolated namespace. | No |
+| `validating` | Signature, decoder, dimension, and policy checks are running. | No |
+| `review_pending` | Automated checks passed; moderation still has to decide. | No |
+| `published` | A specific immutable version is approved for use. | Yes |
+| `rejected` | Policy or safety checks failed. | No |
+| `failed` | Processing failed for an operational reason and may be retried. | No |
+| `withdrawn` | A previously published version must no longer be selected. | No new references |
+
+Store the current state and an append-only transition history. Each transition should record the asset ID, version ID, actor or worker, reason code, policy version, and timestamp. Do not publish by moving a mutable object into place and hoping every cache notices. Publish by changing an application pointer from one immutable version to another.
+
+## 1. Authorize intent before accepting bytes
+
+The application should create an upload record before issuing a direct-upload grant. Check that the authenticated user can attach media to the target tenant, project, post, or product. Bind the grant to a generated asset ID, maximum byte length, short expiry, and narrow object key. Never let the browser choose an arbitrary bucket key or overwrite a published object.
+
+A useful initiation response contains:
+
+```json
+{
+  "assetId": "ast_01J...",
+  "uploadId": "upl_01J...",
+  "objectKey": "quarantine/tenant_42/ast_01J/original",
+  "maxBytes": 10485760,
+  "expiresAt": "2026-09-03T12:10:00Z",
+  "uploadUrl": "https://storage.example/..."
+}
+```
+
+Treat the client-provided filename, extension, MIME type, dimensions, and checksum as hints. They can improve user feedback and idempotency, but none proves what the received bytes contain. The [OWASP File Upload Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html) recommends defense in depth: allowlisted extensions, generated filenames, actual content validation, size limits, authorization, storage outside the webroot, and malware or sandbox analysis where appropriate.
+
+For small files, proxying through the application can simplify policy enforcement. For larger files, a narrowly scoped direct-to-object-storage grant avoids tying up application workers. Both designs still need a trusted completion step. A browser saying “upload complete” is not evidence that storage received the expected bytes.
+
+## 2. Finalize idempotently
+
+On completion, the server should inspect storage metadata, compare the recorded object key and expected length, and enqueue validation exactly once. Require an idempotency key or make repeated completion calls converge on the same upload record. A retry after a network timeout must not create a second asset or publish the same asset twice.
+
+If multipart upload is enabled, expire abandoned parts and grants. Track `initiated` records that never reach quarantine, because unfinished uploads consume storage and can become an unbounded cost path. Do not expose the quarantine bucket through the application’s image host.
+
+## 3. Validate bytes, not labels
+
+Validation should happen in an isolated worker with no application credentials and restricted network access. Start with cheap structural checks and stop early:
+
+1. Enforce the streamed byte ceiling even when a declared content length exists.
+2. Identify the format from magic bytes and decoder output, not only the filename or `Content-Type`.
+3. Decode with hard pixel, page or frame, channel, memory, and time limits.
+4. Reject truncated or malformed inputs instead of attempting a best-effort publish.
+5. Remove or deliberately retain metadata according to product policy.
+6. Generate a cryptographic digest for immutable identity and duplicate detection.
+7. Run malware, steganography, or content-disarm checks when the threat model requires them.
+
+The Sharp constructor documents controls such as `limitInputPixels`, `unlimited`, page selection, and animated-image handling in its [input API](https://sharp.pixelplumbing.com/api-constructor/). Those options are safety inputs, not a complete sandbox. Codec vulnerabilities, pathological animation, large intermediate buffers, and native-library crashes still require patched dependencies and process-level CPU and memory limits.
+
+SVG needs a separate policy. It is active XML content, not merely a raster image with a different extension. Either reject it, sanitize it with a maintained policy, or render it in a strongly isolated process before publishing a raster derivative. Never serve an untrusted original SVG inline under your primary application origin.
+
+The remote-fetch side has a related threat model. If uploads may reference a URL instead of sending bytes, follow the complete [SSRF and image-bomb defense sequence](/blog/secure-image-pipelines-ssrf-image-bombs): allowlist protocols and hosts, reject private addresses, pin the validated connection, revalidate redirects, and enforce streamed limits.
+
+## 4. Separate durable originals from public derivatives
+
+Keep the immutable original in a private source-of-truth namespace. Give each accepted replacement a new version ID or digest. Object-store versioning can protect against accidental overwrites, but it does not replace application-level state, retention, or authorization. Amazon S3, for example, assigns version IDs to object versions and stores versions as full objects rather than diffs; see the [S3 versioning workflow](https://docs.aws.amazon.com/AmazonS3/latest/userguide/versioning-workflows.html).
+
+A practical key layout is:
+
+```text
+quarantine/{tenantId}/{assetId}/{uploadId}
+originals/{tenantId}/{assetId}/{versionId}/source
+published/{tenantId}/{assetId}/{versionId}/source
+derivatives/{tenantId}/{assetId}/{versionId}/{transformKey}
+```
+
+The names are examples, not a requirement. The invariant is that a pending upload cannot overwrite the bytes addressed by an already published URL. Apply tenant-scoped authorization to every database query and storage operation. An object key containing a tenant ID is not, by itself, tenant isolation.
+
+Encrypt storage and transport, restrict worker identities to the smallest necessary prefixes, and define retention. Decide how long to retain rejected objects, failed jobs, old published versions, moderation evidence, and deletion tombstones. “Keep everything” creates privacy and cost liabilities; “delete immediately” can destroy the evidence needed for appeals or incident response.
+
+## 5. Make moderation an explicit gate
+
+File safety and content acceptability are different decisions. A valid JPEG can still violate product policy; an animated GIF can be safe content but exceed a processing budget. Model moderation separately from decoding.
+
+Automated classifiers should return labels, confidence, model or policy version, and an outcome such as approve, reject, or escalate. Keep thresholds product-specific. A marketplace product photo, profile image, medical upload, and private enterprise attachment do not share one defensible moderation rule.
+
+Human review needs least-privilege access, an audit trail, an appeal path, and safe rendering. Do not ask a reviewer’s browser to open the untrusted original directly. Generate a bounded review derivative in isolation, and avoid exposing unrelated tenant identifiers in review tools.
+
+Animation deserves its own decision. Validate frame count, total decoded pixels across frames, duration, loop behavior, and work budget. Decide whether moderation evaluates a representative frame, every frame, or a sampled timeline. A first-frame-only check can miss later content. If animated delivery is unnecessary, flatten or reject animation at ingestion rather than letting each downstream transform rediscover that policy.
+
+## 6. Publish atomically
+
+Publishing should be a database transaction or an equivalently reliable workflow:
+
+1. Confirm the asset version is still the expected candidate and every required gate passed.
+2. Write or verify the immutable published object.
+3. Change the asset’s `currentVersionId` pointer.
+4. Record the transition and an outbox event in the same transaction.
+5. Let consumers invalidate application data or refresh search indexes from the outbox.
+
+Do not mark the database row published before the object is readable, and do not copy bytes into a mutable public key after changing the pointer. Readers should see the old complete version or the new complete version, never a partially published state.
+
+The public URL should contain the version identity:
+
+```text
+https://media.example.com/assets/ast_01J/v_7/source.jpg
+```
+
+That lets long-lived caches store published bytes safely. When a replacement is approved, the application emits a different URL. The [versioned image URL guide](/blog/cache-invalidation-versioned-image-urls) explains browser, CDN, and origin behavior in detail.
+
+## 7. Transform and deliver from the published boundary
+
+Generate a small mandatory derivative set during publication when the product cannot tolerate first-view transform latency. Generate the wider responsive ladder on demand only if the transformer has request bounds, admission control, and a finite cache-key vocabulary. Arbitrary width, quality, crop, and format parameters can turn one upload into an unbounded compute and storage surface.
+
+Use intrinsic `width` and `height`, meaningful alternative text stored alongside the asset reference, and a finite `srcset`. The [responsive image guide](/blog/responsive-image-cdn-guide) covers markup; the [cache-key guide](/blog/image-cdn-cache-keys-vary-accept) covers negotiated formats and complete variant identity.
+
+Keenpix fits here after publication. Point a project at the published origin, constrain that origin, and request versioned source URLs through the transform endpoint. Review the [bring-your-own-origin architecture](/blog/bring-your-own-origin-image-cdn-architecture) and [private-origin boundaries](/blog/private-image-origins-security-boundaries) before deciding whether source objects are public, signed, or network-private. Keenpix currently does not moderate uploads or decide whether an asset may be published.
+
+## 8. Design every failure as a state transition
+
+Separate user errors, policy rejections, transient infrastructure failures, and permanent processing failures.
+
+| Failure | Response | Retry policy |
+| --- | --- | --- |
+| Grant expired before upload | Issue a new grant for the same draft asset. | User-initiated |
+| Byte or pixel ceiling exceeded | Reject with a stable reason code. | No automatic retry |
+| Decoder crash or timeout | Keep quarantined; retry in a fresh worker within a budget. | Bounded with backoff |
+| Malware or policy rejection | Move to `rejected`; retain per policy. | Appeal or new upload |
+| Moderation provider unavailable | Remain `review_pending`; do not fail open. | Backoff and alert |
+| Publish copy failed | Keep the old current version selected. | Idempotent retry |
+| Derivative generation failed | Preserve the original and record derivative status. | Format-specific retry or fallback policy |
+
+Use a dead-letter queue only with an operator workflow. A dead-letter bucket no one watches is silent data loss. Retries should carry the same asset and version identifiers, enforce a maximum attempt count, and avoid repeating non-idempotent side effects.
+
+Return safe errors to users. Logs may include internal reason codes, object versions, decoder versions, and correlation IDs, but should not contain presigned URLs, authentication headers, raw private filenames, or prohibited-content thumbnails.
+
+## Observability and privacy
+
+Measure each stage separately: bytes accepted, validation latency, rejection reason, scan latency, moderation queue age, publish latency, derivative failure rate, and delivery errors. Break results down by format and bounded size class, not by dumping sensitive object keys into a metrics label.
+
+Alert on state age as well as error counts. A quiet queue can be healthy or completely stalled. Useful service-level indicators include the percentage of eligible uploads published within the target time and the number of records stuck beyond the maximum expected stage duration.
+
+Deletion is also a workflow. Remove the application reference first, stop issuing new URLs, revoke private authorization where applicable, and schedule source, derivative, cache, backup, and audit-data treatment according to policy. A CDN purge cannot prove that every browser or downstream cache erased a previously public response. For highly sensitive media, private authorization and short freshness windows are more honest controls than a public immutable URL.
+
+## Verification checklist
+
+Test with more than friendly JPEGs:
+
+- a valid JPEG whose extension and MIME label claim PNG;
+- a truncated image and a file with a valid-looking header plus invalid body;
+- maximum bytes, maximum dimensions, one pixel over each limit, and extreme aspect ratios;
+- transparent, color-profiled, rotated, animated, and multi-page inputs;
+- an SVG with scripts, external references, and oversized paths;
+- repeated finalize calls, worker crashes, duplicate queue delivery, and publish retries;
+- cross-tenant object IDs and expired upload grants;
+- moderation timeout, rejection, appeal, withdrawal, and replacement;
+- old and new asset versions requested through browser and CDN caches.
+
+Run the security cases in an isolated environment. Then exercise the full delivery path using the [symptom-based troubleshooting guide](/blog/image-delivery-troubleshooting-by-symptom) and a [safe rollout and rollback plan](/blog/safe-image-cdn-rollouts-and-rollbacks). Record which assertions came from unit tests, object-store behavior, live HTTP responses, and a rendered browser; they prove different boundaries.
+
+## The durable design rule
+
+The simplest safe mental model is: **untrusted bytes enter quarantine; only an immutable, approved version leaves it**. Authentication decides who may propose an asset. Validation decides whether the bytes are processable. Moderation decides whether the content is acceptable. Publication decides which version applications reference. Transformation and delivery optimize that already-published version.
+
+Keeping those decisions separate makes retries, replacement, moderation appeals, cache behavior, and incident response understandable. It also keeps the Keenpix integration honest: Keenpix can be the bounded transformation and delivery layer, while your application remains responsible for upload authority, source lifecycle, and content policy.

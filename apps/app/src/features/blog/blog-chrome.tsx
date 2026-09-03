@@ -34,9 +34,9 @@ export function SiteHeader() {
           </a>
           <a
             className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
-            href="/blog"
+            href="/learn"
           >
-            Blog
+            Learn
           </a>
           <a
             className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
@@ -98,6 +98,12 @@ export function SiteFooter() {
             href="/compare"
           >
             Compare
+          </a>
+          <a
+            className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"
+            href="/learn"
+          >
+            Learn
           </a>
           <a
             className="inline-flex min-h-11 touch-manipulation items-center hover:text-foreground"

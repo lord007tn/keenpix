@@ -1,18 +1,13 @@
 import interLatin from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url'
-import {
-  createRootRoute,
-  HeadContent,
-  Scripts,
-  useRouterState,
-} from '@tanstack/react-router'
+import { createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
 import { AnalyticsConsent } from '@/components/app/analytics-consent'
 import { NotFoundPage } from '@/components/app/error-page'
+import { MarkdownActions } from '@/components/app/markdown-actions'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import Devtools from '@/devtools/devtools'
-import { getBlogLanguage } from '@/helpers/blog/locale'
 import {
   absoluteUrl,
   SITE_DESCRIPTION,
@@ -97,15 +92,8 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: ReactNode }) {
-  const language = useRouterState({
-    select: (state) => getBlogLanguage(state.location.pathname),
-  })
   return (
-    <html
-      dir={language === 'ar' ? 'rtl' : 'ltr'}
-      lang={language}
-      suppressHydrationWarning
-    >
+    <html dir="ltr" lang="en" suppressHydrationWarning>
       <head>
         {/* Static theme-color pair — kept out of route meta because HeadContent
             dedupes meta by name and would otherwise collapse the two variants. */}
@@ -130,6 +118,7 @@ function RootDocument({ children }: { children: ReactNode }) {
         </a>
         <ThemeProvider>
           {children}
+          <MarkdownActions />
           <Toaster richColors />
         </ThemeProvider>
         <AnalyticsConsent />

@@ -1,7 +1,8 @@
-import { globSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, globSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
+import { RETIRED_ARABIC_BLOG_REDIRECTS } from './blog-redirects'
 
 const TITLE = /^title:\s*(.+)$/m
 const DESCRIPTION = /^description:\s*(.+)$/m
@@ -11,11 +12,13 @@ const COVER = /^cover:\s*(.+)$/m
 const COVER_ALT = /^coverAlt:\s*(.+)$/m
 const OG_IMAGE = /^ogImage:\s*(.+)$/m
 const LANGUAGE = /^language:\s*(.+)$/m
-const TRANSLATION_KEY = /^translationKey:\s*(.+)$/m
 const LEADING_SLASH = /^\//
 const QUERY_STRING = /\?.*$/
 const SURROUNDING_QUOTES = /^['"]|['"]$/g
 const MDX_EXTENSION = /\.mdx$/
+const MARKDOWN_LINK = /\]\(\/[^)]+\)/g
+const TRANSLATION_KEY = /^translationKey:/m
+const WHITESPACE = /\s+/
 
 describe('blog search metadata', () => {
   it('keeps every published title and description within snippet limits', () => {
@@ -105,30 +108,25 @@ describe('blog search metadata', () => {
     }
   })
 
-  it('keeps translated posts reciprocal in English and Arabic', () => {
+  it('keeps the published corpus English-only with valid redirect targets', () => {
     const directory = join(process.cwd(), 'content', 'blog')
-    const translations = new Map<string, string[]>()
 
     for (const file of globSync('**/*.mdx', { cwd: directory })) {
       const content = readFileSync(join(directory, file), 'utf8')
-      const translationKey = content.match(TRANSLATION_KEY)?.[1]?.trim()
       const language = content.match(LANGUAGE)?.[1]?.trim() ?? 'en'
-      if (language === 'ar') {
-        expect(
-          translationKey,
-          `${file} must identify its English translation`,
-        ).toBeTruthy()
-      }
-      if (!translationKey) {
-        continue
-      }
-      const languages = translations.get(translationKey) ?? []
-      languages.push(language)
-      translations.set(translationKey, languages)
+      expect(language, file).toBe('en')
+      expect(
+        content,
+        `${file} must not carry translation metadata`,
+      ).not.toMatch(TRANSLATION_KEY)
     }
 
-    for (const [translationKey, languages] of translations) {
-      expect(languages.sort(), translationKey).toEqual(['ar', 'en'])
+    for (const target of Object.values(RETIRED_ARABIC_BLOG_REDIRECTS)) {
+      if (target === '/blog') {
+        continue
+      }
+      const slug = target.slice('/blog/'.length)
+      expect(existsSync(join(directory, `${slug}.mdx`)), target).toBe(true)
     }
   })
 
@@ -142,5 +140,47 @@ describe('blog search metadata', () => {
     expect(content).toContain('](/compare/imgix-alternative)')
     expect(content).not.toContain('](/blog/keenpix-vs-cloudinary)')
     expect(content).not.toContain('](/blog/keenpix-vs-imgix)')
+  })
+
+  it('keeps the two new guides substantial, linked, and answer-first', () => {
+    const directory = join(process.cwd(), 'content', 'blog')
+    for (const file of [
+      'user-upload-image-pipeline-design.mdx',
+      'cache-invalidation-versioned-image-urls.mdx',
+    ]) {
+      const content = readFileSync(join(directory, file), 'utf8')
+      const body = content.slice(content.indexOf('---', 3) + 3).trim()
+      const words = body.split(WHITESPACE).filter(Boolean)
+
+      expect(words.length, `${file} word count`).toBeGreaterThanOrEqual(1500)
+      expect(
+        content.match(MARKDOWN_LINK)?.length,
+        `${file} internal links`,
+      ).toBeGreaterThanOrEqual(5)
+      expect(
+        body.split('\n')[0]?.length,
+        `${file} answer-first opening`,
+      ).toBeGreaterThan(80)
+    }
+  })
+
+  it('strengthens the existing canonical owners without duplicate topic pages', () => {
+    const directory = join(process.cwd(), 'content', 'blog')
+    const owners = {
+      'agent-assisted-image-cdn-integration.mdx':
+        'Offline mocks prove contracts, not provider behavior',
+      'avif-vs-webp-production-caching.mdx': 'When an AVIF transform fails',
+      'image-transform-cache-stampedes-capacity.mdx':
+        'Request-rate caps and cold-work admission are different',
+      'secure-image-pipelines-ssrf-image-bombs.mdx':
+        'Animation limits do not provide moderation',
+      'transparent-image-cdn-pricing.mdx': 'Cache-hit billing, case by case',
+    }
+
+    for (const [file, heading] of Object.entries(owners)) {
+      expect(readFileSync(join(directory, file), 'utf8'), file).toContain(
+        `## ${heading}`,
+      )
+    }
   })
 })

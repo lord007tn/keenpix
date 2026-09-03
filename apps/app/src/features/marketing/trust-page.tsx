@@ -4,7 +4,7 @@ import { SiteFooter, SiteHeader } from '@/features/blog/blog-chrome'
 import { SUPPORT_EMAIL } from '@/shared/authors'
 import { RELEASES_URL, REPOSITORY_URL } from '@/shared/repository'
 
-const PAGES = {
+export const TRUST_PAGES = {
   security: {
     eyebrow: 'Trust center',
     title: 'Security at Keenpix',
@@ -75,8 +75,8 @@ const PAGES = {
   },
 } as const
 
-export function TrustPage({ page }: { page: keyof typeof PAGES }) {
-  const content = PAGES[page]
+export function TrustPage({ page }: { page: keyof typeof TRUST_PAGES }) {
+  const content = TRUST_PAGES[page]
   return (
     <div className="min-h-svh bg-background">
       <SiteHeader />

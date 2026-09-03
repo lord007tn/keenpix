@@ -1,0 +1,126 @@
+---
+title: "Private image origin security boundaries"
+description: "Choose between public assets, signed source grants, authenticated gateways, and private networks without leaking origin credentials into delivery URLs."
+date: "2026-09-02"
+updated: "2026-09-02"
+language: en
+author: Raed Bahri
+tags:
+  - Security
+  - Private origins
+  - Architecture
+image: /og/blog/private-image-origins-security-boundaries.png?v=2026-09-02
+imageAlt: "Security boundaries between a private image origin, transformer, cache, and public client"
+---
+
+A private image origin needs two independent decisions: how the transformer is authorized to fetch the source, and how viewers are authorized to receive a derived image. One signed URL does not automatically solve both. Keep origin credentials out of browser-visible URLs, logs, cache keys, analytics, and support records.
+
+## Classify the asset before choosing a pattern
+
+| Asset class | Typical policy | Delivery implication |
+| --- | --- | --- |
+| Public marketing asset | Anyone may view; origin protection is operational | Public cached delivery is appropriate. |
+| Unlisted but not confidential | Discovery should be limited; disclosure is tolerable | Unguessable or signed delivery may help, but is not strong confidentiality. |
+| Account-private image | Only an authorized user or role may view | Authorization must happen before delivery; shared public caches need care. |
+| Time-limited download | Access expires or is revocable | Expiry, cache lifetime, and stale serving must align. |
+| Regulated or highly sensitive media | Strict access, audit, residency, deletion, and incident requirements | A general public image CDN may be the wrong system. |
+
+Write the classification and retention rule down. If the answer is “private” only because the bucket currently returns 403, the product policy is incomplete.
+
+## Four origin access patterns
+
+### 1. Public origin with a delivery allowlist
+
+The transformer fetches a public source, but only from configured hosts. This is simple and cache-friendly. It protects the transformer from becoming an arbitrary proxy, not the source from direct access.
+
+### 2. Short-lived presigned source URL
+
+The application generates a time-limited source grant and gives it to the transformer. This can work for immediate transformations, but expiry interacts with retries, cold cache fills, revalidation, and purge recovery. If the signature is embedded in the transform URL, it may fragment caches and appear in logs or referrers.
+
+Prefer a design where the public delivery identity is stable and the source grant is resolved server-side. If that is unavailable, set the source grant longer than the complete transform and recovery window, restrict its scope, redact it everywhere, and test after expiry.
+
+### 3. Authenticated origin gateway
+
+A gateway accepts a stable asset identifier from the transformer, authorizes the transform service through a private credential or mutually authenticated channel, and fetches the object. This keeps storage grants out of public URLs and centralizes policy, but the gateway becomes a production dependency that needs scaling, logging, rotation, and incident response.
+
+### 4. Private network or service binding
+
+The transformer reaches storage through a private network, workload identity, or platform binding. This offers a strong infrastructure boundary when both systems share an environment. It also reduces portability and may not be available from a managed third-party transformer.
+
+## Viewer authorization is a separate layer
+
+A delivery signature should cover the normalized path and every parameter that can change output. Define:
+
+- signature algorithm and key version;
+- canonical parameter order and encoding;
+- expiry and clock-skew handling;
+- replay policy;
+- whether the signature is part of the cache key;
+- behavior after a key rotation or access revocation;
+- which layer returns 401, 403, and 404.
+
+Do not put a long-lived administrative API key in image markup. Do not rely on the `Referer` header as authorization; it may be absent, altered, or leaked. Cookie-based viewer authorization can work at an application gateway, but shared CDN caching must not serve an authorized response to another user. Use a private cache key or disable shared caching for user-specific bytes.
+
+## Cache and revocation rules
+
+The maximum time a revoked image may remain available is not just the signed URL expiry. It can include edge freshness, browser freshness, stale serving, offline caches, and already-downloaded copies.
+
+```text
+effective exposure window = max(
+  viewer grant lifetime,
+  shared cache freshness + allowed stale window,
+  browser cache lifetime
+)
+```
+
+That is a planning model, not a guarantee that downloaded data can be recalled. If immediate revocation is a requirement, public immutable caching is incompatible with the requirement.
+
+## Defend the fetch boundary
+
+Every source and redirect target should pass the same checks:
+
+1. Parse with a standards-compliant URL parser.
+2. Permit only required schemes, normally HTTPS.
+3. Match an explicit hostname policy after normalization.
+4. Resolve DNS and reject loopback, link-local, private, multicast, and metadata-service addresses.
+5. Recheck each redirect and bound the hop count.
+6. Limit connect time, total time, response bytes, decoded pixels, frames, and memory.
+7. Validate content from bytes, not only the supplied extension or `Content-Type`.
+8. Log the decision and safe identifiers without secrets.
+
+The [secure image pipeline guide](/blog/secure-image-pipelines-ssrf-image-bombs) covers SSRF, redirects, and image bombs in depth.
+
+## Verification cases
+
+- Allowed public source and allowed redirect.
+- Allowed hostname resolving to a prohibited address.
+- Redirect from an allowed host to a private or unlisted host.
+- Expired and malformed viewer signatures.
+- Key rotation with old and new key IDs.
+- Presigned source expiry before a cold transform.
+- Cache hit after viewer revocation.
+- Authorization response with and without shared-cache headers.
+- Logs, analytics, errors, and support tooling checked for secret leakage.
+
+Run these in an isolated environment with synthetic fixtures. Do not probe cloud metadata endpoints or third-party private networks.
+
+## Using Keenpix with private origins
+
+Keenpix currently fetches allowlisted HTTP(S) sources and does not accept arbitrary per-project origin authorization headers. Its signed delivery URLs protect who may construct transform requests; they are not a credential for a private S3, R2, or application origin. A public asset origin or an authenticated gateway you operate can fit. Review [source security](/docs/concepts/security) and [signed URLs](/docs/concepts/signed-urls).
+
+Keenpix is not the right fit for a path that requires vendor-managed private networking, storage workload identity, cookies, or arbitrary secret headers unless you add and operate a safe gateway. Highly sensitive or immediate-revocation assets may be better served through an authenticated application endpoint with deliberately limited caching.
+
+## Sources and limitations
+
+- [OWASP SSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html), reviewed September 2, 2026.
+- [Amazon S3 presigned URL documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html), reviewed September 2, 2026.
+- [Cloudflare R2 presigned URLs](https://developers.cloudflare.com/r2/api/s3/presigned-urls/), reviewed September 2, 2026.
+- [HTTP caching, MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching), reviewed September 2, 2026.
+
+This guide does not establish compliance with a law, certification, or customer contract. Threat-model the actual asset, users, jurisdictions, infrastructure, and incident obligations with qualified security and legal reviewers.
+
+## Related guides
+
+- [Bring-your-own-origin architecture](/blog/bring-your-own-origin-image-cdn-architecture)
+- [Signed image URLs with HMAC](/blog/signed-image-urls-hmac)
+- [Security and data handling](/security)

@@ -1,9 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createSitemapXml } from '@/helpers/seo/sitemap/create-sitemap-xml'
-import { SITEMAP_STATIC_PATHS } from '@/helpers/seo/sitemap/sitemap-static-paths'
+import { buildPublicSitemap } from '@/helpers/seo/sitemap/build-public-sitemap'
 import { getAppUrl, isCloud } from '@/server/deployment'
-import { blogSource } from '@/shared/blog-source'
-import { source } from '@/shared/docs-source'
 
 export const Route = createFileRoute('/sitemap.xml')({
   server: {
@@ -18,62 +15,7 @@ export const Route = createFileRoute('/sitemap.xml')({
         // are advertised via robots/link-alternate, not the XML sitemap. Blog
         // entries carry a real <lastmod> from their frontmatter date (already a
         // YYYY-MM-DD W3C datetime, so no timezone-shifting reformatting needed).
-        const origin = getAppUrl()
-        const publishedBlogPages = blogSource
-          .getPages()
-          .filter((page) => !page.data.draft)
-        const entries = [
-          ...SITEMAP_STATIC_PATHS.map((url) => ({
-            ...(url === '/blog' || url === '/blog/ar'
-              ? {
-                  alternates: [
-                    { hreflang: 'en', url: `${origin}/blog` },
-                    { hreflang: 'ar', url: `${origin}/blog/ar` },
-                    { hreflang: 'x-default', url: `${origin}/blog` },
-                  ],
-                }
-              : {}),
-            url: `${origin}${url}`,
-          })),
-          ...source.getPages().map((page) => ({
-            url: `${origin}${page.url}`,
-            lastmod: page.data.updated,
-          })),
-          ...publishedBlogPages.map((page) => {
-            const translation = page.data.translationKey
-              ? publishedBlogPages.find(
-                  (candidate) =>
-                    candidate.data.translationKey ===
-                      page.data.translationKey &&
-                    candidate.data.language !== page.data.language,
-                )
-              : undefined
-            const englishPage = page.data.language === 'en' ? page : translation
-            return {
-              ...(translation && englishPage
-                ? {
-                    alternates: [
-                      {
-                        hreflang: page.data.language,
-                        url: `${origin}${page.url}`,
-                      },
-                      {
-                        hreflang: translation.data.language,
-                        url: `${origin}${translation.url}`,
-                      },
-                      {
-                        hreflang: 'x-default',
-                        url: `${origin}${englishPage.url}`,
-                      },
-                    ],
-                  }
-                : {}),
-              url: `${origin}${page.url}`,
-              lastmod: page.data.updated ?? page.data.date,
-            }
-          }),
-        ]
-        const body = createSitemapXml(entries)
+        const body = buildPublicSitemap(getAppUrl())
 
         return new Response(body, {
           headers: {

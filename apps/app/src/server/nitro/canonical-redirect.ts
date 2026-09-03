@@ -1,4 +1,5 @@
 import { defineHandler, redirect } from 'nitro/h3'
+import { RETIRED_ARABIC_BLOG_REDIRECTS } from '@/shared/blog-redirects'
 
 const DELIVERY_PATH_PREFIXES = ['/api/', '/cdn-cgi/', '/img/', '/og/', '/p/']
 const PUBLIC_PAGE_PREFIXES = [
@@ -39,6 +40,22 @@ export function getCanonicalRedirect(method: string, url: URL) {
 
   const collapsedPathname = url.pathname.replace(REPEATED_SLASHES, '/')
   const publicPathname = collapsedPathname.toLowerCase()
+  const pathnameWithoutSlash =
+    publicPathname !== '/' && publicPathname.endsWith('/')
+      ? publicPathname.slice(0, -1)
+      : publicPathname
+  const markdown = pathnameWithoutSlash.endsWith('.md')
+  const redirectLookup = markdown
+    ? pathnameWithoutSlash.slice(0, -3)
+    : pathnameWithoutSlash
+  const retiredBlogTarget = Reflect.get(
+    RETIRED_ARABIC_BLOG_REDIRECTS,
+    redirectLookup,
+  )
+  if (typeof retiredBlogTarget === 'string') {
+    return `${retiredBlogTarget}${markdown ? '.md' : ''}${url.search}`
+  }
+
   let canonicalPathname = isPublicPagePath(publicPathname)
     ? publicPathname
     : url.pathname

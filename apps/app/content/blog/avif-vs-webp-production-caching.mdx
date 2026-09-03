@@ -2,11 +2,11 @@
 title: "AVIF vs WebP in production: choose with your cache"
 description: Compare AVIF and WebP without borrowed benchmarks, then configure format negotiation and CDN cache variants without serving the wrong bytes.
 date: "2026-08-15"
+updated: "2026-09-03"
 author: Raed Bahri
 language: en
-translationKey: avif-vs-webp-production-caching
 tags: [image-formats, caching, performance]
-image: /og/blog/avif-vs-webp-production-caching.png?v=2026-08-15
+image: /og/blog/avif-vs-webp-production-caching.png?v=2026-09-03
 imageAlt: AVIF and WebP responses separated into safe cache variants by the Accept header
 ---
 
@@ -80,6 +80,20 @@ Use `fmt=auto` when the CDN has proven variant support. If that CDN is Cloudflar
 Use explicit WebP when the delivery stack needs one predictable modern format and the audience test supports it. Use explicit AVIF only when the fixed-image comparison shows a useful byte reduction at acceptable quality and the caller already handles fallback. For a screenshot with small text, a higher-quality WebP can be the better result even when an AVIF file is smaller.
 
 Animation, transparency, and progressive display deserve separate test cases. Do not turn a result from still photographs into a policy for every asset type.
+
+## When an AVIF transform fails
+
+Do not assume an automatic browser fallback can rescue a failed `fmt=auto` response. Negotiation chooses one server response for that request. If AVIF encoding fails after the request selects AVIF, the browser receives that failure; it does not automatically replay the same URL with a WebP-only `Accept` header.
+
+Keenpix's current transform path converts most Sharp decode or encode failures into a generic `502 Origin is not a valid image` response. That safe public message deliberately does not expose native decoder detail, so diagnose with bounded evidence:
+
+1. Request `fmt=avif`, `fmt=webp`, and `fmt=jpeg` as three explicit URLs using the same source, dimensions, crop, and quality.
+2. Record status, `Content-Type`, cache status, response body, and a correlation identifier for each request.
+3. Repeat with a known-good fixture. If all formats fail, inspect source fetch, declared type, truncation, pixel limits, and decoder support before blaming AVIF.
+4. If only AVIF fails, preserve the exact source digest, transform parameters, Sharp/libvips versions, and sanitized server-side error. Do not publish the source URL when it is private.
+5. Choose a product policy: fail the variant, route callers to an explicit WebP/JPEG URL, or remove AVIF from negotiation until the codec path is corrected. Keep fallback identity cache-safe.
+
+A `<picture>` element with distinct explicit-format URLs gives the browser a declarative fallback path when a format is unsupported. It still will not necessarily fall through when the chosen resource returns an ordinary server error, so test the actual browsers and markup you support. The [symptom-based troubleshooting guide](/blog/image-delivery-troubleshooting-by-symptom) covers fetch and response isolation; the [versioned URL guide](/blog/cache-invalidation-versioned-image-urls) keeps corrected source bytes from colliding with cached failed or old variants.
 
 ## When format work is premature
 

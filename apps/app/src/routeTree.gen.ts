@@ -18,6 +18,7 @@ import { Route as SecurityRouteImport } from './routes/security'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as OpenapiDotjsonRouteImport } from './routes/openapi[.]json'
+import { Route as LearnRouteImport } from './routes/learn'
 import { Route as ImageCdnPricingDotjsonRouteImport } from './routes/image-cdn-pricing[.]json'
 import { Route as ImageCdnCostCalculatorRouteImport } from './routes/image-cdn-cost-calculator'
 import { Route as DevelopersRouteImport } from './routes/developers'
@@ -52,7 +53,6 @@ import { Route as authSignupRouteImport } from './routes/(auth)/signup'
 import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
-import { Route as BlogArIndexRouteImport } from './routes/blog/ar/index'
 import { Route as AppSettingsIndexRouteImport } from './routes/app/settings/index'
 import { Route as AppOperationsIndexRouteImport } from './routes/app/operations/index'
 import { Route as AppOnboardingIndexRouteImport } from './routes/app/onboarding/index'
@@ -119,6 +119,11 @@ const PricingRoute = PricingRouteImport.update({
 const OpenapiDotjsonRoute = OpenapiDotjsonRouteImport.update({
   id: '/openapi.json',
   path: '/openapi.json',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LearnRoute = LearnRouteImport.update({
+  id: '/learn',
+  path: '/learn',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImageCdnPricingDotjsonRoute = ImageCdnPricingDotjsonRouteImport.update({
@@ -292,11 +297,6 @@ const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BlogArIndexRoute = BlogArIndexRouteImport.update({
-  id: '/blog/ar/',
-  path: '/blog/ar/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
@@ -416,6 +416,7 @@ export interface FileRoutesByFullPath {
   '/developers': typeof DevelopersRoute
   '/image-cdn-cost-calculator': typeof ImageCdnCostCalculatorRoute
   '/image-cdn-pricing.json': typeof ImageCdnPricingDotjsonRoute
+  '/learn': typeof LearnRoute
   '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -467,7 +468,6 @@ export interface FileRoutesByFullPath {
   '/app/onboarding/': typeof AppOnboardingIndexRoute
   '/app/operations/': typeof AppOperationsIndexRoute
   '/app/settings/': typeof AppSettingsIndexRoute
-  '/blog/ar/': typeof BlogArIndexRoute
   '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
   '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
@@ -481,6 +481,7 @@ export interface FileRoutesByTo {
   '/developers': typeof DevelopersRoute
   '/image-cdn-cost-calculator': typeof ImageCdnCostCalculatorRoute
   '/image-cdn-pricing.json': typeof ImageCdnPricingDotjsonRoute
+  '/learn': typeof LearnRoute
   '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -532,7 +533,6 @@ export interface FileRoutesByTo {
   '/app/onboarding': typeof AppOnboardingIndexRoute
   '/app/operations': typeof AppOperationsIndexRoute
   '/app/settings': typeof AppSettingsIndexRoute
-  '/blog/ar': typeof BlogArIndexRoute
   '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
   '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
@@ -549,6 +549,7 @@ export interface FileRoutesById {
   '/developers': typeof DevelopersRoute
   '/image-cdn-cost-calculator': typeof ImageCdnCostCalculatorRoute
   '/image-cdn-pricing.json': typeof ImageCdnPricingDotjsonRoute
+  '/learn': typeof LearnRoute
   '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -600,7 +601,6 @@ export interface FileRoutesById {
   '/app/onboarding/': typeof AppOnboardingIndexRoute
   '/app/operations/': typeof AppOperationsIndexRoute
   '/app/settings/': typeof AppSettingsIndexRoute
-  '/blog/ar/': typeof BlogArIndexRoute
   '/api/auth/polar/sandbox-webhooks': typeof ApiAuthPolarSandboxWebhooksRoute
   '/api/internal/billing/report-usage': typeof ApiInternalBillingReportUsageRoute
   '/api/internal/logs/stream': typeof ApiInternalLogsStreamRoute
@@ -618,6 +618,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/image-cdn-cost-calculator'
     | '/image-cdn-pricing.json'
+    | '/learn'
     | '/openapi.json'
     | '/pricing'
     | '/robots.txt'
@@ -669,7 +670,6 @@ export interface FileRouteTypes {
     | '/app/onboarding/'
     | '/app/operations/'
     | '/app/settings/'
-    | '/blog/ar/'
     | '/api/auth/polar/sandbox-webhooks'
     | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
@@ -683,6 +683,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/image-cdn-cost-calculator'
     | '/image-cdn-pricing.json'
+    | '/learn'
     | '/openapi.json'
     | '/pricing'
     | '/robots.txt'
@@ -734,7 +735,6 @@ export interface FileRouteTypes {
     | '/app/onboarding'
     | '/app/operations'
     | '/app/settings'
-    | '/blog/ar'
     | '/api/auth/polar/sandbox-webhooks'
     | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
@@ -750,6 +750,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/image-cdn-cost-calculator'
     | '/image-cdn-pricing.json'
+    | '/learn'
     | '/openapi.json'
     | '/pricing'
     | '/robots.txt'
@@ -801,7 +802,6 @@ export interface FileRouteTypes {
     | '/app/onboarding/'
     | '/app/operations/'
     | '/app/settings/'
-    | '/blog/ar/'
     | '/api/auth/polar/sandbox-webhooks'
     | '/api/internal/billing/report-usage'
     | '/api/internal/logs/stream'
@@ -818,6 +818,7 @@ export interface RootRouteChildren {
   DevelopersRoute: typeof DevelopersRoute
   ImageCdnCostCalculatorRoute: typeof ImageCdnCostCalculatorRoute
   ImageCdnPricingDotjsonRoute: typeof ImageCdnPricingDotjsonRoute
+  LearnRoute: typeof LearnRoute
   OpenapiDotjsonRoute: typeof OpenapiDotjsonRoute
   PricingRoute: typeof PricingRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -854,7 +855,6 @@ export interface RootRouteChildren {
   ApiSdkSplatRoute: typeof ApiSdkSplatRoute
   OgBlogSplatRoute: typeof OgBlogSplatRoute
   OgDocsSplatRoute: typeof OgDocsSplatRoute
-  BlogArIndexRoute: typeof BlogArIndexRoute
   ApiAuthPolarSandboxWebhooksRoute: typeof ApiAuthPolarSandboxWebhooksRoute
   ApiInternalBillingReportUsageRoute: typeof ApiInternalBillingReportUsageRoute
   ApiInternalLogsStreamRoute: typeof ApiInternalLogsStreamRoute
@@ -923,6 +923,13 @@ declare module '@tanstack/react-router' {
       path: '/openapi.json'
       fullPath: '/openapi.json'
       preLoaderRoute: typeof OpenapiDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/learn': {
+      id: '/learn'
+      path: '/learn'
+      fullPath: '/learn'
+      preLoaderRoute: typeof LearnRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/image-cdn-pricing.json': {
@@ -1163,13 +1170,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/blog/ar/': {
-      id: '/blog/ar/'
-      path: '/blog/ar'
-      fullPath: '/blog/ar/'
-      preLoaderRoute: typeof BlogArIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/app/settings/': {
       id: '/app/settings/'
       path: '/settings'
@@ -1382,6 +1382,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevelopersRoute: DevelopersRoute,
   ImageCdnCostCalculatorRoute: ImageCdnCostCalculatorRoute,
   ImageCdnPricingDotjsonRoute: ImageCdnPricingDotjsonRoute,
+  LearnRoute: LearnRoute,
   OpenapiDotjsonRoute: OpenapiDotjsonRoute,
   PricingRoute: PricingRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
@@ -1418,7 +1419,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSdkSplatRoute: ApiSdkSplatRoute,
   OgBlogSplatRoute: OgBlogSplatRoute,
   OgDocsSplatRoute: OgDocsSplatRoute,
-  BlogArIndexRoute: BlogArIndexRoute,
   ApiAuthPolarSandboxWebhooksRoute: ApiAuthPolarSandboxWebhooksRoute,
   ApiInternalBillingReportUsageRoute: ApiInternalBillingReportUsageRoute,
   ApiInternalLogsStreamRoute: ApiInternalLogsStreamRoute,
