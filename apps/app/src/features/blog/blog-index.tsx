@@ -1,12 +1,10 @@
 import dayjs from 'dayjs'
-import 'dayjs/locale/ar'
 import { ArrowRightIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import type { BlogListItem } from '@/shared/blog-source'
 import { SiteFooter, SiteHeader } from './blog-chrome'
 
 function PostCard({ post }: { post: BlogListItem }) {
-  const arabic = post.language === 'ar'
   return (
     <a
       className="group flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card transition-colors hover:border-ring/60 hover:bg-muted/40"
@@ -23,9 +21,7 @@ function PostCard({ post }: { post: BlogListItem }) {
       <div className="flex flex-col gap-3 p-6 pt-5">
         <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs">
           <time dateTime={post.date}>
-            {dayjs(post.date)
-              .locale(arabic ? 'ar' : 'en')
-              .format(arabic ? 'D MMMM YYYY' : 'MMMM D, YYYY')}
+            {dayjs(post.date).format('MMMM D, YYYY')}
           </time>
           {post.competitor ? (
             <Badge variant="secondary">vs {post.competitor}</Badge>
@@ -38,7 +34,7 @@ function PostCard({ post }: { post: BlogListItem }) {
           {post.description}
         </p>
         <div className="mt-auto flex items-center gap-1 pt-1 font-medium text-primary text-sm">
-          {arabic ? 'اقرأ المقال' : 'Read more'}
+          Read more
           <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
         </div>
       </div>
@@ -46,14 +42,7 @@ function PostCard({ post }: { post: BlogListItem }) {
   )
 }
 
-export function BlogIndex({
-  posts,
-  language = 'en',
-}: {
-  posts: BlogListItem[]
-  language?: 'ar' | 'en'
-}) {
-  const arabic = language === 'ar'
+export function BlogIndex({ posts }: { posts: BlogListItem[] }) {
   const comparisons = posts.filter((post) => post.competitor)
   const articles = posts.filter((post) => !post.competitor)
 
@@ -64,25 +53,16 @@ export function BlogIndex({
         <section className="border-b bg-muted/30">
           <div className="mx-auto max-w-5xl px-6 py-16 sm:py-20">
             <span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
-              {arabic ? 'مدونة Keenpix' : 'Blog'}
+              Blog
             </span>
             <h1 className="mt-2 text-balance font-semibold text-4xl tracking-tight sm:text-5xl">
-              {arabic
-                ? 'تحسين الصور كما يحدث في المشاريع الحقيقية.'
-                : 'Image delivery, pricing, and the honest CDN.'}
+              Image delivery, pricing, and the honest CDN.
             </h1>
             <p className="mt-4 max-w-2xl text-balance text-lg text-muted-foreground leading-relaxed">
-              {arabic
-                ? 'تجارب وأدلة عملية عن CDN الصور، صيغ AVIF وWebP، الحماية بالتوقيع، وتشغيل Keenpix على خادمك.'
-                : 'Guides on image optimization, transparent bandwidth pricing, and how Keenpix compares to the incumbents, from the team building the open-source engine.'}
+              Guides on image optimization, transparent bandwidth pricing, and
+              how Keenpix compares to the incumbents, from the team building the
+              open-source engine.
             </p>
-            <a
-              className="mt-6 inline-flex min-h-11 items-center font-medium text-primary text-sm underline-offset-4 hover:underline"
-              href={arabic ? '/blog' : '/blog/ar'}
-              hrefLang={arabic ? 'en' : 'ar'}
-            >
-              {arabic ? 'English articles' : 'المقالات العربية'}
-            </a>
           </div>
         </section>
 
@@ -90,14 +70,11 @@ export function BlogIndex({
           <section className="border-b">
             <div className="mx-auto max-w-5xl px-6 py-14">
               <h2 className="font-semibold text-2xl tracking-tight">
-                {arabic
-                  ? 'مقارنة Keenpix بالبدائل'
-                  : 'Keenpix vs the alternatives'}
+                Keenpix vs the alternatives
               </h2>
               <p className="mt-2 max-w-2xl text-muted-foreground">
-                {arabic
-                  ? 'مقارنات مباشرة تعتمد على الأسعار والخصائص المنشورة.'
-                  : "Honest, side-by-side comparisons with the image CDNs you're probably evaluating."}
+                Honest, side-by-side comparisons with the image CDNs you're
+                probably evaluating.
               </p>
               <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {comparisons.map((post) => (
@@ -111,12 +88,10 @@ export function BlogIndex({
         <section>
           <div className="mx-auto max-w-5xl px-6 py-14">
             <h2 className="font-semibold text-2xl tracking-tight">
-              {arabic ? 'أحدث المقالات' : 'Latest articles'}
+              Latest articles
             </h2>
             {articles.length === 0 ? (
-              <p className="mt-6 text-muted-foreground">
-                {arabic ? 'لا توجد مقالات منشورة بعد.' : 'No articles yet.'}
-              </p>
+              <p className="mt-6 text-muted-foreground">No articles yet.</p>
             ) : (
               <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {articles.map((post) => (

@@ -354,10 +354,8 @@ export function blogListingJsonLd(
     title: string
     url: string
   }>,
-  language: 'ar' | 'en' = 'en',
 ) {
-  const arabic = language === 'ar'
-  const listingUrl = absoluteUrl(arabic ? '/blog/ar' : '/blog')
+  const listingUrl = absoluteUrl('/blog')
   return {
     '@context': 'https://schema.org',
     '@type': 'Blog',
@@ -369,11 +367,10 @@ export function blogListingJsonLd(
       headline: post.title,
       url: post.url,
     })),
-    description: arabic
-      ? 'أدلة عملية عن تحسين الصور، صيغ AVIF وWebP، وتشغيل Keenpix على البنية التي تختارها.'
-      : 'Guides on image optimization, transparent bandwidth pricing, and how Keenpix compares to Cloudinary, imgix, and ImageKit.',
-    inLanguage: language,
-    name: arabic ? `مدونة ${SITE_NAME}` : `${SITE_NAME} Blog`,
+    description:
+      'Guides on image optimization, transparent bandwidth pricing, and how Keenpix compares to Cloudinary, imgix, and ImageKit.',
+    inLanguage: 'en',
+    name: `${SITE_NAME} Blog`,
     publisher: { '@id': ORGANIZATION_ID },
     url: listingUrl,
   }
@@ -585,7 +582,6 @@ export function blogPostingJsonLd({
   dateModified,
   description,
   image,
-  language = 'en',
   path,
   title,
   url,
@@ -595,7 +591,6 @@ export function blogPostingJsonLd({
   dateModified?: string
   description: string
   image: string
-  language?: 'ar' | 'en'
   path: Array<{ name: string; url: string }>
   title: string
   url: string
@@ -629,7 +624,7 @@ export function blogPostingJsonLd({
       description,
       headline: title,
       image,
-      inLanguage: language,
+      inLanguage: 'en',
       mainEntityOfPage: url,
       publisher: {
         '@type': 'Organization',

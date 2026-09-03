@@ -1,0 +1,210 @@
+---
+title: "Cache invalidation with versioned image URLs"
+description: "Use immutable versioned image URLs across browser, CDN, and origin caches, with safe publication, rollback, purge, revocation, and verification patterns."
+date: "2026-09-03"
+updated: "2026-09-03"
+language: en
+author: Raed Bahri
+tags: [caching, operations, architecture, performance]
+image: /og/blog/cache-invalidation-versioned-image-urls.png?v=2026-09-03
+imageAlt: "Versioned image URL moving through browser, CDN, shield, and origin cache layers"
+---
+
+The dependable way to update a public image is to publish new bytes at a new URL, update the application reference, and keep the previous version available through a measured rollback window. Use long-lived immutable caching only for URLs whose bytes will never change. Treat purge as an operational accelerator or emergency tool, not as proof that every browser, proxy, CDN layer, and downstream consumer forgot the old response.
+
+This distinction resolves most cache-invalidation confusion: **versioning changes identity; purging tries to remove stored state for an existing identity**. Identity is under your application’s control. Complete invalidation across independent caches usually is not.
+
+## Model every cache in the path
+
+A browser request rarely travels through one cache:
+
+```text
+HTML or API asset reference
+  -> browser memory cache
+  -> browser disk cache / service worker
+  -> customer CDN or reverse proxy
+  -> image delivery edge
+  -> regional shield / optimized-variant cache
+  -> transformer
+  -> source object store or origin cache
+```
+
+Each layer can use a different key, freshness lifetime, revalidation rule, and purge mechanism. A successful CDN purge says nothing about a browser disk entry. Purging the image-delivery edge may leave a customer-owned CDN in front of it warm. Replacing an object at the origin may leave already generated derivatives valid under their old cache keys.
+
+[RFC 9111](https://www.rfc-editor.org/rfc/rfc9111.html) defines HTTP cache behavior, including freshness, validation, and invalidation after unsafe requests. Its invalidation rules apply to caches through which a request travels; they are not a global recall protocol. That is why a design that requires every cache to delete the same public URL before correctness returns is fragile.
+
+## Separate source identity from transform identity
+
+An output variant needs both a source version and a transform specification. For example:
+
+```text
+https://images.example.com/project_7/assets/hero/v_18/source.jpg?w=1280&q=76&fmt=avif
+```
+
+The source identity is `project_7/assets/hero/v_18/source.jpg`. The transform identity includes normalized width, quality, format, crop, fit, and every option that changes bytes. If `fmt=auto` negotiates from `Accept`, every cache must honor the response’s `Vary` behavior or the delivery layer must normalize the chosen format into a distinct internal key. See the [cache-key and Vary guide](/blog/image-cdn-cache-keys-vary-accept).
+
+Do not confuse these identities:
+
+- `hero.jpg?v=18` is versioned only if every relevant cache includes the query in its key and the origin maps it to immutable version 18.
+- `/hero/v_18.jpg` is not immutable if an operator can overwrite its bytes.
+- an object-store version ID protects stored history but does not automatically appear in the public URL.
+- an ETag validates a representation; it does not create a new public identity.
+- a transform cache key without the source version can keep returning a derivative of replaced bytes.
+
+Use a URL form your entire path preserves. A version segment or content digest in the path is usually easier to inspect than a query parameter, but either can work when cache and routing behavior are verified.
+
+## Choose a versioning strategy
+
+### Application version IDs
+
+Generate an opaque version ID when an asset passes publication gates:
+
+```text
+/assets/{assetId}/{versionId}/source.jpg
+```
+
+This works well when metadata, moderation, and the source object move through a managed lifecycle. Store the version as data, not a timestamp guessed from a client filename. The database record can point to the current version while old references remain resolvable during rollback.
+
+### Content digests
+
+Hash the approved source bytes and include the digest, or a collision-resistant prefix, in the path:
+
+```text
+/assets/{assetId}/sha256-7e3c.../source.jpg
+```
+
+Content addressing makes identical bytes share identity and makes accidental mutation detectable. It does not express policy changes that leave source bytes unchanged. If cropping rules, color management, watermark policy, or transformation code changes the output, include a processing-policy version in the derivative identity as well.
+
+### Build fingerprints
+
+For repository-owned images, a bundler-generated content hash is often sufficient:
+
+```text
+/assets/hero.4f8ca91c.webp
+```
+
+The HTML deployment references the new hash. Keep old assets available while old HTML, client-side route caches, emails, and rollbacks may still reference them. Do not delete the previous build’s assets immediately after switching traffic.
+
+### Object-store versions
+
+Versioned storage is valuable recovery protection. Amazon S3 assigns a version ID to stored object versions and retains versions as full objects, according to its [versioning workflow documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/versioning-workflows.html). Still decide how the application maps a public versioned URL to that storage version. A mutable public `/hero.jpg` that happens to live in a versioned bucket remains a mutable cache identity.
+
+## Publish in the right order
+
+The safe sequence is additive:
+
+1. Write new source bytes under a never-before-used immutable identity.
+2. Verify the object is readable from the origin path the transformer will use.
+3. Generate mandatory derivatives or perform representative cold transforms.
+4. Validate content type, dimensions, cache headers, and bytes from the actual delivery host.
+5. Update the application’s current-version pointer or deploy markup referencing the new URL.
+6. Observe errors and rendered pages while the previous version remains available.
+7. Retire old versions only after the rollback and long-tail reference windows close.
+
+Changing the pointer last prevents the application from advertising an object that has not propagated or cannot be transformed. Keeping the old version prevents a rollback from depending on reconstructing deleted bytes.
+
+For a user-upload system, record the source object and `currentVersionId` in a transaction with an outbox event. The [end-to-end upload pipeline guide](/blog/user-upload-image-pipeline-design) covers quarantine, validation, moderation, and atomic publication before delivery.
+
+## Set cache headers by mutability
+
+For a truly immutable, public versioned URL, a long freshness lifetime is appropriate:
+
+```http
+Cache-Control: public, max-age=31536000, immutable
+ETag: "sha256-7e3c..."
+```
+
+The `immutable` directive tells supporting clients that a fresh response does not need revalidation. MDN’s [HTTP caching guide](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching) recommends cache busting with a version or hash in the URL for long-lived static resources and explains why deleting stored responses everywhere is difficult.
+
+For a mutable pointer such as `/assets/hero/current`, use a shorter freshness period and validators:
+
+```http
+Cache-Control: public, max-age=60, stale-while-revalidate=300
+ETag: "asset-hero-current-v18"
+```
+
+The pointer may redirect to or return metadata containing the immutable URL. Keep mutable pointers out of long-lived HTML when direct versioned URLs are practical. If a service worker caches images, version and test its cache namespace too; a service worker can return an old response without contacting the network.
+
+Private or user-specific images need a different policy. Do not mark a response public merely because its path is versioned. Viewer authorization, shared-cache behavior, signed-URL expiry, and revocation must be designed together. Read the [private-origin security guide](/blog/private-image-origins-security-boundaries) and [signed URL guide](/blog/signed-image-urls-hmac) before caching protected media.
+
+## What a purge can and cannot do
+
+A purge is useful when:
+
+- a mutable response received the wrong cache lifetime;
+- corrupted derivatives exist under a valid key;
+- transformation policy produced unsafe output;
+- legal or security response requires best-effort removal;
+- capacity makes waiting for freshness unacceptable.
+
+Purge the exact layers you control and record their results. Provider acceptance of a purge request is not the same as a verified miss at every edge. Test a representative location after completion and inspect `Age`, cache-status headers, ETag, content type, and a digest of the body.
+
+A purge cannot reliably recall bytes already stored in browser caches, downloaded files, screenshots, feeds, email proxies, search caches, or third-party archives. For material that must be revocable, do not expose a permanently public immutable URL. Require authorization on each sufficiently fresh request, keep lifetimes bounded, and accept the availability and cache-hit trade-off.
+
+## Overwrites create ambiguous incidents
+
+Suppose `/hero.jpg` is cached for one year and an operator overwrites the origin object. You now have at least two byte sequences with one identity. Some viewers see the old response, some see the new response, and a derivative cache may contain mixtures created before and after the overwrite. Revalidation can reduce the inconsistency but cannot make the URL’s historical meaning unambiguous.
+
+With `/hero/v17.jpg` and `/hero/v18.jpg`, each URL has one meaning. The application pointer says which version is current. Rollback changes the pointer to v17. Diagnostics can compare exact versions without guessing which bytes an edge held at a given time.
+
+Never reuse a failed version identifier. If v18 was published incorrectly, publish corrected bytes as v19. Reusing v18 after a purge recreates the same ambiguity and makes incident evidence harder to interpret.
+
+## Coordinate HTML, API, and image caches
+
+Versioned images solve only the media object. The HTML or API response containing the image URL also has a cache lifetime. A new image version will not appear until consumers receive the new reference.
+
+Map the complete update path:
+
+| Layer | Identity to change or refresh | Verification |
+| --- | --- | --- |
+| Database | `currentVersionId` or equivalent pointer | Read after write from the serving path |
+| API response | Resource representation or tag | Response body and validator |
+| HTML / RSC payload | Page or route cache | Rendered markup uses new URL |
+| Service worker | Cache namespace and fetch policy | Clean and upgrade scenarios |
+| Image CDN | Source version plus transform key | Cold and warm response headers/body |
+| Browser | New URL in DOM | Network panel and rendered pixels |
+
+If HTML caches for ten minutes, an image update can legitimately take ten minutes to become referenced even though the new version is available immediately. Either accept that window, revalidate the HTML/API layer, or send an application event that causes clients to refresh. Do not purge millions of image variants when the stale layer is actually the page that still points to the old URL.
+
+## Plan rollback before cleanup
+
+A versioned rollout makes rollback a pointer change, but only while old dependencies still exist. Record:
+
+- the previous application revision and asset version;
+- the source and derivative retention window;
+- database schema compatibility;
+- which HTML, API, CDN, and service-worker caches may hold each reference;
+- the condition that triggers reversal;
+- an owner and maximum decision time.
+
+During rollback, restore the old reference, verify it from the delivery host, then render affected desktop and mobile pages. A green deployment or successful raw HTTP response does not prove the browser selected and displayed the intended candidate. The [safe rollout guide](/blog/safe-image-cdn-rollouts-and-rollbacks) provides a broader canary and reversal method.
+
+## Keenpix cache behavior and the natural integration point
+
+Keenpix derives and caches variants from a source URL and transformation parameters. Give the source a new versioned URL when its bytes change. Then the resulting transformed URL also changes, which avoids depending on an all-layer purge for correctness. Keep width, height, fit, position, quality, format, and other byte-changing inputs bounded and explicit.
+
+If automatic AVIF or WebP negotiation is enabled, verify `Vary: Accept` and cache-key behavior through any CDN you place in front. The [AVIF and WebP production guide](/blog/avif-vs-webp-production-caching) covers explicit-format tests and failure handling. The [capacity guide](/blog/image-transform-cache-stampedes-capacity) explains why a burst of entirely new versioned variants is different from warm-cache traffic.
+
+Keenpix does not control a browser cache or a customer-owned CDN placed in front of it. It also cannot determine when your application has safely completed moderation or publication. Those remain application and infrastructure responsibilities. On managed Keenpix, a browser cache hit or customer-owned front-cache hit does not reach the managed delivery network; the [pricing guide](/blog/transparent-image-cdn-pricing) documents the billing boundary.
+
+## Verification matrix
+
+Run a small matrix for every critical image path:
+
+1. Request the old version cold and warm; record status, content type, cache status, `Age`, ETag, and body digest.
+2. Publish the new source under a new URL without changing the application reference; prove the old page still works.
+3. Request representative new AVIF, WebP, and fallback outputs cold, then warm.
+4. Change the application pointer and verify the raw HTML or API reference.
+5. Render the page at desktop and mobile widths; confirm the selected `currentSrc`, dimensions, crop, and pixels.
+6. Restore the old pointer and repeat the rendered check.
+7. If purge is part of the runbook, test it separately and name the exact cache layers it covers.
+
+Include a query-string case if versions use queries, a customer-CDN case if one exists, and a service-worker upgrade case if the application registers one. Test stale clients that keep old HTML open across the publication event.
+
+Use the [symptom-based troubleshooting guide](/blog/image-delivery-troubleshooting-by-symptom) when a layer disagrees, and use [reproducible image performance measurement](/blog/reproducible-image-performance-measurement) to keep cold-transform latency separate from warm-cache delivery and browser rendering.
+
+## The durable rule
+
+Cache invalidation becomes manageable when correctness does not depend on deletion. Publish immutable bytes at a unique URL, switch references only after verification, and retain the previous version long enough to reverse. Use bounded freshness and validators for mutable pointers. Reserve purges for acceleration and incidents, and describe their coverage honestly.
+
+That model gives browsers and CDNs permission to cache aggressively without making asset replacement mysterious. It also produces better evidence: a URL names one byte sequence, a pointer records the current choice, and a rollback restores a known version instead of hoping every cache has forgotten an overwrite.

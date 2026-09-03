@@ -2,10 +2,11 @@
 title: "Stop cache stampedes in image transformation"
 description: Coalesce cold image transforms, serve stale safely, shed overload, and size CPU and memory capacity from measured service time and working sets.
 date: "2026-08-23"
+updated: "2026-09-03"
 author: Raed Bahri
 language: en
 tags: [caching, capacity, operations]
-image: /og/blog/image-transform-cache-stampedes-capacity.png?v=2026-08-23
+image: /og/blog/image-transform-cache-stampedes-capacity.png?v=2026-09-03
 imageAlt: Many cold image requests coalesced into one bounded transform and cache fill
 ---
 
@@ -125,6 +126,16 @@ location /img/ {
 This counts proxied connections, so it is less efficient than a gate that distinguishes an internal cache hit from a cold transform. It is still a safer emergency ceiling than allowing memory to determine the limit through an OOM kill. Preserve a separate lightweight health route outside the limit.
 
 Do not reuse `KEENPIX_WORKER_CONCURRENCY` as if it controlled HTTP traffic. Reduce or pause prewarm concurrency during a live cold-miss surge; background warming should yield to user requests.
+
+## Request-rate caps and cold-work admission are different
+
+A public request-rate limit answers “how many requests may this caller, tenant, or route send in a window?” A cold-work admission limit answers “how many distinct transforms may execute concurrently without exhausting CPU, memory, storage, or origin capacity?” You usually need both.
+
+A hot cached image can tolerate a much higher request rate than an uncached stream of unique widths. Conversely, a low-rate request for one huge animated source can consume more work than hundreds of small hits. Apply an edge rate cap before the transform service to contain floods and abusive clients, but keep a separate semaphore or queue budget around distinct cold transforms.
+
+Keenpix's current public repository does not declare one universal application-level requests-per-second limit for image delivery. Project transformation constraints, signed URLs, origin allowlists, proxy limits, CDN rules, container capacity, and provider plan policy are separate boundaries. Do not invent an RPS number from the prewarm worker concurrency or from a load test on different hardware.
+
+When a request cap is exceeded, prefer `429 Too Many Requests` with a bounded `Retry-After` when the rejection is specifically caller quota. Use `503 Service Unavailable` when shared transform capacity is temporarily full. Keep either response out of the image's immutable success cache. Track hot hits, unique cold keys, rejected quota requests, admission rejects, queue age, and retry volume separately; one aggregate request graph hides the failure mode.
 
 ## Capacity is constrained by CPU, memory, and origins
 

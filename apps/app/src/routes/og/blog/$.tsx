@@ -1,4 +1,3 @@
-import arabicFontDataUrl from '@fontsource-variable/noto-sans-arabic/files/noto-sans-arabic-arabic-wght-normal.woff2?inline'
 import ImageResponse from '@takumi-rs/image-response'
 import { createFileRoute } from '@tanstack/react-router'
 import { blogSource } from '@/shared/blog-source'
@@ -30,8 +29,7 @@ export const Route = createFileRoute('/og/blog/$')({
         if (!page || page.data.draft) {
           return new Response('Not found', { status: 404 })
         }
-        const arabic = page.data.language === 'ar'
-        let blogLabel = arabic ? 'مدونة Keenpix' : 'Keenpix Blog'
+        let blogLabel = 'Keenpix Blog'
         if (page.data.competitor) {
           blogLabel = `Keenpix vs ${page.data.competitor}`
         }
@@ -62,7 +60,6 @@ export const Route = createFileRoute('/og/blog/$')({
               justifyContent: 'center',
               padding: 72,
               width: '100%',
-              ...(arabic ? { fontFamily: 'Noto Sans Arabic' } : {}),
             }}
           >
             <div
@@ -123,12 +120,10 @@ export const Route = createFileRoute('/og/blog/$')({
               >
                 <div
                   style={{
-                    direction: arabic ? 'rtl' : 'ltr',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 18,
                     maxWidth: 720,
-                    textAlign: arabic ? 'right' : 'left',
                   }}
                 >
                   <div
@@ -322,21 +317,6 @@ export const Route = createFileRoute('/og/blog/$')({
             // PNG, not WebP: several link unfurlers (LinkedIn, some Slack/Discord
             // scrapers) reject WebP og:image and show no preview.
             format: 'png',
-            ...(arabic
-              ? {
-                  fonts: [
-                    {
-                      data: () =>
-                        fetch(arabicFontDataUrl).then((response) =>
-                          response.arrayBuffer(),
-                        ),
-                      key: 'noto-sans-arabic-variable',
-                      name: 'Noto Sans Arabic',
-                      style: 'normal' as const,
-                    },
-                  ],
-                }
-              : {}),
             headers: {
               'cache-control': 'public, immutable, max-age=31536000',
             },

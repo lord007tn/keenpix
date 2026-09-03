@@ -144,6 +144,11 @@ export const LEARNING_GUIDE_CLASSIFICATION = {
     jobs: ['understand', 'integrate', 'secure'],
     featured: true,
   },
+  'user-upload-image-pipeline-design': {
+    pillar: 'origins',
+    jobs: ['integrate', 'secure', 'operate'],
+    featured: true,
+  },
   'private-image-origins-security-boundaries': {
     pillar: 'security',
     jobs: ['secure', 'integrate'],
@@ -165,6 +170,11 @@ export const LEARNING_GUIDE_CLASSIFICATION = {
   'safe-image-cdn-rollouts-and-rollbacks': {
     pillar: 'operations',
     jobs: ['operate', 'integrate'],
+  },
+  'cache-invalidation-versioned-image-urls': {
+    pillar: 'operations',
+    jobs: ['understand', 'integrate', 'operate'],
+    featured: true,
   },
   'self-host-image-cdn-docker': {
     pillar: 'operations',

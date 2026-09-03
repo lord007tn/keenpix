@@ -39,8 +39,7 @@ const blogFrontmatterSchema = frontmatterSchema
     // Optional last-edited date; defaults to `date` for BlogPosting dateModified
     // and drives article:modified_time. Set it when a post is materially updated.
     updated: publicationDateSchema.optional(),
-    language: z.enum(['en', 'ar']).default('en'),
-    translationKey: z.string().min(1).optional(),
+    language: z.literal('en').default('en'),
     author: z.string().default('Keenpix Team'),
     tags: z.array(z.string()).default([]),
     competitor: z.string().optional(),

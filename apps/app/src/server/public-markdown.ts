@@ -280,7 +280,7 @@ function staticMarkdown(pathname: string, origin: string) {
         description:
           'Human-first learning paths for image CDN fundamentals, performance, cost, origins, security, operations, migrations, frameworks, and agent integration.',
         title: 'Keenpix Learn',
-        updated: '2026-09-02',
+        updated: '2026-09-03',
       }),
       'Start with the problem, not the product. Every guide is designed to remain useful without its Keenpix next step.',
       '',
@@ -305,19 +305,16 @@ function staticMarkdown(pathname: string, origin: string) {
       }),
     ].join('\n')
   }
-  if (pathname === '/blog' || pathname === '/blog/ar') {
-    const language = pathname === '/blog/ar' ? 'ar' : 'en'
+  if (pathname === '/blog') {
     return [
       markdownMetadata({
-        canonicalUrl: `${origin}${pathname}`,
+        canonicalUrl: `${origin}/blog`,
         description:
-          language === 'ar'
-            ? 'مقالات Keenpix حول تحسين الصور وتسليمها.'
-            : 'Implementation guides, category education, and source-backed comparisons.',
-        title: language === 'ar' ? 'مدونة Keenpix' : 'Keenpix blog',
-        updated: '2026-09-02',
+          'Implementation guides, category education, and source-backed comparisons.',
+        title: 'Keenpix blog',
+        updated: '2026-09-03',
       }),
-      ...listBlogPosts(language).map(
+      ...listBlogPosts().map(
         (post) =>
           `- [${post.title}](${origin}${post.url}): ${post.description}`,
       ),
@@ -367,7 +364,7 @@ function staticMarkdown(pathname: string, origin: string) {
 }
 
 export async function getPublicMarkdown(pathname: string, origin: string) {
-  if (pathname === '/blog' || pathname === '/blog/ar') {
+  if (pathname === '/blog') {
     return staticMarkdown(pathname, origin)
   }
   if (pathname.startsWith('/blog/')) {
@@ -419,7 +416,6 @@ export async function listPublicMarkdown(origin: string) {
     '/about',
     '/authors/raed-bahri',
     '/blog',
-    '/blog/ar',
     '/changelog',
     '/compare',
     '/developers',

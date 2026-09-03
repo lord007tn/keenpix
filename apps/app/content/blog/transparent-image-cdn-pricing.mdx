@@ -2,10 +2,10 @@
 title: "Image CDN Pricing: Why Keenpix Bills by Managed Delivery"
 description: See why Keenpix bills for optimized managed delivery instead of transformations, with published plans, included transforms, and always-on metered overage.
 date: "2026-06-28"
-updated: "2026-08-31"
+updated: "2026-09-03"
 author: Raed Bahri
 tags: [pricing, philosophy, image-cdn]
-image: /og/blog/transparent-image-cdn-pricing.png?v=2026-07-11
+image: /og/blog/transparent-image-cdn-pricing.png?v=2026-09-03
 imageAlt: Transparent image CDN managed-delivery and projected-cost meter
 ---
 
@@ -34,6 +34,21 @@ Keenpix's billing meter records one thing: **optimized bytes delivered to end us
 Managed Cloudflare delivery is part of Keenpix, so its successful edge responses count toward the same delivery allowance as application responses. They are not added twice: an edge hit is counted at the edge, while an edge miss is counted when the Keenpix application returns the image. A browser cache hit—or a hit in a customer-owned CDN placed in front of Keenpix—never reaches the managed network and is not counted.
 
 Bandwidth saved is different. Keenpix analytics compare source bytes with the smaller optimized response and report the reduction as `bytesSaved`. That savings value is never added to delivered bytes and never sent to Polar as billable usage.
+
+### Cache-hit billing, case by case
+
+| Where the request is satisfied | Reaches managed Keenpix delivery? | Counts as one managed delivery response? |
+| --- | --- | --- |
+| Browser memory or disk cache | No | No |
+| Service worker returning its own stored response | No | No |
+| Customer-owned CDN in front of Keenpix | No, on that CDN's hit | No |
+| Keenpix-managed Cloudflare edge | Yes | Yes, once at the edge |
+| Keenpix optimized-variant cache after an edge miss | Yes | Yes, once when Keenpix returns the image |
+| New transform after all managed caches miss | Yes | Yes, once when Keenpix returns the image |
+
+The table describes Keenpix's current managed-meter boundary, verified against the repository on September 3, 2026. It is not a promise about charges from a browser vendor, customer-owned CDN, source-storage provider, or network carrier. An edge miss does not mean the same response is charged twice: the managed path records the successful delivery at the layer that returns it.
+
+Caching still matters to capacity and user experience even when the billing unit stays the same. Browser and customer-owned front-cache hits avoid the managed request entirely. Managed edge hits avoid origin fetch and transform work. Version image source URLs when bytes change so long-lived caches remain correct; the [cache invalidation and versioned URL guide](/blog/cache-invalidation-versioned-image-urls) covers that lifecycle.
 
 ## The result
 

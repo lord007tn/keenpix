@@ -16,7 +16,7 @@ export const Route = createFileRoute('/{$llmFile}.txt')({
           return new Response('Not found', { status: 404 })
         }
         if (params.llmFile === 'llms') {
-          return textResponse(llmsIndex())
+          return textResponse(buildLlmsIndex())
         }
         if (params.llmFile === 'llms-full') {
           return textResponse(await llmsFull())
@@ -27,7 +27,7 @@ export const Route = createFileRoute('/{$llmFile}.txt')({
   },
 })
 
-function llmsIndex() {
+export function buildLlmsIndex() {
   const baseUrl = getAppUrl()
   return `# Keenpix image delivery knowledge
 
@@ -37,6 +37,8 @@ function llmsIndex() {
 
 - [Keenpix Learn](${baseUrl}/learn.md): answer-first paths across fundamentals, performance, cost, origins, security, operations, migrations, frameworks, and agent integration.
 - [Bring your own origin](${baseUrl}/blog/bring-your-own-origin-image-cdn-architecture.md): architecture, access models, cache identity, rollout, and verification.
+- [Design a user-upload image pipeline](${baseUrl}/blog/user-upload-image-pipeline-design.md): authenticated ingestion, byte validation, quarantine, moderation, publication, delivery, and recovery.
+- [Use versioned image URLs](${baseUrl}/blog/cache-invalidation-versioned-image-urls.md): immutable identity, layered cache behavior, publication, purge limits, rollback, and verification.
 - [Troubleshoot image delivery](${baseUrl}/blog/image-delivery-troubleshooting-by-symptom.md): diagnose broken, slow, stale, oversized, or incorrectly cropped images.
 - [Measure image performance](${baseUrl}/blog/reproducible-image-performance-measurement.md): separate cold transforms, warm caches, browser rendering, and field evidence.
 - [Secure private origins](${baseUrl}/blog/private-image-origins-security-boundaries.md): source authorization, viewer authorization, caching, revocation, and limits.

@@ -2,14 +2,14 @@
 title: "Agent-assisted image CDN integration without blind trust"
 description: "Give a coding agent public, bounded contracts for image delivery, then verify generated URLs, security boundaries, responsive behavior, and rollback."
 date: "2026-09-02"
-updated: "2026-09-02"
+updated: "2026-09-03"
 language: en
 author: Raed Bahri
 tags:
   - AI agents
   - Integration
   - Developer tools
-image: /og/blog/agent-assisted-image-cdn-integration.png?v=2026-09-02
+image: /og/blog/agent-assisted-image-cdn-integration.png?v=2026-09-03
 imageAlt: "A coding agent reading public Markdown and OpenAPI contracts before an image CDN integration review"
 ---
 
@@ -83,6 +83,23 @@ The review bundle should include:
 - explicit unknowns and unsupported capabilities.
 
 Reject claims such as “faster,” “secure,” “zero downtime,” or “saves 40%” unless the task produced the corresponding evidence.
+
+## Offline mocks prove contracts, not provider behavior
+
+An offline mock is useful for deterministic questions: Did the loader normalize a width? Did it preserve the source path? Does a rejected parameter return the expected application error? Can the old URL builder be restored? Keep fixtures small, explicit, and versioned with the test.
+
+A mock cannot prove that a CDN varies its cache by `Accept`, that a purge propagated, that an origin credential works, that a deployed edge returns the intended MIME type, or that a browser selects and renders the right responsive candidate. It also cannot establish production latency, availability, cache-hit rate, or billing. Avoid teaching the mock undocumented provider behavior merely to make an assertion pass.
+
+Split the evidence into layers:
+
+| Evidence | What it can prove | What remains unproven |
+| --- | --- | --- |
+| Unit test with offline fixture | URL construction, finite parameters, fallback control flow | Network, CDN, origin, rendered pixels |
+| Local integration service | Request/response contract and decoder behavior for fixtures | Provider edge and production identity |
+| Raw deployed HTTP probe | Status, headers, bytes, and cache signals at that location | Browser selection and visual layout |
+| Rendered desktop/mobile browser | Chosen `currentSrc`, dimensions, crop, and visible result | Global edge behavior or production-wide metrics |
+
+Require the agent to label each result accordingly. Keep offline mocks in the normal test suite, then run authenticated or production probes only with explicit authority and scrubbed outputs. A successful mock should never be rewritten in a report as “the CDN was verified.” Use the [versioned URL guide](/blog/cache-invalidation-versioned-image-urls) to define cache assertions and the [performance measurement guide](/blog/reproducible-image-performance-measurement) to separate cold, warm, and browser evidence.
 
 ## Failure modes to test
 

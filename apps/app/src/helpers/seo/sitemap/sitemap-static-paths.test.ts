@@ -11,15 +11,15 @@ describe('sitemap static paths', () => {
     )
   })
 
-  it('includes both blog language indexes without duplicate URLs', () => {
+  it('includes the English blog index without retired locale paths', () => {
     expect(SITEMAP_STATIC_PATHS).toEqual(
       expect.arrayContaining([
         '/blog',
-        '/blog/ar',
         '/developers',
         '/image-cdn-cost-calculator',
       ]),
     )
+    expect(SITEMAP_STATIC_PATHS).not.toContain('/blog/ar')
     expect(new Set(SITEMAP_STATIC_PATHS).size).toBe(SITEMAP_STATIC_PATHS.length)
   })
 })

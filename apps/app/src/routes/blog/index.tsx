@@ -11,7 +11,6 @@ const listBlogPostsFn = createServerFn({ method: 'GET' }).handler(() => {
   const selfHost = !isCloud()
   const canonicalUrl = absoluteUrl('/blog')
   return {
-    arabicUrl: absoluteUrl('/blog/ar'),
     canonicalUrl,
     posts,
     selfHost,
@@ -26,7 +25,6 @@ const listBlogPostsFn = createServerFn({ method: 'GET' }).handler(() => {
             title: post.title,
             url: absoluteUrl(post.url),
           })),
-          'en',
         ),
   }
 })
@@ -35,12 +33,10 @@ export const Route = createFileRoute('/blog/')({
   loader: () => listBlogPostsFn(),
   head: ({ loaderData }) => {
     const canonicalUrl = loaderData?.canonicalUrl ?? absoluteUrl('/blog')
-    const arabicUrl = loaderData?.arabicUrl ?? absoluteUrl('/blog/ar')
     return {
       links: [
         { rel: 'canonical', href: canonicalUrl },
         { rel: 'alternate', hrefLang: 'en', href: canonicalUrl },
-        { rel: 'alternate', hrefLang: 'ar', href: arabicUrl },
         { rel: 'alternate', hrefLang: 'x-default', href: canonicalUrl },
       ],
       meta: [
@@ -64,7 +60,7 @@ function BlogIndexPage() {
   return (
     <>
       {jsonLd ? <JsonLd data={jsonLd} /> : null}
-      <BlogIndex language="en" posts={posts} />
+      <BlogIndex posts={posts} />
     </>
   )
 }

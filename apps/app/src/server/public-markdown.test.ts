@@ -82,9 +82,25 @@ describe('public Markdown registry', () => {
       '/api/sdk/v1/projects',
       '/blog/does-not-exist',
       '/docs/does-not-exist',
+      '/blog/ar',
+      '/blog/ar/avif-vs-webp-production-caching',
     ]) {
       expect(await getPublicMarkdown(pathname, origin), pathname).toBeNull()
     }
+  })
+
+  it('publishes both new English guides without retired locale URLs', async () => {
+    const full = await listPublicMarkdown(origin)
+    const paths = full.map((document) => document.pathname)
+
+    expect(paths).toContain('/blog/user-upload-image-pipeline-design')
+    expect(paths).toContain('/blog/cache-invalidation-versioned-image-urls')
+    expect(paths.some((pathname) => pathname.startsWith('/blog/ar'))).toBe(
+      false,
+    )
+    expect(full.map((document) => document.markdown).join('\n')).not.toContain(
+      '/blog/ar',
+    )
   })
 
   it('does not leak private workspace or credential material', async () => {

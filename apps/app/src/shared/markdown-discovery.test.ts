@@ -24,5 +24,12 @@ describe('Markdown discovery paths', () => {
     expect(isPublicKnowledgePath('/app/dashboard')).toBe(false)
     expect(isPublicKnowledgePath('/api/sdk/v1/projects')).toBe(false)
     expect(isPublicKnowledgePath('/login')).toBe(false)
+    expect(isPublicKnowledgePath('/blog/ar')).toBe(false)
+    expect(
+      isPublicKnowledgePath('/blog/ar/avif-vs-webp-production-caching'),
+    ).toBe(false)
+    expect(isPublicKnowledgePath('/blog/ar/signed-image-urls-hmac.md')).toBe(
+      false,
+    )
   })
 })

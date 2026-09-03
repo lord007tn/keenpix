@@ -3,7 +3,6 @@ const PUBLIC_KNOWLEDGE_PATHS = new Set([
   '/about',
   '/authors/raed-bahri',
   '/blog',
-  '/blog/ar',
   '/changelog',
   '/compare',
   '/developers',
@@ -24,7 +23,11 @@ const TRAILING_SLASH = /\/$/
 const FILE_PATH = /\/[^/]+\.[^/]+$/
 
 export function isPublicKnowledgePath(pathname: string) {
-  if (FILE_PATH.test(pathname)) {
+  if (
+    FILE_PATH.test(pathname) ||
+    pathname === '/blog/ar' ||
+    pathname.startsWith('/blog/ar/')
+  ) {
     return false
   }
   return (
