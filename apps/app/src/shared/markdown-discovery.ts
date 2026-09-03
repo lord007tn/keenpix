@@ -21,8 +21,12 @@ const PUBLIC_KNOWLEDGE_PATHS = new Set([
   '/support',
 ])
 const TRAILING_SLASH = /\/$/
+const FILE_PATH = /\/[^/]+\.[^/]+$/
 
 export function isPublicKnowledgePath(pathname: string) {
+  if (FILE_PATH.test(pathname)) {
+    return false
+  }
   return (
     PUBLIC_KNOWLEDGE_PATHS.has(pathname) ||
     pathname.startsWith('/blog/') ||

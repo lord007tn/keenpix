@@ -1,5 +1,6 @@
 import { getPlanPricing } from '@/actions/billing/plan-pricing'
 import { COMPARISONS } from '@/features/compare/comparison-data'
+import { legalPageMarkdown } from '@/features/legal/legal-content'
 import { getPlanCardFeatures } from '@/features/marketing/plan-card-content'
 import { TRUST_PAGES } from '@/features/marketing/trust-page'
 import { PLANS, TRIAL } from '@/lib/billing/plans'
@@ -246,157 +247,6 @@ function trustMarkdown(
   ].join('\n')
 }
 
-const LEGAL_MARKDOWN = {
-  '/legal/terms': `# Terms of Service
-
-Last updated: August 5, 2026
-
-These Terms govern access to and use of the Keenpix cloud service. By creating an account or using the service you agree to them.
-
-## 1. The service
-
-Keenpix is a hosted image-optimization proxy and CDN. You point it at images you are authorized to use; Keenpix fetches them from origins you control, then transforms, caches, and delivers them.
-
-## 2. Accounts and workspaces
-
-You are responsible for account credentials, workspace activity, accurate information, and keeping your email current. You must be at least 16.
-
-## 3. Acceptable use
-
-Do not deliver content without permission, probe or bypass security controls, overload the service, distribute malware or illegal material, or use Keenpix to build an open proxy.
-
-## 4. Plans, billing, and usage
-
-Polar is the merchant of record. Plans include a managed-delivery allotment; successful optimized delivery above it is billed at the published overage rate. Trial usage is not billed. Cancel before renewal to avoid the next charge.
-
-## 5. Your content and origins
-
-You retain rights to your images and grant Keenpix the limited permission needed to fetch, transform, cache, and deliver them. You are responsible for allowlisted origins and source rights.
-
-## 6. Availability and changes
-
-Keenpix aims for high availability but does not guarantee uninterrupted service. Features and these terms may change with reasonable notice.
-
-## 7. Termination
-
-You may stop at any time. Keenpix may suspend or terminate for breach, non-payment, credible security risk, or harmful activity, with notice where practical.
-
-## 8. Disclaimers and liability
-
-The service is provided as is. To the maximum extent permitted by law, aggregate liability is limited to amounts paid in the three months before the event giving rise to a claim.
-
-## 9. Ownership and feedback
-
-Keenpix and its licensors retain rights in the service, software, documentation, and branding. These terms do not transfer your content or Keenpix intellectual property.
-
-## 10. Your responsibility
-
-You are responsible for claims arising from content, origins, or instructions you provide. Keep independent source-asset copies and do not use Keenpix as your only archive.
-
-## 11. Contact
-
-Email ${SUPPORT_EMAIL}.`,
-  '/legal/privacy': `# Privacy Policy
-
-Last updated: July 15, 2026
-
-This policy explains how Keenpix collects, uses, and protects personal data in the cloud service. Customers processing data for their own users are controllers and Keenpix acts as processor under the DPA.
-
-## Data we collect
-
-Account and authentication data; billing identifiers and subscription state; service configuration; operational request logs and aggregate delivery analytics; support communications; and consented website analytics.
-
-## How we use data
-
-To operate, secure, support, bill, and improve the service; communicate service information; investigate abuse; and comply with legal obligations. Keenpix does not sell personal data or use service data for targeted advertising.
-
-## Sub-processors
-
-Infrastructure and database providers, Cloudflare, ClickHouse, Polar, email delivery, and consented analytics may process the minimum data needed for their role. The DPA describes processing responsibilities.
-
-## Analytics choices
-
-Google Analytics remains off until a visitor chooses Allow analytics. Declining does not affect service use. The choice is remembered for one year and can be reset by clearing site data.
-
-## Retention
-
-Operational logs follow the plan retention window; aggregate analytics are retained for up to one year. Account data is kept while active and deleted or anonymized within a reasonable period after closure, subject to legal and backup obligations.
-
-## Your rights
-
-Depending on location, you may request access, correction, export, deletion, objection, or restriction by emailing ${SUPPORT_EMAIL}.
-
-## Children
-
-Keenpix is not directed to children under 16.
-
-## Security
-
-Keenpix uses in-transit encryption, tenant isolation, password hashing, and least-privilege access. No system is perfectly secure.
-
-## Contact
-
-Email ${SUPPORT_EMAIL}.`,
-  '/legal/dpa': `# Data Processing Addendum
-
-Last updated: July 13, 2026
-
-This DPA forms part of the Terms between the customer as Controller and Keenpix as Processor for personal data processed through the cloud service.
-
-## Scope and instructions
-
-Keenpix processes personal data only to provide and secure the service, on documented customer instructions, and as required by law.
-
-## Confidentiality and security
-
-Authorized personnel are bound by confidentiality. Keenpix uses proportionate technical and organizational safeguards, including access controls, tenant isolation, transport encryption, and operational monitoring.
-
-## Sub-processors
-
-Keenpix may use infrastructure, delivery, analytics-storage, billing, email, and support providers. Keenpix remains responsible for its processor obligations and will make material changes available through public policy updates.
-
-## Data-subject requests and incidents
-
-Keenpix will provide reasonable assistance with data-subject requests and notify the Controller without undue delay after confirming a personal-data breach affecting Controller data.
-
-## Deletion, return, and audits
-
-On termination, data is deleted or returned according to the service and retention policy, subject to legal and backup obligations. Reasonable compliance information is available on request; intrusive audits require scope, confidentiality, and cost agreement.
-
-## International transfers and precedence
-
-The parties will use an applicable transfer mechanism where required. This DPA controls over conflicting processor terms in the Terms.
-
-## Contact
-
-Email ${SUPPORT_EMAIL}.`,
-  '/legal/license': `# License & Open Source
-
-Last updated: August 5, 2026
-
-The released Keenpix engine is public and can be self-hosted with no Keenpix license fee. Operators remain responsible for infrastructure, security, backups, delivery, and compliance.
-
-## Engine license
-
-The engine is licensed under GNU AGPL-3.0. Review the repository LICENSE and obtain legal advice for your use. Releases already published retain their published license.
-
-## Cloud service
-
-Hosted-cloud use is governed by the Terms and Privacy Policy, not by the engine license alone.
-
-## Third-party software
-
-Keenpix includes third-party open-source packages with their own licenses. Distribution and deployment must preserve their terms.
-
-## No lock-in
-
-Cloud and self-hosting share a delivery URL model, but migration still requires configuration, data, cache, DNS, and operational planning.
-
-## Editorial content and RSL
-
-The source-code license does not unambiguously establish a separate machine-readable license for all public editorial content. Keenpix does not publish an RSL declaration without an explicit legal decision and approved content-license text.`,
-} as const
-
 function staticMarkdown(pathname: string, origin: string) {
   if (pathname === '/pricing') {
     return pricingMarkdown(origin)
@@ -408,9 +258,16 @@ function staticMarkdown(pathname: string, origin: string) {
   ) {
     return trustMarkdown(pathname, origin)
   }
-  if (pathname in LEGAL_MARKDOWN) {
-    const body = LEGAL_MARKDOWN[pathname as keyof typeof LEGAL_MARKDOWN]
-    return `${body}\n\nCanonical HTML: [${origin}${pathname}](${origin}${pathname})`
+  if (pathname.startsWith('/legal/')) {
+    const pageId = pathname.slice('/legal/'.length)
+    if (
+      pageId === 'terms' ||
+      pageId === 'privacy' ||
+      pageId === 'dpa' ||
+      pageId === 'license'
+    ) {
+      return legalPageMarkdown(pageId, origin)
+    }
   }
   if (pathname === '/changelog') {
     return `${markdownMetadata({ canonicalUrl: `${origin}/changelog`, description: 'Every notable Keenpix release from the repository changelog.', title: 'Keenpix product changelog' })}\n${changelog.trim()}`

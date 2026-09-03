@@ -131,8 +131,15 @@ export function noIndexPageHead(title: string, description: string) {
 
 export function absoluteUrl(path = '/') {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  const origin =
+  const serverCanonical =
+    typeof document === 'undefined'
+      ? null
+      : document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href
+  const requestOrigin =
     typeof window === 'undefined' ? getAppUrl() : window.location.origin
+  const origin = serverCanonical
+    ? new URL(serverCanonical).origin
+    : requestOrigin
   return `${origin}${normalizedPath}`
 }
 

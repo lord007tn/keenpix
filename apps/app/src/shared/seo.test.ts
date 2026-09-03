@@ -18,10 +18,22 @@ afterEach(() => {
 })
 
 describe('SEO entity graphs', () => {
-  it('uses the browser origin when route metadata hydrates', () => {
+  it('preserves the server canonical origin when an alias hydrates', () => {
     vi.stubGlobal('window', {
       location: { origin: 'https://preview.keenpix.example' },
     })
+    vi.stubGlobal('document', {
+      querySelector: () => ({ href: 'https://keenpix.com/pricing' }),
+    })
+
+    expect(absoluteUrl('/pricing')).toBe('https://keenpix.com/pricing')
+  })
+
+  it('uses the browser origin when no server canonical is present', () => {
+    vi.stubGlobal('window', {
+      location: { origin: 'https://preview.keenpix.example' },
+    })
+    vi.stubGlobal('document', { querySelector: () => null })
 
     expect(absoluteUrl('/pricing')).toBe(
       'https://preview.keenpix.example/pricing',

@@ -20,6 +20,7 @@ describe('Markdown discovery paths', () => {
     expect(isPublicKnowledgePath('/learn')).toBe(true)
     expect(isPublicKnowledgePath('/docs/reference/endpoint')).toBe(true)
     expect(isPublicKnowledgePath('/compare/cloudinary')).toBe(true)
+    expect(isPublicKnowledgePath('/blog/rss.xml')).toBe(false)
     expect(isPublicKnowledgePath('/app/dashboard')).toBe(false)
     expect(isPublicKnowledgePath('/api/sdk/v1/projects')).toBe(false)
     expect(isPublicKnowledgePath('/login')).toBe(false)
