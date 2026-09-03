@@ -67,6 +67,7 @@ export function MarkdownActions() {
         <span className="min-[390px]:hidden">Markdown</span>
       </a>
       <Button
+        aria-label={copied ? 'Copied' : 'Copy Markdown'}
         className="min-h-10 gap-2 px-3"
         onClick={copyMarkdown}
         size="sm"
