@@ -68,7 +68,14 @@ function AppLayout() {
   return (
     <QueryProvider>
       <ProjectProvider projects={projects}>
-        <div className="flex min-h-svh flex-col bg-background">
+        <div
+          className="flex min-h-svh flex-col bg-background"
+          data-analytics-traffic={
+            user.role === 'super_admin' || user.impersonatedBy
+              ? 'internal'
+              : undefined
+          }
+        >
           <AppTopnav
             cloud={cloud}
             user={user}

@@ -192,7 +192,7 @@ export const LEGAL_PAGES = {
     seoTitle: 'Keenpix Privacy Policy | Image CDN Service',
     description:
       'Learn how Keenpix collects, uses, protects, and retains account, operational, billing, support, and optional website analytics data in the cloud service.',
-    lastUpdated: 'July 15, 2026',
+    lastUpdated: 'September 5, 2026',
     introduction: [
       {
         kind: 'paragraph',
@@ -235,7 +235,7 @@ export const LEGAL_PAGES = {
               ],
               [
                 { kind: 'strong', text: 'Optional website analytics:' },
-                ' after you explicitly consent, Google Analytics receives page and funnel events such as CTA clicks, signup, project creation, first image delivery, and checkout. Google Analytics may also collect the page location and title, referrer, browser and device information, approximate location, analytics cookies, and interactions enabled through Enhanced Measurement. Keenpix does not intentionally send account, organization, project, image, API key, or email data. Advertising storage and personalization remain disabled.',
+                ' after you explicitly consent, Google Analytics receives page and funnel events such as CTA clicks, signup, project creation, and checkout. Google Analytics may also collect the page location and title, referrer, browser and device information, approximate location, analytics cookies, and interactions enabled through Enhanced Measurement. Keenpix does not intentionally send account, organization, project, image, API key, or email data. Advertising storage and personalization remain disabled.',
               ],
               [
                 { kind: 'strong', text: 'Website performance telemetry:' },
