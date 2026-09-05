@@ -91,7 +91,7 @@ describe('analytics navigation lifecycle', () => {
     await navigate('/compare/imgix-alternative')
     expect(
       window.dataLayer?.filter(
-        (entry) => Reflect.get(entry, 'event') === 'page_view',
+        (entry) => Reflect.get(entry, '1') === 'page_view',
       ),
     ).toHaveLength(1)
   })

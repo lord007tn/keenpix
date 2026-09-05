@@ -70,11 +70,15 @@ First-party source preservation does not prove GA4 session attribution across
 Google OAuth. Do not rewrite Google referrers or change unwanted-referral settings
 without a consented round-trip trace demonstrating the actual behavior.
 
-Withdrawal updates Google Consent Mode, disables the configured direct collector,
+Withdrawal disables the configured destination and validated GA4 destinations
+found in Google-owned loader URLs before updating Google Consent Mode,
 clears first-party `_ga*` cookies and source context, and synchronizes the consent
 component, including changes from another tab. Loaded scripts remain in the
-document. Visitors can reopen Analytics preferences on the privacy-policy page.
-Remote GTM tags must obey consent independently.
+document in other tabs to preserve unsaved edits. Explicit withdrawal from the
+privacy-policy page reloads that page after disabling collectors and clearing
+state, unloading the Google runtime. Regrant clears the destination disable flag
+and measures only new consented activity. Remote GTM tags must obey consent
+independently; this behavior must be reverified when provider tags change.
 
 ## Internal traffic and provider verification
 
@@ -87,20 +91,30 @@ test property or block collectors for local synthetic QA.
 
 Before release, inspect the actual GTM/GA4 configuration:
 
-The intended managed deployment requires `VITE_GTM_CONTAINER_ID` in production
-Compose at build time and runtime, and does not forward the direct GA4 fallback.
+The intended managed deployment requires both `VITE_GTM_CONTAINER_ID` and
+`VITE_GA_MEASUREMENT_ID` in production Compose at build time and runtime.
 The documented container/destination are `GTM-TFJ9TQDN` / `G-C04VQED7GV`; these must
 be verified against the existing provider account. Other deployments can retain
-the mutually exclusive direct option. With both IDs present, GTM alone is loaded.
+the mutually exclusive direct option. With both IDs present, GTM alone is loaded
+by the application; the GA ID supplies explicit event routing and withdrawal
+control, not another installation or config command.
 A Google destination script loaded by GTM is not a competing application loader.
 
-1. Require analytics consent for all tags. Verify no sends before grant or after
-   withdrawal, and sanitized location/referrer/title on collected events.
-2. Direct GA4 uses `send_page_view: false`. GTM must disable its automatic initial
-   view and forward the app's explicit `page_view`. Disable Enhanced Measurement
+1. Require analytics consent for all tags. Verify no sends before grant and
+   sanitized location/referrer/title. Destination disable and unloading prevent new
+   measurement, but the actual native runtime can flush previously buffered events
+   after withdrawal/pagehide. Strict zero post-withdrawal transmission remains
+   unresolved; see the [timestamped verification](../../../docs/verification/acquisition-measurement-2026-09-05.md).
+2. Both modes use standard Google `event` commands with the sanitized parameter
+   object; the configured GA ID supplies `send_to`. The existing native GTM Google
+   tag consumes these commands without custom-event tags or arbitrary data-layer
+   mappings. Plain data-layer event objects and commands without an explicit
+   destination did not route under the verified version 5 container. Direct GA4
+   uses `send_page_view: false`; the GTM native tag must also disable its automatic
+   initial view. Disable Enhanced Measurement
    browser-history views, automatic form interactions and duplicate history triggers.
    Do not route automatic form/input values or generic data-layer events. Use an
-   explicit custom-event allowlist from the table above. Google documents that
+   explicit application event contract from the table above. Google documents that
    `send_page_view: false` alone does not disable history measurement:
    [manual page views](https://developers.google.com/analytics/devguides/collection/ga4/views).
 3. Check initial load, SPA navigation, query-only updates, real OAuth return, reload,

@@ -66,7 +66,7 @@ it('measures the committed destination after a real TanStack route transition', 
     })
     expect(
       window.dataLayer.filter(
-        (event) => Reflect.get(event, 'event') === 'page_view',
+        (event) => Reflect.get(event, '1') === 'page_view',
       ),
     ).toHaveLength(1)
     const navigation = router.navigate({ to: '/signup' })
@@ -75,7 +75,7 @@ it('measures the committed destination after a real TanStack route transition', 
     })
     expect(
       window.dataLayer.filter(
-        (event) => Reflect.get(event, 'event') === 'page_view',
+        (event) => Reflect.get(event, '1') === 'page_view',
       ),
     ).toHaveLength(1)
     await act(async () => {
@@ -83,10 +83,10 @@ it('measures the committed destination after a real TanStack route transition', 
       await navigation
     })
     const views = window.dataLayer.filter(
-      (event) => Reflect.get(event, 'event') === 'page_view',
+      (event) => Reflect.get(event, '1') === 'page_view',
     )
     expect(views).toHaveLength(2)
-    expect(views[1]).toMatchObject({
+    expect(views[1] && Reflect.get(views[1], '2')).toMatchObject({
       page_path: '/signup',
       page_location: `${window.location.origin}/signup`,
       page_referrer: `${window.location.origin}/`,

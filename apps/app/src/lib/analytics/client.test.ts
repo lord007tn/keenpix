@@ -127,7 +127,7 @@ describe('consent-aware Google analytics', () => {
     )
   })
 
-  it('pushes custom events for GTM to route to GA4', () => {
+  it('uses Google event commands with a GTM-owned destination', () => {
     clientEnv.VITE_GA_MEASUREMENT_ID = 'G-KEENPIX123'
     clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
     setAnalyticsConsent('granted')
@@ -135,8 +135,16 @@ describe('consent-aware Google analytics', () => {
     trackEvent('project_created')
 
     expect(window.dataLayer).toContainEqual(
-      expect.objectContaining({ event: 'project_created' }),
+      expect.objectContaining({
+        0: 'event',
+        1: 'project_created',
+        2: expect.objectContaining({ send_to: 'G-KEENPIX123' }),
+      }),
     )
+    expect(
+      window.dataLayer?.some((entry) => Reflect.get(entry, '0') === 'config'),
+    ).toBe(false)
+    expect(document.querySelector('[data-keenpix-ga]')).toBeNull()
   })
 
   it('carries comparison context into later activation milestones without query data', () => {
@@ -157,19 +165,25 @@ describe('consent-aware Google analytics', () => {
 
     expect(window.dataLayer).toContainEqual(
       expect.objectContaining({
-        event: 'comparison_cta_click',
-        comparison_slug: 'cloudinary-alternative',
-        cta_destination: '/signup',
-        source_path: '/compare/cloudinary-alternative',
+        0: 'event',
+        1: 'comparison_cta_click',
+        2: expect.objectContaining({
+          comparison_slug: 'cloudinary-alternative',
+          cta_destination: '/signup',
+          source_path: '/compare/cloudinary-alternative',
+        }),
       }),
     )
     expect(window.dataLayer).toContainEqual(
       expect.objectContaining({
-        event: 'project_created',
-        activation_source_group: 'comparison',
-        activation_source_path: '/compare/cloudinary-alternative',
-        activation_comparison: 'cloudinary-alternative',
-        activation_destination: '/signup',
+        0: 'event',
+        1: 'project_created',
+        2: expect.objectContaining({
+          activation_source_group: 'comparison',
+          activation_source_path: '/compare/cloudinary-alternative',
+          activation_comparison: 'cloudinary-alternative',
+          activation_destination: '/signup',
+        }),
       }),
     )
     expect(JSON.stringify(window.dataLayer)).not.toContain('private')
@@ -190,7 +204,7 @@ describe('consent-aware Google analytics', () => {
     trackFunnelMilestone('project_created')
 
     expect(window.dataLayer).toContainEqual(
-      expect.objectContaining({ event: 'project_created' }),
+      expect.objectContaining({ 0: 'event', 1: 'project_created' }),
     )
     expect(
       window.localStorage.getItem('keenpix.activation-context.v1'),
@@ -242,10 +256,10 @@ describe('consent-aware Google analytics', () => {
     trackFunnelMilestone('project_created')
     trackFunnelMilestone('project_created')
     const events = window.dataLayer?.filter(
-      (entry) => Reflect.get(entry, 'event') === 'project_created',
+      (entry) => Reflect.get(entry, '1') === 'project_created',
     )
     expect(events).toHaveLength(1)
-    expect(events?.[0]).toMatchObject({
+    expect(events?.[0] && Reflect.get(events[0], '2')).toMatchObject({
       activation_source_path: '/compare/imgix-alternative',
       activation_utm_source: 'github',
       activation_utm_medium: 'referral',
@@ -278,11 +292,45 @@ describe('consent-aware Google analytics', () => {
     shell.remove()
     trackFunnelMilestone('project_created')
     const events = window.dataLayer?.filter(
-      (entry) => Reflect.get(entry, 'event') === 'project_created',
+      (entry) => Reflect.get(entry, '1') === 'project_created',
     )
     expect(events).toHaveLength(2)
-    expect(events?.[0]).toMatchObject({ traffic_type: 'internal' })
-    expect(events?.[1]).toMatchObject({ traffic_type: undefined })
+    expect(events?.[0] && Reflect.get(events[0], '2')).toMatchObject({
+      traffic_type: 'internal',
+    })
+    expect(events?.[1] && Reflect.get(events[1], '2')).toMatchObject({
+      traffic_type: undefined,
+    })
+  })
+
+  it('disables GTM-owned destinations before consent commands and re-enables on grant', () => {
+    clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
+    setAnalyticsConsent('granted')
+    for (const src of [
+      'https://www.googletagmanager.com/gtag/js?id=G-DESTINATION',
+      'https://www.googletagmanager.com/gtag/destination?id=G-SECOND',
+      'https://example.test/gtag/js?id=G-UNTRUSTED',
+    ]) {
+      const script = document.createElement('script')
+      script.src = src
+      document.head.append(script)
+    }
+    const states: unknown[] = []
+    window.dataLayer ??= []
+    const push = vi.spyOn(window.dataLayer, 'push').mockImplementation(() => {
+      states.push(Reflect.get(window, 'ga-disable-G-DESTINATION'))
+      return 0
+    })
+    setAnalyticsConsent('denied')
+    expect(states.length).toBeGreaterThan(0)
+    expect(states.every((state) => state === true)).toBe(true)
+    expect(Reflect.get(window, 'ga-disable-G-SECOND')).toBe(true)
+    expect(Reflect.get(window, 'ga-disable-G-UNTRUSTED')).toBeUndefined()
+    push.mockRestore()
+    setAnalyticsConsent('granted')
+    expect(Reflect.get(window, 'ga-disable-G-DESTINATION')).toBe(false)
+    expect(Reflect.get(window, 'ga-disable-G-SECOND')).toBe(false)
+    expect(document.querySelectorAll('[data-keenpix-gtm]')).toHaveLength(1)
   })
 
   it('never grants Google consent when Do Not Track is enabled', () => {

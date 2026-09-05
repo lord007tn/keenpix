@@ -81,6 +81,7 @@ services:
       args:
         VITE_KEENPIX_PUBLIC_URL: ${KEENPIX_APP_URL:?set KEENPIX_APP_URL}
         VITE_GTM_CONTAINER_ID: ${VITE_GTM_CONTAINER_ID:?set the verified managed GTM container}
+        VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:?set the verified GTM-owned GA4 destination}
         VERSION: ${SOURCE_COMMIT:-master}
     restart: unless-stopped
     mem_limit: ${KEENPIX_MEM_LIMIT:-0}
@@ -116,6 +117,7 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       VITE_KEENPIX_PUBLIC_URL: ${KEENPIX_APP_URL:?set KEENPIX_APP_URL}
       VITE_GTM_CONTAINER_ID: ${VITE_GTM_CONTAINER_ID:?set the verified managed GTM container}
+      VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:?set the verified GTM-owned GA4 destination}
       KEENPIX_SUPER_ADMIN_EMAIL: ${KEENPIX_SUPER_ADMIN_EMAIL}
       KEENPIX_SUPER_ADMIN_PASSWORD: ${KEENPIX_SUPER_ADMIN_PASSWORD}
       KEENPIX_RUN_MIGRATIONS: ${KEENPIX_RUN_MIGRATIONS:-true}

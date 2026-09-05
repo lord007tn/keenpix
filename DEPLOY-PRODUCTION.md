@@ -53,6 +53,7 @@ CLOUDFLARE_ACCOUNT_API_TOKEN=...
 CLOUDFLARE_ACCOUNT_ID=...
 CLOUDFLARE_ZONE_ID=...
 VITE_GTM_CONTAINER_ID=GTM-TFJ9TQDN
+VITE_GA_MEASUREMENT_ID=G-C04VQED7GV
 GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=...
 ```
@@ -67,13 +68,14 @@ The managed deployment uses GA4 through the existing GTM container. The IDs
 documented for this product are `GTM-TFJ9TQDN` and destination `G-C04VQED7GV`;
 verify ownership and the published configuration before release. Configure one
 Google destination and route the application's explicit page-view/custom events.
-Set `VITE_GTM_CONTAINER_ID` at both build time and runtime; Compose requires both.
+Set both public IDs at build time and runtime; Compose requires both IDs.
 Turbo explicitly forwards and hashes the Dockerfile's public build variables.
 Changing only runtime values cannot change the embedded Vite client configuration;
 rebuild the app image with the verified container ID.
-Leave `VITE_GA_MEASUREMENT_ID` unset in this managed configuration. The mutually
-exclusive direct fallback remains available for other deployments, but is not
-the intended managed setup. A Google destination script loaded by GTM is not a
+`VITE_GA_MEASUREMENT_ID` provides explicit `send_to` routing and withdrawal control
+for the existing GTM-owned destination. GTM still exclusively installs/configures
+Google when both IDs are present. The direct option remains available when GTM is
+unset in other deployments. A Google destination script loaded by GTM is not a
 second independent application installation.
 
 Follow [the measurement contract](apps/docs/notes/analytics-funnel.md) before

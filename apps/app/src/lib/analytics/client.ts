@@ -12,6 +12,7 @@ const ANALYTICS_CONSENT_COOKIE = 'keenpix_analytics_consent'
 export const ANALYTICS_CONSENT_EVENT = 'keenpix:analytics-consent'
 const ACTIVATION_CONTEXT_KEY = 'keenpix.activation-context.v1'
 const SAFE_COMPARISON_SLUG = /[^a-z0-9-]/g
+const GOOGLE_ANALYTICS_DESTINATION = /^G-[A-Z0-9]+$/
 const PUBLIC_SOURCES = [
   'google',
   'bing',
@@ -196,6 +197,30 @@ export function getAnalyticsConsent() {
 
 export function setAnalyticsConsent(requestedConsent: AnalyticsConsent) {
   const consent = navigator.doNotTrack === '1' ? 'denied' : requestedConsent
+  // Stop already-loaded destinations before consent updates or pagehide can send.
+  // GTM owns its destination IDs; read only Google-owned GA4 script URLs.
+  const destinations = new Set<string>()
+  if (clientEnv.VITE_GA_MEASUREMENT_ID) {
+    destinations.add(clientEnv.VITE_GA_MEASUREMENT_ID)
+  }
+  for (const script of document.scripts) {
+    if (!URL.canParse(script.src)) {
+      continue
+    }
+    const url = new URL(script.src)
+    const id = url.searchParams.get('id')
+    if (
+      url.origin === 'https://www.googletagmanager.com' &&
+      ['/gtag/js', '/gtag/destination'].includes(url.pathname) &&
+      id &&
+      GOOGLE_ANALYTICS_DESTINATION.test(id)
+    ) {
+      destinations.add(id)
+    }
+  }
+  for (const id of destinations) {
+    Reflect.set(window, `ga-disable-${id}`, consent !== 'granted')
+  }
   try {
     window.localStorage.setItem(ANALYTICS_CONSENT_KEY, consent)
   } catch {
@@ -206,13 +231,6 @@ export function setAnalyticsConsent(requestedConsent: AnalyticsConsent) {
   document.cookie = `${ANALYTICS_CONSENT_COOKIE}=${consent}; Max-Age=31536000; Path=/; SameSite=Lax${secure}`
   pushGoogleConsent('default', 'denied')
   pushGoogleConsent('update', consent)
-  if (clientEnv.VITE_GA_MEASUREMENT_ID) {
-    Reflect.set(
-      window,
-      `ga-disable-${clientEnv.VITE_GA_MEASUREMENT_ID}`,
-      consent !== 'granted',
-    )
-  }
   window.dataLayer ??= []
   window.dataLayer.push({
     event: 'consent_update',
@@ -404,11 +422,13 @@ export function trackEvent(
   const context = getPageContext()
   // Keep defaults sanitized for Google-generated events as well as our own.
   pushGoogleCommand('set', context)
-  if (clientEnv.VITE_GTM_CONTAINER_ID) {
-    window.dataLayer.push({ event, ...context, ...parameters })
-  } else if (clientEnv.VITE_GA_MEASUREMENT_ID) {
-    pushGoogleCommand('event', event, { ...context, ...parameters })
-  }
+  pushGoogleCommand('event', event, {
+    ...context,
+    ...parameters,
+    ...(clientEnv.VITE_GA_MEASUREMENT_ID
+      ? { send_to: clientEnv.VITE_GA_MEASUREMENT_ID }
+      : {}),
+  })
 }
 
 export function trackComparisonCta(
