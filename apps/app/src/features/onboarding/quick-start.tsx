@@ -16,7 +16,9 @@ export function QuickStart({ project }: { project: Project }) {
     typeof window === 'undefined'
       ? 'https://keenpix.com'
       : window.location.origin
-  const cloudDelivery = new URL(base).hostname === 'keenpix.com'
+  const hostname = new URL(base).hostname
+  const cloudDelivery =
+    hostname === 'keenpix.com' || hostname === 'www.keenpix.com'
   const deliveryBase = cloudDelivery
     ? `https://cdn.keenpix.com/p/${project.id}`
     : base
