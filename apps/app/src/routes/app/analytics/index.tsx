@@ -618,7 +618,11 @@ function AnalyticsPage() {
                   }}
                   value={activeLens}
                 >
-                  <SelectTrigger className="w-[8.5rem]" size="sm">
+                  <SelectTrigger
+                    aria-label="Chart view"
+                    className="w-[8.5rem]"
+                    size="sm"
+                  >
                     <SelectValue>
                       {(v) =>
                         LENSES.find((l) => l.value === v)?.label ?? String(v)
@@ -652,7 +656,11 @@ function AnalyticsPage() {
                 }}
                 value={view}
               >
-                <SelectTrigger className="w-[8.5rem]" size="sm">
+                <SelectTrigger
+                  aria-label="Chart metric"
+                  className="w-[8.5rem]"
+                  size="sm"
+                >
                   <SelectValue>
                     {(v) =>
                       AREA_VIEWS.find((o) => o.value === v)?.label ?? String(v)
