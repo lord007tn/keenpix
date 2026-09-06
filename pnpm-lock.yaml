@@ -1271,6 +1271,9 @@ importers:
 
   packages/transform:
     dependencies:
+      '@img/colour':
+        specifier: 1.1.0
+        version: 1.1.0
       '@keenpix/core':
         specifier: workspace:*
         version: link:../frameworks/core

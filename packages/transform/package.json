@@ -15,6 +15,7 @@
     "clean": "git clean -xdf node_modules"
   },
   "dependencies": {
+    "@img/colour": "1.1.0",
     "@keenpix/core": "workspace:*",
     "got": "^15.0.5",
     "lru-cache": "^11.5.1",
