@@ -8,6 +8,34 @@ on:
         required: true
         default: false
         type: boolean
+      scope:
+        description: Images to build (scoped builds do not update release aliases)
+        type: choice
+        default: all
+        options: [all, app-transform]
+      app_public_url:
+        description: Optional public app URL baked into the app image
+        type: string
+        default: ""
+      app_gtm_id:
+        description: Optional public GTM container ID baked into the app image
+        type: string
+        default: ""
+      app_ga_id:
+        description: Optional public GA measurement ID baked into the app image
+        type: string
+        default: ""
+      image_version:
+        description: Optional VERSION build argument for app-transform scope only
+        type: string
+        default: ""
+
+env:
+  IMAGE_SCOPE: ${{ inputs.scope }}
+  APP_PUBLIC_URL: ${{ inputs.app_public_url }}
+  APP_GTM_ID: ${{ inputs.app_gtm_id }}
+  APP_GA_ID: ${{ inputs.app_ga_id }}
+  IMAGE_VERSION: ${{ inputs.image_version }}
 
 permissions:
   contents: read
@@ -19,32 +47,35 @@ concurrency:
   queue: max
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      scope: ${{ steps.plan.outputs.scope }}
+      tags: ${{ steps.plan.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - id: plan
+        run: node tooling/docker-images.mjs plan
+
   image:
     name: Build ${{ matrix.image }} image
+    needs: plan
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - image: app
-            dockerfile: apps/app/Dockerfile
-          - image: transform
-            dockerfile: apps/transform/Dockerfile
-          - image: worker
-            dockerfile: apps/worker/Dockerfile
-          - image: docs
-            dockerfile: apps/docs/Dockerfile
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v6
 
-      - name: Validate semver tag
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
-            echo "Docker release tags must be semantic versions like v0.1.0"
-            exit 1
-          fi
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -62,23 +93,66 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}-${{ matrix.image }}
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}},prefix=v
-            type=semver,pattern={{major}}.{{minor}},prefix=v
-            type=raw,value=latest,enable={{is_default_branch}}
+          tags: ${{ needs.plan.outputs.tags }}
+          flavor: latest=${{ needs.plan.outputs.scope == 'app-transform' && 'false' || 'auto' }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
 
       - name: Build and publish
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
           file: ./${{ matrix.dockerfile }}
+          platforms: linux/amd64
           push: ${{ inputs.publish }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VERSION=${{ steps.meta.outputs.version }}
+            VERSION=${{ inputs.image_version || steps.meta.outputs.version }}
+            VITE_KEENPIX_PUBLIC_URL=${{ inputs.app_public_url }}
+            VITE_GTM_CONTAINER_ID=${{ inputs.app_gtm_id }}
+            VITE_GA_MEASUREMENT_ID=${{ inputs.app_ga_id }}
           cache-from: |
             type=gha,scope=keenpix-${{ matrix.image }}
           cache-to: |
             type=gha,mode=max,scope=keenpix-${{ matrix.image }},ignore-error=true
+
+      - name: Record published image identity
+        if: inputs.publish
+        run: node tooling/docker-images.mjs receipt
+        env:
+          IMAGE_NAME: ${{ matrix.image }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          EFFECTIVE_VERSION: ${{ inputs.image_version || steps.meta.outputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        if: inputs.publish
+        with:
+          name: image-${{ needs.plan.outputs.scope }}-${{ matrix.image }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: image-receipts/${{ matrix.image }}.json
+          if-no-files-found: error
+
+  manifest:
+    needs: [plan, image]
+    if: inputs.publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: image-${{ needs.plan.outputs.scope }}-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: image-receipts
+          merge-multiple: true
+      - name: Verify the selected image set
+        run: node tooling/docker-images.mjs verify
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-manifest-${{ needs.plan.outputs.scope }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: image-manifest.json
+          if-no-files-found: error
