@@ -18,8 +18,9 @@ import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import dayjs from 'dayjs'
 import { ensurePersonalOrganizationMembership } from '@/data-access/members'
 import { env } from '@/env/server'
+import { verifyInvitationSeat } from '@/lib/auth/invitation-hooks'
 import { buildPolarPlugin } from '@/lib/billing/polar-plugin'
-import { assertCanAddSeat, getSeatLimit } from '@/lib/billing/quota'
+import { getSeatLimit } from '@/lib/billing/quota'
 import { sendPlatformEmail } from '@/lib/email/send'
 import { errorContext, logger } from '@/lib/logger/logger'
 import { getAppUrl, isCloud } from '@/server/deployment'
@@ -394,7 +395,7 @@ export const auth = betterAuth({
       membershipLimit: (_user, organization) => getSeatLimit(organization.id),
       organizationHooks: {
         beforeCreateInvitation: ({ organization }) =>
-          assertCanAddSeat(organization.id),
+          verifyInvitationSeat(organization.id),
         afterAcceptInvitation: async ({ organization, user }) => {
           // Invite-driven signups may briefly receive a personal workspace when
           // their identity is verified. Remove only that just-created, empty,
