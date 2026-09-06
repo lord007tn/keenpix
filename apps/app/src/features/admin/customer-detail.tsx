@@ -713,8 +713,8 @@ export function CustomerDetail({ orgId }: { orgId: string }) {
             </DialogTitle>
             <DialogDescription>
               {suspended
-                ? `${customer.name} will be served again immediately.`
-                : `${customer.name}'s images stop being served immediately. Use this for abuse, fraud, or non-payment.`}
+                ? `Remove the suspension for ${customer.name}. New image requests can be served if the workspace has an eligible plan.`
+                : `Block new image requests for ${customer.name} when they reach Keenpix. Previously cached images may remain available until their cache expires. Use this for abuse, fraud, or non-payment.`}
             </DialogDescription>
           </DialogHeader>
           {suspended ? null : (
