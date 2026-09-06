@@ -105,6 +105,7 @@ export function reconciledCards(
 ): SourceSplitCardProps[] {
   const deliveredTotal = edge.bytesFromEdge + summary.bandwidthOut
   const edgeBytesPct = ratio(edge.bytesFromEdge, deliveredTotal)
+  const originBytesPct = ratio(summary.bandwidthOut, deliveredTotal)
   // Cloudflare hits never reach Keenpix. The truthful end-to-end total is the
   // edge-optimized requests plus every request recorded at the origin. The
   // visible stage rows then add back to this headline exactly.
@@ -123,7 +124,7 @@ export function reconciledCards(
       value: humanBytes(deliveredTotal, 1),
       bar: [
         { source: 'edge', pct: edgeBytesPct },
-        { source: 'origin', pct: 100 - edgeBytesPct },
+        { source: 'origin', pct: originBytesPct },
       ],
       rows: [
         {
@@ -134,7 +135,7 @@ export function reconciledCards(
         {
           source: 'origin',
           label: 'Origin delivery',
-          value: `${humanBytes(summary.bandwidthOut, 1)} · ${Math.round(100 - edgeBytesPct)}%`,
+          value: `${humanBytes(summary.bandwidthOut, 1)} · ${Math.round(originBytesPct)}%`,
         },
       ],
     },
@@ -198,6 +199,10 @@ function originOnlyCards(
   // fresh optimizes.
   const diskHits = summary.cacheHits
   const liveServed = summary.liveOptimizations
+  // These shares use the all-request headline. hitRate uses successful
+  // deliveries, so its complement would incorrectly include failed requests.
+  const diskPct = ratio(diskHits, summary.totalRequests)
+  const livePct = ratio(liveServed, summary.totalRequests)
   return [
     {
       label: 'Bandwidth delivered',
@@ -217,19 +222,19 @@ function originOnlyCards(
       sub: `${compactNumber(summary.successfulDeliveries)} origin delivered`,
       delta: deltas?.requests,
       bar: [
-        { source: 'disk', pct: summary.hitRate },
-        { source: 'live', pct: 100 - summary.hitRate },
+        { source: 'disk', pct: diskPct },
+        { source: 'live', pct: livePct },
       ],
       rows: [
         {
           source: 'disk',
           label: 'Cache',
-          value: `${compactNumber(diskHits)} · ${Math.round(summary.hitRate)}%`,
+          value: `${compactNumber(diskHits)} · ${Math.round(diskPct)}%`,
         },
         {
           source: 'live',
           label: 'Optimized',
-          value: `${compactNumber(liveServed)} · ${Math.round(100 - summary.hitRate)}%`,
+          value: `${compactNumber(liveServed)} · ${Math.round(livePct)}%`,
         },
       ],
     },

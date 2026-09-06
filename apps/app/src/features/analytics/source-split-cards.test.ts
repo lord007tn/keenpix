@@ -1,6 +1,8 @@
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { EdgeCacheStats } from '@/shared/types'
-import { reconciledCards } from './source-split-cards'
+import { reconciledCards, SourceSplitCards } from './source-split-cards'
 
 function edgeStats(over: Partial<EdgeCacheStats>): EdgeCacheStats {
   return {
@@ -133,6 +135,56 @@ describe('reconciledCards — bandwidth saved', () => {
 })
 
 describe('reconciledCards — delivery totals', () => {
+  it('does not assign the origin all delivery when no bytes were delivered', () => {
+    const cards = reconciledCards(
+      edgeStats({}),
+      summary({
+        bandwidthOut: 0,
+        bandwidthSaved: 0,
+        hitRate: 0,
+        totalRequests: 0,
+      }),
+    )
+    const card = cards.find((item) => item.label === 'Bandwidth delivered')
+    expect(card?.rows.map((row) => row.value)).toEqual(['0 B · 0%', '0 B · 0%'])
+    expect(card?.bar?.map((segment) => segment.pct)).toEqual([0, 0])
+  })
+
+  it('preserves measured nonzero bandwidth shares', () => {
+    const cards = reconciledCards(
+      edgeStats({ bytesFromEdge: 750 }),
+      summary({
+        bandwidthOut: 250,
+        bandwidthSaved: 0,
+        hitRate: 0,
+        totalRequests: 1,
+      }),
+    )
+    const card = cards.find((item) => item.label === 'Bandwidth delivered')
+    expect(card?.bar?.map((segment) => segment.pct)).toEqual([75, 25])
+    expect(card?.rows[1].value).toContain('25%')
+  })
+
+  it.each([
+    { edgeBytes: 100, originBytes: 0, shares: [100, 0] },
+    { edgeBytes: 0, originBytes: 100, shares: [0, 100] },
+  ])('preserves single-source delivery shares: $shares', ({
+    edgeBytes,
+    originBytes,
+    shares,
+  }) => {
+    const card = reconciledCards(
+      edgeStats({ bytesFromEdge: edgeBytes }),
+      summary({
+        bandwidthOut: originBytes,
+        bandwidthSaved: 0,
+        hitRate: 0,
+        totalRequests: 1,
+      }),
+    ).find((item) => item.label === 'Bandwidth delivered')
+    expect(card?.bar?.map((segment) => segment.pct)).toEqual(shares)
+  })
+
   it('keeps failures out of the app delivery-stage rows', () => {
     const edge = edgeStats({
       bytesFromEdge: 1_000_000,
@@ -175,5 +227,77 @@ describe('reconciledCards — delivery totals', () => {
       'Edge compression',
       'Origin compression',
     ])
+  })
+})
+
+describe('origin-only request split', () => {
+  it.each([
+    { cacheHits: 4, liveOptimizations: 0, hitRate: 100 },
+    { cacheHits: 0, liveOptimizations: 4, hitRate: 0 },
+  ])('preserves all-cache or all-optimized delivery without inventing missing edge data', (counts) => {
+    const markup = renderToStaticMarkup(
+      createElement(SourceSplitCards, {
+        ready: false,
+        edge: null,
+        summary: {
+          bandwidthOut: 100,
+          bandwidthSaved: 50,
+          totalRequests: 4,
+          successfulDeliveries: 4,
+          failedRequests: 0,
+          ...counts,
+        },
+      }),
+    )
+    expect(markup).toContain('4 · 100%')
+    expect(markup).toContain('0 · 0%')
+    expect(markup).not.toContain('Edge delivery')
+  })
+
+  it('does not assign empty or failed traffic to optimizations', () => {
+    for (const totalRequests of [0, 10]) {
+      const markup = renderToStaticMarkup(
+        createElement(SourceSplitCards, {
+          ready: false,
+          edge: null,
+          summary: {
+            bandwidthOut: 0,
+            bandwidthSaved: 0,
+            hitRate: 0,
+            totalRequests,
+            cacheHits: 0,
+            liveOptimizations: 0,
+            successfulDeliveries: 0,
+            failedRequests: totalRequests,
+          },
+        }),
+      )
+      expect(markup).toContain('Optimized')
+      expect(markup).toContain('0 · 0%')
+      expect(markup).not.toContain('100%')
+    }
+  })
+
+  it('uses the actual optimization count instead of the non-cache remainder', () => {
+    const markup = renderToStaticMarkup(
+      createElement(SourceSplitCards, {
+        ready: false,
+        edge: null,
+        summary: {
+          bandwidthOut: 100,
+          bandwidthSaved: 50,
+          hitRate: (4 / 7) * 100,
+          totalRequests: 10,
+          cacheHits: 4,
+          liveOptimizations: 3,
+          successfulDeliveries: 7,
+          failedRequests: 3,
+        },
+      }),
+    )
+    expect(markup).toContain('4 · 40%')
+    expect(markup).toContain('3 · 30%')
+    expect(markup).toContain('57.1%')
+    expect(markup).not.toContain('3 · 43%')
   })
 })
