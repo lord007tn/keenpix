@@ -197,7 +197,7 @@ export function getAnalyticsConsent() {
 
 export function setAnalyticsConsent(requestedConsent: AnalyticsConsent) {
   const consent = navigator.doNotTrack === '1' ? 'denied' : requestedConsent
-  // Stop already-loaded destinations before consent updates or pagehide can send.
+  // Disable destinations before consent updates; native buffered sends may remain.
   // GTM owns its destination IDs; read only Google-owned GA4 script URLs.
   const destinations = new Set<string>()
   if (clientEnv.VITE_GA_MEASUREMENT_ID) {
