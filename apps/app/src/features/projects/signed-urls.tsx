@@ -48,7 +48,7 @@ export function SignedUrls({ projectId }: { projectId: string }) {
       queryClient.setQueryData(queryKey, signing)
       toast.success(
         signing.requireSignedUrls
-          ? 'Signed URLs required — unsigned requests now get 403'
+          ? 'Signed URLs required. Previously cached images may remain available.'
           : 'Signed URLs no longer required',
       )
     },
@@ -183,9 +183,10 @@ export function SignedUrls({ projectId }: { projectId: string }) {
           <DialogHeader>
             <DialogTitle>Rotate the signing secret?</DialogTitle>
             <DialogDescription>
-              Every URL signed with the current secret stops working
-              immediately. Update your integrations with the new secret right
-              after rotating.
+              Requests using the current secret will fail signature checks after
+              rotation. Previously cached images may remain available until
+              their caches expire or are cleared. Update your integrations with
+              the new secret and key version.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

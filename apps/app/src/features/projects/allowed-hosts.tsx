@@ -285,14 +285,16 @@ export function AllowedHosts({
           <DialogHeader>
             <DialogTitle>Remove allowed host?</DialogTitle>
             <DialogDescription>
-              keenpix will immediately stop serving images from{' '}
+              Keenpix will block new fetches from{' '}
               <span className="font-mono">{confirmHost?.host}</span>
               {confirmHost && confirmHost.requests > 0
                 ? ` — it served ${compactNumber(confirmHost.requests)} requests in the last 30 days.`
                 : '.'}
               {allowedCount === 1
-                ? ' This is the last allowed host, so every request to this project will be blocked.'
-                : ''}
+                ? ' This leaves the project with no allowed hosts.'
+                : ''}{' '}
+              Previously cached images may remain available until their caches
+              expire or are cleared.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
