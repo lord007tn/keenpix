@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { KeenpixLogo } from '@/components/app/keenpix-logo'
@@ -12,8 +12,12 @@ import { authClient } from '@/lib/auth/client'
 import { noIndexPageHead } from '@/shared/seo'
 
 export const Route = createFileRoute('/(auth)/reset-password')({
-  validateSearch: (search: Record<string, unknown>): { token?: string } => ({
-    token: typeof search.token === 'string' ? search.token : undefined,
+  validateSearch: (search: Record<string, unknown>) => ({
+    token:
+      typeof search.token === 'string'
+        ? search.token.trim() || undefined
+        : undefined,
+    error: typeof search.error === 'string' ? search.error : undefined,
   }),
   head: () =>
     noIndexPageHead(
@@ -25,14 +29,16 @@ export const Route = createFileRoute('/(auth)/reset-password')({
 
 function ResetPasswordPage() {
   const navigate = useNavigate()
-  const { token } = Route.useSearch()
+  const { token, error: linkError } = Route.useSearch()
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [rejectedToken, setRejectedToken] = useState(false)
+  const invalidLink = !token || linkError === 'INVALID_TOKEN' || rejectedToken
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!token) {
+    if (!token || invalidLink) {
       setError('This reset link is invalid or has expired.')
       return
     }
@@ -48,6 +54,9 @@ function ResetPasswordPage() {
     })
     setBusy(false)
     if (err) {
+      if (err.code === 'INVALID_TOKEN') {
+        setRejectedToken(true)
+      }
       setError(err.message ?? 'Could not reset your password.')
       return
     }
@@ -69,31 +78,47 @@ function ResetPasswordPage() {
           <CardTitle>Set a new password</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <form className="flex flex-col gap-3" onSubmit={submit}>
-            {error ? (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : null}
-            <div className="flex flex-col gap-1.5">
-              <Label className="sr-only" htmlFor="password">
-                New password
-              </Label>
-              <Input
-                autoComplete="new-password"
-                autoFocus
-                id="password"
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="New password (min 8 characters)"
-                required
-                type="password"
-                value={password}
-              />
-            </div>
-            <Button disabled={busy || !token} type="submit">
-              {busy ? 'Updating…' : 'Update password'}
-            </Button>
-          </form>
+          {invalidLink ? (
+            <Alert variant="destructive">
+              <AlertDescription>
+                This reset link is invalid or has expired.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <form className="flex flex-col gap-3" onSubmit={submit}>
+              {error ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
+              <div className="flex flex-col gap-1.5">
+                <Label className="sr-only" htmlFor="password">
+                  New password
+                </Label>
+                <Input
+                  autoComplete="new-password"
+                  autoFocus
+                  id="password"
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="New password (min 8 characters)"
+                  required
+                  type="password"
+                  value={password}
+                />
+              </div>
+              <Button disabled={busy || !token} type="submit">
+                {busy ? 'Updating…' : 'Update password'}
+              </Button>
+            </form>
+          )}
+          {invalidLink || error ? (
+            <Link
+              className="text-center text-primary text-sm underline-offset-4 hover:underline"
+              to="/forgot-password"
+            >
+              Request a new reset link
+            </Link>
+          ) : null}
         </CardContent>
       </Card>
     </main>
