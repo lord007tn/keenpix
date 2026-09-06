@@ -229,9 +229,9 @@ export function ProjectGeneral({
             <DialogDescription>
               This permanently deletes{' '}
               <span className="font-medium">{project.name}</span> and its
-              request logs. New image requests that reach Keenpix will be
-              rejected. Previously cached images may remain available until
-              their cache expires. This cannot be undone.
+              request logs. Previously cached images may still be served;
+              deleting the project does not purge those copies. This cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <form
