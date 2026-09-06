@@ -327,7 +327,7 @@ export function HistoryRangePicker({
   }
 
   return (
-    <fieldset className="min-h-11 rounded-lg border border-border bg-muted/40 p-1">
+    <fieldset className="min-w-0 rounded-lg bg-muted/40 ring-1 ring-border ring-inset">
       <legend className="sr-only">{label} range</legend>
       <Popover
         onOpenChange={(nextOpen) => {
@@ -364,7 +364,7 @@ export function HistoryRangePicker({
             setCustomOpen(false)
             onChange({ range: preset.value, from: undefined, to: undefined })
           }}
-          size="sm"
+          size="lg"
           value={[
             visibleRange === '24h' ||
             visibleRange === '7d' ||
@@ -374,11 +374,7 @@ export function HistoryRangePicker({
           ]}
         >
           {PRIMARY_HISTORY_RANGES.map((item) => (
-            <ToggleGroupItem
-              className="h-11"
-              key={item.value}
-              value={item.value}
-            >
+            <ToggleGroupItem key={item.value} value={item.value}>
               {item.buttonLabel}
             </ToggleGroupItem>
           ))}
@@ -392,7 +388,7 @@ export function HistoryRangePicker({
                     ? `${dropdownLabel}, selected. Choose a date range`
                     : 'Choose a custom date range'
                 }
-                className="h-11 aria-expanded:bg-accent aria-expanded:text-accent-foreground"
+                className="aria-expanded:bg-accent aria-expanded:text-accent-foreground"
                 value="custom"
               />
             }
@@ -404,10 +400,10 @@ export function HistoryRangePicker({
 
         <PopoverContent
           align="end"
-          className="max-h-[calc(100dvh-1rem)] w-[50rem] max-w-[calc(100vw-1rem)] gap-0 overflow-hidden p-0"
+          className="max-h-(--available-height) w-[50rem] max-w-(--available-width) gap-0 overflow-hidden p-0"
           sideOffset={8}
         >
-          <PopoverHeader className="border-b px-4 py-3">
+          <PopoverHeader className="shrink-0 border-b px-4 py-3">
             <PopoverTitle>Custom date range</PopoverTitle>
             <PopoverDescription>
               Select an inclusive range between{' '}
@@ -438,16 +434,16 @@ export function HistoryRangePicker({
               setCustomOpen(false)
             }}
           >
-            <div className="grid min-h-0 flex-1 sm:grid-cols-[11rem_minmax(0,1fr)]">
+            <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] sm:grid-cols-[11rem_minmax(0,1fr)] sm:grid-rows-1">
               <nav
                 aria-label="Date range shortcuts"
-                className="flex gap-1 overflow-x-auto overscroll-contain border-b p-2 sm:flex-col sm:overflow-y-auto sm:overflow-x-hidden sm:border-r sm:border-b-0"
+                className="flex gap-1 overflow-x-auto overscroll-contain border-b p-2 sm:flex-col sm:overflow-y-auto sm:overflow-x-hidden sm:border-e sm:border-b-0"
               >
                 {availableShortcuts.map((shortcut) => (
                   <Button
                     aria-pressed={selectedShortcut === shortcut.value}
                     className={cn(
-                      'h-9 shrink-0 justify-start',
+                      'shrink-0 justify-start',
                       selectedShortcut === shortcut.value &&
                         'bg-accent text-accent-foreground',
                     )}
@@ -475,7 +471,6 @@ export function HistoryRangePicker({
                       }
                       setCustomOpen(false)
                     }}
-                    size="sm"
                     type="button"
                     variant="ghost"
                   >
@@ -563,7 +558,7 @@ export function HistoryRangePicker({
             </div>
 
             <Separator />
-            <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex shrink-0 flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p aria-live="polite" className="text-muted-foreground text-sm">
                 {draftSummary}
               </p>

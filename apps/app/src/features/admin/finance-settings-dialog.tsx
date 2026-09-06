@@ -157,9 +157,7 @@ export function FinanceSettingsDialog({
 
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger
-        render={<Button className="h-11" size="sm" variant="outline" />}
-      >
+      <DialogTrigger render={<Button size="lg" variant="outline" />}>
         <Settings2Icon data-icon="inline-start" />
         Cost model
       </DialogTrigger>
