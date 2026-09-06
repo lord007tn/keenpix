@@ -317,7 +317,10 @@ function SettingsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <PipelineSettings project={currentProject} />
+                  <PipelineSettings
+                    key={currentProject.id}
+                    project={currentProject}
+                  />
                 </CardContent>
               </Card>
               <Card>
@@ -329,7 +332,10 @@ function SettingsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <WatermarkSettings project={currentProject} />
+                  <WatermarkSettings
+                    key={currentProject.id}
+                    project={currentProject}
+                  />
                 </CardContent>
               </Card>
             </div>
