@@ -1,3 +1,4 @@
+import Color from '@img/colour'
 import type {
   ExtendWith,
   Fit,
@@ -113,6 +114,11 @@ function parseBoolean(value: string | null) {
 function parseColor(value: string | null) {
   const trimmed = value?.trim()
   if (!trimmed || trimmed.length > 80 || !COLOR_RE.test(trimmed)) {
+    return
+  }
+  try {
+    Color(trimmed)
+  } catch {
     return
   }
   return trimmed
