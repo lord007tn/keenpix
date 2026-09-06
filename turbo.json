@@ -23,6 +23,9 @@
       "dependsOn": ["generate", "^build", "^generate"],
       "outputs": []
     },
+    "@keenpix/docs#typecheck": {
+      "dependsOn": ["build"]
+    },
     "clean": {
       "cache": false
     }
