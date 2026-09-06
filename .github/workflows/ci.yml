@@ -49,6 +49,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0 --prefer-offline
 
+      - name: Manual image workflow contracts
+        run: node --test tooling/docker-images.test.mjs
+
       - name: Generate Prisma client
         run: pnpm db:generate
 
