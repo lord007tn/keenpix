@@ -210,8 +210,8 @@ export function ProjectGeneral({
           <CardHeader>
             <CardTitle>Danger zone</CardTitle>
             <CardDescription>
-              Deleting a project removes its request logs and frees a plan
-              project slot. This cannot be undone.
+              Deleting a project frees a plan project slot. This cannot be
+              undone.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -228,8 +228,9 @@ export function ProjectGeneral({
             <DialogTitle>Delete this project?</DialogTitle>
             <DialogDescription>
               This permanently deletes{' '}
-              <span className="font-medium">{project.name}</span> and its
-              request logs, and stops serving its images. This cannot be undone.
+              <span className="font-medium">{project.name}</span>. Previously
+              cached images may still be served; deleting the project does not
+              purge those copies. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <form
