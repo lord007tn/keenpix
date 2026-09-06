@@ -74,9 +74,10 @@ Withdrawal disables the configured destination and validated GA4 destinations
 found in Google-owned loader URLs before updating Google Consent Mode,
 clears first-party `_ga*` cookies and source context, and synchronizes the consent
 component, including changes from another tab. Loaded scripts remain in the
-document in other tabs to preserve unsaved edits. Explicit withdrawal from the
-privacy-policy page reloads that page after disabling collectors and clearing
-state, unloading the Google runtime. Regrant clears the destination disable flag
+document to preserve unsaved edits. Explicit withdrawal from the privacy-policy
+page also updates consent in place without forcing reload or pagehide. This avoids
+adding a pagehide trigger but does not cancel native buffered events.
+Regrant clears the destination disable flag
 and measures only new consented activity. Remote GTM tags must obey consent
 independently; this behavior must be reverified when provider tags change.
 
@@ -101,10 +102,10 @@ control, not another installation or config command.
 A Google destination script loaded by GTM is not a competing application loader.
 
 1. Require analytics consent for all tags. Verify no sends before grant and
-   sanitized location/referrer/title. Destination disable and unloading prevent new
+   sanitized location/referrer/title. Consent guards and destination disable stop new
    measurement, but the actual native runtime can flush previously buffered events
    after withdrawal/pagehide. Strict zero post-withdrawal transmission remains
-   unresolved; see the [timestamped verification](../../../docs/verification/acquisition-measurement-2026-09-05.md).
+   unresolved; see the [verification summary](../../../docs/verification/acquisition-measurement-2026-09-05.md).
 2. Both modes use standard Google `event` commands with the sanitized parameter
    object; the configured GA ID supplies `send_to`. The existing native GTM Google
    tag consumes these commands without custom-event tags or arbitrary data-layer

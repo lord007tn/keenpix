@@ -23,8 +23,10 @@ not add a second loader. The unsupported historical-aggregate
 Withdrawal stops new application events and disables configured destinations.
 Google's runtime may still transmit events buffered while consent was granted,
 including during pagehide. Strict zero transmission after withdrawal is not
-established. Destination disable and page reload must not be described as
-cancelling all buffered requests.
+established. Withdrawal updates consent in place without forcing reload or
+pagehide. Destination disable must not be described as cancelling all buffered
+requests. A DOM regression checks the actual Decline click, destination disabling,
+denied consent, suppression of subsequent page events and absence of reload.
 
 Browser milestones are not canonical business records. There is no first-image
 activation ledger or consent-safe project-to-analytics join. A queued event is
@@ -41,4 +43,5 @@ privacy controls at desktop and 390px mobile widths.
 - [Desktop privacy](../../output/playwright/acquisition-measurement/desktop-privacy.png)
 - [Mobile privacy](../../output/playwright/acquisition-measurement/mobile-privacy.png)
 - [Mobile preferences](../../output/playwright/acquisition-measurement/mobile-preferences-open.png)
-- [Preferences and withdrawal recording](../../output/playwright/acquisition-measurement/preferences-withdrawal.webm)
+- [Earlier preferences recording](../../output/playwright/acquisition-measurement/preferences-withdrawal.webm)
+  predates the removal of forced reload and is not proof of current withdrawal behavior.

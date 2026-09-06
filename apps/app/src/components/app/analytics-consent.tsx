@@ -157,13 +157,7 @@ export function AnalyticsConsent() {
         <Button
           className="min-h-11 flex-1 touch-manipulation sm:flex-none"
           onClick={() => {
-            const wasGranted = getAnalyticsConsent() === 'granted'
             setAnalyticsConsent('denied')
-            // Explicit withdrawal occurs on the privacy page. Unload remote
-            // runtimes there; cross-tab changes must preserve ongoing edits.
-            if (wasGranted && pathname === '/legal/privacy') {
-              window.location.reload()
-            }
           }}
           variant="outline"
         >

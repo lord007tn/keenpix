@@ -51,6 +51,7 @@ describe('analytics navigation lifecycle', () => {
     await act(() => root.unmount())
     root = createRoot(container)
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('owns one initial view and one per SPA pathname, excluding URL secrets', async () => {
@@ -119,7 +120,7 @@ describe('analytics navigation lifecycle', () => {
     )
   })
 
-  it('lets a visitor withdraw consent from the privacy page', async () => {
+  it('withdraws from the privacy page without reloading or generating new events', async () => {
     window.localStorage.setItem('keenpix.analytics-consent.v1', 'granted')
     await navigate('/legal/privacy')
     const preferences = [...container.querySelectorAll('button')].find(
@@ -131,10 +132,36 @@ describe('analytics navigation lifecycle', () => {
       (button) => button.textContent === 'Decline',
     )
     expect(decline).toBeDefined()
+    const reload = vi.fn()
+    const pagehide = vi.fn()
+    window.addEventListener('pagehide', pagehide, { once: true })
+    // JSDOM's Location methods are non-configurable. Stub only the window's
+    // location view so a real button click can expose an accidental reload.
+    vi.stubGlobal(
+      'window',
+      new Proxy(window, {
+        get(target, property) {
+          return property === 'location'
+            ? { ...target.location, reload }
+            : Reflect.get(target, property, target)
+        },
+      }),
+    )
     await act(() => decline?.click())
     expect(window.localStorage.getItem('keenpix.analytics-consent.v1')).toBe(
       'denied',
     )
+    expect(Reflect.get(window, 'ga-disable-G-LOCALTEST')).toBe(true)
+    expect(window.dataLayer).toContainEqual(
+      expect.objectContaining({
+        event: 'consent_update',
+        analytics_storage: 'denied',
+      }),
+    )
+    expect(reload).not.toHaveBeenCalled()
+    expect(pagehide).not.toHaveBeenCalled()
+    window.removeEventListener('pagehide', pagehide)
+    vi.unstubAllGlobals()
     await navigate('/pricing')
     expect(pageViews()).toHaveLength(1)
   })
