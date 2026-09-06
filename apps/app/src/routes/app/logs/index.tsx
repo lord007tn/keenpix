@@ -390,7 +390,7 @@ function LogsPage() {
             <Button
               disabled={visibleRange !== '24h'}
               onClick={() => setLive((v) => !v)}
-              size="sm"
+              size="lg"
               variant={liveVariant}
             >
               <span
@@ -401,7 +401,7 @@ function LogsPage() {
             <Button
               disabled={filtered.length === 0}
               onClick={() => exportNdjson(filtered)}
-              size="sm"
+              size="lg"
               variant="outline"
             >
               <DownloadIcon data-icon="inline-start" />
@@ -426,22 +426,26 @@ function LogsPage() {
 
       <Card className="flex flex-col gap-3 p-3">
         <div className="relative">
-          <SearchIcon className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
+          <SearchIcon className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            className="px-8 font-mono text-xs"
+            aria-label="Filter logs by path"
+            className="ps-9 pe-12 font-mono text-xs"
+            controlSize="lg"
             onChange={(e) => setFilter(e.target.value)}
             placeholder="filter by path… e.g. /products/"
             value={filter}
           />
           {filter ? (
-            <button
+            <Button
               aria-label="Clear path search"
-              className="absolute top-2.5 right-2.5 text-muted-foreground outline-none hover:text-foreground"
+              className="absolute end-0 top-0 text-muted-foreground hover:text-foreground"
               onClick={() => setFilter('')}
+              size="icon-lg"
               type="button"
+              variant="ghost"
             >
-              <XIcon className="size-4" />
-            </button>
+              <XIcon />
+            </Button>
           ) : null}
         </div>
         {limitedLogs ? (

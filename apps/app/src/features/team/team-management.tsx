@@ -302,7 +302,7 @@ export function TeamManagement() {
                 render={
                   <Button
                     aria-label={`Actions for ${label}`}
-                    size="icon-sm"
+                    size="icon"
                     variant="ghost"
                   />
                 }

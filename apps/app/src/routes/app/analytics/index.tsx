@@ -441,10 +441,9 @@ function AnalyticsPage() {
           />
           <Button
             aria-label="Export analytics CSV"
-            className="h-11"
             disabled={!data}
             onClick={downloadAnalytics}
-            size="sm"
+            size="lg"
             variant="outline"
           >
             <DownloadIcon aria-hidden="true" />

@@ -61,7 +61,8 @@ function FilterPill({
         <DropdownMenuTrigger
           render={
             <Button
-              className="h-11 rounded-r-none px-3"
+              className="rounded-e-none px-3"
+              size="lg"
               type="button"
               variant="outline"
             />
@@ -92,9 +93,9 @@ function FilterPill({
       </DropdownMenu>
       <Button
         aria-label={`Remove ${field.label} filter`}
-        className="h-11 rounded-l-none border-l-0 px-2"
+        className="rounded-s-none border-s-0"
         onClick={onRemove}
-        size="icon"
+        size="icon-lg"
         type="button"
         variant="outline"
       >
@@ -125,9 +126,7 @@ export function DataFilters({
     <div className="flex flex-wrap items-center gap-2">
       {fields.length > 0 ? (
         <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<Button className="h-11" variant="outline" />}
-          >
+          <DropdownMenuTrigger render={<Button size="lg" variant="outline" />}>
             <ListFilterIcon data-icon="inline-start" />
             Filters
             {selectionCount > 0 ? (
@@ -198,10 +197,10 @@ export function DataFilters({
 
       {active.length > 0 ? (
         <Button
-          className="h-11"
           onClick={() => {
             onClear()
           }}
+          size="lg"
           variant="ghost"
         >
           Clear

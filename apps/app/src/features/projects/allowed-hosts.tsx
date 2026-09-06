@@ -165,7 +165,6 @@ export function AllowedHosts({
                     {([canSubmit, isSubmitting]) => (
                       <Button
                         disabled={!canSubmit || isSubmitting}
-                        size="sm"
                         type="submit"
                       >
                         <PlusIcon data-icon="inline-start" />

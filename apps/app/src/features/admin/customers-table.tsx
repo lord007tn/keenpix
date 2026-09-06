@@ -313,15 +313,15 @@ export function CustomersTable() {
         <span className="text-muted-foreground text-sm">
           {customers.length} customer{customers.length === 1 ? '' : 's'}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
           <Input
             aria-label="Search customers"
-            className="w-56"
+            className="w-full sm:w-56"
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search name, slug, or owner…"
             value={search}
           />
-          <Button disabled={loading} onClick={load} size="sm" variant="outline">
+          <Button disabled={loading} onClick={load} variant="outline">
             <RefreshCcwIcon data-icon="inline-start" />
             Refresh
           </Button>
