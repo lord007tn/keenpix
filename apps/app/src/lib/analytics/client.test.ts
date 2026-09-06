@@ -17,6 +17,7 @@ import {
   getPublicContentGroup,
   loadGoogleAnalytics,
   setAnalyticsConsent,
+  trackAcquisitionContext,
   trackComparisonCta,
   trackEvent,
   trackFunnelMilestone,
@@ -27,6 +28,8 @@ describe('consent-aware Google analytics', () => {
     clientEnv.VITE_GA_MEASUREMENT_ID = undefined
     clientEnv.VITE_GTM_CONTAINER_ID = undefined
     document.head.replaceChildren()
+    document.body.replaceChildren()
+    window.history.replaceState({}, '', '/')
     window.localStorage.clear()
     // biome-ignore lint/suspicious/noDocumentCookie: reset the essential consent cookie between isolated browser tests.
     document.cookie = 'keenpix_analytics_consent=; Max-Age=0; Path=/'
@@ -124,14 +127,24 @@ describe('consent-aware Google analytics', () => {
     )
   })
 
-  it('pushes custom events for GTM to route to GA4', () => {
+  it('uses Google event commands with a GTM-owned destination', () => {
     clientEnv.VITE_GA_MEASUREMENT_ID = 'G-KEENPIX123'
     clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
     setAnalyticsConsent('granted')
 
     trackEvent('project_created')
 
-    expect(window.dataLayer).toContainEqual({ event: 'project_created' })
+    expect(window.dataLayer).toContainEqual(
+      expect.objectContaining({
+        0: 'event',
+        1: 'project_created',
+        2: expect.objectContaining({ send_to: 'G-KEENPIX123' }),
+      }),
+    )
+    expect(
+      window.dataLayer?.some((entry) => Reflect.get(entry, '0') === 'config'),
+    ).toBe(false)
+    expect(document.querySelector('[data-keenpix-ga]')).toBeNull()
   })
 
   it('carries comparison context into later activation milestones without query data', () => {
@@ -150,19 +163,29 @@ describe('consent-aware Google analytics', () => {
     )
     trackFunnelMilestone('project_created')
 
-    expect(window.dataLayer).toContainEqual({
-      event: 'comparison_cta_click',
-      comparison_slug: 'cloudinary-alternative',
-      cta_destination: '/signup',
-      source_path: '/compare/cloudinary-alternative',
-    })
-    expect(window.dataLayer).toContainEqual({
-      event: 'project_created',
-      activation_source_group: 'comparison',
-      activation_source_path: '/compare/cloudinary-alternative',
-      activation_comparison: 'cloudinary-alternative',
-      activation_destination: '/signup',
-    })
+    expect(window.dataLayer).toContainEqual(
+      expect.objectContaining({
+        0: 'event',
+        1: 'comparison_cta_click',
+        2: expect.objectContaining({
+          comparison_slug: 'cloudinary-alternative',
+          cta_destination: '/signup',
+          source_path: '/compare/cloudinary-alternative',
+        }),
+      }),
+    )
+    expect(window.dataLayer).toContainEqual(
+      expect.objectContaining({
+        0: 'event',
+        1: 'project_created',
+        2: expect.objectContaining({
+          activation_source_group: 'comparison',
+          activation_source_path: '/compare/cloudinary-alternative',
+          activation_comparison: 'cloudinary-alternative',
+          activation_destination: '/signup',
+        }),
+      }),
+    )
     expect(JSON.stringify(window.dataLayer)).not.toContain('private')
   })
 
@@ -180,29 +203,155 @@ describe('consent-aware Google analytics', () => {
 
     trackFunnelMilestone('project_created')
 
-    expect(window.dataLayer).toContainEqual({ event: 'project_created' })
+    expect(window.dataLayer).toContainEqual(
+      expect.objectContaining({ 0: 'event', 1: 'project_created' }),
+    )
     expect(
       window.localStorage.getItem('keenpix.activation-context.v1'),
     ).toBeNull()
   })
 
-  it('clears comparison context after the activation journey completes', () => {
+  it('clears comparison context on withdrawal and stops future sends', () => {
     clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
     setAnalyticsConsent('granted')
     window.history.replaceState({}, '', '/compare/imgix-alternative')
     trackComparisonCta('imgix-alternative', '/signup')
 
-    trackFunnelMilestone('first_image_served')
-
-    expect(window.dataLayer).toContainEqual({
-      event: 'first_image_served',
-      activation_source_group: 'comparison',
-      activation_source_path: '/compare/imgix-alternative',
-      activation_comparison: 'imgix-alternative',
-      activation_destination: '/signup',
-    })
+    setAnalyticsConsent('denied')
+    const count = window.dataLayer?.length
+    trackFunnelMilestone('project_created')
+    expect(window.dataLayer).toHaveLength(count ?? 0)
     expect(
       window.localStorage.getItem('keenpix.activation-context.v1'),
+    ).toBeNull()
+  })
+
+  it('preserves consented source across a login round trip and reload', () => {
+    clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
+    window.history.replaceState(
+      {},
+      '',
+      '/compare/imgix-alternative?utm_source=github&utm_medium=referral&utm_campaign=private@example.test',
+    )
+    setAnalyticsConsent('granted')
+    trackAcquisitionContext()
+    trackComparisonCta('imgix-alternative', '/signup')
+    const original = window.localStorage.getItem(
+      'keenpix.activation-context.v1',
+    )
+
+    for (const path of [
+      '/login',
+      '/app/dashboard?new_user=google',
+      '/pricing',
+    ]) {
+      window.history.replaceState({}, '', path)
+      document.head.replaceChildren()
+      loadGoogleAnalytics()
+      trackAcquisitionContext()
+    }
+    expect(window.localStorage.getItem('keenpix.activation-context.v1')).toBe(
+      original,
+    )
+    trackFunnelMilestone('project_created')
+    trackFunnelMilestone('project_created')
+    const events = window.dataLayer?.filter(
+      (entry) => Reflect.get(entry, '1') === 'project_created',
+    )
+    expect(events).toHaveLength(1)
+    expect(events?.[0] && Reflect.get(events[0], '2')).toMatchObject({
+      activation_source_path: '/compare/imgix-alternative',
+      activation_utm_source: 'github',
+      activation_utm_medium: 'referral',
+    })
+    expect(JSON.stringify(window.dataLayer)).not.toContain(
+      'private@example.test',
+    )
+  })
+
+  it('does not claim a product or Google return is a new acquisition landing', () => {
+    clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
+    window.history.replaceState({}, '', '/app/dashboard?new_user=google')
+    setAnalyticsConsent('granted')
+    trackAcquisitionContext()
+    expect(
+      window.localStorage.getItem('keenpix.funnel.acquisition_landing.v1'),
+    ).toBeNull()
+    expect(
+      window.localStorage.getItem('keenpix.activation-context.v1'),
+    ).toBeNull()
+  })
+
+  it('labels operator and impersonated activity without consuming customer milestones', () => {
+    clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
+    setAnalyticsConsent('granted')
+    const shell = document.createElement('main')
+    shell.dataset.analyticsTraffic = 'internal'
+    document.body.append(shell)
+    trackFunnelMilestone('project_created')
+    shell.remove()
+    trackFunnelMilestone('project_created')
+    const events = window.dataLayer?.filter(
+      (entry) => Reflect.get(entry, '1') === 'project_created',
+    )
+    expect(events).toHaveLength(2)
+    expect(events?.[0] && Reflect.get(events[0], '2')).toMatchObject({
+      traffic_type: 'internal',
+    })
+    expect(events?.[1] && Reflect.get(events[1], '2')).toMatchObject({
+      traffic_type: undefined,
+    })
+  })
+
+  it('disables GTM-owned destinations before consent commands and re-enables on grant', () => {
+    clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
+    setAnalyticsConsent('granted')
+    for (const src of [
+      'https://www.googletagmanager.com/gtag/js?id=G-DESTINATION',
+      'https://www.googletagmanager.com/gtag/destination?id=G-SECOND',
+      'https://example.test/gtag/js?id=G-UNTRUSTED',
+    ]) {
+      const script = document.createElement('script')
+      script.src = src
+      document.head.append(script)
+    }
+    const states: unknown[] = []
+    window.dataLayer ??= []
+    const push = vi.spyOn(window.dataLayer, 'push').mockImplementation(() => {
+      states.push(Reflect.get(window, 'ga-disable-G-DESTINATION'))
+      return 0
+    })
+    setAnalyticsConsent('denied')
+    expect(states.length).toBeGreaterThan(0)
+    expect(states.every((state) => state === true)).toBe(true)
+    expect(Reflect.get(window, 'ga-disable-G-SECOND')).toBe(true)
+    expect(Reflect.get(window, 'ga-disable-G-UNTRUSTED')).toBeUndefined()
+    push.mockRestore()
+    setAnalyticsConsent('granted')
+    expect(Reflect.get(window, 'ga-disable-G-DESTINATION')).toBe(false)
+    expect(Reflect.get(window, 'ga-disable-G-SECOND')).toBe(false)
+    expect(document.querySelectorAll('[data-keenpix-gtm]')).toHaveLength(1)
+  })
+
+  it('never grants Google consent when Do Not Track is enabled', () => {
+    clientEnv.VITE_GA_MEASUREMENT_ID = 'G-KEENPIX123'
+    Object.defineProperty(window.navigator, 'doNotTrack', {
+      configurable: true,
+      value: '1',
+    })
+    setAnalyticsConsent('granted')
+    trackFunnelMilestone('project_created')
+    expect(getAnalyticsConsent()).toBe('denied')
+    expect(document.querySelector('script')).toBeNull()
+    expect(JSON.stringify(window.dataLayer)).not.toContain('granted')
+    expect(Reflect.get(window, 'ga-disable-G-KEENPIX123')).toBe(true)
+  })
+
+  it('does not consume a milestone when no provider is configured', () => {
+    setAnalyticsConsent('granted')
+    trackFunnelMilestone('project_created')
+    expect(
+      window.localStorage.getItem('keenpix.funnel.project_created.v1'),
     ).toBeNull()
   })
 })

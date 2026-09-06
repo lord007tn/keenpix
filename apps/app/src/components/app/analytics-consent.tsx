@@ -1,13 +1,15 @@
-import { useLocation } from '@tanstack/react-router'
+import { useRouterState } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { clientEnv } from '@/env/client'
 import {
+  ANALYTICS_CONSENT_EVENT,
   getAnalyticsConsent,
   getAnalyticsPathname,
   getPublicContentGroup,
   loadGoogleAnalytics,
   setAnalyticsConsent,
+  trackAcquisitionContext,
   trackComparisonCta,
   trackEvent,
   trackFunnelMilestone,
@@ -25,12 +27,15 @@ function trackSocialSignup() {
 }
 
 export function AnalyticsConsent() {
-  const { pathname } = useLocation()
-  const previousPath = useRef(pathname)
+  const pathname = useRouterState({
+    // Requested locations can precede history/DOM commit. Measure settled views.
+    select: (state) => state.resolvedLocation?.pathname,
+  })
+  const previousPath = useRef<string | null>(null)
   const providerAvailable = Boolean(
     clientEnv.VITE_GA_MEASUREMENT_ID || clientEnv.VITE_GTM_CONTAINER_ID,
   )
-  const [available, setAvailable] = useState(providerAvailable)
+  const [available, setAvailable] = useState(false)
   const [open, setOpen] = useState(false)
   const [trackingEnabled, setTrackingEnabled] = useState(false)
 
@@ -39,30 +44,48 @@ export function AnalyticsConsent() {
       setAvailable(false)
       return
     }
-    const consent = getAnalyticsConsent()
-    setOpen(consent === null)
-    setTrackingEnabled(consent === 'granted')
-    if (consent === 'granted') {
-      loadGoogleAnalytics()
-      trackSocialSignup()
+    const syncConsent = () => {
+      const consent = getAnalyticsConsent()
+      setAvailable(true)
+      setOpen(consent === null)
+      setTrackingEnabled(consent === 'granted')
+      if (consent === 'granted') {
+        loadGoogleAnalytics()
+      } else {
+        previousPath.current = null
+      }
+    }
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === 'keenpix.analytics-consent.v1' || event.key === null) {
+        setAnalyticsConsent(getAnalyticsConsent() ?? 'denied')
+      }
+    }
+    syncConsent()
+    window.addEventListener(ANALYTICS_CONSENT_EVENT, syncConsent)
+    window.addEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener(ANALYTICS_CONSENT_EVENT, syncConsent)
+      window.removeEventListener('storage', onStorage)
     }
   }, [providerAvailable])
 
   useEffect(() => {
-    if (!trackingEnabled) {
+    if (!(trackingEnabled && pathname)) {
       return
     }
     if (previousPath.current === pathname) {
       return
     }
-    previousPath.current = pathname
-    const pagePath = getAnalyticsPathname(pathname)
     trackEvent('page_view', {
-      content_group: getPublicContentGroup(pagePath),
-      page_location: `${window.location.origin}${pagePath}`,
-      page_path: pagePath,
-      page_title: document.title,
+      ...(previousPath.current
+        ? {
+            page_referrer: `${window.location.origin}${getAnalyticsPathname(previousPath.current)}`,
+          }
+        : {}),
     })
+    previousPath.current = pathname
+    trackAcquisitionContext()
+    trackSocialSignup()
   }, [pathname, trackingEnabled])
 
   useEffect(() => {
@@ -102,7 +125,15 @@ export function AnalyticsConsent() {
   }
 
   if (!open) {
-    return null
+    return pathname === '/legal/privacy' ? (
+      <Button
+        className="fixed right-3 bottom-20 z-50 min-h-11 sm:right-5"
+        onClick={() => setOpen(true)}
+        variant="outline"
+      >
+        Analytics preferences
+      </Button>
+    ) : null
   }
 
   return (
@@ -127,8 +158,6 @@ export function AnalyticsConsent() {
           className="min-h-11 flex-1 touch-manipulation sm:flex-none"
           onClick={() => {
             setAnalyticsConsent('denied')
-            setTrackingEnabled(false)
-            setOpen(false)
           }}
           variant="outline"
         >
@@ -138,9 +167,6 @@ export function AnalyticsConsent() {
           className="min-h-11 flex-1 touch-manipulation sm:flex-none"
           onClick={() => {
             setAnalyticsConsent('granted')
-            setTrackingEnabled(true)
-            trackSocialSignup()
-            setOpen(false)
           }}
         >
           Allow analytics

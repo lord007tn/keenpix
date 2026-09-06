@@ -5,7 +5,6 @@ import {
   useNavigate,
   useRouteContext,
 } from '@tanstack/react-router'
-import { useEffect } from 'react'
 import { ChartAreaInteractive } from '@/components/app/chart-area-interactive'
 import { HistoryRangePicker } from '@/components/app/history-range-picker'
 import { PageHeader } from '@/components/app/page-header'
@@ -22,7 +21,6 @@ import { OnboardingChecklist } from '@/features/onboarding/onboarding-checklist'
 import { QuickStart } from '@/features/onboarding/quick-start'
 import { getBillingStateFn } from '@/functions/billing'
 import { limitHistorySearch } from '@/helpers/history/window'
-import { trackFunnelMilestone } from '@/lib/analytics/client'
 import { DEFAULT_HISTORY_DAYS, getPlan } from '@/lib/billing/plans'
 import { appPageHead } from '@/shared/seo'
 import {
@@ -96,12 +94,6 @@ function DashboardPage() {
     dashboardSearch,
     workspaceReady,
   )
-  const requestCount = data?.latencySummary.successfulDeliveries ?? 0
-  useEffect(() => {
-    if (requestCount > 0) {
-      trackFunnelMilestone('first_image_served')
-    }
-  }, [requestCount])
   const isRefreshing = isFetching && !isPending
   // Cloudflare edge stats load off the critical path; the KPI edge split fills
   // in afterward. Range-aware now that we persist edge history.

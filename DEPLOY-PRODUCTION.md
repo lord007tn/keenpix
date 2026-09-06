@@ -52,6 +52,7 @@ CLOUDFLARE_API_TOKEN=...
 CLOUDFLARE_ACCOUNT_API_TOKEN=...
 CLOUDFLARE_ACCOUNT_ID=...
 CLOUDFLARE_ZONE_ID=...
+VITE_GTM_CONTAINER_ID=GTM-TFJ9TQDN
 VITE_GA_MEASUREMENT_ID=G-C04VQED7GV
 GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=...
@@ -63,13 +64,26 @@ The production Compose file fixes `KEENPIX_DEPLOYMENT_ENV=production` so the
 deployment mode cannot drift in Coolify. The application rejects localhost or
 non-HTTPS URLs and rejects Polar sandbox credentials in production cloud mode.
 
-`VITE_GA_MEASUREMENT_ID` and `VITE_GTM_CONTAINER_ID` are public configuration,
-not credentials. Mark configured values as available at both build time and
-runtime: Vite embeds them in the browser bundle, while the runtime values keep
-the deployment configuration explicit. GTM takes precedence when both are
-present. Set the GTM ID only after its published Google tag and custom-event
-tags pass Preview and are not scanner-paused; otherwise omit it and use the
-direct GA4 fallback. Leaving both unset disables Google product analytics.
+The managed deployment uses GA4 through the existing GTM container. The IDs
+documented for this product are `GTM-TFJ9TQDN` and destination `G-C04VQED7GV`;
+verify ownership and the published configuration before release. Configure one
+Google destination and route the application's explicit page-view/custom events.
+Set both public IDs at build time and runtime; Compose requires both IDs.
+Turbo explicitly forwards and hashes the Dockerfile's public build variables.
+Changing only runtime values cannot change the embedded Vite client configuration;
+rebuild the app image with the verified container ID.
+`VITE_GA_MEASUREMENT_ID` provides explicit `send_to` routing and withdrawal control
+for the existing GTM-owned destination. GTM still exclusively installs/configures
+Google when both IDs are present. The direct option remains available when GTM is
+unset in other deployments. A Google destination script loaded by GTM is not a
+second independent application installation.
+
+Follow [the measurement contract](apps/docs/notes/analytics-funnel.md) before
+changing the container or deploying: verify consent/default ordering, disable
+duplicate initial/history/form collection, inspect internal-filter state, and
+test Preview/DebugView. Public IDs and a successful script fetch do not establish
+that the container is configured correctly. Leaving both IDs unset disables
+Google product analytics.
 Cloudflare Web Analytics supplies independent, cookie-free field performance
 monitoring for the public site.
 

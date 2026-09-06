@@ -63,7 +63,10 @@ function AdminLayout() {
 
   return (
     <QueryProvider>
-      <div className="flex min-h-svh bg-background">
+      <div
+        className="flex min-h-svh bg-background"
+        data-analytics-traffic="internal"
+      >
         <aside className="sticky top-0 hidden h-svh w-64 shrink-0 border-sidebar-border border-r md:block">
           <AdminSidebar cloud={cloud} user={user} />
         </aside>

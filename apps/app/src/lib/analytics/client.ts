@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { clientEnv } from '@/env/client'
 
 declare global {
@@ -8,10 +9,30 @@ declare global {
 
 const ANALYTICS_CONSENT_KEY = 'keenpix.analytics-consent.v1'
 const ANALYTICS_CONSENT_COOKIE = 'keenpix_analytics_consent'
-const ANALYTICS_CONSENT_EVENT = 'keenpix:analytics-consent'
+export const ANALYTICS_CONSENT_EVENT = 'keenpix:analytics-consent'
 const ACTIVATION_CONTEXT_KEY = 'keenpix.activation-context.v1'
-const ACTIVATION_CONTEXT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const SAFE_COMPARISON_SLUG = /[^a-z0-9-]/g
+const GOOGLE_ANALYTICS_DESTINATION = /^G-[A-Z0-9]+$/
+const PUBLIC_SOURCES = [
+  'google',
+  'bing',
+  'duckduckgo',
+  'github',
+  'x',
+  'twitter',
+  'linkedin',
+  'reddit',
+  'producthunt',
+  'newsletter',
+]
+const PUBLIC_MEDIA = [
+  'organic',
+  'referral',
+  'social',
+  'email',
+  'cpc',
+  'paid_social',
+]
 
 export type AnalyticsConsent = 'granted' | 'denied'
 
@@ -50,6 +71,9 @@ export function getPublicContentGroup(pathname: string) {
   if (pathname.startsWith('/app')) {
     return 'product'
   }
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    return 'internal'
+  }
   return 'other'
 }
 
@@ -77,7 +101,8 @@ function getActivationContext() {
     if (
       typeof recordedAt !== 'number' ||
       !Number.isFinite(recordedAt) ||
-      Date.now() - recordedAt > ACTIVATION_CONTEXT_MAX_AGE_MS
+      dayjs(recordedAt).isAfter(dayjs()) ||
+      dayjs(recordedAt).isBefore(dayjs().subtract(30, 'day'))
     ) {
       window.localStorage.removeItem(ACTIVATION_CONTEXT_KEY)
       return {}
@@ -88,6 +113,8 @@ function getActivationContext() {
       'activation_source_path',
       'activation_comparison',
       'activation_destination',
+      'activation_utm_source',
+      'activation_utm_medium',
     ]) {
       const value = Reflect.get(parsed, key)
       if (typeof value === 'string') {
@@ -110,7 +137,7 @@ function rememberActivationContext(context: Record<string, string>) {
       JSON.stringify({
         ...getActivationContext(),
         ...context,
-        recorded_at: Date.now(),
+        recorded_at: dayjs().valueOf(),
       }),
     )
   } catch {
@@ -168,7 +195,32 @@ export function getAnalyticsConsent() {
   return consent === 'granted' || consent === 'denied' ? consent : null
 }
 
-export function setAnalyticsConsent(consent: AnalyticsConsent) {
+export function setAnalyticsConsent(requestedConsent: AnalyticsConsent) {
+  const consent = navigator.doNotTrack === '1' ? 'denied' : requestedConsent
+  // Disable destinations before consent updates; native buffered sends may remain.
+  // GTM owns its destination IDs; read only Google-owned GA4 script URLs.
+  const destinations = new Set<string>()
+  if (clientEnv.VITE_GA_MEASUREMENT_ID) {
+    destinations.add(clientEnv.VITE_GA_MEASUREMENT_ID)
+  }
+  for (const script of document.scripts) {
+    if (!URL.canParse(script.src)) {
+      continue
+    }
+    const url = new URL(script.src)
+    const id = url.searchParams.get('id')
+    if (
+      url.origin === 'https://www.googletagmanager.com' &&
+      ['/gtag/js', '/gtag/destination'].includes(url.pathname) &&
+      id &&
+      GOOGLE_ANALYTICS_DESTINATION.test(id)
+    ) {
+      destinations.add(id)
+    }
+  }
+  for (const id of destinations) {
+    Reflect.set(window, `ga-disable-${id}`, consent !== 'granted')
+  }
   try {
     window.localStorage.setItem(ANALYTICS_CONSENT_KEY, consent)
   } catch {
@@ -206,12 +258,47 @@ export function setAnalyticsConsent(consent: AnalyticsConsent) {
       }
     }
   }
+  if (consent === 'granted') {
+    loadGoogleAnalytics()
+  }
   window.dispatchEvent(
     new CustomEvent(ANALYTICS_CONSENT_EVENT, { detail: consent }),
   )
+}
 
-  if (consent === 'granted') {
-    loadGoogleAnalytics()
+function getPageContext() {
+  const pagePath = getAnalyticsPathname(window.location.pathname)
+  const contentGroup = getPublicContentGroup(pagePath)
+  const search = new URLSearchParams(window.location.search)
+  let referrer = ''
+  try {
+    if (document.referrer) {
+      referrer = new URL(document.referrer).origin
+    }
+  } catch {
+    // An invalid referrer carries no usable acquisition evidence.
+  }
+  return {
+    content_group: contentGroup,
+    campaign_source: PUBLIC_SOURCES.find(
+      (source) => source === search.get('utm_source'),
+    ),
+    campaign_medium: PUBLIC_MEDIA.find(
+      (medium) => medium === search.get('utm_medium'),
+    ),
+    page_location: `${window.location.origin}${pagePath}`,
+    page_path: pagePath,
+    page_referrer: referrer,
+    page_title: ['authentication', 'product', 'internal', 'other'].includes(
+      contentGroup,
+    )
+      ? 'Keenpix'
+      : document.title,
+    traffic_type:
+      document.querySelector('[data-analytics-traffic="internal"]') ||
+      contentGroup === 'internal'
+        ? 'internal'
+        : undefined,
   }
 }
 
@@ -231,14 +318,17 @@ export function loadGoogleAnalytics() {
 
   pushGoogleConsent('default', 'denied')
   pushGoogleConsent('update', 'granted')
+  pushGoogleCommand('set', getPageContext())
   const script = document.createElement('script')
   script.async = true
   script.dataset.keenpixGa = measurementId
   script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`
   document.head.append(script)
-  pushGoogleCommand('js', new Date())
-  pushGoogleCommand('config', measurementId)
-  trackAcquisitionContext()
+  pushGoogleCommand('js', dayjs().toDate())
+  pushGoogleCommand('config', measurementId, {
+    ...getPageContext(),
+    send_page_view: false,
+  })
 }
 
 function loadGoogleTagManager() {
@@ -254,6 +344,7 @@ function loadGoogleTagManager() {
   window.dataLayer ??= []
   pushGoogleConsent('default', 'denied')
   pushGoogleConsent('update', 'granted')
+  pushGoogleCommand('set', getPageContext())
   window.dataLayer.push({
     'gtm.start': Date.now(),
     event: 'gtm.js',
@@ -263,11 +354,14 @@ function loadGoogleTagManager() {
   script.dataset.keenpixGtm = containerId
   script.src = `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(containerId)}`
   document.head.append(script)
-  trackAcquisitionContext()
 }
 
-function trackAcquisitionContext() {
-  if (getAnalyticsConsent() !== 'granted') {
+export function trackAcquisitionContext() {
+  if (
+    getAnalyticsConsent() !== 'granted' ||
+    !(clientEnv.VITE_GTM_CONTAINER_ID || clientEnv.VITE_GA_MEASUREMENT_ID) ||
+    getPageContext().traffic_type === 'internal'
+  ) {
     return
   }
   const search = new URLSearchParams(window.location.search)
@@ -281,19 +375,36 @@ function trackAcquisitionContext() {
   }
   const landingPath = getAnalyticsPathname(window.location.pathname)
   const contentGroup = getPublicContentGroup(landingPath)
-  if (contentGroup !== 'authentication' && contentGroup !== 'product') {
+  if (
+    ['authentication', 'product', 'internal', 'other'].includes(contentGroup)
+  ) {
+    return
+  }
+  if (!getActivationContext().activation_source_path) {
+    const source = PUBLIC_SOURCES.find(
+      (value) => value === search.get('utm_source'),
+    )
+    const medium = PUBLIC_MEDIA.find(
+      (value) => value === search.get('utm_medium'),
+    )
     rememberActivationContext({
       activation_source_group: contentGroup,
       activation_source_path: landingPath,
+      ...(source ? { activation_utm_source: source } : {}),
+      ...(medium ? { activation_utm_medium: medium } : {}),
     })
   }
   trackFunnelMilestone('acquisition_landing', {
     content_group: contentGroup,
     landing_path: landingPath,
     referrer_origin: referrerOrigin,
-    utm_source: search.get('utm_source')?.slice(0, 100),
-    utm_medium: search.get('utm_medium')?.slice(0, 100),
-    utm_campaign: search.get('utm_campaign')?.slice(0, 100),
+    // Only public channel labels are accepted; arbitrary campaign text can be PII.
+    utm_source: PUBLIC_SOURCES.find(
+      (source) => source === search.get('utm_source'),
+    ),
+    utm_medium: PUBLIC_MEDIA.find(
+      (medium) => medium === search.get('utm_medium'),
+    ),
   })
 }
 
@@ -301,22 +412,33 @@ export function trackEvent(
   event: string,
   parameters: Record<string, boolean | number | string | undefined> = {},
 ) {
-  if (getAnalyticsConsent() !== 'granted') {
+  if (
+    getAnalyticsConsent() !== 'granted' ||
+    !(clientEnv.VITE_GTM_CONTAINER_ID || clientEnv.VITE_GA_MEASUREMENT_ID)
+  ) {
     return
   }
   window.dataLayer ??= []
-  if (clientEnv.VITE_GTM_CONTAINER_ID) {
-    window.dataLayer.push({ event, ...parameters })
-  } else if (clientEnv.VITE_GA_MEASUREMENT_ID) {
-    pushGoogleCommand('event', event, parameters)
-  }
+  const context = getPageContext()
+  // Keep defaults sanitized for Google-generated events as well as our own.
+  pushGoogleCommand('set', context)
+  pushGoogleCommand('event', event, {
+    ...context,
+    ...parameters,
+    ...(clientEnv.VITE_GA_MEASUREMENT_ID
+      ? { send_to: clientEnv.VITE_GA_MEASUREMENT_ID }
+      : {}),
+  })
 }
 
 export function trackComparisonCta(
   comparisonSlug: string,
   destination: string,
 ) {
-  if (getAnalyticsConsent() !== 'granted') {
+  if (
+    getAnalyticsConsent() !== 'granted' ||
+    !(clientEnv.VITE_GTM_CONTAINER_ID || clientEnv.VITE_GA_MEASUREMENT_ID)
+  ) {
     return
   }
   const comparison = comparisonSlug
@@ -344,10 +466,14 @@ export function trackFunnelMilestone(
   event: string,
   parameters: Record<string, boolean | number | string | undefined> = {},
 ) {
-  if (getAnalyticsConsent() !== 'granted') {
+  if (
+    getAnalyticsConsent() !== 'granted' ||
+    !(clientEnv.VITE_GTM_CONTAINER_ID || clientEnv.VITE_GA_MEASUREMENT_ID)
+  ) {
     return
   }
-  const key = `keenpix.funnel.${event}.v1`
+  const internal = getPageContext().traffic_type === 'internal'
+  const key = `keenpix.funnel.${event}${internal ? '.internal' : ''}.v1`
   try {
     if (window.localStorage.getItem(key)) {
       return
@@ -356,12 +482,8 @@ export function trackFunnelMilestone(
   } catch {
     return
   }
-  trackEvent(event, { ...getActivationContext(), ...parameters })
-  if (event === 'first_image_served') {
-    try {
-      window.localStorage.removeItem(ACTIVATION_CONTEXT_KEY)
-    } catch {
-      // The milestone has already been emitted; storage cleanup is best-effort.
-    }
-  }
+  trackEvent(event, {
+    ...(internal ? {} : getActivationContext()),
+    ...parameters,
+  })
 }
