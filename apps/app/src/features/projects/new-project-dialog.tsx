@@ -2,7 +2,7 @@ import { useForm } from '@tanstack/react-form'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useRouteContext, useRouter } from '@tanstack/react-router'
 import { PlusIcon } from 'lucide-react'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { toast } from 'sonner'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
@@ -37,6 +37,7 @@ export function NewProjectDialog({
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }) {
+  const formId = useId()
   const router = useRouter()
   const { setProject } = useProject()
   const { cloud } = useRouteContext({ from: '/app' })
@@ -66,7 +67,7 @@ export function NewProjectDialog({
         toast.success(`Created project ${project.name}`)
         // Refresh layout/dashboard loaders so the new project appears everywhere,
         // then switch scope to it so the user lands ready to add allowed hosts.
-        await router.invalidate()
+        await router.invalidate({ sync: true })
         setProject(project.id)
         setOpen(false)
       } catch (e) {
@@ -132,14 +133,14 @@ export function NewProjectDialog({
                 const error = getFieldError(field.state.meta)
                 return (
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Name</Label>
+                    <Label htmlFor={`${formId}-${field.name}`}>Name</Label>
                     <Input
                       aria-describedby={
-                        error ? `${field.name}-error` : undefined
+                        error ? `${formId}-${field.name}-error` : undefined
                       }
                       aria-invalid={!!error}
                       autoFocus
-                      id={field.name}
+                      id={`${formId}-${field.name}`}
                       name={field.name}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -149,7 +150,7 @@ export function NewProjectDialog({
                     {error ? (
                       <p
                         className="text-destructive text-xs"
-                        id={`${field.name}-error`}
+                        id={`${formId}-${field.name}-error`}
                       >
                         {error}
                       </p>
@@ -163,14 +164,18 @@ export function NewProjectDialog({
                 const error = getFieldError(field.state.meta)
                 return (
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={field.name}>Origin URL</Label>
+                    <Label htmlFor={`${formId}-${field.name}`}>
+                      Origin URL
+                    </Label>
                     <Input
                       aria-describedby={
-                        error ? `${field.name}-error` : `${field.name}-help`
+                        error
+                          ? `${formId}-${field.name}-error`
+                          : `${formId}-${field.name}-help`
                       }
                       aria-invalid={!!error}
                       className="font-mono text-xs"
-                      id={field.name}
+                      id={`${formId}-${field.name}`}
                       name={field.name}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -180,14 +185,14 @@ export function NewProjectDialog({
                     {error ? (
                       <p
                         className="text-destructive text-xs"
-                        id={`${field.name}-error`}
+                        id={`${formId}-${field.name}-error`}
                       >
                         {error}
                       </p>
                     ) : (
                       <span
                         className="text-muted-foreground text-xs"
-                        id={`${field.name}-help`}
+                        id={`${formId}-${field.name}-help`}
                       >
                         The origin's hostname is added to the allowlist
                         automatically.
