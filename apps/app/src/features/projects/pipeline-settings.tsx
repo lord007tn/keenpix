@@ -15,7 +15,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { getErrorMessage } from '@/errors/common'
 import { updateProjectSettingsFn } from '@/functions/projects'
-import { projectQualitySchema } from '@/schemas/projects'
+import { projectQualitySchema, projectSettingsSchema } from '@/schemas/projects'
 import type { Project, ProjectFit } from '@/shared/types'
 import { getFieldError } from '@/utils/validation/form-errors'
 
@@ -127,8 +127,13 @@ export function PipelineSettings({ project }: { project: Project }) {
     }
   }
 
-  const maxWidthValue = Number(maxWidth || 0)
-  const maxWidthChanged = maxWidthValue !== (project.maxWidth ?? 0)
+  const maxWidthResult =
+    projectSettingsSchema.shape.maxWidth.safeParse(maxWidth)
+  const maxWidthChanged =
+    maxWidthResult.success && maxWidthResult.data !== (project.maxWidth ?? 0)
+  const maxWidthError = maxWidthResult.success
+    ? undefined
+    : maxWidthResult.error.issues[0]?.message
 
   return (
     <div className="divide-y">
@@ -230,27 +235,40 @@ export function PipelineSettings({ project }: { project: Project }) {
         description="Cap the requested ?w= width (0 = no cap). Wider requests are clamped down."
         label="Max width"
       >
-        <div className="flex items-center gap-2">
-          <Input
-            aria-label="Max width"
-            className="w-24 text-right font-mono tabular-nums"
-            inputMode="numeric"
-            max={10_000}
-            min={0}
-            onChange={(e) => setMaxWidth(e.target.value)}
-            placeholder="0"
-            type="number"
-            value={maxWidth}
-          />
-          <span className="text-muted-foreground text-xs">px</span>
-          <Button
-            disabled={pending || !maxWidthChanged}
-            onClick={() => persist({ maxWidth: maxWidthValue })}
-            size="sm"
-            variant="outline"
-          >
-            Save
-          </Button>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Input
+              aria-describedby={maxWidthError ? 'max-width-error' : undefined}
+              aria-invalid={!!maxWidthError}
+              aria-label="Max width"
+              className="w-24 text-right font-mono tabular-nums"
+              inputMode="numeric"
+              max={10_000}
+              min={0}
+              onChange={(e) => setMaxWidth(e.target.value)}
+              placeholder="0"
+              type="number"
+              value={maxWidth}
+            />
+            <span className="text-muted-foreground text-xs">px</span>
+            <Button
+              disabled={pending || !maxWidthChanged}
+              onClick={() => {
+                if (maxWidthResult.success) {
+                  persist({ maxWidth: maxWidthResult.data })
+                }
+              }}
+              size="sm"
+              variant="outline"
+            >
+              Save
+            </Button>
+          </div>
+          {maxWidthError ? (
+            <p className="text-destructive text-xs" id="max-width-error">
+              {maxWidthError}
+            </p>
+          ) : null}
         </div>
       </Row>
       <Row
