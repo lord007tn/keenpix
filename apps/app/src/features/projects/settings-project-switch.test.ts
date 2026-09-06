@@ -102,6 +102,69 @@ const secondProject: Project = {
 afterEach(() => vi.clearAllMocks())
 
 describe('project settings identity', () => {
+  it('blocks invalid widths inline and preserves zero-clear and upper-bound saves', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    const Page = Route.options.component
+    if (!Page) {
+      throw new Error('Settings page component is missing')
+    }
+    try {
+      mocks.project = firstProject
+      await act(async () => root.render(createElement(Page)))
+      const input = container.querySelector<HTMLInputElement>(
+        '[aria-label="Max width"]',
+      )
+      const save = input?.parentElement?.querySelector('button')
+      const setValue = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        'value',
+      )?.set
+      if (!(input && save && setValue)) {
+        throw new Error('Width controls are missing')
+      }
+      for (const [value, message] of [
+        ['-1', 'Use 0 or a positive width.'],
+        ['10001', 'Use 10000 or fewer.'],
+        ['1.5', 'Use a whole number.'],
+      ]) {
+        await act(() => {
+          setValue.call(input, value)
+          input.dispatchEvent(new Event('input', { bubbles: true }))
+        })
+        expect(input.getAttribute('aria-invalid')).toBe('true')
+        expect(input.getAttribute('aria-describedby')).toBe('max-width-error')
+        expect(container.querySelector('#max-width-error')?.textContent).toBe(
+          message,
+        )
+        expect(save.disabled).toBe(true)
+        await act(async () => save.click())
+        expect(mocks.save).not.toHaveBeenCalled()
+      }
+      for (const value of ['', '0', '10000']) {
+        mocks.save.mockClear()
+        await act(() => {
+          setValue.call(input, value)
+          input.dispatchEvent(new Event('input', { bubbles: true }))
+        })
+        expect(input.getAttribute('aria-invalid')).toBe('false')
+        expect(input.hasAttribute('aria-describedby')).toBe(false)
+        expect(container.querySelector('#max-width-error')).toBeNull()
+        expect(save.disabled).toBe(false)
+        await act(async () => save.click())
+        expect(mocks.save).toHaveBeenCalledExactlyOnceWith({
+          data: { projectId: firstProject.id, maxWidth: Number(value) },
+        })
+      }
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('loads the selected project values and saves only that project after switching', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     const container = document.createElement('div')
