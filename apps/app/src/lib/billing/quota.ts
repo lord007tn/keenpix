@@ -19,6 +19,8 @@ function startOfMonthUtc(now: Date): Date {
 // (unlimited). Cloud reads the org's active plan; an org with no active
 // subscription is blocked from consuming resources (there is no cloud free tier).
 
+export class BillingQuotaError extends Error {}
+
 const NO_SUBSCRIPTION =
   'An active subscription is required. Choose a plan under Settings → Plan & billing.'
 const PAYMENT_ISSUE =
@@ -31,9 +33,9 @@ const DUNNING_STATUSES = new Set(['past_due', 'unpaid'])
 async function noPlanError(orgId: string): Promise<Error> {
   const sub = await getOrgSubscription(orgId)
   if (sub && DUNNING_STATUSES.has(sub.status)) {
-    return new Error(PAYMENT_ISSUE)
+    return new BillingQuotaError(PAYMENT_ISSUE)
   }
-  return new Error(NO_SUBSCRIPTION)
+  return new BillingQuotaError(NO_SUBSCRIPTION)
 }
 
 export async function hasProductAccess(orgId: string) {
@@ -142,7 +144,7 @@ export async function assertCanAddSeat(orgId: string): Promise<void> {
     }),
   ])
   if (members + pendingInvitations >= plan.maxSeats) {
-    throw new Error(
+    throw new BillingQuotaError(
       `Your ${plan.name} plan includes ${plan.maxSeats} seats. Upgrade to add more.`,
     )
   }

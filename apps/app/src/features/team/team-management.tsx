@@ -110,12 +110,14 @@ export function TeamManagement() {
     validators: { onChange: inviteSchema, onSubmit: inviteSchema },
     onSubmit: async ({ value }) => {
       const payload = inviteSchema.parse(value)
-      const { error } = await authClient.organization.inviteMember({
+      const { data, error } = await authClient.organization.inviteMember({
         email: payload.email,
         role: payload.role,
       })
-      if (error) {
-        toast.error(error.message ?? 'Could not send invitation')
+      if (error || !data?.id) {
+        toast.error(
+          error?.message ?? 'Could not send invitation. Please try again.',
+        )
         return
       }
       inviteForm.reset()
