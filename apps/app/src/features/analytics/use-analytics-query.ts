@@ -1,11 +1,11 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { getAnalyticsFn } from '@/functions/analytics'
 import type { HistoricalAnalyticsRange } from '@/shared/types'
 
-// Analytics payload, fetched client-side with stale-while-revalidate: a
-// range/project/filter change keeps the previous data on screen (keepPreviousData)
-// while the new window loads in the background. `isPending` is true only on the
-// very first load with no cached data; `isFetching` covers background refetches.
+// Analytics payload, fetched client-side with stale-while-revalidate.
+// Range/filter changes keep this project's previous data while the new window
+// loads. A project change shows the loading state until that project's data is
+// available; metrics from another project must not appear under its heading.
 export function useAnalyticsQuery(params: {
   country?: string[]
   domain?: string[]
@@ -31,7 +31,8 @@ export function useAnalyticsQuery(params: {
       params.to,
     ],
     queryFn: () => getAnalyticsFn({ data: params }),
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[2] === params.project ? previousData : undefined,
     staleTime: 30_000,
   })
   return {

@@ -2,9 +2,9 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/cn/utils'
 
-// First-load placeholders for the analytics + overview pages — shown only when
-// there is no data at all yet (stale-while-revalidate keeps real data on screen
-// the rest of the time). Each skeleton is sized to the component it stands in for
+// Loading placeholders for analytics + overview when the selected project has
+// no cached data. Range refreshes retain the same project's previous data.
+// Each skeleton is sized to the component it stands in for
 // so swapping skeleton → content does not shift the layout. The page header
 // renders live above these, so these are body-only.
 
