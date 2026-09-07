@@ -23,11 +23,15 @@ export function ProjectProvider({
   // The active scope lives in the URL (?project=) so it survives refresh, is
   // shareable, and lets route loaders scope their queries. No param — or a
   // stale id that no longer matches a project — means "All projects".
+  // The location changes before loaders settle. Read the rendered match, just
+  // like Route.useSearch(), so project headings and page data change together.
   const searchProject = useRouterState({
-    select: (s) =>
-      typeof s.location.search.project === 'string'
-        ? s.location.search.project
-        : undefined,
+    select: (s) => {
+      const search = s.matches.at(-1)?.search
+      return search && 'project' in search && typeof search.project === 'string'
+        ? search.project
+        : undefined
+    },
   })
 
   useEffect(() => {
