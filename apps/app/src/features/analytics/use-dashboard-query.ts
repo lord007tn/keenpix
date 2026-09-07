@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { getDashboardFn } from '@/functions/dashboard'
 import type { HistorySearch } from '@/helpers/history/window'
 
@@ -20,7 +20,8 @@ export function useDashboardQuery(
     ],
     queryFn: () => getDashboardFn({ data: params }),
     enabled,
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[4] === params.project ? previousData : undefined,
     staleTime: 30_000,
   })
   return {

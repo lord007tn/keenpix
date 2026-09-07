@@ -88,8 +88,8 @@ function DashboardPage() {
     cloud ? maxHistoryDays : undefined,
   )
   const dashboardSearch = { ...search, ...boundedWindow }
-  // Stale-while-revalidate: the previous payload stays on screen while a new
-  // range/project loads in the background; `isRefreshing` drives the indicator.
+  // Keep the current project's payload during range refreshes. Switching to an
+  // uncached project shows the body skeleton instead of another project's data.
   const { data, isPending, isFetching, isError, refetch } = useDashboardQuery(
     dashboardSearch,
     workspaceReady,
