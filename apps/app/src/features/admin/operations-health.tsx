@@ -311,6 +311,8 @@ export function OperationsHealth({ cloud }: { cloud: boolean }) {
   const [maintenanceTarget, setMaintenanceTarget] =
     useState<CacheMaintenanceTarget | null>(null)
 
+  const [refreshFailed, setRefreshFailed] = useState(false)
+
   // `silent` skips the pending flag so the background auto-refresh never flickers
   // the manual button or its spinner.
   const refresh = useCallback(async (silent = false) => {
@@ -319,6 +321,9 @@ export function OperationsHealth({ cloud }: { cloud: boolean }) {
     }
     try {
       setHealth(await getOperationsHealthFn())
+      setRefreshFailed(false)
+    } catch {
+      setRefreshFailed(true)
     } finally {
       if (!silent) {
         setPending(false)
@@ -332,9 +337,18 @@ export function OperationsHealth({ cloud }: { cloud: boolean }) {
     return () => clearInterval(id)
   }, [refresh])
 
-  const diskUsed = health
-    ? percent(health.cache.diskSizeBytes, health.cache.diskMaxBytes)
-    : 0
+  const diskConfigured = health?.cache.cacheTiers?.includes('disk')
+  const diskUsed =
+    health &&
+    diskConfigured &&
+    Number.isFinite(health.cache.diskSizeBytes) &&
+    health.cache.diskSizeBytes >= 0 &&
+    Number.isFinite(health.cache.diskMaxBytes) &&
+    health.cache.diskMaxBytes > 0 &&
+    Number.isInteger(health.cache.diskFileCount) &&
+    health.cache.diskFileCount >= 0
+      ? percent(health.cache.diskSizeBytes, health.cache.diskMaxBytes)
+      : null
   const memoryUsed = health
     ? percent(health.cache.memorySizeBytes, health.cache.memoryMaxBytes)
     : 0
@@ -402,8 +416,39 @@ export function OperationsHealth({ cloud }: { cloud: boolean }) {
     }
   }
 
+  if (!health) {
+    return (
+      <div className="flex flex-col items-start gap-3" role="status">
+        <p className="text-muted-foreground text-sm">
+          {refreshFailed
+            ? 'Operations data unavailable.'
+            : 'Loading operations…'}
+        </p>
+        {refreshFailed ? (
+          <Button
+            disabled={pending}
+            onClick={() => refresh()}
+            size="sm"
+            variant="outline"
+          >
+            Retry
+          </Button>
+        ) : null}
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-4">
+      {refreshFailed ? (
+        <Alert variant="destructive">
+          <AlertTriangleIcon />
+          <AlertTitle>Refresh failed</AlertTitle>
+          <AlertDescription>
+            Showing the last successful snapshot. Try Refresh again.
+          </AlertDescription>
+        </Alert>
+      ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">
@@ -544,36 +589,48 @@ export function OperationsHealth({ cloud }: { cloud: boolean }) {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel icon={HardDriveIcon} title="Disk cache">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="font-semibold text-2xl tabular-nums">
-              {humanBytes(health?.cache.diskSizeBytes ?? 0)}
-            </span>
-            <span className="text-muted-foreground text-sm">
-              {health?.cache.diskFileCount ?? 0} files
-            </span>
-          </div>
-          <Progress aria-label="Disk cache usage" value={diskUsed} />
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Badge variant="secondary">
-              {diskUsed}% of {humanBytes(health?.cache.diskMaxBytes ?? 0)}
-            </Badge>
-            {cloud ? null : (
-              <Button
-                disabled={!!maintenanceTarget}
-                onClick={() => maintainCache('disk')}
-                size="sm"
-                variant="outline"
-              >
-                <Trash2Icon data-icon="inline-start" />
-                {maintenanceTarget === 'disk' ? 'Clearing...' : 'Clear disk'}
-              </Button>
-            )}
-          </div>
-          <p className="text-muted-foreground text-xs">
-            {diskEvictedFiles > 0
-              ? `Bounded cache — evicted ${diskEvictedFiles} files (${humanBytes(diskEvictedBytes)}) since boot.`
-              : 'Bounded cache — no evictions since boot; current cap fits the working set.'}
-          </p>
+          {diskUsed === null ? (
+            <p className="text-muted-foreground text-sm">
+              {diskConfigured === false
+                ? 'Local disk cache is not configured. Remote storage usage is not measured here.'
+                : 'Disk cache usage unavailable.'}
+            </p>
+          ) : (
+            <>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-semibold text-2xl tabular-nums">
+                  {humanBytes(health?.cache.diskSizeBytes ?? 0)}
+                </span>
+                <span className="text-muted-foreground text-sm">
+                  {health?.cache.diskFileCount ?? 0} files
+                </span>
+              </div>
+              <Progress aria-label="Disk cache usage" value={diskUsed} />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Badge variant="secondary">
+                  {diskUsed}% of {humanBytes(health?.cache.diskMaxBytes ?? 0)}
+                </Badge>
+                {cloud ? null : (
+                  <Button
+                    disabled={!!maintenanceTarget}
+                    onClick={() => maintainCache('disk')}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Trash2Icon data-icon="inline-start" />
+                    {maintenanceTarget === 'disk'
+                      ? 'Clearing...'
+                      : 'Clear disk'}
+                  </Button>
+                )}
+              </div>
+              <p className="text-muted-foreground text-xs">
+                {diskEvictedFiles > 0
+                  ? `Bounded cache — evicted ${diskEvictedFiles} files (${humanBytes(diskEvictedBytes)}) since boot.`
+                  : 'Bounded cache — no evictions reported since boot.'}
+              </p>
+            </>
+          )}
         </Panel>
 
         <Panel icon={DatabaseIcon} title="Memory cache">
