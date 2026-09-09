@@ -19,6 +19,7 @@ vi.mock('@/env/client', () => ({ clientEnv }))
 
 import { setAnalyticsConsent } from '@/lib/analytics/client'
 import { AnalyticsConsent } from './analytics-consent'
+import { AnalyticsPreferences } from './analytics-preferences'
 
 const container = document.createElement('div')
 let root = createRoot(container)
@@ -52,6 +53,59 @@ describe('analytics navigation lifecycle', () => {
     root = createRoot(container)
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+  })
+
+  it('leaves fresh navigation quiet without writing consent or loading providers', async () => {
+    for (const path of [
+      '/',
+      '/signup',
+      '/docs',
+      '/legal/privacy',
+      '/app/settings',
+    ]) {
+      await navigate(path)
+      expect(container.textContent).toBe('')
+      expect(
+        window.localStorage.getItem('keenpix.analytics-consent.v1'),
+      ).toBeNull()
+      expect(document.cookie).not.toContain('keenpix_analytics_consent')
+      expect(
+        document.querySelector('script[src*="googletagmanager"]'),
+      ).toBeNull()
+      expect(pageViews()).toHaveLength(0)
+    }
+  })
+
+  it('only grants analytics after an explicit preference action', async () => {
+    await navigate('/legal/privacy')
+    await act(() => root.render(createElement(AnalyticsPreferences)))
+    expect(container.textContent).toContain('Analytics is off.')
+    expect(
+      window.localStorage.getItem('keenpix.analytics-consent.v1'),
+    ).toBeNull()
+    expect(document.querySelector('script[src*="googletagmanager"]')).toBeNull()
+    const allow = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Allow analytics',
+    )
+    await act(() => allow?.click())
+    expect(window.localStorage.getItem('keenpix.analytics-consent.v1')).toBe(
+      'granted',
+    )
+    expect(container.textContent).toContain('Analytics is on.')
+  })
+
+  it('keeps analytics off when the browser requests Do Not Track', async () => {
+    vi.stubGlobal('navigator', { doNotTrack: '1' })
+    await act(() => root.render(createElement(AnalyticsPreferences)))
+    expect(container.textContent).toContain('Do Not Track')
+    expect(
+      [...container.querySelectorAll('button')].every(
+        (button) => button.disabled,
+      ),
+    ).toBe(true)
+    expect(
+      window.localStorage.getItem('keenpix.analytics-consent.v1'),
+    ).toBeNull()
   })
 
   it('owns one initial view and one per SPA pathname, excluding URL secrets', async () => {
@@ -123,13 +177,9 @@ describe('analytics navigation lifecycle', () => {
   it('withdraws from the privacy page without reloading or generating new events', async () => {
     window.localStorage.setItem('keenpix.analytics-consent.v1', 'granted')
     await navigate('/legal/privacy')
-    const preferences = [...container.querySelectorAll('button')].find(
-      (button) => button.textContent === 'Analytics preferences',
-    )
-    expect(preferences).toBeDefined()
-    await act(() => preferences?.click())
+    await act(() => root.render(createElement(AnalyticsPreferences)))
     const decline = [...container.querySelectorAll('button')].find(
-      (button) => button.textContent === 'Decline',
+      (button) => button.textContent === 'Turn off analytics',
     )
     expect(decline).toBeDefined()
     const reload = vi.fn()

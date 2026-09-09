@@ -286,7 +286,7 @@ export const LEGAL_PAGES = {
           {
             kind: 'paragraph',
             content: [
-              'Google Analytics is off until you choose “Allow analytics.” Declining does not affect the service. Your choice is remembered for one year, so the prompt is not shown again on normal revisits. Clear Keenpix site data in your browser and reload the site if you want to choose again. Keenpix also respects the browser’s Do Not Track setting by not loading Google analytics. Declining stops future Google funnel reports, updates Google Consent Mode to denied, and removes Keenpix-domain Google Analytics cookies. Cloudflare’s separate cookie-free Web Analytics beacon remains active for site performance measurement in all regions, including the EU, and is not used for Keenpix account or image-project analytics.',
+              'Google Analytics is off until you choose “Allow analytics.” Declining does not affect the service. You can change your choice at any time using Optional analytics on this page or Account preferences. Your choice is remembered in this browser. Keenpix also respects the browser’s Do Not Track setting by not loading Google analytics. Declining stops future Google funnel reports, updates Google Consent Mode to denied, and removes Keenpix-domain Google Analytics cookies. Cloudflare’s separate cookie-free Web Analytics beacon remains active for site performance measurement in all regions, including the EU, and is not used for Keenpix account or image-project analytics.',
             ],
           },
         ],
