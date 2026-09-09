@@ -4,7 +4,6 @@ import type { ReactNode } from 'react'
 
 import { AnalyticsConsent } from '@/components/app/analytics-consent'
 import { NotFoundPage } from '@/components/app/error-page'
-import { MarkdownActions } from '@/components/app/markdown-actions'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import Devtools from '@/devtools/devtools'
@@ -118,7 +117,6 @@ function RootDocument({ children }: { children: ReactNode }) {
         </a>
         <ThemeProvider>
           {children}
-          <MarkdownActions />
           <Toaster richColors />
         </ThemeProvider>
         <AnalyticsConsent />
