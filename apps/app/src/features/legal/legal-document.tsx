@@ -1,4 +1,5 @@
 import { Fragment } from 'react'
+import { AnalyticsPreferences } from '@/components/app/analytics-preferences'
 import {
   LEGAL_PAGES,
   type LegalBlock,
@@ -76,6 +77,7 @@ export function LegalDocument({ pageId }: { pageId: LegalPageId }) {
   const page = LEGAL_PAGES[pageId]
   return (
     <LegalLayout lastUpdated={page.lastUpdated} title={page.title}>
+      {pageId === 'privacy' ? <AnalyticsPreferences /> : null}
       <LegalDocumentContent pageId={pageId} />
     </LegalLayout>
   )

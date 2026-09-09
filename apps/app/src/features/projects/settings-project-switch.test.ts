@@ -6,6 +6,10 @@ import type { Project } from '@/shared/types'
 
 const mocks = vi.hoisted(() => ({
   project: {} as Project,
+  allProjects: false,
+  section: 'pipeline' as string | undefined,
+  productAccess: true,
+  setProject: vi.fn(),
   save: vi.fn().mockResolvedValue({}),
   invalidate: vi.fn().mockResolvedValue(undefined),
 }))
@@ -13,21 +17,21 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: () => (options: object) => ({
     options,
-    useSearch: () => ({ section: 'pipeline' }),
+    useSearch: () => ({ section: mocks.section }),
   }),
   Link: ({ children }: { children: React.ReactNode }) => children,
   useRouteContext: () => ({
     cloud: true,
     orgRole: 'owner',
-    productAccess: true,
+    productAccess: mocks.productAccess,
   }),
   useRouter: () => ({ invalidate: mocks.invalidate }),
 }))
 vi.mock('@/stores/project-context', () => ({
   useProject: () => ({
-    currentProject: mocks.project,
+    currentProject: mocks.allProjects ? undefined : mocks.project,
     projects: [mocks.project],
-    setProject: vi.fn(),
+    setProject: mocks.setProject,
   }),
 }))
 vi.mock('@/functions/projects', () => ({ updateProjectSettingsFn: mocks.save }))
@@ -36,7 +40,7 @@ vi.mock('@/features/api-keys/api-key-management', () => ({
   ApiKeyManagement: () => null,
 }))
 vi.mock('@/features/billing/billing-panel', () => ({
-  BillingPanel: () => null,
+  BillingPanel: () => 'Synthetic billing panel',
 }))
 vi.mock('@/features/projects/allowed-hosts', () => ({
   AllowedHosts: () => null,
@@ -99,9 +103,44 @@ const secondProject: Project = {
   watermarkUrl: 'https://assets.example.com/b.png',
 }
 
-afterEach(() => vi.clearAllMocks())
+afterEach(() => {
+  vi.clearAllMocks()
+  mocks.allProjects = false
+  mocks.section = 'pipeline'
+  mocks.productAccess = true
+})
 
 describe('project settings identity', () => {
+  it('offers project selection from All projects, preserving explicit billing and setup entry', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const Page = Route.options.component
+    if (!Page) {
+      throw new Error('Settings page component is missing')
+    }
+    mocks.project = firstProject
+    mocks.allProjects = true
+    mocks.section = undefined
+    try {
+      await act(() => root.render(createElement(Page)))
+      expect(container.textContent).toContain('Select a project')
+      expect(container.textContent).toContain('Synthetic A')
+      expect(container.textContent).not.toContain('Synthetic billing panel')
+      await act(() => container.querySelector('button')?.click())
+      expect(mocks.setProject).toHaveBeenCalledWith(firstProject.id)
+      mocks.section = 'billing'
+      await act(() => root.render(createElement(Page)))
+      expect(container.textContent).toContain('Synthetic billing panel')
+      mocks.section = undefined
+      mocks.productAccess = false
+      await act(() => root.render(createElement(Page)))
+      expect(container.textContent).toContain('Synthetic billing panel')
+    } finally {
+      await act(() => root.unmount())
+      vi.unstubAllGlobals()
+    }
+  })
   it('blocks invalid widths inline and preserves zero-clear and upper-bound saves', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     const container = document.createElement('div')

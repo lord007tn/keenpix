@@ -10,6 +10,7 @@ import {
   UserIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { AnalyticsPreferences } from '@/components/app/analytics-preferences'
 import { PageHeader } from '@/components/app/page-header'
 import { SettingRow } from '@/components/app/setting-row'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -344,6 +345,9 @@ function AccountPage() {
                   >
                     <ThemeControl />
                   </SettingRow>
+                </div>
+                <div className="mt-4">
+                  <AnalyticsPreferences />
                 </div>
               </CardContent>
             </Card>

@@ -155,16 +155,22 @@ function SettingsPage() {
     ...teamSections,
     ...apiKeySections,
   ]
-  const active = section && available.includes(section) ? section : available[0]
+  let active = available.at(0)
+  if (cloud && productAccess && !currentProject) {
+    active = undefined
+  }
+  if (section && available.includes(section)) {
+    active = section
+  }
 
-  // No project selected and no instance access: there is nothing to configure
-  // until a project is picked or created.
+  // A workspace with access should choose its project before configuring it.
+  // Explicit organization links and subscription setup still open directly.
   if (!active) {
     return (
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-6">
         <PageHeader
           eyebrow="All projects"
-          subtitle="Per-project configuration."
+          subtitle="Choose a project to configure, or manage your organization."
           title="Settings"
         />
         <Card>
@@ -205,6 +211,28 @@ function SettingsPage() {
             )}
           </CardContent>
         </Card>
+        {cloud ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Organization</CardTitle>
+              <CardDescription>
+                These settings apply to every project in this organization.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-3">
+              {(['billing', 'team'] as const).map((organizationSection) => (
+                <Link
+                  className="inline-flex min-h-11 items-center rounded-md border px-4 text-sm hover:bg-accent"
+                  key={organizationSection}
+                  search={(prev) => ({ ...prev, section: organizationSection })}
+                  to="/app/settings"
+                >
+                  {SECTION_META[organizationSection].label}
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
     )
   }
