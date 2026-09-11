@@ -4,6 +4,7 @@ export const SITEMAP_STATIC_PATHS = [
   '/',
   '/about',
   '/developers',
+  '/integrations',
   '/image-cdn-cost-calculator',
   '/pricing',
   '/learn',

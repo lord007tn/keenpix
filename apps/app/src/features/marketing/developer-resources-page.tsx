@@ -10,6 +10,14 @@ import { REPOSITORY_URL } from '@/shared/repository'
 
 const RESOURCE_GROUPS = [
   {
+    title: 'Choose an integration',
+    description:
+      'Compare framework adapters, package-free image markup, HTTP origins, and server automation before following a setup guide.',
+    links: [
+      { href: '/integrations', label: 'Framework and origin integrations' },
+    ],
+  },
+  {
     title: 'Discover the API',
     description:
       'Start with the machine-readable contract, then use the human documentation for workflows and security context.',

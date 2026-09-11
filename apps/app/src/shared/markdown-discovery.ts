@@ -6,6 +6,7 @@ const PUBLIC_KNOWLEDGE_PATHS = new Set([
   '/changelog',
   '/compare',
   '/developers',
+  '/integrations',
   '/image-cdn-cost-calculator',
   '/learn',
   '/legal/dpa',

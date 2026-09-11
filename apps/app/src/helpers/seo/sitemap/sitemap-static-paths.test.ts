@@ -16,6 +16,7 @@ describe('sitemap static paths', () => {
       expect.arrayContaining([
         '/blog',
         '/developers',
+        '/integrations',
         '/image-cdn-cost-calculator',
       ]),
     )

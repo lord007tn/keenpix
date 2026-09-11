@@ -52,6 +52,14 @@ export function LearningHub({ posts }: { posts: LearningPost[] }) {
         </section>
 
         <section className="border-b">
+          <div className="mx-auto max-w-6xl px-6 pt-8">
+            <a
+              className="inline-flex min-h-11 items-center font-medium text-primary underline"
+              href="/integrations"
+            >
+              Choose a framework or origin integration
+            </a>
+          </div>
           <div className="mx-auto max-w-6xl px-6 py-14 sm:py-16">
             <span className="font-medium text-primary text-sm">
               Featured answers

@@ -1,35 +1,25 @@
 ---
 title: React (Vite)
-description: A small <KeenpixImage> component for any React app.
+description: Choose the Keenpix React component or plain image attributes, with responsive sizing, SSR and server-only signing.
 icon: Atom
+updated: "2026-09-11"
 ---
 
-For any React app (Vite, CRA, Parcel…), wrap the [universal helper](/docs/frameworks#the-universal-pattern)
-in a reusable component:
+Use the maintained `@keenpix/react` component when your React application needs responsive Keenpix images. The [React family guide](/docs/frameworks/react-family#react) contains the package API and configuration example. Configure the delivery base URL and project using your [cloud quickstart](/docs/getting-started/cloud-quickstart); allowlist the original image host before testing a component.
 
-```tsx
-// KeenpixImage.tsx
-import { keenpix, keenpixSrcSet } from './keenpix'
+## Choose the right entry point
 
-type Props = React.ComponentProps<'img'> & { src: string; width?: number }
+- **React or Vite:** use the configured React component. Set `sizes` to the actual layout and pass a compact set of width candidates.
+- **Next.js:** use its [custom image loader](/docs/frameworks/nextjs) to preserve `next/image` behavior.
+- **TanStack Start or Remix:** use the props factories documented in the [React family guide](/docs/frameworks/react-family#props-first-react-frameworks).
+- **Plain markup:** use URL generation or normal `img` and `srcset` attributes. Installing a package is optional for managed delivery.
 
-export function KeenpixImage({ src, width = 1280, sizes = '100vw', ...rest }: Props) {
-  return (
-    <img
-      decoding="async"
-      loading="lazy"
-      sizes={sizes}
-      src={keenpix(src, { w: width, fmt: 'auto' })}
-      srcSet={keenpixSrcSet(src)}
-      {...rest}
-    />
-  )
-}
-```
+The React component is SSR-safe. This does not make its JSX implementation interchangeable with Solid or Qwik: use the [matching adapter](/docs/frameworks/web-and-meta-frameworks) for those runtimes.
 
-```tsx
-<KeenpixImage src="https://cdn.example.com/hero.jpg" width={1280} alt="Hero" />
-```
+## Validate the rendered image
 
-This works identically in Solid, Qwik, and Preact — only the `class`/`className` prop name
-differs.
+Reserve the aspect ratio with width and height, provide useful alt text, and inspect the selected resource at narrow and wide viewports. Check the [responsive image guide](/blog/responsive-image-cdn-guide) for candidate selection. Do not force lazy loading on the prominent image before checking its effect on rendering.
+
+Keep management keys and HMAC signing secrets in trusted server or build code. If signing is enabled, generate the signed delivery URL there and pass the result to the component. A browser-facing package is not a place to store credentials.
+
+Keenpix supplies image transformation and delivery; React still owns layout, loading priority, accessibility and error presentation. For a store, validate the [catalog and gallery workflow](/blog/ecommerce-product-image-delivery) before replacing every product image.

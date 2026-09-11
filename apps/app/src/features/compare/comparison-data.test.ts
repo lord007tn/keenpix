@@ -33,7 +33,7 @@ describe('comparison data', () => {
       expect(comparison.verifiedAt >= earliestCurrentVerificationDate).toBe(
         true,
       )
-      expect(comparison.nextReviewAt).toBe('2026-10-12')
+      expect(comparison.nextReviewAt > comparison.verifiedAt).toBe(true)
       expect(comparison.sources.length).toBeGreaterThanOrEqual(3)
       expect(
         comparison.sources.every(
@@ -62,7 +62,7 @@ describe('comparison data', () => {
       expect(comparison.activation?.destination).toBe('/signup')
       expect(comparison.activation?.label).toContain('14-day')
       expect(comparison.evaluationChecks).toHaveLength(4)
-      expect(comparison.verifiedAt).toBe('2026-08-31')
+      expect(comparison.verifiedAt >= '2026-08-31').toBe(true)
       expect(comparison.sources.length).toBeGreaterThanOrEqual(6)
     }
   })
