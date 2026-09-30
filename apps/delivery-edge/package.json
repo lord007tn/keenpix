@@ -5,16 +5,19 @@
   "type": "module",
   "license": "AGPL-3.0-only",
   "scripts": {
-    "build": "wrangler deploy --dry-run --outdir dist",
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit",
+    "build": "cf build",
+    "dev": "cf dev",
+    "upload": "cf workers versions create --prebuilt --mode production",
+    "deploy": "cf workers deployments create --worker keenpix-custom-domain-edge --strategy percentage",
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "cf workers types && tsc --noEmit",
     "clean": "git clean -xdf dist node_modules"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
+    "cf": "1.0.0-beta.6",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4",
-    "wrangler": "^4.118.0"
+    "vite": "8.3.1",
+    "vitest": "^3.2.4"
   }
 }

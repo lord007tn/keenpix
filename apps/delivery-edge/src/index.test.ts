@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import worker, {
   classifyDelivery,
   createOriginRequest,
@@ -14,6 +14,8 @@ const env = {
 } as const
 
 describe('delivery edge Worker', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
   it.each([
     new Headers({ referer: 'https://keenpix.com/app/projects?secret=private' }),
     new Headers({ 'x-keenpix-request-purpose': 'operator-test' }),
@@ -112,6 +114,7 @@ describe('delivery edge Worker', () => {
         method: 'POST',
       }),
       env,
+      { waitUntil: vi.fn() },
     )
 
     expect(response.status).toBe(405)
@@ -123,5 +126,124 @@ describe('delivery edge Worker', () => {
     expect(classifyDelivery(200, 'miss', 'hit')).toBe('cache')
     expect(classifyDelivery(200, 'miss', 'miss')).toBe('optimized')
     expect(classifyDelivery(404, 'hit', 'hit')).toBe('failed')
+  })
+
+  it.each([
+    'HIT',
+    'MISS',
+  ])('counts streamed bytes once when %s responses have no Content-Length', async (cacheStatus) => {
+    const chunks = [new Uint8Array([1, 2, 3]), new Uint8Array([4, 5])]
+    const origin = new Response(
+      new ReadableStream({
+        start(controller) {
+          for (const chunk of chunks) {
+            controller.enqueue(chunk)
+          }
+          controller.close()
+        },
+      }),
+      { headers: { 'cf-cache-status': cacheStatus } },
+    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(origin))
+    const writeDataPoint = vi.fn()
+    const waitUntil = vi.fn((task: Promise<unknown>) => task)
+    const response = await worker.fetch(
+      new Request('https://cdn.keenpix.com/p/project_123/img/source'),
+      { ...env, EDGE_ANALYTICS: { writeDataPoint } },
+      { waitUntil },
+    )
+
+    expect(writeDataPoint).not.toHaveBeenCalled()
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(
+      new Uint8Array([1, 2, 3, 4, 5]),
+    )
+    await Promise.all(waitUntil.mock.calls.map(([task]) => task))
+    expect(writeDataPoint).toHaveBeenCalledOnce()
+    expect(writeDataPoint).toHaveBeenCalledWith({
+      indexes: ['project_123'],
+      blobs: [
+        cacheStatus === 'HIT' ? 'edge' : 'optimized',
+        cacheStatus.toLowerCase(),
+        'cdn.keenpix.com',
+        '200',
+        '',
+      ],
+      doubles: [5, 1],
+    })
+  })
+
+  it('keeps header-based accounting on the fast path', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response('image', { headers: { 'content-length': '5' } }),
+        ),
+    )
+    const writeDataPoint = vi.fn()
+    const waitUntil = vi.fn()
+    const response = await worker.fetch(
+      new Request('https://cdn.keenpix.com/p/project_123/img/source'),
+      { ...env, EDGE_ANALYTICS: { writeDataPoint } },
+      { waitUntil },
+    )
+
+    expect(await response.text()).toBe('image')
+    expect(writeDataPoint).toHaveBeenCalledOnce()
+    expect(writeDataPoint.mock.calls[0][0].doubles).toEqual([5, 1])
+    expect(waitUntil).not.toHaveBeenCalled()
+  })
+
+  it('does not bill the Content-Length header of a HEAD response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(null, { headers: { 'content-length': '11546' } }),
+        ),
+    )
+    const writeDataPoint = vi.fn()
+    await worker.fetch(
+      new Request('https://cdn.keenpix.com/p/project_123/img/source', {
+        method: 'HEAD',
+      }),
+      { ...env, EDGE_ANALYTICS: { writeDataPoint } },
+      { waitUntil: vi.fn() },
+    )
+
+    expect(writeDataPoint).toHaveBeenCalledOnce()
+    expect(writeDataPoint.mock.calls[0][0].doubles).toEqual([0, 1])
+  })
+
+  it('records partial streamed bytes once when the reader cancels', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new Uint8Array([1, 2, 3]))
+            },
+          }),
+          { headers: { 'cf-cache-status': 'HIT' } },
+        ),
+      ),
+    )
+    const writeDataPoint = vi.fn()
+    const waitUntil = vi.fn((task: Promise<unknown>) => task)
+    const response = await worker.fetch(
+      new Request('https://cdn.keenpix.com/p/project_123/img/source'),
+      { ...env, EDGE_ANALYTICS: { writeDataPoint } },
+      { waitUntil },
+    )
+    const reader = response.body?.getReader()
+    expect((await reader?.read())?.value).toEqual(new Uint8Array([1, 2, 3]))
+    await reader?.cancel('client disconnected')
+    await Promise.all(waitUntil.mock.calls.map(([task]) => task))
+
+    expect(writeDataPoint).toHaveBeenCalledOnce()
+    expect(writeDataPoint.mock.calls[0][0].doubles).toEqual([3, 1])
   })
 })
