@@ -36,6 +36,7 @@ const config: KnipConfig = {
       ],
     },
     'apps/delivery-edge': {
+      entry: ['src/index.ts', 'cloudflare.config.ts'],
       project: ['src/**/*.ts'],
     },
     'apps/worker': {

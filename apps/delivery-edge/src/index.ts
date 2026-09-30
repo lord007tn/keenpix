@@ -113,7 +113,11 @@ export function createOriginRequest(request: Request, env: WorkerEnv) {
 }
 
 export default {
-  async fetch(request: Request, env: WorkerEnv) {
+  async fetch(
+    request: Request,
+    env: WorkerEnv,
+    ctx: Pick<ExecutionContext, 'waitUntil'>,
+  ) {
     if (!(env.EDGE_SECRET && env.TRANSFORM_ORIGIN)) {
       return new Response('Edge configuration is incomplete.', { status: 503 })
     }
@@ -142,32 +146,70 @@ export default {
     const keenpixCacheStatus = (
       response.headers.get('x-keenpix-cache') ?? 'miss'
     ).toLowerCase()
+    let body = response.body
     if (projectId && PROJECT_ID_RE.test(projectId)) {
-      const contentLength = Number(response.headers.get('content-length') ?? 0)
-      env.EDGE_ANALYTICS.writeDataPoint({
-        indexes: [projectId],
-        blobs: [
-          classifyDelivery(
-            response.status,
+      const recordDelivery = (bytes: number) => {
+        env.EDGE_ANALYTICS.writeDataPoint({
+          indexes: [projectId],
+          blobs: [
+            classifyDelivery(
+              response.status,
+              cloudflareCacheStatus,
+              keenpixCacheStatus,
+            ),
             cloudflareCacheStatus,
-            keenpixCacheStatus,
+            hostname,
+            String(response.status),
+            (request.headers.get('cf-ipcountry') ?? '').toUpperCase(),
+          ],
+          doubles: [bytes, 1],
+        })
+      }
+      const lengthHeader = response.headers.get('content-length')
+      const contentLength = Number(lengthHeader)
+      if (request.method === 'HEAD' || !body) {
+        recordDelivery(0)
+      } else if (
+        lengthHeader?.trim() &&
+        Number.isSafeInteger(contentLength) &&
+        contentLength >= 0
+      ) {
+        recordDelivery(contentLength)
+      } else {
+        // Cloudflare can remove Content-Length, including on cache hits. Count
+        // streamed chunks without buffering the image or delaying its first byte.
+        let bytes = 0
+        const stream = new TransformStream<
+          Uint8Array<ArrayBuffer>,
+          Uint8Array<ArrayBuffer>
+        >()
+        const writer = stream.writable.getWriter()
+        const cancellation = new AbortController()
+        writer.closed.catch((reason) => cancellation.abort(reason))
+        const counter = new WritableStream<Uint8Array<ArrayBuffer>>({
+          async write(chunk) {
+            await writer.write(chunk)
+            bytes += chunk.byteLength
+          },
+          close() {
+            return writer.close()
+          },
+          abort(reason) {
+            return writer.abort(reason)
+          },
+        })
+        ctx.waitUntil(
+          body.pipeTo(counter, { signal: cancellation.signal }).then(
+            () => recordDelivery(bytes),
+            () => recordDelivery(bytes),
           ),
-          cloudflareCacheStatus,
-          hostname,
-          String(response.status),
-          (request.headers.get('cf-ipcountry') ?? '').toUpperCase(),
-        ],
-        doubles: [
-          request.method === 'HEAD' || !Number.isFinite(contentLength)
-            ? 0
-            : Math.max(0, contentLength),
-          1,
-        ],
-      })
+        )
+        body = stream.readable
+      }
     }
     const headers = new Headers(response.headers)
     headers.delete(EDGE_PROJECT_HEADER)
-    return new Response(response.body, {
+    return new Response(body, {
       headers,
       status: response.status,
       statusText: response.statusText,
