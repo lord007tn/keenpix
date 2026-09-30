@@ -27,26 +27,28 @@ export function setOrganizationActivationClassification(input: {
 // The unique project key is the idempotency boundary across retries/replicas.
 // Keep the earliest qualified event time even when durable outbox batches arrive
 // out of order. This is an origin observation, not image receipt by a visitor.
-export function recordProjectFirstImageSuccess(
+export function recordProjectFirstImageSuccesses(
   input: {
     projectId: string
     orgId: string
     observedAt?: Date
-  },
+  }[],
   db: Pick<Prisma.TransactionClient, '$executeRaw'> = prisma,
 ) {
   return db.$executeRaw`
     INSERT INTO "ProjectFirstImageSuccess" ("projectId", "orgId", "observedAt", "definitionVersion")
-    SELECT p."id", p."orgId", COALESCE(${input.observedAt ?? null}::timestamp, CURRENT_TIMESTAMP), 1
-    FROM "Project" p
+    SELECT p."id", p."orgId", MIN(COALESCE(event."observedAt", CURRENT_TIMESTAMP)), 1
+    FROM jsonb_to_recordset(${JSON.stringify(input)}::jsonb)
+      AS event("projectId" text, "orgId" text, "observedAt" timestamp)
+    JOIN "Project" p ON p."id" = event."projectId" AND p."orgId" = event."orgId"
     JOIN "OrganizationActivationPolicy" policy ON policy."orgId" = p."orgId"
-    WHERE p."id" = ${input.projectId} AND p."orgId" = ${input.orgId}
-      AND policy."classification" = 'customer' AND policy."eligibleSince" IS NOT NULL
-      AND policy."eligibleSince" <= COALESCE(${input.observedAt ?? null}::timestamp, CURRENT_TIMESTAMP)
+    WHERE policy."classification" = 'customer' AND policy."eligibleSince" IS NOT NULL
+      AND policy."eligibleSince" <= COALESCE(event."observedAt", CURRENT_TIMESTAMP)
       AND EXISTS (SELECT 1 FROM "Member" m JOIN "User" u ON u."id" = m."userId"
         WHERE m."organizationId" = p."orgId" AND m."role" = 'owner' AND u."role" = 'user')
       AND NOT EXISTS (SELECT 1 FROM "Member" m JOIN "User" u ON u."id" = m."userId"
         WHERE m."organizationId" = p."orgId" AND u."role" <> 'user')
+    GROUP BY p."id", p."orgId"
     ON CONFLICT ("projectId") DO UPDATE SET "observedAt" = EXCLUDED."observedAt"
       WHERE EXCLUDED."observedAt" < "ProjectFirstImageSuccess"."observedAt"
   `

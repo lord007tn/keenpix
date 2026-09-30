@@ -49,11 +49,30 @@ The managed app persists the candidate bit in the existing durable analytics
 outbox before returning success. Draining commits the ledger, request log,
 billing rollup, and outbox deletion in one transaction. Its observation time is
 the original event time, not drain time. Old outbox rows default to non-candidates.
-Events before enrollment cannot be backfilled into activation. The standalone
-transform runtime writes the ledger before buffering analytics and returning;
-a ledger write failure returns a sanitized error. This adds a database write on
-eligible standalone requests and transactional work while draining managed
-requests; monitor latency and backlog during rollout.
+Events before enrollment cannot be backfilled into activation. Each managed
+batch adds at most one bulk activation SQL statement. Tenant/enrollment/membership
+filters run before selecting each project's minimum event time, so a rejected
+earlier event cannot hide a later eligible event. Repeated observations preserve
+the existing earlier time and do not insert another row.
+
+The standalone transform adds one awaited SQL statement for **every otherwise
+qualifying cloud GET**, including unclassified/excluded workspaces and projects
+already observed. Eligibility is determined inside that statement; no cached
+classification can silently extend customer coverage after an exclusion. This
+cost and database availability dependency apply even when no row is written.
+HEAD, marked preview, prewarm, and self-hosted requests skip it.
+
+The standalone runtime checks durability before buffering successful accounting
+and returning an image. A ledger-query error therefore returns a sanitized 500,
+without enqueueing a successful request. This deliberate fail-closed policy
+prevents acknowledging an origin success while its first observation is silently
+lost; it trades availability for measurement durability. On retry, a successful
+ledger query allows exactly one success enqueue for that attempt. If the database
+committed but its acknowledgment was lost, the earlier ledger row may survive
+the failed HTTP attempt; the retry converges on that same row. This is another
+reason the ledger does not prove receipt. The standalone analytics buffer itself
+remains non-durable and is not an exactly-once billing guarantee. Monitor request
+latency, database failures, and managed backlog before customer enrollment.
 
 ## Restricted operator commands
 

@@ -1,5 +1,5 @@
 import { prisma } from '@keenpix/database'
-import { recordProjectFirstImageSuccess } from '@keenpix/database/activation'
+import { recordProjectFirstImageSuccesses } from '@keenpix/database/activation'
 import type { AnalyticsEventOutbox, Prisma } from '@keenpix/database/client'
 import {
   aggregateRollupIncrements,
@@ -47,16 +47,20 @@ async function writeOutboxBatch(
   for (const increment of aggregateRollupIncrements(events)) {
     await applyRollupIncrement(db, increment)
   }
-  // Eligibility is checked against each event's time: a pre-enrollment event
-  // must not hide a later eligible event for the same project in this batch.
-  for (const log of batch) {
-    if (!(log.activationCandidate && log.status === 200 && log.bytesOut > 0)) {
-      continue
-    }
-    await recordProjectFirstImageSuccess(
-      { projectId: log.projectId, orgId: log.orgId, observedAt: log.ts },
-      db,
+  // One statement per batch. The database filters enrollment before selecting
+  // each project's earliest event, including batches that straddle enrollment.
+  const candidates = batch
+    .filter(
+      (log) =>
+        log.activationCandidate && log.status === 200 && log.bytesOut > 0,
     )
+    .map((log) => ({
+      projectId: log.projectId,
+      orgId: log.orgId,
+      observedAt: log.ts,
+    }))
+  if (candidates.length > 0) {
+    await recordProjectFirstImageSuccesses(candidates, db)
   }
   await db.analyticsEventOutbox.deleteMany({
     where: { id: { in: batch.map((event) => event.id) } },

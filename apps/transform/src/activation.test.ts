@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   enqueue: vi.fn(),
 }))
 vi.mock('@keenpix/database/activation', () => ({
-  recordProjectFirstImageSuccess: mocks.record,
+  recordProjectFirstImageSuccesses: mocks.record,
 }))
 vi.mock('@keenpix/analytics', () => ({
   createRequestEventBuffer: () => ({ enqueue: mocks.enqueue, flush: vi.fn() }),
@@ -62,10 +62,12 @@ describe('standalone transform first-image capture', () => {
     )
     expect(response.status).toBe(200)
     expect(await response.text()).toBe('image')
-    expect(mocks.record).toHaveBeenCalledExactlyOnceWith({
-      projectId: 'project',
-      orgId: 'organization',
-    })
+    expect(mocks.record).toHaveBeenCalledExactlyOnceWith([
+      {
+        projectId: 'project',
+        orgId: 'organization',
+      },
+    ])
   })
 
   it.each([
@@ -87,6 +89,17 @@ describe('standalone transform first-image capture', () => {
     }
   })
 
+  it('still queries eligibility for unclassified workspaces and serves when no row qualifies', async () => {
+    mocks.record.mockResolvedValueOnce(0)
+    const response = await handleTransformRequest(
+      new Request('https://images.customer.test/img/source?project=project'),
+      'https://example.test/image.jpg',
+    )
+    expect(response.status).toBe(200)
+    expect(mocks.record).toHaveBeenCalledTimes(1)
+    expect(mocks.enqueue).toHaveBeenCalledTimes(1)
+  })
+
   it('excludes authenticated prewarm even if an internal caller sets the candidate flag', async () => {
     await optimizeProjectImage({
       accept: 'image/webp',
@@ -101,7 +114,7 @@ describe('standalone transform first-image capture', () => {
     expect(mocks.enqueue).not.toHaveBeenCalled()
   })
 
-  it('fails the response when durable observation cannot be saved', async () => {
+  it('fails before accounting when durability fails, then accounts one successful retry', async () => {
     mocks.record.mockRejectedValueOnce(new Error('Synthetic ledger failure'))
     const response = await handleTransformRequest(
       new Request('https://images.customer.test/img/source?project=project'),
@@ -110,5 +123,16 @@ describe('standalone transform first-image capture', () => {
     expect(response.status).toBe(500)
     expect(mocks.enqueue).not.toHaveBeenCalled()
     expect(await response.text()).not.toContain('Synthetic ledger failure')
+    const retry = await handleTransformRequest(
+      new Request('https://images.customer.test/img/source?project=project'),
+      'https://example.test/image.jpg',
+    )
+    expect(retry.status).toBe(200)
+    expect(await retry.text()).toBe('image')
+    expect(mocks.record).toHaveBeenCalledTimes(2)
+    expect(mocks.enqueue).toHaveBeenCalledTimes(1)
+    expect(mocks.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 200, bytesOut: 5 }),
+    )
   })
 })

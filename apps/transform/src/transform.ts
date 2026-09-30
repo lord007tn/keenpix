@@ -1,6 +1,6 @@
 import { createRequestEventBuffer } from '@keenpix/analytics'
 import { createTransformCache } from '@keenpix/cache'
-import { recordProjectFirstImageSuccess } from '@keenpix/database/activation'
+import { recordProjectFirstImageSuccesses } from '@keenpix/database/activation'
 import { createLogger } from '@keenpix/logger'
 import {
   assertAllowedOrigin,
@@ -286,10 +286,12 @@ export async function optimizeProjectImage(input: {
         status === 200 &&
         bytesOut > 0
       ) {
-        await recordProjectFirstImageSuccess({
-          projectId: project.id,
-          orgId: project.orgId,
-        })
+        await recordProjectFirstImageSuccesses([
+          {
+            projectId: project.id,
+            orgId: project.orgId,
+          },
+        ])
       }
       analytics.enqueue({
         bytesIn,

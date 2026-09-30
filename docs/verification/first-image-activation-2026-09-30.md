@@ -10,7 +10,7 @@ count was performed for this change.
 - Frozen pnpm install and Prisma client generation passed.
 - All repository migrations, including the activation migration, applied to a
   disposable loopback PostgreSQL 18 database named `keenpix_activation_test`.
-- Ten real PostgreSQL integration tests passed. They cover unknown/internal/test
+- Eleven real PostgreSQL integration tests passed. They cover unknown/internal/test
   exclusions, ordinary ownership, platform operators including a staff member
   alongside an ordinary owner, tenant lookup and composite foreign key, deletion,
   and current-snapshot aggregate/window semantics.
@@ -22,9 +22,18 @@ count was performed for this change.
 - Old outbox rows and pre-enrollment events did not reconstruct activation. A
   mixed batch spanning enrollment retained the earliest eligible event, even
   when it arrived after a later candidate.
+- The managed drain uses one bulk activation statement per batch, filtering tenant
+  and enrollment eligibility before selecting the earliest candidate. A 500-event,
+  52-project test included 50 eligible projects plus test and unclassified
+  workspaces. Baseline/first/repeated-capture drain times were 117/115/112 ms on
+  local loopback PostgreSQL 18. All three batches emptied the backlog; 1,500 logs
+  and rollup requests retained exactly 18,000 output bytes and 50 ledger rows.
+  These bounded synthetic timings are not a production/network latency guarantee.
 - Focused HTTP/action tests cover GET success, HEAD with an empty response body,
   failed/empty transforms, trusted/prewarm/self-hosted exclusions, purpose and
-  preview signals, durable-write failure, and resolved project ownership.
+  preview signals, durable-write failure, and resolved project ownership. The
+  standalone failure/retry test verifies a sanitized 500 with no successful
+  accounting enqueue, followed by a successful retry with exactly one enqueue.
   Edge tests verify the exclusion bit without forwarding cookies or referrer URLs.
 - Denied/granted/withdrawn cookie states do not change the operational request
   predicate. No Google emitter, attribution join, or browser-storage measurement
