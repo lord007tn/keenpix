@@ -53,6 +53,7 @@ import {
   captureConfiguredEdgeHistory,
   captureConfiguredProjectEdgeHistory,
 } from './edge-history'
+import { getOriginAllowlistWarnings } from './origin-allowlist-warnings'
 
 // Every metric is a GROUP BY / aggregate, so the store returns a few pre-summed
 // rows instead of the full per-(hour × project × host × country × path × format
@@ -114,6 +115,7 @@ export async function getAnalytics(
       projects,
       projectGrouped,
       hostGrouped,
+      originAllowlistWarnings,
     ] = await Promise.all([
       source.aggregateRollupSummary(filtered),
       source.groupRollupsByBucket(filtered),
@@ -127,6 +129,7 @@ export async function getAnalytics(
         ? Promise.resolve(null)
         : source.groupRollupsByProject(unfiltered),
       project ? source.groupRollupsByHost(unfiltered) : Promise.resolve(null),
+      getOriginAllowlistWarnings(orgId, project),
     ])
 
     return {
@@ -153,6 +156,7 @@ export async function getAnalytics(
         : [],
       domainBreakdown: hostGrouped ? domainBreakdown(hostGrouped) : null,
       available,
+      originAllowlistWarnings,
     }
   })
 }

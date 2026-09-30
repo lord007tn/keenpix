@@ -50,6 +50,7 @@ import {
   StatusAreaChart,
 } from '@/features/analytics/charts'
 import { DomainBreakdown } from '@/features/analytics/domain-breakdown'
+import { OriginAllowlistWarning } from '@/features/analytics/origin-allowlist-warning'
 import { ProjectBreakdown } from '@/features/analytics/project-breakdown'
 import { ResponseLatencyCard } from '@/features/analytics/response-latency-card'
 import { AnalyticsBodySkeleton } from '@/features/analytics/skeletons'
@@ -584,6 +585,7 @@ function AnalyticsPage() {
       )}
 
       <section className="flex flex-col gap-3">
+        <OriginAllowlistWarning warnings={data.originAllowlistWarnings} />
         <SourceSplitCards
           connect={edgeNotConfigured}
           edge={edge}
