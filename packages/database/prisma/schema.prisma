@@ -35,6 +35,7 @@ model Organization {
   subscriptionGrantAudits SubscriptionGrantAudit[]
   billingAlerts           BillingAlert[]
   apiKeyScopes            ApiKeyScope[]
+  activationPolicy        OrganizationActivationPolicy?
 }
 
 // One-shot billing notification ledger: one row per (org, kind, period). The
@@ -287,8 +288,33 @@ model Project {
   analyticsOutboxEvents AnalyticsEventOutbox[]
   apiKeyScopes      ApiKeyScope[]
   customDomains     CustomDomain[]
+  firstImageSuccess ProjectFirstImageSuccess?
 
   @@unique([id, orgId])
+  @@index([orgId])
+}
+
+// Operator-reviewed measurement eligibility. Absent policy means unclassified.
+// Enrollment is prospective and must follow deployment of every serving runtime.
+model OrganizationActivationPolicy {
+  orgId          String       @id
+  organization   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  classification String
+  eligibleSince  DateTime?
+  updatedAt      DateTime     @default(now())
+}
+
+// First qualifying origin observation, independent of browser/Google consent.
+// No image URL, visitor identity, account email, or attribution identifier.
+model ProjectFirstImageSuccess {
+  projectId         String   @id
+  orgId             String
+  project           Project  @relation(fields: [projectId, orgId], references: [id, orgId], onDelete: Cascade)
+  observedAt        DateTime @default(now())
+  definitionVersion Int      @default(1)
+
+  @@unique([projectId, orgId])
+  @@index([observedAt])
   @@index([orgId])
 }
 
@@ -415,6 +441,7 @@ model AnalyticsEventOutbox {
   country    String?
   sourceHost String?
   createdAt  DateTime @default(now())
+  activationCandidate Boolean @default(false)
 
   @@index([createdAt])
   @@index([orgId, ts])

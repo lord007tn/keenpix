@@ -36,19 +36,19 @@ identify a first project delivery. The effect and its exclusively dependent
 attribution-cleanup branch were removed. Historical Google data and existing local
 milestone keys are not deleted or relabeled.
 
-Operational logs, rollups, outbox, tenant checks, and billing are unchanged. The
-transform runtime logs after transformation/cache work. Its HEAD path can log
-success without returning an image body. Authenticated prewarm uses
-`recordLog: false`. A public GET used for preview or QA follows ordinary delivery
-semantics; no existing signal distinguishes it from customer usage. A returned
-response also does not prove that a person viewed the image.
+A separate durable `origin_first_image_v1` ledger now records qualifying origin
+GET observations for explicitly classified customer workspaces. It excludes
+HEAD, trusted prewarm, marked preview/QA traffic, and platform operator membership.
+Managed capture uses the existing request-accounting outbox transaction. Billing
+totals retain their existing semantics. See the
+[counting contract and operator readout](../../../docs/operations/first-image-activation.md)
+for enrollment, unknown history, edge-only cache limitations, and deployment gates.
 
-No canonical first-image ledger or consent-safe project-to-Google join exists
-here. Canonical activation idempotency and customer conversion cannot be asserted
-or tested as if they exist. A future contract must define eligible projects and
-requests, trusted QA/internal classification, successful-delivery acknowledgment,
-a unique durable outcome key, retry behavior, and consent/lifetime rules before
-adding a join. Do not reconstruct activation from historical aggregate counts.
+The ledger is not Google attribution or proof that a person received/viewed an
+image. Anonymous unmarked QA remains indistinguishable from ordinary delivery.
+There is still no consent-safe project-to-Google join, and this change does not
+restore the browser conversion. Do not reconstruct activation from historical
+aggregate counts.
 
 ## Source preservation and consent
 
@@ -129,7 +129,8 @@ A Google destination script loaded by GTM is not a competing application loader.
    activation. Record the rollout boundary without rewriting old data.
 
 Local tests do not establish provider state, production recovery, customer
-activation, or revenue. No database migration is needed. Release the reviewed app
-revision after these provider checks. Rollback restores the prior app image;
+activation, or revenue. The browser measurement changes alone need no database
+migration; the separate origin ledger requires its own linked rollout procedure.
+Release the reviewed app revision after these provider checks. Browser rollback restores the prior app image;
 retain all records and keep the old first-image metric explicitly invalid if the
 former emitter is restored.

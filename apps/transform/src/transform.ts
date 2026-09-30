@@ -1,5 +1,6 @@
 import { createRequestEventBuffer } from '@keenpix/analytics'
 import { createTransformCache } from '@keenpix/cache'
+import { recordProjectFirstImageSuccesses } from '@keenpix/database/activation'
 import { createLogger } from '@keenpix/logger'
 import {
   assertAllowedOrigin,
@@ -8,6 +9,7 @@ import {
   getContentType,
   getPublicTransformErrorMessage,
   getTransformErrorStatus,
+  isActivationDelivery,
   type OutputFormat,
   optimizeSvgImage,
   parseTransformParams,
@@ -174,6 +176,7 @@ export async function optimizeProjectImage(input: {
   country?: string
   projectId: string
   recordLog?: boolean
+  recordActivation?: boolean
   searchParams: URLSearchParams
   src: string
   startedAt?: number
@@ -276,6 +279,20 @@ export async function optimizeProjectImage(input: {
     throw error
   } finally {
     if (input.recordLog !== false) {
+      if (
+        input.recordActivation &&
+        !input.trusted &&
+        env.KEENPIX_MODE === 'cloud' &&
+        status === 200 &&
+        bytesOut > 0
+      ) {
+        await recordProjectFirstImageSuccesses([
+          {
+            projectId: project.id,
+            orgId: project.orgId,
+          },
+        ])
+      }
       analytics.enqueue({
         bytesIn,
         bytesOut,
@@ -342,6 +359,7 @@ export async function handleTransformRequest(
         ''
       ).toUpperCase(),
       projectId,
+      recordActivation: isActivationDelivery(request, env.KEENPIX_APP_URL),
       searchParams,
       src,
       startedAt,

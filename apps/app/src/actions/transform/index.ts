@@ -25,6 +25,7 @@ import { enqueueRequestLog } from '@/lib/analytics-buffer/buffer'
 import { orgEntitledForServing } from '@/lib/billing/service-gate'
 import { buildCacheKey, readCacheEntry, writeCache } from '@/lib/cache/cache'
 import { errorContext, logger } from '@/lib/logger/logger'
+import { isCloud } from '@/server/deployment'
 
 export interface OptimizeProjectImageInput {
   accept: string
@@ -35,6 +36,7 @@ export interface OptimizeProjectImageInput {
   }
   country?: string
   projectId: string
+  recordActivation?: boolean
   recordLog?: boolean
   searchParams: URLSearchParams
   src: string
@@ -210,6 +212,7 @@ export async function optimizeProjectImage({
   country = '',
   projectId,
   recordLog = true,
+  recordActivation = false,
   searchParams,
   src,
   startedAt = performance.now(),
@@ -336,25 +339,32 @@ export async function optimizeProjectImage({
     if (recordLog) {
       // Managed 2xx delivery is acknowledged only after its billable rollup is
       // durable. Self-hosted and failed-request telemetry stays buffered.
-      await enqueueRequestLog({
-        orgId: project.orgId,
-        projectId: project.id,
-        path: logPath(src),
-        sourceHost: logHost(src),
-        country,
-        width,
-        quality,
-        format,
-        status,
-        cached,
-        latencyMs: Math.round(performance.now() - startedAt),
-        bytesIn,
-        bytesOut,
-        // Compression delta booked on every delivery (hit or miss): the origin
-        // original — persisted with the cache entry, so a hit knows it without
-        // refetching — minus the optimized bytes served.
-        bytesSaved: Math.max(0, originalBytes - bytesOut),
-      })
+      await enqueueRequestLog(
+        {
+          orgId: project.orgId,
+          projectId: project.id,
+          path: logPath(src),
+          sourceHost: logHost(src),
+          country,
+          width,
+          quality,
+          format,
+          status,
+          cached,
+          latencyMs: Math.round(performance.now() - startedAt),
+          bytesIn,
+          bytesOut,
+          // Compression delta booked on every delivery (hit or miss): the origin
+          // original — persisted with the cache entry, so a hit knows it without
+          // refetching — minus the optimized bytes served.
+          bytesSaved: Math.max(0, originalBytes - bytesOut),
+        },
+        recordActivation &&
+          !trusted &&
+          isCloud() &&
+          status === 200 &&
+          bytesOut > 0,
+      )
     }
   }
 }

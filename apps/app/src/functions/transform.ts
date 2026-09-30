@@ -2,6 +2,7 @@ import {
   getContentType,
   getPublicTransformErrorMessage,
   getTransformErrorStatus,
+  isActivationDelivery,
 } from '@keenpix/transform'
 import { resolveCustomDomainProject } from '@/actions/custom-domains'
 import { optimizeProjectImage } from '@/actions/transform'
@@ -130,6 +131,7 @@ export async function handleTransformRequest(
       },
       country,
       projectId,
+      recordActivation: isActivationDelivery(request, getAppUrl()),
       searchParams,
       src,
       startedAt,
@@ -139,32 +141,35 @@ export async function handleTransformRequest(
     // locked-down CSP + nosniff so a malicious source SVG can't execute in the
     // serving origin's context (stored-XSS / account-takeover guard).
     const isSvg = result.format === 'svg'
-    return new Response(new Uint8Array(result.body), {
-      status: 200,
-      headers: {
-        'content-type': getContentType(result.format),
-        'content-length': String(result.body.byteLength),
-        'cache-control': cacheControl(),
-        'accept-ch': 'Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width',
-        vary: 'Accept, Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width, DPR, Width, Viewport-Width',
-        ...(result.contentDpr
-          ? { 'content-dpr': String(result.contentDpr) }
-          : {}),
-        'x-content-type-options': 'nosniff',
-        // Origin-shield cache status, for observability behind an outer CDN.
-        'x-keenpix-cache': result.cached ? 'HIT' : 'MISS',
-        // The trusted edge Worker consumes and strips this marker. Keeping it
-        // on the cached origin response lets later Cloudflare hits retain the
-        // same project attribution without a KV lookup or public API key.
-        ...(edgeRequest ? { [EDGE_PROJECT_HEADER]: projectId } : {}),
-        ...(isSvg
-          ? {
-              'content-security-policy':
-                "default-src 'none'; style-src 'unsafe-inline'; sandbox",
-            }
-          : {}),
+    return new Response(
+      request.method === 'HEAD' ? null : new Uint8Array(result.body),
+      {
+        status: 200,
+        headers: {
+          'content-type': getContentType(result.format),
+          'content-length': String(result.body.byteLength),
+          'cache-control': cacheControl(),
+          'accept-ch': 'Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width',
+          vary: 'Accept, Sec-CH-DPR, Sec-CH-Width, Sec-CH-Viewport-Width, DPR, Width, Viewport-Width',
+          ...(result.contentDpr
+            ? { 'content-dpr': String(result.contentDpr) }
+            : {}),
+          'x-content-type-options': 'nosniff',
+          // Origin-shield cache status, for observability behind an outer CDN.
+          'x-keenpix-cache': result.cached ? 'HIT' : 'MISS',
+          // The trusted edge Worker consumes and strips this marker. Keeping it
+          // on the cached origin response lets later Cloudflare hits retain the
+          // same project attribution without a KV lookup or public API key.
+          ...(edgeRequest ? { [EDGE_PROJECT_HEADER]: projectId } : {}),
+          ...(isSvg
+            ? {
+                'content-security-policy':
+                  "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+              }
+            : {}),
+        },
       },
-    })
+    )
   } catch (error) {
     return new Response(getPublicTransformErrorMessage(error), {
       status: getTransformErrorStatus(error),

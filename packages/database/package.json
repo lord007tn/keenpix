@@ -5,9 +5,11 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./activation": "./src/data-access/activation.ts",
     "./client": "./src/generated/prisma/client.ts"
   },
   "scripts": {
+    "test:activation": "tsx --tsconfig ../../apps/app/tsconfig.json --test tests/activation.integration.ts",
     "generate": "prisma generate",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
@@ -29,6 +31,7 @@
     "tsx": "^4.22.3"
   },
   "devDependencies": {
+    "dayjs": "^1.11.20",
     "@types/node": "^22.19.15",
     "@types/pg": "^8.20.0",
     "typescript": "^5.9.3"

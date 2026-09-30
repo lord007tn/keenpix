@@ -36,10 +36,13 @@ let flushing: Promise<void> | null = null
 let durableTimer: NodeJS.Timeout | null = null
 let durableFlushing: Promise<void> | null = null
 
-async function persistManagedDelivery(event: RequestLogEvent) {
+async function persistManagedDelivery(
+  event: RequestLogEvent,
+  activationCandidate: boolean,
+) {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      await persistAnalyticsOutboxEvent(event)
+      await persistAnalyticsOutboxEvent(event, activationCandidate)
       if (!durableTimer) {
         const t = setTimeout(() => {
           durableTimer = null
@@ -66,10 +69,13 @@ async function persistManagedDelivery(event: RequestLogEvent) {
   }
 }
 
-export function enqueueRequestLog(log: NewRequestLog) {
+export function enqueueRequestLog(
+  log: NewRequestLog,
+  activationCandidate = false,
+) {
   const event = { ...log, id: cuid(), ts: new Date() }
   if (isCloud() && log.status >= 200 && log.status < 300) {
-    return persistManagedDelivery(event)
+    return persistManagedDelivery(event, activationCandidate)
   }
   buffer.push(event)
   if (buffer.length >= MAX_BUFFER) {

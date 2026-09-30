@@ -1,4 +1,5 @@
 import { prisma } from '@keenpix/database'
+import { recordProjectFirstImageSuccesses } from '@keenpix/database/activation'
 import type { AnalyticsEventOutbox, Prisma } from '@keenpix/database/client'
 import {
   aggregateRollupIncrements,
@@ -10,8 +11,13 @@ const OUTBOX_BATCH_SIZE = 500
 const OUTBOX_LOCK_CLASS = 0x6b_70
 const OUTBOX_LOCK_OBJ = 2
 
-export function persistAnalyticsOutboxEvent(event: RequestLogEvent) {
-  return prisma.analyticsEventOutbox.create({ data: event })
+export function persistAnalyticsOutboxEvent(
+  event: RequestLogEvent,
+  activationCandidate = false,
+) {
+  return prisma.analyticsEventOutbox.create({
+    data: { ...event, activationCandidate },
+  })
 }
 
 async function writeOutboxBatch(
@@ -40,6 +46,21 @@ async function writeOutboxBatch(
   await db.requestLog.createMany({ data: events })
   for (const increment of aggregateRollupIncrements(events)) {
     await applyRollupIncrement(db, increment)
+  }
+  // One statement per batch. The database filters enrollment before selecting
+  // each project's earliest event, including batches that straddle enrollment.
+  const candidates = batch
+    .filter(
+      (log) =>
+        log.activationCandidate && log.status === 200 && log.bytesOut > 0,
+    )
+    .map((log) => ({
+      projectId: log.projectId,
+      orgId: log.orgId,
+      observedAt: log.ts,
+    }))
+  if (candidates.length > 0) {
+    await recordProjectFirstImageSuccesses(candidates, db)
   }
   await db.analyticsEventOutbox.deleteMany({
     where: { id: { in: batch.map((event) => event.id) } },

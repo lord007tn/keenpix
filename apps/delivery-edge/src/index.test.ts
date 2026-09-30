@@ -6,6 +6,7 @@ import worker, {
 } from './index'
 
 const env = {
+  APP_ORIGIN: 'https://keenpix.com',
   EDGE_ANALYTICS: { writeDataPoint: () => undefined },
   EDGE_SECRET: 'a-secure-edge-secret-that-is-long-enough',
   FIRST_PARTY_HOSTNAME: 'cdn.keenpix.com',
@@ -13,6 +14,21 @@ const env = {
 } as const
 
 describe('delivery edge Worker', () => {
+  it.each([
+    new Headers({ referer: 'https://keenpix.com/app/projects?secret=private' }),
+    new Headers({ 'x-keenpix-request-purpose': 'operator-test' }),
+    new Headers({ purpose: 'prefetch' }),
+    new Headers({ 'sec-purpose': 'prerender' }),
+  ])('forwards an exclusion bit without private preview context', (headers) => {
+    const result = createOriginRequest(
+      new Request('https://images.customer.com/img/source', { headers }),
+      env,
+    )
+    expect(result.headers.get('x-keenpix-request-purpose')).toBe('preview')
+    expect(result.headers.has('referer')).toBe(false)
+    expect(JSON.stringify([...result.headers])).not.toContain('private')
+  })
+
   it('routes a customer hostname to the fixed transform origin', () => {
     const result = createOriginRequest(
       new Request('https://images.customer.com/img/source?q=80'),
