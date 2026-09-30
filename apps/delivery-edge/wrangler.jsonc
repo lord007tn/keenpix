@@ -1,9 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
-  "name": "keenpix-delivery-edge",
+  "name": "keenpix-custom-domain-edge",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-13",
   "workers_dev": false,
+  "preview_urls": false,
+  "keep_vars": true,
   "secrets": { "required": ["EDGE_SECRET"] },
   // The zone route table is managed as one unit through the Cloudflare dashboard
   // or API. Do not declare only the wildcard here and overwrite no-Worker routes.
