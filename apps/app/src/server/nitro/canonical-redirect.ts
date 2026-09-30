@@ -9,6 +9,7 @@ const PUBLIC_PAGE_PREFIXES = [
   '/changelog',
   '/compare',
   '/developers',
+  '/integrations',
   '/docs',
   '/image-cdn-cost-calculator',
   '/legal',

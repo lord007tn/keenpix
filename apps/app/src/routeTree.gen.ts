@@ -19,6 +19,7 @@ import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as OpenapiDotjsonRouteImport } from './routes/openapi[.]json'
 import { Route as LearnRouteImport } from './routes/learn'
+import { Route as IntegrationsRouteImport } from './routes/integrations'
 import { Route as ImageCdnPricingDotjsonRouteImport } from './routes/image-cdn-pricing[.]json'
 import { Route as ImageCdnCostCalculatorRouteImport } from './routes/image-cdn-cost-calculator'
 import { Route as DevelopersRouteImport } from './routes/developers'
@@ -124,6 +125,11 @@ const OpenapiDotjsonRoute = OpenapiDotjsonRouteImport.update({
 const LearnRoute = LearnRouteImport.update({
   id: '/learn',
   path: '/learn',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IntegrationsRoute = IntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImageCdnPricingDotjsonRoute = ImageCdnPricingDotjsonRouteImport.update({
@@ -416,6 +422,7 @@ export interface FileRoutesByFullPath {
   '/developers': typeof DevelopersRoute
   '/image-cdn-cost-calculator': typeof ImageCdnCostCalculatorRoute
   '/image-cdn-pricing.json': typeof ImageCdnPricingDotjsonRoute
+  '/integrations': typeof IntegrationsRoute
   '/learn': typeof LearnRoute
   '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
@@ -481,6 +488,7 @@ export interface FileRoutesByTo {
   '/developers': typeof DevelopersRoute
   '/image-cdn-cost-calculator': typeof ImageCdnCostCalculatorRoute
   '/image-cdn-pricing.json': typeof ImageCdnPricingDotjsonRoute
+  '/integrations': typeof IntegrationsRoute
   '/learn': typeof LearnRoute
   '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
@@ -549,6 +557,7 @@ export interface FileRoutesById {
   '/developers': typeof DevelopersRoute
   '/image-cdn-cost-calculator': typeof ImageCdnCostCalculatorRoute
   '/image-cdn-pricing.json': typeof ImageCdnPricingDotjsonRoute
+  '/integrations': typeof IntegrationsRoute
   '/learn': typeof LearnRoute
   '/openapi.json': typeof OpenapiDotjsonRoute
   '/pricing': typeof PricingRoute
@@ -618,6 +627,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/image-cdn-cost-calculator'
     | '/image-cdn-pricing.json'
+    | '/integrations'
     | '/learn'
     | '/openapi.json'
     | '/pricing'
@@ -683,6 +693,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/image-cdn-cost-calculator'
     | '/image-cdn-pricing.json'
+    | '/integrations'
     | '/learn'
     | '/openapi.json'
     | '/pricing'
@@ -750,6 +761,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/image-cdn-cost-calculator'
     | '/image-cdn-pricing.json'
+    | '/integrations'
     | '/learn'
     | '/openapi.json'
     | '/pricing'
@@ -818,6 +830,7 @@ export interface RootRouteChildren {
   DevelopersRoute: typeof DevelopersRoute
   ImageCdnCostCalculatorRoute: typeof ImageCdnCostCalculatorRoute
   ImageCdnPricingDotjsonRoute: typeof ImageCdnPricingDotjsonRoute
+  IntegrationsRoute: typeof IntegrationsRoute
   LearnRoute: typeof LearnRoute
   OpenapiDotjsonRoute: typeof OpenapiDotjsonRoute
   PricingRoute: typeof PricingRoute
@@ -930,6 +943,13 @@ declare module '@tanstack/react-router' {
       path: '/learn'
       fullPath: '/learn'
       preLoaderRoute: typeof LearnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/integrations': {
+      id: '/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof IntegrationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/image-cdn-pricing.json': {
@@ -1382,6 +1402,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevelopersRoute: DevelopersRoute,
   ImageCdnCostCalculatorRoute: ImageCdnCostCalculatorRoute,
   ImageCdnPricingDotjsonRoute: ImageCdnPricingDotjsonRoute,
+  IntegrationsRoute: IntegrationsRoute,
   LearnRoute: LearnRoute,
   OpenapiDotjsonRoute: OpenapiDotjsonRoute,
   PricingRoute: PricingRoute,

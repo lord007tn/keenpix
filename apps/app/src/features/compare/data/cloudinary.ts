@@ -9,12 +9,12 @@ export const cloudinaryComparison = {
   },
   title: 'Cloudinary Alternative: Keenpix vs Cloudinary (2026)',
   metaDescription:
-    'Keenpix vs Cloudinary (August 2026): pooled credits vs one managed-delivery meter. Honest pricing, migration steps, and when each wins.',
+    'Keenpix vs Cloudinary (September 2026): pooled credits vs one managed-delivery meter. Honest pricing, migration steps, and when each wins.',
   heroHeadline: 'Keenpix vs Cloudinary: a focused image CDN alternative',
   heroSubhead:
     'Cloudinary bundles transformations, storage, and bandwidth into credits. Keenpix bills exactly one thing: optimized bytes delivered through managed cloud, with unlimited transforms and team members plus always-on paid overage.',
   verdict:
-    'If you need video transcoding, a full digital asset manager, or AI-powered transforms today, pick Cloudinary — its breadth is real and Keenpix does not offer those capabilities. If what you use Cloudinary for is resizing and delivering images, Keenpix offers one managed-delivery meter, unlimited transformations and team members, managed custom domains, always-on paid usage, and an AGPL-3.0 v0.3.1 self-host path. Be aware of what you give up: Keenpix is a young solo-founder product with no video or storage. As of August 31, 2026, the Keenpix standard catalog lists 400 GB/month at $29; Cloudinary bandwidth draws from the Advanced plan’s pooled credits alongside transforms and storage.',
+    'If you need video transcoding, a full digital asset manager, or AI-powered transforms today, pick Cloudinary — its breadth is real and Keenpix does not offer those capabilities. If what you use Cloudinary for is resizing and delivering images, Keenpix offers one managed-delivery meter, unlimited transformations and team members, managed custom domains, always-on paid usage, and an AGPL-3.0 v0.3.1 self-host path. Be aware of what you give up: Keenpix is a young solo-founder product with no video or storage. As of September 11, 2026, the Keenpix standard catalog lists 400 GB/month at $29; Cloudinary bandwidth draws from the Advanced plan’s pooled credits alongside transforms and storage.',
   pricingRows: [
     {
       scenario: 'Credits → GB translation',
@@ -217,8 +217,8 @@ export const cloudinaryComparison = {
       url: 'https://github.com/lord007tn/keenpix/releases/tag/v0.3.1',
     },
   ],
-  pricingAsOf: 'August 31, 2026',
+  pricingAsOf: 'September 11, 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
-  verifiedAt: '2026-08-31',
-  nextReviewAt: '2026-10-12',
+  verifiedAt: '2026-09-11',
+  nextReviewAt: '2026-10-11',
 } satisfies ComparisonPageData

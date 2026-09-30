@@ -342,6 +342,30 @@ function staticMarkdown(pathname: string, origin: string) {
   if (pathname === '/methodology/comparisons') {
     return `${markdownMetadata({ canonicalUrl: `${origin}${pathname}`, description: 'How Keenpix verifies competitor facts, calculates pricing scenarios, discloses conflicts, and corrects comparison pages.', title: 'How Keenpix comparisons are researched', updated: '2026-09-02' })}\n## Source order\n\n1. Official pricing, product documentation, limits, and legal terms.\n2. Official release notes and support statements.\n3. Reproducible product behavior where public documentation is incomplete.\n\nUndocumented behavior stays labeled unknown. No customer ratings, market-share claims, or performance benchmarks are published without inspectable evidence.\n\n## Pricing comparisons\n\nEvery scenario states its workload and uses the public price checked on the page date. Taxes, contracts, legacy plans, regional differences, and external CDN charges remain limitations.\n\n## Product scope and licensing\n\nA media platform, image optimizer, CDN feature, and self-hosted transform engine are not interchangeable. Source-code licenses are checked from the applicable release.\n\n## Review and corrections\n\nCommercial facts are reviewed at least quarterly and after material announcements. Send the page, disputed statement, primary source, and check date to ${SUPPORT_EMAIL}.\n\n## What a verdict means\n\n“Best for” is a fit judgment for stated criteria, not a universal ranking. Every comparison states when the competitor is the better choice.`
   }
+  if (pathname === '/integrations') {
+    return [
+      markdownMetadata({
+        canonicalUrl: `${origin}/integrations`,
+        description:
+          'Choose a framework adapter, HTTP origin or trusted server SDK.',
+        title: 'Keenpix integrations',
+        updated: '2026-09-11',
+      }),
+      '## Choose a boundary',
+      'Use a Next.js custom loader, React component, Vue provider, or plain HTML image URLs. Packages are optional for managed delivery; project setup and an origin allowlist are required. Self-hosting requires deployment and operations.',
+      `- [Next.js loader](${origin}/docs/frameworks/nextjs)`,
+      `- [React family](${origin}/docs/frameworks/react-family)`,
+      `- [Vue family](${origin}/docs/frameworks/vue-family)`,
+      `- [Other frameworks](${origin}/docs/frameworks/web-and-meta-frameworks)`,
+      `- [HTTP origin architecture](${origin}/blog/bring-your-own-origin-image-cdn-architecture)`,
+      `- [Server SDK](${origin}/docs/reference/sdk-package)`,
+      '## Validate one image',
+      'Create a project, allow the intended source host, verify one delivery URL, connect one component and check responsive candidates. Generate signatures only in trusted code. Canary a small route and retain the old delivery path for rollback.',
+      '## Limits',
+      'HTTP origin compatibility is not a bucket synchronization connector. Keenpix does not provide uploads, source storage, moderation, video or asset approvals. Private origins need an explicit access design. The managed 14-day trial requires a card.',
+      `Read the [quickstart](${origin}/docs/getting-started/cloud-quickstart), [pricing](${origin}/pricing), [catalog workflow](${origin}/blog/ecommerce-product-image-delivery) and [create a project](${origin}/signup).`,
+    ].join('\n\n')
+  }
   if (pathname === '/developers') {
     return `${markdownMetadata({ canonicalUrl: `${origin}/developers`, description: 'API discovery, project-scoped authentication, official SDK, and agent-readable public contracts.', title: 'Keenpix developer resources', updated: '2026-09-02' })}\n## Discover the API\n\n- [OpenAPI 3.1 specification](${origin}/openapi.json)\n- [SDK API documentation](${origin}/docs/reference/sdk-api)\n- [Public JSON health endpoint](${origin}/api/health)\n\n## Use the official SDK\n\nThe supported automation client is the server-side @keenpix/sdk package. Keenpix does not publish an official CLI, OAuth authorization server, or separate API sandbox.\n\n## Authentication and onboarding\n\nControl-plane operations use a project-scoped API key in Authorization: Bearer or X-Keenpix-Api-Key. Normal image delivery URLs are keyless after project and origin configuration. Keep keys in trusted server environments.\n\n## Agent-readable sources\n\n- [Concise LLM index](${origin}/llms.txt)\n- [Complete Markdown collection](${origin}/llms-full.txt)\n- [Learning hub](${origin}/learn)\n\nContact ${SUPPORT_EMAIL}.`
   }
@@ -419,6 +443,7 @@ export async function listPublicMarkdown(origin: string) {
     '/changelog',
     '/compare',
     '/developers',
+    '/integrations',
     '/image-cdn-cost-calculator',
     '/learn',
     '/legal/dpa',

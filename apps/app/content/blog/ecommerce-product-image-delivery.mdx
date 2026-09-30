@@ -1,0 +1,59 @@
+---
+title: "Ecommerce image CDN: product grids, galleries and updates"
+description: "Plan product-image delivery for catalog cards, detail galleries and product updates, with crop rules, versioned URLs and a reversible Keenpix rollout."
+date: "2026-09-11"
+updated: "2026-09-11"
+language: en
+author: Raed Bahri
+tags: [ecommerce, responsive-images, implementation]
+image: /og/blog/ecommerce-product-image-delivery.png?v=2026-09-11
+imageAlt: "Product image delivery for catalog grids and detail galleries"
+---
+
+An ecommerce image pipeline must preserve the product a shopper expects to receive. A crop that looks attractive on a landing page can hide the edge of a shoe, a label, or an included accessory in a product grid. Start with a catalog-specific image contract before changing the CDN.
+
+Keenpix can resize, fit, encode, cache, and deliver published product images from an allowed origin. It does not manage inventory, upload originals, remove backgrounds with AI, moderate seller uploads, or synchronize a commerce platform. This workflow fits a storefront whose team controls image URLs or components. If your hosted storefront does not expose either, check its supported extension points before choosing an external image service.
+
+## Define three delivery contexts
+
+| Context | Image decision | What to verify |
+| --- | --- | --- |
+| Product grid | Consistent card dimensions; preserve the whole product with a contain-style fit when cropping would hide details | Every color variant remains recognizable; image boxes reserve space before loading |
+| Detail gallery | Larger candidates for the displayed gallery width; retain the original aspect ratio when detail matters | Zoom can access sufficient source resolution; selecting a variant changes the correct image |
+| Editorial promotion | Deliberate cover crops for a designed layout | Mobile crops keep the intended subject and any required product information |
+
+Use the [parameter reference](/docs/reference/parameters) to choose supported width, height, fit and format options. Test transparent packaging shots against the page background. Do not apply one global quality value without comparing text, labels, gradients and fine texture in your own originals.
+
+## Keep product identity separate from image identity
+
+A SKU identifies the product; it should not be the only cache identity for its photograph. Publish a new source path when the photograph changes, such as `products/example-sku/front-v2.jpg`, and update the product record to that version. Keep the previous source available through the rollback window.
+
+Replacing bytes behind the same source URL can leave old variants in browser, CDN, and transform caches. A catalog update is complete only when the storefront points to the new image and the selected variant renders it. Use the [versioned URL guide](/blog/cache-invalidation-versioned-image-urls) to plan retention and invalidation. Avoid timestamps generated on every request: they destroy reuse instead of representing a real asset update.
+
+## Connect one storefront component
+
+1. Publish a representative product image on an HTTP origin you control. Allowlist that host in a Keenpix project.
+2. Follow the [cloud quickstart](/docs/getting-started/cloud-quickstart) to construct its delivery URL. Start with one product card and keep the original URL as a rollback option.
+3. Set intrinsic width and height on the image element. Use `srcset` candidates and a `sizes` value that matches the card's actual column width, following the [responsive image guide](/blog/responsive-image-cdn-guide).
+4. Choose your existing framework's [integration](/integrations). Do not run a second optimizer over the Keenpix output without a specific reason; extra transforms complicate quality and cache behavior.
+5. Treat the first prominent image differently from below-the-fold cards. Check loading behavior in the browser instead of assuming lazy-loading every image improves the page.
+
+A delivery integration is not an upload integration. For marketplace sellers, authenticate ingestion, validate bytes, quarantine unapproved images and publish only approved originals before making them available to Keenpix. The [user-upload pipeline guide](/blog/user-upload-image-pipeline-design) covers that separate responsibility.
+
+## Run a catalog acceptance sample
+
+Select real examples that stress your store: a transparent product cutout, packaging with small text, a tall item, a wide bundle, alternate colors and an unavailable original. At 320px, 390px and desktop widths, check the selected resource, visible crop, reserved space, alt text and gallery controls. Confirm the image changes when the product variant changes and the old source still works during rollback.
+
+Record cold and warm responses separately. Compare transferred bytes and visual quality against the existing path under the same viewport and network conditions. An image CDN can reduce image bytes; it does not guarantee a faster checkout, a Core Web Vitals pass or a conversion increase. Scripts, layout and application responses remain separate work.
+
+## Estimate cost from delivered variants
+
+Forecast the bytes shoppers actually receive, including galleries, high-density displays and repeat visits that reach the service. Do not multiply the original upload size by page views when transformed candidates differ substantially. Use the [cost calculator](/image-cdn-cost-calculator) as an estimate and validate the assumptions with your sample.
+
+Keenpix managed cloud is paid after its trial; the trial requires a card. Self-hosting removes the Keenpix license fee under the published license but leaves infrastructure and operations with you. Review [current pricing](/pricing) and the [managed versus self-hosted decision](/blog/self-host-vs-managed-image-optimization) before rollout.
+
+## Start with a reversible category rollout
+
+[Create a project](/signup), validate one card and gallery, then canary a small category with both paths available. Keep your current provider when you need its asset library, video, approvals or commerce plugin and those capabilities are more important than replacing image delivery. Use the [comparison hub](/compare) to evaluate those boundaries before committing the whole catalog.
+
+Reviewed September 11, 2026 against the Keenpix [transform reference](/docs/reference/parameters), [project setup](/docs/getting-started/projects) and [framework catalog](/docs/frameworks/catalog). This is implementation guidance, not a measured customer result.

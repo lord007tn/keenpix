@@ -84,6 +84,10 @@ export const LEARNING_JOBS = [
 ] as const
 
 export const LEARNING_GUIDE_CLASSIFICATION = {
+  'ecommerce-product-image-delivery': {
+    pillar: 'origins',
+    jobs: ['integrate', 'operate'],
+  },
   'what-is-an-image-cdn': {
     pillar: 'fundamentals',
     jobs: ['understand', 'evaluate'],

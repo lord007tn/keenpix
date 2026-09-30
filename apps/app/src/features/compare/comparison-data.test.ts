@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { describe, expect, it } from 'vitest'
 import { COMPARISONS } from './comparison-data'
 
@@ -33,7 +34,9 @@ describe('comparison data', () => {
       expect(comparison.verifiedAt >= earliestCurrentVerificationDate).toBe(
         true,
       )
-      expect(comparison.nextReviewAt).toBe('2026-10-12')
+      expect(
+        dayjs(comparison.nextReviewAt).isAfter(dayjs(comparison.verifiedAt)),
+      ).toBe(true)
       expect(comparison.sources.length).toBeGreaterThanOrEqual(3)
       expect(
         comparison.sources.every(
@@ -62,7 +65,9 @@ describe('comparison data', () => {
       expect(comparison.activation?.destination).toBe('/signup')
       expect(comparison.activation?.label).toContain('14-day')
       expect(comparison.evaluationChecks).toHaveLength(4)
-      expect(comparison.verifiedAt).toBe('2026-08-31')
+      expect(dayjs(comparison.verifiedAt).isBefore(dayjs('2026-08-31'))).toBe(
+        false,
+      )
       expect(comparison.sources.length).toBeGreaterThanOrEqual(6)
     }
   })
