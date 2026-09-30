@@ -13,7 +13,9 @@ export async function getOriginAllowlistWarnings(
     listBlockedOriginRequests({
       orgId,
       projectId,
-      since: dayjs().subtract(24, 'hour').toDate(),
+      // Include the overlapping hour: rollups cannot split its requests at
+      // the cutoff. The UI describes this as roughly a day (up to 25 hours).
+      since: dayjs().subtract(24, 'hour').startOf('hour').toDate(),
     }),
     projectId
       ? getProject(projectId, orgId).then((project) =>

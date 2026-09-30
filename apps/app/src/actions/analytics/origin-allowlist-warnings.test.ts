@@ -20,7 +20,7 @@ const project = {
 describe('origin allowlist warnings', () => {
   beforeEach(() => {
     vi.useFakeTimers()
-    vi.setSystemTime(dayjs('2026-09-30T12:00:00Z').toDate())
+    vi.setSystemTime(dayjs('2026-09-30T12:30:00Z').toDate())
     mocks.listBlockedOriginRequests.mockResolvedValue([])
     mocks.getProject.mockResolvedValue(project)
     mocks.listProjects.mockResolvedValue([project])

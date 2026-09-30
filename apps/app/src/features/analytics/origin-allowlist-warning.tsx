@@ -18,9 +18,9 @@ export function OriginAllowlistWarning({
       <AlertTitle>Some image sources need an allowlist review</AlertTitle>
       <AlertDescription>
         <p>
-          These sources have had at least 100 blocked requests each over the
-          past day and are missing from their project’s allowed origins. Add a
-          source only if you recognize and trust it.
+          These sources have had at least 100 blocked requests each over roughly
+          the past day and are missing from their project’s allowed origins. Add
+          a source only if you recognize and trust it.
         </p>
         <ul className="mt-3 space-y-3">
           {warnings.map((warning) => (
