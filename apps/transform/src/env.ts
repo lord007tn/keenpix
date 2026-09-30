@@ -9,6 +9,7 @@ export const env = z
   .object({
     CLOUDFLARE_SAAS_EDGE_SECRET: z.string().min(32).optional(),
     DATABASE_URL: z.string().min(1),
+    KEENPIX_APP_URL: z.url().default('https://keenpix.com'),
     KEENPIX_CACHE_CONTROL: z
       .string()
       .min(1)

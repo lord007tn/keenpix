@@ -8,6 +8,7 @@
   // The zone route table is managed as one unit through the Cloudflare dashboard
   // or API. Do not declare only the wildcard here and overwrite no-Worker routes.
   "vars": {
+    "APP_ORIGIN": "https://keenpix.com",
     "FIRST_PARTY_HOSTNAME": "cdn.keenpix.com",
     "TRANSFORM_ORIGIN": "https://transform.keenpix.com"
   },

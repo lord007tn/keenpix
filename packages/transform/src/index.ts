@@ -1,3 +1,4 @@
+export * from './activation'
 export * from './errors'
 export * from './origin/fetch-image'
 export * from './origin/safe-origin'

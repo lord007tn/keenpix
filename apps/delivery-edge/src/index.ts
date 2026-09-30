@@ -1,4 +1,4 @@
-type WorkerEnv = Cloudflare.Env & { EDGE_SECRET: string }
+type WorkerEnv = Cloudflare.Env & { EDGE_SECRET: string; APP_ORIGIN: string }
 
 const EDGE_HOST_HEADER = 'x-keenpix-custom-host'
 const EDGE_SECRET_HEADER = 'x-keenpix-edge-secret'
@@ -18,6 +18,7 @@ const FORWARDED_HEADERS = [
 const EDGE_OFFLOAD_STATUSES = new Set(['hit', 'ignored', 'stale', 'updating'])
 const PROJECT_ID_RE = /^[a-z0-9][a-z0-9_-]{7,127}$/
 const FIRST_PARTY_PATH_RE = /^\/p\/([a-z0-9][a-z0-9_-]{7,127})(\/img\/.*)$/
+const WWW_PREFIX = /^www\./
 
 export function getFirstPartyDelivery(url: URL, hostname: string) {
   if (url.hostname.toLowerCase() !== hostname.trim().toLowerCase()) {
@@ -60,6 +61,27 @@ export function createOriginRequest(request: Request, env: WorkerEnv) {
     target.searchParams.set('project', firstPartyDelivery.projectId)
   }
   const headers = new Headers()
+  // Forward only an exclusion bit, never account cookies or the referrer URL.
+  let preview =
+    incoming.searchParams.has('__keenpix_preview') ||
+    request.headers.has('x-keenpix-request-purpose') ||
+    ['purpose', 'sec-purpose'].some((name) => {
+      const value = request.headers.get(name)?.toLowerCase() ?? ''
+      return value.includes('prefetch') || value.includes('prerender')
+    })
+  const referrer = request.headers.get('referer')
+  if (referrer) {
+    try {
+      preview ||=
+        new URL(referrer).hostname.replace(WWW_PREFIX, '') ===
+        new URL(env.APP_ORIGIN).hostname.replace(WWW_PREFIX, '')
+    } catch {
+      preview = true
+    }
+  }
+  if (preview) {
+    headers.set('x-keenpix-request-purpose', 'preview')
+  }
   for (const name of FORWARDED_HEADERS) {
     const value = request.headers.get(name)
     if (value) {

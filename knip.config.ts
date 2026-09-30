@@ -62,6 +62,14 @@ const config: KnipConfig = {
       entry: ['src/index.ts', 'src/signing.ts'],
       project: ['src/**/*.ts'],
     },
+    'packages/database': {
+      entry: [
+        'src/index.ts',
+        'src/data-access/activation.ts',
+        'tests/activation.integration.ts',
+      ],
+      project: ['src/**/*.ts', 'tests/**/*.ts'],
+    },
     'packages/frameworks/*': {
       entry: ['src/index.{ts,tsx}'],
       project: ['src/**/*.{ts,tsx}'],

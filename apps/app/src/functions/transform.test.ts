@@ -25,6 +25,28 @@ const source = 'https://assets.example.com/photo.jpg'
 const encodedSource = encodeURIComponent(source)
 
 describe('transform request routing', () => {
+  it.each([
+    new Request(`https://images.customer.com/img/${encodedSource}`, {
+      method: 'HEAD',
+    }),
+    new Request(
+      `https://images.customer.com/img/${encodedSource}?__keenpix_preview=1`,
+    ),
+    new Request(`https://images.customer.com/img/${encodedSource}`, {
+      headers: { 'x-keenpix-request-purpose': 'test' },
+    }),
+  ])('does not classify HEAD/preview/test work as activation', async (request) => {
+    resolveCustomDomainProject.mockResolvedValue('project_123')
+    const response = await handleTransformRequest(request, encodedSource)
+    expect(response.status).toBe(200)
+    expect(optimizeProjectImage).toHaveBeenCalledWith(
+      expect.objectContaining({ recordActivation: false }),
+    )
+    if (request.method === 'HEAD') {
+      expect(await response.text()).toBe('')
+    }
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     isCloud.mockReturnValue(true)

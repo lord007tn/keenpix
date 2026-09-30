@@ -33,6 +33,20 @@ jobs:
     name: Lint, typecheck, test, build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: activation_test
+          POSTGRES_PASSWORD: activation-test-only
+          POSTGRES_DB: keenpix_activation_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U activation_test -d keenpix_activation_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v6
 
@@ -54,6 +68,14 @@ jobs:
 
       - name: Generate Prisma client
         run: pnpm db:generate
+
+      - name: Activation migration and PostgreSQL contract
+        env:
+          DATABASE_URL: postgresql://activation_test:activation-test-only@127.0.0.1:5432/keenpix_activation_test
+          KEENPIX_ACTIVATION_TEST_DATABASE: keenpix_activation_test
+        run: |
+          pnpm --filter @keenpix/database run deploy
+          pnpm --filter @keenpix/database test:activation
 
       - name: Repository health
         run: pnpm run health
