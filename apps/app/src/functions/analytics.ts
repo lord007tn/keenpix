@@ -19,7 +19,7 @@ import { isCloud } from '@/server/deployment'
 // appears in the org-wide "All projects" analytics view.
 export const getAnalyticsFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
-  .inputValidator(analyticsInputSchema)
+  .validator(analyticsInputSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireActiveOrg(context)
     const cloud = isCloud()
@@ -36,7 +36,7 @@ export const getAnalyticsFn = createServerFn({ method: 'GET' })
 // analytics/overview render.
 export const getEdgeCacheStatsFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
-  .inputValidator(edgeCacheStatsSchema)
+  .validator(edgeCacheStatsSchema)
   .handler(({ data, context }) => {
     const viewerIsAdmin = context.role === 'super_admin'
     const platform = Boolean(data.platform && viewerIsAdmin)
@@ -49,7 +49,7 @@ export const getEdgeCacheStatsFn = createServerFn({ method: 'GET' })
 
 export const getAllowedHostStatsFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
-  .inputValidator(allowedHostStatsSchema)
+  .validator(allowedHostStatsSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireActiveOrg(context)
     await assertHasWorkspaceAccess(orgId)

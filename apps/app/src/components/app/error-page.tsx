@@ -85,7 +85,12 @@ export function ServerErrorPage({ error }: ErrorComponentProps) {
         // Never surface a raw server/DB error message to users in production
         // (infra strings leak internals); keep it in dev for debugging.
         description={
-          import.meta.env.DEV && error?.message
+          import.meta.env.DEV &&
+          error !== null &&
+          typeof error === 'object' &&
+          'message' in error &&
+          typeof error.message === 'string' &&
+          error.message
             ? error.message
             : 'An unexpected error occurred while loading this page.'
         }
@@ -148,7 +153,12 @@ export function RouteError({ error }: ErrorComponentProps) {
       <ErrorMessage
         code="500"
         description={
-          import.meta.env.DEV && error?.message
+          import.meta.env.DEV &&
+          error !== null &&
+          typeof error === 'object' &&
+          'message' in error &&
+          typeof error.message === 'string' &&
+          error.message
             ? error.message
             : 'An unexpected error occurred. Try again, or head back to your dashboard.'
         }

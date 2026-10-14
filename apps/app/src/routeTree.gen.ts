@@ -9,146 +9,75 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as Char123llmFileChar125DottxtRouteImport } from './routes/{$llmFile}[.]txt'
-import { Route as SupportRouteImport } from './routes/support'
-import { Route as StatusRouteImport } from './routes/status'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as SelfHostedImageCdnRouteImport } from './routes/self-hosted-image-cdn'
-import { Route as SecurityRouteImport } from './routes/security'
-import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
-import { Route as PricingRouteImport } from './routes/pricing'
-import { Route as OpenapiDotjsonRouteImport } from './routes/openapi[.]json'
-import { Route as LearnRouteImport } from './routes/learn'
-import { Route as ImageCdnPricingDotjsonRouteImport } from './routes/image-cdn-pricing[.]json'
-import { Route as ImageCdnCostCalculatorRouteImport } from './routes/image-cdn-cost-calculator'
-import { Route as DevelopersRouteImport } from './routes/developers'
-import { Route as ChangelogRouteImport } from './routes/changelog'
-import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
-import { Route as AboutRouteImport } from './routes/about'
-import { Route as AppRouteRouteImport } from './routes/app/route'
-import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CompareIndexRouteImport } from './routes/compare/index'
-import { Route as BlogIndexRouteImport } from './routes/blog/index'
-import { Route as AppIndexRouteImport } from './routes/app/index'
-import { Route as AdminIndexRouteImport } from './routes/admin/index'
-import { Route as MethodologyComparisonsRouteImport } from './routes/methodology/comparisons'
-import { Route as LegalTermsRouteImport } from './routes/legal/terms'
-import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
-import { Route as LegalLicenseRouteImport } from './routes/legal/license'
-import { Route as LegalDpaRouteImport } from './routes/legal/dpa'
-import { Route as InviteTokenRouteImport } from './routes/invite/$token'
-import { Route as ImgSplatRouteImport } from './routes/img/$'
-import { Route as DocsSplatRouteImport } from './routes/docs/$'
-import { Route as CompareSlugRouteImport } from './routes/compare/$slug'
-import { Route as BlogRssDotxmlRouteImport } from './routes/blog/rss[.]xml'
-import { Route as BlogSplatRouteImport } from './routes/blog/$'
-import { Route as AuthorsRaedBahriRouteImport } from './routes/authors/raed-bahri'
-import { Route as ApiSearchRouteImport } from './routes/api/search'
-import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as ApiSplatRouteImport } from './routes/api/$'
-import { Route as DotwellKnownSecurityDottxtRouteImport } from './routes/[.]well-known/security[.]txt'
-import { Route as authVerifyEmailRouteImport } from './routes/(auth)/verify-email'
-import { Route as authSignupRouteImport } from './routes/(auth)/signup'
-import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
-import { Route as authLoginRouteImport } from './routes/(auth)/login'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
+import { Route as AppRouteRouteImport } from './routes/app/route'
+import { Route as ChangelogRouteImport } from './routes/changelog'
+import { Route as DevelopersRouteImport } from './routes/developers'
+import { Route as ImageCdnCostCalculatorRouteImport } from './routes/image-cdn-cost-calculator'
+import { Route as ImageCdnPricingDotjsonRouteImport } from './routes/image-cdn-pricing[.]json'
+import { Route as LearnRouteImport } from './routes/learn'
+import { Route as OpenapiDotjsonRouteImport } from './routes/openapi[.]json'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SecurityRouteImport } from './routes/security'
+import { Route as SelfHostedImageCdnRouteImport } from './routes/self-hosted-image-cdn'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as StatusRouteImport } from './routes/status'
+import { Route as SupportRouteImport } from './routes/support'
+import { Route as Char123llmFileChar125DottxtRouteImport } from './routes/{$llmFile}[.]txt'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
-import { Route as AppSettingsIndexRouteImport } from './routes/app/settings/index'
-import { Route as AppOperationsIndexRouteImport } from './routes/app/operations/index'
-import { Route as AppOnboardingIndexRouteImport } from './routes/app/onboarding/index'
-import { Route as AppLogsIndexRouteImport } from './routes/app/logs/index'
-import { Route as AppDashboardIndexRouteImport } from './routes/app/dashboard/index'
-import { Route as AppAnalyticsIndexRouteImport } from './routes/app/analytics/index'
-import { Route as AppAccountIndexRouteImport } from './routes/app/account/index'
-import { Route as AdminStaffIndexRouteImport } from './routes/admin/staff/index'
-import { Route as AdminSettingsIndexRouteImport } from './routes/admin/settings/index'
-import { Route as AdminOperationsIndexRouteImport } from './routes/admin/operations/index'
-import { Route as AdminFinancesIndexRouteImport } from './routes/admin/finances/index'
-import { Route as AdminCustomersIndexRouteImport } from './routes/admin/customers/index'
+import { Route as authLoginRouteImport } from './routes/(auth)/login'
+import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
+import { Route as authSignupRouteImport } from './routes/(auth)/signup'
+import { Route as authVerifyEmailRouteImport } from './routes/(auth)/verify-email'
+import { Route as DotwellKnownSecurityDottxtRouteImport } from './routes/[.]well-known/security[.]txt'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as ApiSplatRouteImport } from './routes/api/$'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiSearchRouteImport } from './routes/api/search'
+import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as AuthorsRaedBahriRouteImport } from './routes/authors/raed-bahri'
+import { Route as BlogIndexRouteImport } from './routes/blog/index'
+import { Route as BlogSplatRouteImport } from './routes/blog/$'
+import { Route as BlogRssDotxmlRouteImport } from './routes/blog/rss[.]xml'
+import { Route as CompareIndexRouteImport } from './routes/compare/index'
+import { Route as CompareSlugRouteImport } from './routes/compare/$slug'
+import { Route as DocsSplatRouteImport } from './routes/docs/$'
+import { Route as ImgSplatRouteImport } from './routes/img/$'
+import { Route as InviteTokenRouteImport } from './routes/invite/$token'
+import { Route as LegalDpaRouteImport } from './routes/legal/dpa'
+import { Route as LegalLicenseRouteImport } from './routes/legal/license'
+import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
+import { Route as LegalTermsRouteImport } from './routes/legal/terms'
+import { Route as MethodologyComparisonsRouteImport } from './routes/methodology/comparisons'
 import { Route as AdminAnalyticsIndexRouteImport } from './routes/admin/analytics/index'
-import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
-import { Route as OgBlogSplatRouteImport } from './routes/og/blog/$'
-import { Route as ApiSdkSplatRouteImport } from './routes/api/sdk/$'
+import { Route as AdminCustomersIndexRouteImport } from './routes/admin/customers/index'
+import { Route as AdminFinancesIndexRouteImport } from './routes/admin/finances/index'
+import { Route as AdminOperationsIndexRouteImport } from './routes/admin/operations/index'
+import { Route as AdminSettingsIndexRouteImport } from './routes/admin/settings/index'
+import { Route as AdminStaffIndexRouteImport } from './routes/admin/staff/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiSdkSplatRouteImport } from './routes/api/sdk/$'
+import { Route as AppAccountIndexRouteImport } from './routes/app/account/index'
+import { Route as AppAnalyticsIndexRouteImport } from './routes/app/analytics/index'
+import { Route as AppDashboardIndexRouteImport } from './routes/app/dashboard/index'
+import { Route as AppLogsIndexRouteImport } from './routes/app/logs/index'
+import { Route as AppOnboardingIndexRouteImport } from './routes/app/onboarding/index'
+import { Route as AppOperationsIndexRouteImport } from './routes/app/operations/index'
+import { Route as AppSettingsIndexRouteImport } from './routes/app/settings/index'
+import { Route as OgBlogSplatRouteImport } from './routes/og/blog/$'
+import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
 import { Route as AdminCustomersOrgIdIndexRouteImport } from './routes/admin/customers/$orgId/index'
-import { Route as ApiInternalLogsStreamRouteImport } from './routes/api/internal/logs/stream'
-import { Route as ApiInternalBillingReportUsageRouteImport } from './routes/api/internal/billing/report-usage'
 import { Route as ApiAuthPolarSandboxWebhooksRouteImport } from './routes/api/auth/polar/sandbox-webhooks'
+import { Route as ApiInternalBillingReportUsageRouteImport } from './routes/api/internal/billing/report-usage'
+import { Route as ApiInternalLogsStreamRouteImport } from './routes/api/internal/logs/stream'
 
-const Char123llmFileChar125DottxtRoute =
-  Char123llmFileChar125DottxtRouteImport.update({
-    id: '/{$llmFile}.txt',
-    path: '/{$llmFile}.txt',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const SupportRoute = SupportRouteImport.update({
-  id: '/support',
-  path: '/support',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StatusRoute = StatusRouteImport.update({
-  id: '/status',
-  path: '/status',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SelfHostedImageCdnRoute = SelfHostedImageCdnRouteImport.update({
-  id: '/self-hosted-image-cdn',
-  path: '/self-hosted-image-cdn',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SecurityRoute = SecurityRouteImport.update({
-  id: '/security',
-  path: '/security',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
-  id: '/robots.txt',
-  path: '/robots.txt',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PricingRoute = PricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OpenapiDotjsonRoute = OpenapiDotjsonRouteImport.update({
-  id: '/openapi.json',
-  path: '/openapi.json',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LearnRoute = LearnRouteImport.update({
-  id: '/learn',
-  path: '/learn',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ImageCdnPricingDotjsonRoute = ImageCdnPricingDotjsonRouteImport.update({
-  id: '/image-cdn-pricing.json',
-  path: '/image-cdn-pricing.json',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ImageCdnCostCalculatorRoute = ImageCdnCostCalculatorRouteImport.update({
-  id: '/image-cdn-cost-calculator',
-  path: '/image-cdn-cost-calculator',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevelopersRoute = DevelopersRouteImport.update({
-  id: '/developers',
-  path: '/developers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChangelogRoute = ChangelogRouteImport.update({
-  id: '/changelog',
-  path: '/changelog',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AcceptInviteRoute = AcceptInviteRouteImport.update({
-  id: '/accept-invite',
-  path: '/accept-invite',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -156,9 +85,9 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRouteRoute = AppRouteRouteImport.update({
-  id: '/app',
-  path: '/app',
+const AcceptInviteRoute = AcceptInviteRouteImport.update({
+  id: '/accept-invite',
+  path: '/accept-invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRouteRoute = AdminRouteRouteImport.update({
@@ -166,104 +95,105 @@ const AdminRouteRoute = AdminRouteRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AppRouteRoute = AppRouteRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CompareIndexRoute = CompareIndexRouteImport.update({
-  id: '/compare/',
-  path: '/compare/',
+const ChangelogRoute = ChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BlogIndexRoute = BlogIndexRouteImport.update({
-  id: '/blog/',
-  path: '/blog/',
+const DevelopersRoute = DevelopersRouteImport.update({
+  id: '/developers',
+  path: '/developers',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppIndexRoute = AppIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppRouteRoute,
-} as any)
-const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const MethodologyComparisonsRoute = MethodologyComparisonsRouteImport.update({
-  id: '/methodology/comparisons',
-  path: '/methodology/comparisons',
+const ImageCdnCostCalculatorRoute = ImageCdnCostCalculatorRouteImport.update({
+  id: '/image-cdn-cost-calculator',
+  path: '/image-cdn-cost-calculator',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LegalTermsRoute = LegalTermsRouteImport.update({
-  id: '/legal/terms',
-  path: '/legal/terms',
+const ImageCdnPricingDotjsonRoute = ImageCdnPricingDotjsonRouteImport.update({
+  id: '/image-cdn-pricing.json',
+  path: '/image-cdn-pricing.json',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
-  id: '/legal/privacy',
-  path: '/legal/privacy',
+const LearnRoute = LearnRouteImport.update({
+  id: '/learn',
+  path: '/learn',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LegalLicenseRoute = LegalLicenseRouteImport.update({
-  id: '/legal/license',
-  path: '/legal/license',
+const OpenapiDotjsonRoute = OpenapiDotjsonRouteImport.update({
+  id: '/openapi.json',
+  path: '/openapi.json',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LegalDpaRoute = LegalDpaRouteImport.update({
-  id: '/legal/dpa',
-  path: '/legal/dpa',
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InviteTokenRoute = InviteTokenRouteImport.update({
-  id: '/invite/$token',
-  path: '/invite/$token',
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ImgSplatRoute = ImgSplatRouteImport.update({
-  id: '/img/$',
-  path: '/img/$',
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DocsSplatRoute = DocsSplatRouteImport.update({
-  id: '/docs/$',
-  path: '/docs/$',
+const SelfHostedImageCdnRoute = SelfHostedImageCdnRouteImport.update({
+  id: '/self-hosted-image-cdn',
+  path: '/self-hosted-image-cdn',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CompareSlugRoute = CompareSlugRouteImport.update({
-  id: '/compare/$slug',
-  path: '/compare/$slug',
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BlogRssDotxmlRoute = BlogRssDotxmlRouteImport.update({
-  id: '/blog/rss.xml',
-  path: '/blog/rss.xml',
+const StatusRoute = StatusRouteImport.update({
+  id: '/status',
+  path: '/status',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BlogSplatRoute = BlogSplatRouteImport.update({
-  id: '/blog/$',
-  path: '/blog/$',
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthorsRaedBahriRoute = AuthorsRaedBahriRouteImport.update({
-  id: '/authors/raed-bahri',
-  path: '/authors/raed-bahri',
+const Char123llmFileChar125DottxtRoute =
+  Char123llmFileChar125DottxtRouteImport.update({
+    id: '/{$llmFile}.txt',
+    path: '/{$llmFile}.txt',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
+  id: '/(auth)/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiSearchRoute = ApiSearchRouteImport.update({
-  id: '/api/search',
-  path: '/api/search',
+const authLoginRoute = authLoginRouteImport.update({
+  id: '/(auth)/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiHealthRoute = ApiHealthRouteImport.update({
-  id: '/api/health',
-  path: '/api/health',
+const authResetPasswordRoute = authResetPasswordRouteImport.update({
+  id: '/(auth)/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiSplatRoute = ApiSplatRouteImport.update({
-  id: '/api/$',
-  path: '/api/$',
+const authSignupRoute = authSignupRouteImport.update({
+  id: '/(auth)/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authVerifyEmailRoute = authVerifyEmailRouteImport.update({
+  id: '/(auth)/verify-email',
+  path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DotwellKnownSecurityDottxtRoute =
@@ -272,84 +202,104 @@ const DotwellKnownSecurityDottxtRoute =
     path: '/.well-known/security.txt',
     getParentRoute: () => rootRouteImport,
   } as any)
-const authVerifyEmailRoute = authVerifyEmailRouteImport.update({
-  id: '/(auth)/verify-email',
-  path: '/verify-email',
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const ApiSplatRoute = ApiSplatRouteImport.update({
+  id: '/api/$',
+  path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const authSignupRoute = authSignupRouteImport.update({
-  id: '/(auth)/signup',
-  path: '/signup',
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
-const authResetPasswordRoute = authResetPasswordRouteImport.update({
-  id: '/(auth)/reset-password',
-  path: '/reset-password',
+const ApiSearchRoute = ApiSearchRouteImport.update({
+  id: '/api/search',
+  path: '/api/search',
   getParentRoute: () => rootRouteImport,
 } as any)
-const authLoginRoute = authLoginRouteImport.update({
-  id: '/(auth)/login',
-  path: '/login',
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AuthorsRaedBahriRoute = AuthorsRaedBahriRouteImport.update({
+  id: '/authors/raed-bahri',
+  path: '/authors/raed-bahri',
   getParentRoute: () => rootRouteImport,
 } as any)
-const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
-  id: '/(auth)/forgot-password',
-  path: '/forgot-password',
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
-  id: '/settings/',
-  path: '/settings/',
-  getParentRoute: () => AppRouteRoute,
+const BlogSplatRoute = BlogSplatRouteImport.update({
+  id: '/blog/$',
+  path: '/blog/$',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppOperationsIndexRoute = AppOperationsIndexRouteImport.update({
-  id: '/operations/',
-  path: '/operations/',
-  getParentRoute: () => AppRouteRoute,
+const BlogRssDotxmlRoute = BlogRssDotxmlRouteImport.update({
+  id: '/blog/rss.xml',
+  path: '/blog/rss.xml',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppOnboardingIndexRoute = AppOnboardingIndexRouteImport.update({
-  id: '/onboarding/',
-  path: '/onboarding/',
-  getParentRoute: () => AppRouteRoute,
+const CompareIndexRoute = CompareIndexRouteImport.update({
+  id: '/compare/',
+  path: '/compare/',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppLogsIndexRoute = AppLogsIndexRouteImport.update({
-  id: '/logs/',
-  path: '/logs/',
-  getParentRoute: () => AppRouteRoute,
+const CompareSlugRoute = CompareSlugRouteImport.update({
+  id: '/compare/$slug',
+  path: '/compare/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppDashboardIndexRoute = AppDashboardIndexRouteImport.update({
-  id: '/dashboard/',
-  path: '/dashboard/',
-  getParentRoute: () => AppRouteRoute,
+const DocsSplatRoute = DocsSplatRouteImport.update({
+  id: '/docs/$',
+  path: '/docs/$',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppAnalyticsIndexRoute = AppAnalyticsIndexRouteImport.update({
+const ImgSplatRoute = ImgSplatRouteImport.update({
+  id: '/img/$',
+  path: '/img/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalDpaRoute = LegalDpaRouteImport.update({
+  id: '/legal/dpa',
+  path: '/legal/dpa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalLicenseRoute = LegalLicenseRouteImport.update({
+  id: '/legal/license',
+  path: '/legal/license',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
+  id: '/legal/privacy',
+  path: '/legal/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalTermsRoute = LegalTermsRouteImport.update({
+  id: '/legal/terms',
+  path: '/legal/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MethodologyComparisonsRoute = MethodologyComparisonsRouteImport.update({
+  id: '/methodology/comparisons',
+  path: '/methodology/comparisons',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAnalyticsIndexRoute = AdminAnalyticsIndexRouteImport.update({
   id: '/analytics/',
   path: '/analytics/',
-  getParentRoute: () => AppRouteRoute,
-} as any)
-const AppAccountIndexRoute = AppAccountIndexRouteImport.update({
-  id: '/account/',
-  path: '/account/',
-  getParentRoute: () => AppRouteRoute,
-} as any)
-const AdminStaffIndexRoute = AdminStaffIndexRouteImport.update({
-  id: '/staff/',
-  path: '/staff/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminSettingsIndexRoute = AdminSettingsIndexRouteImport.update({
-  id: '/settings/',
-  path: '/settings/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminOperationsIndexRoute = AdminOperationsIndexRouteImport.update({
-  id: '/operations/',
-  path: '/operations/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminFinancesIndexRoute = AdminFinancesIndexRouteImport.update({
-  id: '/finances/',
-  path: '/finances/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminCustomersIndexRoute = AdminCustomersIndexRouteImport.update({
@@ -357,19 +307,29 @@ const AdminCustomersIndexRoute = AdminCustomersIndexRouteImport.update({
   path: '/customers/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminAnalyticsIndexRoute = AdminAnalyticsIndexRouteImport.update({
-  id: '/analytics/',
-  path: '/analytics/',
+const AdminFinancesIndexRoute = AdminFinancesIndexRouteImport.update({
+  id: '/finances/',
+  path: '/finances/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const OgDocsSplatRoute = OgDocsSplatRouteImport.update({
-  id: '/og/docs/$',
-  path: '/og/docs/$',
-  getParentRoute: () => rootRouteImport,
+const AdminOperationsIndexRoute = AdminOperationsIndexRouteImport.update({
+  id: '/operations/',
+  path: '/operations/',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
-const OgBlogSplatRoute = OgBlogSplatRouteImport.update({
-  id: '/og/blog/$',
-  path: '/og/blog/$',
+const AdminSettingsIndexRoute = AdminSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminStaffIndexRoute = AdminStaffIndexRouteImport.update({
+  id: '/staff/',
+  path: '/staff/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSdkSplatRoute = ApiSdkSplatRouteImport.update({
@@ -377,9 +337,49 @@ const ApiSdkSplatRoute = ApiSdkSplatRouteImport.update({
   path: '/api/sdk/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
+const AppAccountIndexRoute = AppAccountIndexRouteImport.update({
+  id: '/account/',
+  path: '/account/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppAnalyticsIndexRoute = AppAnalyticsIndexRouteImport.update({
+  id: '/analytics/',
+  path: '/analytics/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppDashboardIndexRoute = AppDashboardIndexRouteImport.update({
+  id: '/dashboard/',
+  path: '/dashboard/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppLogsIndexRoute = AppLogsIndexRouteImport.update({
+  id: '/logs/',
+  path: '/logs/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppOnboardingIndexRoute = AppOnboardingIndexRouteImport.update({
+  id: '/onboarding/',
+  path: '/onboarding/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppOperationsIndexRoute = AppOperationsIndexRouteImport.update({
+  id: '/operations/',
+  path: '/operations/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const OgBlogSplatRoute = OgBlogSplatRouteImport.update({
+  id: '/og/blog/$',
+  path: '/og/blog/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OgDocsSplatRoute = OgDocsSplatRouteImport.update({
+  id: '/og/docs/$',
+  path: '/og/docs/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminCustomersOrgIdIndexRoute =
@@ -388,23 +388,23 @@ const AdminCustomersOrgIdIndexRoute =
     path: '/customers/$orgId/',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const ApiInternalLogsStreamRoute = ApiInternalLogsStreamRouteImport.update({
-  id: '/api/internal/logs/stream',
-  path: '/api/internal/logs/stream',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiInternalBillingReportUsageRoute =
-  ApiInternalBillingReportUsageRouteImport.update({
-    id: '/api/internal/billing/report-usage',
-    path: '/api/internal/billing/report-usage',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiAuthPolarSandboxWebhooksRoute =
   ApiAuthPolarSandboxWebhooksRouteImport.update({
     id: '/api/auth/polar/sandbox-webhooks',
     path: '/api/auth/polar/sandbox-webhooks',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalBillingReportUsageRoute =
+  ApiInternalBillingReportUsageRouteImport.update({
+    id: '/api/internal/billing/report-usage',
+    path: '/api/internal/billing/report-usage',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalLogsStreamRoute = ApiInternalLogsStreamRouteImport.update({
+  id: '/api/internal/logs/stream',
+  path: '/api/internal/logs/stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -862,109 +862,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/{$llmFile}.txt': {
-      id: '/{$llmFile}.txt'
-      path: '/{$llmFile}.txt'
-      fullPath: '/{$llmFile}.txt'
-      preLoaderRoute: typeof Char123llmFileChar125DottxtRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/support': {
-      id: '/support'
-      path: '/support'
-      fullPath: '/support'
-      preLoaderRoute: typeof SupportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/status': {
-      id: '/status'
-      path: '/status'
-      fullPath: '/status'
-      preLoaderRoute: typeof StatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/self-hosted-image-cdn': {
-      id: '/self-hosted-image-cdn'
-      path: '/self-hosted-image-cdn'
-      fullPath: '/self-hosted-image-cdn'
-      preLoaderRoute: typeof SelfHostedImageCdnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/security': {
-      id: '/security'
-      path: '/security'
-      fullPath: '/security'
-      preLoaderRoute: typeof SecurityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/robots.txt': {
-      id: '/robots.txt'
-      path: '/robots.txt'
-      fullPath: '/robots.txt'
-      preLoaderRoute: typeof RobotsDottxtRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/openapi.json': {
-      id: '/openapi.json'
-      path: '/openapi.json'
-      fullPath: '/openapi.json'
-      preLoaderRoute: typeof OpenapiDotjsonRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/learn': {
-      id: '/learn'
-      path: '/learn'
-      fullPath: '/learn'
-      preLoaderRoute: typeof LearnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/image-cdn-pricing.json': {
-      id: '/image-cdn-pricing.json'
-      path: '/image-cdn-pricing.json'
-      fullPath: '/image-cdn-pricing.json'
-      preLoaderRoute: typeof ImageCdnPricingDotjsonRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/image-cdn-cost-calculator': {
-      id: '/image-cdn-cost-calculator'
-      path: '/image-cdn-cost-calculator'
-      fullPath: '/image-cdn-cost-calculator'
-      preLoaderRoute: typeof ImageCdnCostCalculatorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/developers': {
-      id: '/developers'
-      path: '/developers'
-      fullPath: '/developers'
-      preLoaderRoute: typeof DevelopersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/changelog': {
-      id: '/changelog'
-      path: '/changelog'
-      fullPath: '/changelog'
-      preLoaderRoute: typeof ChangelogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/accept-invite': {
-      id: '/accept-invite'
-      path: '/accept-invite'
-      fullPath: '/accept-invite'
-      preLoaderRoute: typeof AcceptInviteRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -974,11 +876,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteRouteImport
+    '/accept-invite': {
+      id: '/accept-invite'
+      path: '/accept-invite'
+      fullPath: '/accept-invite'
+      preLoaderRoute: typeof AcceptInviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -988,179 +890,109 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/compare/': {
-      id: '/compare/'
-      path: '/compare'
-      fullPath: '/compare/'
-      preLoaderRoute: typeof CompareIndexRouteImport
+    '/changelog': {
+      id: '/changelog'
+      path: '/changelog'
+      fullPath: '/changelog'
+      preLoaderRoute: typeof ChangelogRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/blog/': {
-      id: '/blog/'
-      path: '/blog'
-      fullPath: '/blog/'
-      preLoaderRoute: typeof BlogIndexRouteImport
+    '/developers': {
+      id: '/developers'
+      path: '/developers'
+      fullPath: '/developers'
+      preLoaderRoute: typeof DevelopersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/app/': {
-      id: '/app/'
-      path: '/'
-      fullPath: '/app/'
-      preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRouteRoute
-    }
-    '/admin/': {
-      id: '/admin/'
-      path: '/'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/methodology/comparisons': {
-      id: '/methodology/comparisons'
-      path: '/methodology/comparisons'
-      fullPath: '/methodology/comparisons'
-      preLoaderRoute: typeof MethodologyComparisonsRouteImport
+    '/image-cdn-cost-calculator': {
+      id: '/image-cdn-cost-calculator'
+      path: '/image-cdn-cost-calculator'
+      fullPath: '/image-cdn-cost-calculator'
+      preLoaderRoute: typeof ImageCdnCostCalculatorRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/legal/terms': {
-      id: '/legal/terms'
-      path: '/legal/terms'
-      fullPath: '/legal/terms'
-      preLoaderRoute: typeof LegalTermsRouteImport
+    '/image-cdn-pricing.json': {
+      id: '/image-cdn-pricing.json'
+      path: '/image-cdn-pricing.json'
+      fullPath: '/image-cdn-pricing.json'
+      preLoaderRoute: typeof ImageCdnPricingDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/legal/privacy': {
-      id: '/legal/privacy'
-      path: '/legal/privacy'
-      fullPath: '/legal/privacy'
-      preLoaderRoute: typeof LegalPrivacyRouteImport
+    '/learn': {
+      id: '/learn'
+      path: '/learn'
+      fullPath: '/learn'
+      preLoaderRoute: typeof LearnRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/legal/license': {
-      id: '/legal/license'
-      path: '/legal/license'
-      fullPath: '/legal/license'
-      preLoaderRoute: typeof LegalLicenseRouteImport
+    '/openapi.json': {
+      id: '/openapi.json'
+      path: '/openapi.json'
+      fullPath: '/openapi.json'
+      preLoaderRoute: typeof OpenapiDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/legal/dpa': {
-      id: '/legal/dpa'
-      path: '/legal/dpa'
-      fullPath: '/legal/dpa'
-      preLoaderRoute: typeof LegalDpaRouteImport
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/invite/$token': {
-      id: '/invite/$token'
-      path: '/invite/$token'
-      fullPath: '/invite/$token'
-      preLoaderRoute: typeof InviteTokenRouteImport
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/img/$': {
-      id: '/img/$'
-      path: '/img/$'
-      fullPath: '/img/$'
-      preLoaderRoute: typeof ImgSplatRouteImport
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/docs/$': {
-      id: '/docs/$'
-      path: '/docs/$'
-      fullPath: '/docs/$'
-      preLoaderRoute: typeof DocsSplatRouteImport
+    '/self-hosted-image-cdn': {
+      id: '/self-hosted-image-cdn'
+      path: '/self-hosted-image-cdn'
+      fullPath: '/self-hosted-image-cdn'
+      preLoaderRoute: typeof SelfHostedImageCdnRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/compare/$slug': {
-      id: '/compare/$slug'
-      path: '/compare/$slug'
-      fullPath: '/compare/$slug'
-      preLoaderRoute: typeof CompareSlugRouteImport
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/blog/rss.xml': {
-      id: '/blog/rss.xml'
-      path: '/blog/rss.xml'
-      fullPath: '/blog/rss.xml'
-      preLoaderRoute: typeof BlogRssDotxmlRouteImport
+    '/status': {
+      id: '/status'
+      path: '/status'
+      fullPath: '/status'
+      preLoaderRoute: typeof StatusRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/blog/$': {
-      id: '/blog/$'
-      path: '/blog/$'
-      fullPath: '/blog/$'
-      preLoaderRoute: typeof BlogSplatRouteImport
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/authors/raed-bahri': {
-      id: '/authors/raed-bahri'
-      path: '/authors/raed-bahri'
-      fullPath: '/authors/raed-bahri'
-      preLoaderRoute: typeof AuthorsRaedBahriRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/search': {
-      id: '/api/search'
-      path: '/api/search'
-      fullPath: '/api/search'
-      preLoaderRoute: typeof ApiSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/health': {
-      id: '/api/health'
-      path: '/api/health'
-      fullPath: '/api/health'
-      preLoaderRoute: typeof ApiHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/$': {
-      id: '/api/$'
-      path: '/api/$'
-      fullPath: '/api/$'
-      preLoaderRoute: typeof ApiSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.well-known/security.txt': {
-      id: '/.well-known/security.txt'
-      path: '/.well-known/security.txt'
-      fullPath: '/.well-known/security.txt'
-      preLoaderRoute: typeof DotwellKnownSecurityDottxtRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(auth)/verify-email': {
-      id: '/(auth)/verify-email'
-      path: '/verify-email'
-      fullPath: '/verify-email'
-      preLoaderRoute: typeof authVerifyEmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(auth)/signup': {
-      id: '/(auth)/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof authSignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(auth)/reset-password': {
-      id: '/(auth)/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof authResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(auth)/login': {
-      id: '/(auth)/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof authLoginRouteImport
+    '/{$llmFile}.txt': {
+      id: '/{$llmFile}.txt'
+      path: '/{$llmFile}.txt'
+      fullPath: '/{$llmFile}.txt'
+      preLoaderRoute: typeof Char123llmFileChar125DottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(auth)/forgot-password': {
@@ -1170,81 +1002,179 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/app/settings/': {
-      id: '/app/settings/'
-      path: '/settings'
-      fullPath: '/app/settings/'
-      preLoaderRoute: typeof AppSettingsIndexRouteImport
+    '/(auth)/login': {
+      id: '/(auth)/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof authLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/reset-password': {
+      id: '/(auth)/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof authResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/signup': {
+      id: '/(auth)/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof authSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/verify-email': {
+      id: '/(auth)/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof authVerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/security.txt': {
+      id: '/.well-known/security.txt'
+      path: '/.well-known/security.txt'
+      fullPath: '/.well-known/security.txt'
+      preLoaderRoute: typeof DotwellKnownSecurityDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/api/$': {
+      id: '/api/$'
+      path: '/api/$'
+      fullPath: '/api/$'
+      preLoaderRoute: typeof ApiSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/search': {
+      id: '/api/search'
+      path: '/api/search'
+      fullPath: '/api/search'
+      preLoaderRoute: typeof ApiSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
-    '/app/operations/': {
-      id: '/app/operations/'
-      path: '/operations'
-      fullPath: '/app/operations/'
-      preLoaderRoute: typeof AppOperationsIndexRouteImport
-      parentRoute: typeof AppRouteRoute
+    '/authors/raed-bahri': {
+      id: '/authors/raed-bahri'
+      path: '/authors/raed-bahri'
+      fullPath: '/authors/raed-bahri'
+      preLoaderRoute: typeof AuthorsRaedBahriRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/app/onboarding/': {
-      id: '/app/onboarding/'
-      path: '/onboarding'
-      fullPath: '/app/onboarding/'
-      preLoaderRoute: typeof AppOnboardingIndexRouteImport
-      parentRoute: typeof AppRouteRoute
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/app/logs/': {
-      id: '/app/logs/'
-      path: '/logs'
-      fullPath: '/app/logs/'
-      preLoaderRoute: typeof AppLogsIndexRouteImport
-      parentRoute: typeof AppRouteRoute
+    '/blog/$': {
+      id: '/blog/$'
+      path: '/blog/$'
+      fullPath: '/blog/$'
+      preLoaderRoute: typeof BlogSplatRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/app/dashboard/': {
-      id: '/app/dashboard/'
-      path: '/dashboard'
-      fullPath: '/app/dashboard/'
-      preLoaderRoute: typeof AppDashboardIndexRouteImport
-      parentRoute: typeof AppRouteRoute
+    '/blog/rss.xml': {
+      id: '/blog/rss.xml'
+      path: '/blog/rss.xml'
+      fullPath: '/blog/rss.xml'
+      preLoaderRoute: typeof BlogRssDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/app/analytics/': {
-      id: '/app/analytics/'
+    '/compare/': {
+      id: '/compare/'
+      path: '/compare'
+      fullPath: '/compare/'
+      preLoaderRoute: typeof CompareIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/$slug': {
+      id: '/compare/$slug'
+      path: '/compare/$slug'
+      fullPath: '/compare/$slug'
+      preLoaderRoute: typeof CompareSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs/$': {
+      id: '/docs/$'
+      path: '/docs/$'
+      fullPath: '/docs/$'
+      preLoaderRoute: typeof DocsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/img/$': {
+      id: '/img/$'
+      path: '/img/$'
+      fullPath: '/img/$'
+      preLoaderRoute: typeof ImgSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/dpa': {
+      id: '/legal/dpa'
+      path: '/legal/dpa'
+      fullPath: '/legal/dpa'
+      preLoaderRoute: typeof LegalDpaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/license': {
+      id: '/legal/license'
+      path: '/legal/license'
+      fullPath: '/legal/license'
+      preLoaderRoute: typeof LegalLicenseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/privacy': {
+      id: '/legal/privacy'
+      path: '/legal/privacy'
+      fullPath: '/legal/privacy'
+      preLoaderRoute: typeof LegalPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/terms': {
+      id: '/legal/terms'
+      path: '/legal/terms'
+      fullPath: '/legal/terms'
+      preLoaderRoute: typeof LegalTermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/methodology/comparisons': {
+      id: '/methodology/comparisons'
+      path: '/methodology/comparisons'
+      fullPath: '/methodology/comparisons'
+      preLoaderRoute: typeof MethodologyComparisonsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/analytics/': {
+      id: '/admin/analytics/'
       path: '/analytics'
-      fullPath: '/app/analytics/'
-      preLoaderRoute: typeof AppAnalyticsIndexRouteImport
-      parentRoute: typeof AppRouteRoute
-    }
-    '/app/account/': {
-      id: '/app/account/'
-      path: '/account'
-      fullPath: '/app/account/'
-      preLoaderRoute: typeof AppAccountIndexRouteImport
-      parentRoute: typeof AppRouteRoute
-    }
-    '/admin/staff/': {
-      id: '/admin/staff/'
-      path: '/staff'
-      fullPath: '/admin/staff/'
-      preLoaderRoute: typeof AdminStaffIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/settings/': {
-      id: '/admin/settings/'
-      path: '/settings'
-      fullPath: '/admin/settings/'
-      preLoaderRoute: typeof AdminSettingsIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/operations/': {
-      id: '/admin/operations/'
-      path: '/operations'
-      fullPath: '/admin/operations/'
-      preLoaderRoute: typeof AdminOperationsIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/finances/': {
-      id: '/admin/finances/'
-      path: '/finances'
-      fullPath: '/admin/finances/'
-      preLoaderRoute: typeof AdminFinancesIndexRouteImport
+      fullPath: '/admin/analytics/'
+      preLoaderRoute: typeof AdminAnalyticsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/customers/': {
@@ -1254,25 +1184,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCustomersIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/analytics/': {
-      id: '/admin/analytics/'
-      path: '/analytics'
-      fullPath: '/admin/analytics/'
-      preLoaderRoute: typeof AdminAnalyticsIndexRouteImport
+    '/admin/finances/': {
+      id: '/admin/finances/'
+      path: '/finances'
+      fullPath: '/admin/finances/'
+      preLoaderRoute: typeof AdminFinancesIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/og/docs/$': {
-      id: '/og/docs/$'
-      path: '/og/docs/$'
-      fullPath: '/og/docs/$'
-      preLoaderRoute: typeof OgDocsSplatRouteImport
-      parentRoute: typeof rootRouteImport
+    '/admin/operations/': {
+      id: '/admin/operations/'
+      path: '/operations'
+      fullPath: '/admin/operations/'
+      preLoaderRoute: typeof AdminOperationsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
-    '/og/blog/$': {
-      id: '/og/blog/$'
-      path: '/og/blog/$'
-      fullPath: '/og/blog/$'
-      preLoaderRoute: typeof OgBlogSplatRouteImport
+    '/admin/settings/': {
+      id: '/admin/settings/'
+      path: '/settings'
+      fullPath: '/admin/settings/'
+      preLoaderRoute: typeof AdminSettingsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/staff/': {
+      id: '/admin/staff/'
+      path: '/staff'
+      fullPath: '/admin/staff/'
+      preLoaderRoute: typeof AdminStaffIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/sdk/$': {
@@ -1282,11 +1226,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSdkSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
+    '/app/account/': {
+      id: '/app/account/'
+      path: '/account'
+      fullPath: '/app/account/'
+      preLoaderRoute: typeof AppAccountIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/analytics/': {
+      id: '/app/analytics/'
+      path: '/analytics'
+      fullPath: '/app/analytics/'
+      preLoaderRoute: typeof AppAnalyticsIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/dashboard/': {
+      id: '/app/dashboard/'
+      path: '/dashboard'
+      fullPath: '/app/dashboard/'
+      preLoaderRoute: typeof AppDashboardIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/logs/': {
+      id: '/app/logs/'
+      path: '/logs'
+      fullPath: '/app/logs/'
+      preLoaderRoute: typeof AppLogsIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/onboarding/': {
+      id: '/app/onboarding/'
+      path: '/onboarding'
+      fullPath: '/app/onboarding/'
+      preLoaderRoute: typeof AppOnboardingIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/operations/': {
+      id: '/app/operations/'
+      path: '/operations'
+      fullPath: '/app/operations/'
+      preLoaderRoute: typeof AppOperationsIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/settings/': {
+      id: '/app/settings/'
+      path: '/settings'
+      fullPath: '/app/settings/'
+      preLoaderRoute: typeof AppSettingsIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/og/blog/$': {
+      id: '/og/blog/$'
+      path: '/og/blog/$'
+      fullPath: '/og/blog/$'
+      preLoaderRoute: typeof OgBlogSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/og/docs/$': {
+      id: '/og/docs/$'
+      path: '/og/docs/$'
+      fullPath: '/og/docs/$'
+      preLoaderRoute: typeof OgDocsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/customers/$orgId/': {
@@ -1296,11 +1296,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCustomersOrgIdIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/api/internal/logs/stream': {
-      id: '/api/internal/logs/stream'
-      path: '/api/internal/logs/stream'
-      fullPath: '/api/internal/logs/stream'
-      preLoaderRoute: typeof ApiInternalLogsStreamRouteImport
+    '/api/auth/polar/sandbox-webhooks': {
+      id: '/api/auth/polar/sandbox-webhooks'
+      path: '/api/auth/polar/sandbox-webhooks'
+      fullPath: '/api/auth/polar/sandbox-webhooks'
+      preLoaderRoute: typeof ApiAuthPolarSandboxWebhooksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/internal/billing/report-usage': {
@@ -1310,11 +1310,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalBillingReportUsageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/auth/polar/sandbox-webhooks': {
-      id: '/api/auth/polar/sandbox-webhooks'
-      path: '/api/auth/polar/sandbox-webhooks'
-      fullPath: '/api/auth/polar/sandbox-webhooks'
-      preLoaderRoute: typeof ApiAuthPolarSandboxWebhooksRouteImport
+    '/api/internal/logs/stream': {
+      id: '/api/internal/logs/stream'
+      path: '/api/internal/logs/stream'
+      fullPath: '/api/internal/logs/stream'
+      preLoaderRoute: typeof ApiInternalLogsStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
   }

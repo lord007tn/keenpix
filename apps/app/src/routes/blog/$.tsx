@@ -127,7 +127,7 @@ export const Route = createFileRoute('/blog/$')({
 })
 
 const serverLoader = createServerFn({ method: 'GET' })
-  .inputValidator(docsSlugsSchema)
+  .validator(docsSlugsSchema)
   .handler(({ data: slugs }) => {
     const page = blogSource.getPage(slugs)
     if (!page || page.data.draft) {

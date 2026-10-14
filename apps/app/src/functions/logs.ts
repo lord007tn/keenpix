@@ -17,7 +17,7 @@ const ADVANCED_LOG_LIMIT = 500
 
 export const listLogsFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
-  .inputValidator(logsQuerySchema)
+  .validator(logsQuerySchema)
   .handler(async ({ data, context }) => {
     const orgId = requireActiveOrg(context)
     const cloud = isCloud()

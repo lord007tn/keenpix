@@ -12,7 +12,7 @@ import { absoluteUrl, comparisonPageJsonLd, seo } from '@/shared/seo'
 // deployment mode (self-host marketing pages are noindex, like /blog and
 // /about).
 const compareMetaFn = createServerFn({ method: 'GET' })
-  .inputValidator(z.string())
+  .validator(z.string())
   .handler(({ data: slug }) => {
     const comparison = COMPARISONS[slug]
     if (!comparison) {

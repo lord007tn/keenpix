@@ -111,7 +111,7 @@ export const Route = createFileRoute('/docs/$')({
 })
 
 const serverLoader = createServerFn({ method: 'GET' })
-  .inputValidator(docsSlugsSchema)
+  .validator(docsSlugsSchema)
   .handler(async ({ data: slugs }) => {
     const page = source.getPage(slugs)
     if (!page) {
