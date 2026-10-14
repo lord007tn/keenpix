@@ -8,7 +8,7 @@ import { dashboardInputSchema } from '@/schemas/analytics'
 // project scope: KPIs, chart series, project list, and per-project stats.
 export const getDashboardFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
-  .inputValidator(dashboardInputSchema)
+  .validator(dashboardInputSchema)
   .handler(async ({ data, context }) => {
     const orgId = requireActiveOrg(context)
     await assertHasWorkspaceAccess(orgId)

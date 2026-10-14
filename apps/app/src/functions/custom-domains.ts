@@ -18,28 +18,28 @@ import {
 
 export const listCustomDomainsFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
-  .inputValidator(listCustomDomainsSchema)
+  .validator(listCustomDomainsSchema)
   .handler(({ data, context }) =>
     listCustomDomains(requireActiveOrg(context), data.projectId),
   )
 
 export const createCustomDomainFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
-  .inputValidator(createCustomDomainSchema)
+  .validator(createCustomDomainSchema)
   .handler(({ data, context }) =>
     createCustomDomain(requireOrgAdmin(context), data.projectId, data.hostname),
   )
 
 export const refreshCustomDomainFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
-  .inputValidator(mutateCustomDomainSchema)
+  .validator(mutateCustomDomainSchema)
   .handler(({ data, context }) =>
     refreshCustomDomain(requireOrgAdmin(context), data.projectId, data.id),
   )
 
 export const deleteCustomDomainFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
-  .inputValidator(mutateCustomDomainSchema)
+  .validator(mutateCustomDomainSchema)
   .handler(({ data, context }) =>
     deleteCustomDomain(requireOrgAdmin(context), data.projectId, data.id),
   )

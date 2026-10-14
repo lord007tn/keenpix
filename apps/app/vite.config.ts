@@ -6,7 +6,6 @@ import viteReact, { reactCompilerPreset } from '@vitejs/plugin-react'
 import mdx from 'fumadocs-mdx/vite'
 import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
-import viteTsConfigPaths from 'vite-tsconfig-paths'
 import packageJson from './package.json' with { type: 'json' }
 
 const config = defineConfig({
@@ -16,6 +15,9 @@ const config = defineConfig({
   server: {
     port: 3000,
   },
+  resolve: {
+    tsconfigPaths: true,
+  },
   ssr: {
     // These dependencies load package-relative runtime assets or CommonJS
     // entrypoints that cannot be relocated into Nitro's ESM chunks.
@@ -24,16 +26,13 @@ const config = defineConfig({
   plugins: [
     mdx(),
     devtools(),
-    nitro(),
-    viteTsConfigPaths({
-      projects: ['./tsconfig.json'],
-    }),
     tailwindcss(),
     tanstackStart({
       router: {
         routeFileIgnorePattern: '\\.test\\.[cm]?[jt]sx?$',
       },
     }),
+    nitro(),
     viteReact(),
     babel({
       presets: [reactCompilerPreset({ compilationMode: 'annotation' })],

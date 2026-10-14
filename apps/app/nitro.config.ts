@@ -40,7 +40,7 @@ export default defineNitroConfig({
   routeRules: {
     '/**': { headers: SECURITY_HEADERS },
   },
-  rollupConfig: {
+  rolldownConfig: {
     external: [
       // BullMQ's ESM Postgres loader references CommonJS globals. Loading the
       // package through Node preserves its CJS entrypoint; bundling it into the

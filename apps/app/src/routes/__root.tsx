@@ -20,7 +20,7 @@ import appCss from '../styles.css?url'
 export const Route = createRootRoute({
   head: ({ matches }) => {
     const notFound = matches.some(
-      (match) => match.status === 'notFound' || match.globalNotFound,
+      (match) => match.status === 'notFound' || match._notFound,
     )
     const description = notFound
       ? "The page you're looking for doesn't exist or may have moved."

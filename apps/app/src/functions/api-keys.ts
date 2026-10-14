@@ -19,7 +19,7 @@ import {
 // enforces the caller's active org; keys are stamped with and filtered by it.
 export const getOrgApiKeysFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
-  .inputValidator(apiKeyWorkspaceSchema)
+  .validator(apiKeyWorkspaceSchema)
   .handler(async ({ context, data }) => {
     const orgId = requireOrgAdmin(context)
     await assertHasProductAccess(orgId)
@@ -28,7 +28,7 @@ export const getOrgApiKeysFn = createServerFn({ method: 'GET' })
 
 export const createOrgApiKeyFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
-  .inputValidator(createApiKeySchema)
+  .validator(createApiKeySchema)
   .handler(async ({ context, data }) => {
     const orgId = requireOrgAdmin(context)
     await assertHasProductAccess(orgId)
@@ -42,7 +42,7 @@ export const createOrgApiKeyFn = createServerFn({ method: 'POST' })
 
 export const disableOrgApiKeyFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
-  .inputValidator(disableApiKeySchema)
+  .validator(disableApiKeySchema)
   .handler(async ({ context, data }) => {
     const orgId = requireOrgAdmin(context)
     await assertHasProductAccess(orgId)
@@ -51,7 +51,7 @@ export const disableOrgApiKeyFn = createServerFn({ method: 'POST' })
 
 export const getOrgApiKeyActivitiesFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
-  .inputValidator(apiKeyActivityPageSchema)
+  .validator(apiKeyActivityPageSchema)
   .handler(async ({ context, data }) => {
     const orgId = requireOrgAdmin(context)
     await assertHasProductAccess(orgId)

@@ -24,7 +24,7 @@ interface DocsData {
 }
 
 const loadPage = createServerFn({ method: 'GET' })
-  .inputValidator(slugsSchema)
+  .validator(slugsSchema)
   .handler(async ({ data: slugs }) => {
     const page = source.getPage(slugs)
     if (!page) {
