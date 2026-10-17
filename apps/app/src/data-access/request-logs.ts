@@ -24,6 +24,12 @@ export type RequestLogEvent = NewRequestLog & { id: string; ts: Date }
 // and failed-request telemetry is batched; successful managed deliveries use
 // the same atomic write synchronously so billable bytes survive a process exit.
 
+export function listRequestLogOrganizations() {
+  // Prisma's findMany({ distinct }) deduplicates in Node, loading every log.
+  // Group in PostgreSQL so daily retention reads one row per organization.
+  return prisma.requestLog.groupBy({ by: ['orgId'] })
+}
+
 // Operator-only cross-tenant cache-hit stats for the platform admin health view.
 // Deliberately NOT org-scoped — never use this for a tenant-facing read.
 export async function getCacheHitStatsAllOrgs(since: Date) {
