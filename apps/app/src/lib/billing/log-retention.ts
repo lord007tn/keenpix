@@ -1,4 +1,5 @@
 import { prisma } from '@keenpix/database'
+import { listRequestLogOrganizations } from '@/data-access/request-logs'
 import { DEFAULT_LOG_RETENTION_DAYS, getPlan } from '@/lib/billing/plans'
 import { deleteRequestEventsBefore } from '@/lib/clickhouse/retention'
 import { errorContext, logger } from '@/lib/logger/logger'
@@ -32,10 +33,7 @@ async function orgRetentionDays(): Promise<Map<string, number>> {
   }
   // Orgs with logs but no subscription row at all (never subscribed or Free)
   // get the default window too.
-  const orgsWithLogs = await prisma.requestLog.findMany({
-    distinct: ['orgId'],
-    select: { orgId: true },
-  })
+  const orgsWithLogs = await listRequestLogOrganizations()
   for (const row of orgsWithLogs) {
     if (!retention.has(row.orgId)) {
       retention.set(row.orgId, DEFAULT_LOG_RETENTION_DAYS)
