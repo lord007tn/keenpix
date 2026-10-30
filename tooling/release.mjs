@@ -121,6 +121,14 @@ const getOrderedPublicPackages = () => {
   return orderedPackages
 }
 
+const unpublishableRangeProtocols = [
+  'workspace:',
+  'catalog:',
+  'link:',
+  'file:',
+  'portal:',
+]
+
 const dependencyFields = [
   'dependencies',
   'optionalDependencies',
@@ -146,7 +154,9 @@ export const verifyPackedPackage = (tarball, expected, internalNames) => {
   }
   for (const field of dependencyFields) {
     for (const [name, range] of Object.entries(manifest[field] ?? {})) {
-      if (range.includes('workspace:') || range.includes('catalog:')) {
+      if (
+        unpublishableRangeProtocols.some((protocol) => range.includes(protocol))
+      ) {
         throw new Error(`${manifest.name} ${field}.${name} contains ${range}.`)
       }
       if (internalNames.has(name) && range !== `^${expected.version}`) {

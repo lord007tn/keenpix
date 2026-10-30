@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
@@ -22,7 +28,14 @@ test('packed manifest guard rejects protocols in every dependency field and inco
       'peerDependencies',
       'devDependencies',
     ]) {
-      for (const range of ['workspace:^', 'catalog:default', '^0.3.2']) {
+      for (const range of [
+        'workspace:^',
+        'catalog:default',
+        'link:../core',
+        'file:../core',
+        'portal:../core',
+        '^0.3.2',
+      ]) {
         writeFileSync(
           join(directory, 'package/package.json'),
           JSON.stringify({
@@ -64,4 +77,16 @@ test('packed manifest guard rejects protocols in every dependency field and inco
   } finally {
     rmSync(directory, { recursive: true, force: true })
   }
+})
+
+test('publishing sends the verified tarball, never the package directory', () => {
+  const source = readFileSync(new URL('./release.mjs', import.meta.url), 'utf8')
+  const publishPackages = source.slice(source.indexOf('const publishPackages'))
+
+  assert.match(
+    publishPackages,
+    /'publish',\s+process\.platform === 'win32' \? `"\$\{tarball\}"` : tarball,/,
+  )
+  assert.match(publishPackages, /cwd: destination,/)
+  assert.doesNotMatch(publishPackages, /cwd: (packageEntry\.)?directory/)
 })
