@@ -56,13 +56,13 @@ export async function handleDemoRequest(request: Request, sample?: string) {
     }
     return new Response(new Uint8Array(result.image.data), {
       headers: {
-        'Content-Type': `image/${result.image.format}`,
+        'Content-Type': `image/${format}`,
         'Content-Length': String(result.image.data.length),
         'Cache-Control': 'public, max-age=86400, no-transform',
         'X-Keenpix-Original-Bytes': String(result.originalBytes),
         'X-Keenpix-Output-Width': String(result.image.width),
         'X-Keenpix-Output-Height': String(result.image.height),
-        'X-Keenpix-Output-Format': result.image.format,
+        'X-Keenpix-Output-Format': format,
         'X-Keenpix-Cache': result.cache,
         'X-Robots-Tag': 'noindex',
         'Timing-Allow-Origin': '*',

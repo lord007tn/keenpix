@@ -122,6 +122,15 @@ describe('bounded unmetered demo', () => {
       (await request('fmt=avif&q=85&w=1200')).headers.get('x-keenpix-cache'),
     ).toBe('HIT')
   })
+  it('labels AVIF with the public format rather than sharp internal HEIF', async () => {
+    const response = await request('fmt=avif&q=85&w=1200')
+    expect(response.headers.get('content-type')).toBe('image/avif')
+    expect(response.headers.get('x-keenpix-output-format')).toBe('avif')
+    const metadata = await sharp(
+      Buffer.from(await response.arrayBuffer()),
+    ).metadata()
+    expect(metadata.compression).toBe('av1')
+  })
   it('serializes distinct cold encodes', async () => {
     encodes.peak = 0
     const responses = await Promise.all(
