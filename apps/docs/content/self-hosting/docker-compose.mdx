@@ -71,11 +71,12 @@ is operationally useful but is not the system of record. To replace MaxIO with
 Cloudflare R2, set the five `KEENPIX_CACHE_S3_*` variables; no Compose topology
 change is required.
 
-Earlier Compose files let `keenpix_dragonfly` grow without limit, because each
-5-minute snapshot was saved under a new name and none were removed. Current
-files set `--dbfilename=dump`, which overwrites the last save. Updating your
-Compose file stops the growth but keeps the old snapshots, so remove them once
-Dragonfly has restarted with the new flag and written `dump-summary.dfs`:
+Earlier Compose files saved each Dragonfly snapshot under a new name, and
+Dragonfly doesn't remove old ones, so `keenpix_dragonfly` can keep growing. Each
+snapshot can be as large as the variant cache. Current files set
+`--dbfilename=dump`, which overwrites the last save. Updating your Compose file
+stops the pile-up but keeps the old snapshots, so remove them once Dragonfly has
+restarted with the new flag and written `dump-summary.dfs`:
 
 ```bash
 docker compose exec dragonfly find /data -maxdepth 1 -name 'dump-20*' -delete
