@@ -19,7 +19,7 @@ vi.mock('@keenpix/transform/sharp', async (importOriginal) => {
     ) => {
       if (encodes.hangNext) {
         encodes.hangNext = false
-        return new Promise<never>(() => {})
+        return new Promise<never>(() => undefined)
       }
       encodes.active++
       encodes.total++
