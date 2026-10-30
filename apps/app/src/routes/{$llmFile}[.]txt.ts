@@ -2,11 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { COMPARISONS } from '@/features/compare/comparison-data'
 import { getAppUrl, isCloud } from '@/server/deployment'
 import { listPublicMarkdown } from '@/server/public-markdown'
-import {
-  SUPPORT_EMAIL,
-  SUPPORT_WHATSAPP_LABEL,
-  SUPPORT_WHATSAPP_URL,
-} from '@/shared/authors'
+import { SUPPORT_EMAIL } from '@/shared/authors'
 
 export const Route = createFileRoute('/{$llmFile}.txt')({
   server: {
@@ -68,13 +64,13 @@ Control-plane operations require project-scoped server-side API keys. Normal ima
 - [Security and data handling](${baseUrl}/security.md): current controls and explicit claim limits.
 - [Service status guidance](${baseUrl}/status.md): current health, incident reporting, and absence of an uptime-history claim.
 - [Support and corrections](${baseUrl}/support.md): safe issue, vulnerability, and editorial-correction paths.
-- [Product changelog](${baseUrl}/changelog.md): released product history from the repository source.
+- [Product changelog](${baseUrl}/changelog.md): releases and confirmed incidents from the repository source.
 - [Terms](${baseUrl}/legal/terms.md)
 - [Privacy](${baseUrl}/legal/privacy.md)
 - [Data Processing Addendum](${baseUrl}/legal/dpa.md)
 - [License and open source](${baseUrl}/legal/license.md): code-license boundary and the absence of an invented RSL declaration.
 
-API and documentation contact: [${SUPPORT_EMAIL}](mailto:${SUPPORT_EMAIL}) or [WhatsApp ${SUPPORT_WHATSAPP_LABEL}](${SUPPORT_WHATSAPP_URL}).
+API and documentation contact: [${SUPPORT_EMAIL}](mailto:${SUPPORT_EMAIL}).
 
 ## Complete collection
 

@@ -23,6 +23,7 @@ import { SiteFooter, SiteHeader } from '@/features/blog/blog-chrome'
 import {
   getPlanCardFeatures,
   PLAN_CARD_ORDER,
+  PLAN_CARD_TRIAL_LIMITS,
   PLAN_TAGLINES,
 } from '@/features/marketing/plan-card-content'
 import {
@@ -257,16 +258,21 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
                           </li>
                         ))}
                       </ul>
-                      <Link
-                        className={buttonVariants({
-                          className:
-                            'mt-auto min-h-11 w-full touch-manipulation px-4',
-                          variant: featured ? 'default' : 'outline',
-                        })}
-                        to="/signup"
-                      >
-                        Start {TRIAL.days}-day free trial
-                      </Link>
+                      <div className="mt-auto flex flex-col gap-2">
+                        <Link
+                          className={buttonVariants({
+                            className:
+                              'min-h-11 w-full touch-manipulation px-4',
+                            variant: featured ? 'default' : 'outline',
+                          })}
+                          to="/signup"
+                        >
+                          Start {TRIAL.days}-day free trial
+                        </Link>
+                        <p className="text-center text-muted-foreground text-xs">
+                          {PLAN_CARD_TRIAL_LIMITS}
+                        </p>
+                      </div>
                     </CardContent>
                   </Card>
                 )
@@ -364,7 +370,7 @@ export function PricingPage({ pricing }: { pricing: PlanPricing | null }) {
             <h2 className="font-semibold text-2xl tracking-tight">
               Billing questions, answered honestly
             </h2>
-            <Accordion className="mt-6">
+            <Accordion className="mt-6" hiddenUntilFound>
               {PRICING_FAQ.map((item) => (
                 <AccordionItem key={item.question} value={item.question}>
                   <AccordionTrigger className="text-base">

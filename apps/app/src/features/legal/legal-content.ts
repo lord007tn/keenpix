@@ -19,6 +19,10 @@ interface LegalPageDefinition {
   title: string
 }
 
+// Legal text keeps its own contact, independent of SUPPORT_EMAIL. Changing it
+// changes the published terms, so legal-content.test.ts pins the value.
+export const LEGAL_CONTACT_EMAIL = 'hi@raedbahri.com'
+
 export const LEGAL_PAGE_IDS = ['terms', 'privacy', 'dpa', 'license'] as const
 export type LegalPageId = (typeof LEGAL_PAGE_IDS)[number]
 
@@ -177,8 +181,8 @@ export const LEGAL_PAGES = {
               'Questions about these Terms? Email ',
               {
                 kind: 'link',
-                text: SUPPORT_EMAIL,
-                href: `mailto:${SUPPORT_EMAIL}`,
+                text: LEGAL_CONTACT_EMAIL,
+                href: `mailto:${LEGAL_CONTACT_EMAIL}`,
               },
               '.',
             ],
@@ -311,8 +315,8 @@ export const LEGAL_PAGES = {
               'Depending on your location, you may have rights to access, correct, export, or delete your personal data, and to object to or restrict certain processing. To exercise these rights, email ',
               {
                 kind: 'link',
-                text: SUPPORT_EMAIL,
-                href: `mailto:${SUPPORT_EMAIL}`,
+                text: LEGAL_CONTACT_EMAIL,
+                href: `mailto:${LEGAL_CONTACT_EMAIL}`,
               },
               '. You can also delete projects and close your account from the app at any time.',
             ],
@@ -350,8 +354,8 @@ export const LEGAL_PAGES = {
               'Questions about privacy? Email ',
               {
                 kind: 'link',
-                text: SUPPORT_EMAIL,
-                href: `mailto:${SUPPORT_EMAIL}`,
+                text: LEGAL_CONTACT_EMAIL,
+                href: `mailto:${LEGAL_CONTACT_EMAIL}`,
               },
               '.',
             ],
@@ -502,8 +506,8 @@ export const LEGAL_PAGES = {
               'To raise a data-protection matter or request a signed copy of this DPA, email ',
               {
                 kind: 'link',
-                text: SUPPORT_EMAIL,
-                href: `mailto:${SUPPORT_EMAIL}`,
+                text: LEGAL_CONTACT_EMAIL,
+                href: `mailto:${LEGAL_CONTACT_EMAIL}`,
               },
               '.',
             ],
@@ -651,5 +655,4 @@ export function legalPageMarkdown(pageId: LegalPageId, origin: string) {
   ].join('\n')
 }
 
-import { SUPPORT_EMAIL } from '@/shared/authors'
 import { REPOSITORY_URL } from '@/shared/repository'

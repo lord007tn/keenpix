@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getAppUrl, isCloud } from '@/server/deployment'
 import { SUPPORT_EMAIL } from '@/shared/authors'
+import { REPOSITORY_URL } from '@/shared/repository'
 
 export const Route = createFileRoute('/.well-known/security.txt')({
   server: {
@@ -13,6 +14,7 @@ export const Route = createFileRoute('/.well-known/security.txt')({
         const canonicalUrl = `${getAppUrl()}/.well-known/security.txt`
         const body = [
           `Contact: mailto:${SUPPORT_EMAIL}`,
+          `Contact: ${REPOSITORY_URL}/security/advisories/new`,
           'Expires: 2027-07-12T23:59:59Z',
           `Canonical: ${canonicalUrl}`,
           `Policy: ${getAppUrl()}/security`,

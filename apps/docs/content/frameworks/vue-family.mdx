@@ -25,17 +25,7 @@ Use `imageProps()` with `v-bind` when you want a native `<img>`. The adapter ret
 
 ## Nuxt Image
 
-```ts
-// providers/keenpix.ts
-import { createNuxtImageProvider } from '@keenpix/nuxt'
-
-export const getImage = createNuxtImageProvider({
-  baseUrl: 'https://images.example.com',
-  projectId: 'website',
-})
-```
-
-Register it as a custom provider in `nuxt.config.ts`, then use that provider with `<NuxtImg>`. The adapter implements Nuxt Image's `getImage` response contract and maps provider modifiers into Keenpix transforms.
+See the [Nuxt guide](/docs/frameworks/nuxt) for the provider file, registration, and `<NuxtImg>` usage.
 
 ## VitePress
 
