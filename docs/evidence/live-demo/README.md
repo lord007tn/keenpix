@@ -33,7 +33,8 @@ Checked the official current default-cache documentation: https://developers.clo
 ```sh
 curl -sS -D - 'https://keenpix.com/demo/img/og.png?fmt=webp&q=70&w=960' -o /dev/null
 # Repeat: 200, image/webp, Cache-Control: public, max-age=86400, no-transform
-# Cloudflare serves the body chunked, so production responses carry no Content-Length.
+# Don't expect Content-Length: the origin sets it, but on 2026-10-30 Cloudflare omitted it
+# from 16 of 18 cached responses across three variants, over both HTTP/1.1 and HTTP/2.
 # X-Keenpix-Original-Bytes: 126912; output width 960, height 504, format webp
 # X-Keenpix-Cache: HIT or MISS; X-Robots-Tag: noindex; Timing-Allow-Origin: *
 # No Set-Cookie. Repeated production request must eventually show CF-Cache-Status: HIT.
