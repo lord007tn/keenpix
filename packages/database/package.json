@@ -5,6 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./measurement-outbox": "./src/data-access/image-measurement.ts",
+    "./image-measurement": "./src/actions/image-measurement.ts",
     "./activation": "./src/data-access/activation.ts",
     "./client": "./src/generated/prisma/client.ts"
   },
@@ -25,13 +27,13 @@
     "@prisma/client": "^7.8.0",
     "better-auth": "^1.6.11",
     "cuid": "^3.0.0",
+    "dayjs": "^1.11.20",
     "dotenv": "^17.4.2",
     "pg": "^8.21.0",
     "prisma": "^7.8.0",
     "tsx": "^4.22.3"
   },
   "devDependencies": {
-    "dayjs": "^1.11.20",
     "@types/node": "^22.19.15",
     "@types/pg": "^8.20.0",
     "typescript": "^5.9.3"

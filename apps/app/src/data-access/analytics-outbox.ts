@@ -1,6 +1,7 @@
 import { prisma } from '@keenpix/database'
-import { recordProjectFirstImageSuccesses } from '@keenpix/database/activation'
 import type { AnalyticsEventOutbox, Prisma } from '@keenpix/database/client'
+import { drainImageMeasurementOutbox } from '@keenpix/database/measurement-outbox'
+import { createLogger } from '@keenpix/logger'
 import { isExternalImageSource } from '@keenpix/transform/activation'
 import {
   aggregateRollupIncrements,
@@ -8,6 +9,7 @@ import {
 } from '@/data-access/analytics-rollups'
 import type { RequestLogEvent } from '@/data-access/request-logs'
 
+const logger = createLogger()
 const OUTBOX_BATCH_SIZE = 500
 const OUTBOX_LOCK_CLASS = 0x6b_70
 const OUTBOX_LOCK_OBJ = 2
@@ -49,11 +51,6 @@ async function writeOutboxBatch(
   for (const increment of aggregateRollupIncrements(events)) {
     await applyRollupIncrement(db, increment)
   }
-  // One statement per batch for both ledgers. The database filters enrollment
-  // before selecting each project's earliest event, including batches that
-  // straddle enrollment. The candidate bit carries the request-time exclusions;
-  // the persisted source host decides the external ledger. Without an app origin
-  // no source can be proven external, so only origin_first_image_v1 is written.
   const candidates = batch
     .filter(
       (log) =>
@@ -68,7 +65,47 @@ async function writeOutboxBatch(
         : false,
     }))
   if (candidates.length > 0) {
-    await recordProjectFirstImageSuccesses(candidates, db)
+    // A savepoint is required: catching a PostgreSQL error alone leaves the
+    // accounting transaction aborted. Only optional handoff is rolled back.
+    await db.$executeRaw`SAVEPOINT image_measurement`
+    try {
+      const [settings] = await db.$queryRaw<
+        { statement: string; lock: string }[]
+      >`
+        SELECT current_setting('statement_timeout') AS statement, current_setting('lock_timeout') AS lock`
+      await db.$executeRaw`SELECT set_config('statement_timeout', '750ms', true), set_config('lock_timeout', '150ms', true)`
+      await db.$executeRaw`
+        INSERT INTO "ImageMeasurementOutbox" ("id", "candidates")
+        VALUES (${batch[0].id}, ${JSON.stringify(candidates)}::jsonb)
+        ON CONFLICT DO NOTHING`
+      await db.$executeRaw`SELECT set_config('statement_timeout', ${settings.statement}, true), set_config('lock_timeout', ${settings.lock}, true)`
+      await db.$executeRaw`RELEASE SAVEPOINT image_measurement`
+    } catch {
+      await db.$executeRaw`ROLLBACK TO SAVEPOINT image_measurement`
+      await db.$executeRaw`RELEASE SAVEPOINT image_measurement`
+      await db.$executeRaw`SAVEPOINT image_measurement_gap`
+      try {
+        const [settings] = await db.$queryRaw<
+          { statement: string; lock: string }[]
+        >`
+          SELECT current_setting('statement_timeout') AS statement, current_setting('lock_timeout') AS lock`
+        await db.$executeRaw`SELECT set_config('statement_timeout', '750ms', true), set_config('lock_timeout', '150ms', true)`
+        await db.$executeRaw`
+          INSERT INTO "FirstExternalImageInterruption" ("startedAt", "endedAt")
+          SELECT MIN("observedAt"), MAX("observedAt") + interval '1 millisecond'
+          FROM jsonb_to_recordset(${JSON.stringify(candidates)}::jsonb) event("observedAt" timestamp)
+          ON CONFLICT DO NOTHING`
+        await db.$executeRaw`SELECT set_config('statement_timeout', ${settings.statement}, true), set_config('lock_timeout', ${settings.lock}, true)`
+      } catch {
+        // Missing migration/database failure also prevents gap persistence.
+        // Positive coverage evidence is still required, so this cannot yield zero.
+        await db.$executeRaw`ROLLBACK TO SAVEPOINT image_measurement_gap`
+      }
+      await db.$executeRaw`RELEASE SAVEPOINT image_measurement_gap`
+      logger.warn(
+        'image measurement handoff interrupted; coverage remains unverified',
+      )
+    }
   }
   await db.analyticsEventOutbox.deleteMany({
     where: { id: { in: batch.map((event) => event.id) } },
@@ -88,8 +125,11 @@ export async function drainProjectAnalyticsOutbox(
   return batch.length > 0 ? writeOutboxBatch(db, batch) : []
 }
 
-export function drainAnalyticsOutboxBatch(through: Date, appOrigin?: string) {
-  return prisma.$transaction(
+export async function drainAnalyticsOutboxBatch(
+  through: Date,
+  appOrigin?: string,
+) {
+  const result = await prisma.$transaction(
     async (db) => {
       const locks = await db.$queryRaw<{ locked: boolean }[]>`
         SELECT pg_try_advisory_xact_lock(${OUTBOX_LOCK_CLASS}, ${OUTBOX_LOCK_OBJ}) AS locked`
@@ -112,4 +152,10 @@ export function drainAnalyticsOutboxBatch(through: Date, appOrigin?: string) {
     },
     { timeout: 30_000 },
   )
+  try {
+    await drainImageMeasurementOutbox()
+  } catch {
+    logger.warn('image measurement retry deferred')
+  }
+  return result
 }

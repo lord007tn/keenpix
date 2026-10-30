@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
 }))
 const db = vi.hoisted(() => ({
   $queryRaw: vi.fn(),
+  $executeRaw: vi.fn(),
   analyticsEventOutbox: {
     count: vi.fn(),
     deleteMany: vi.fn(),
@@ -19,8 +20,8 @@ vi.mock('@keenpix/database', () => ({
     $transaction: (work: (client: typeof db) => unknown) => work(db),
   },
 }))
-vi.mock('@keenpix/database/activation', () => ({
-  recordProjectFirstImageSuccesses: mocks.record,
+vi.mock('@keenpix/database/measurement-outbox', () => ({
+  drainImageMeasurementOutbox: mocks.record,
 }))
 vi.mock('@/data-access/analytics-rollups', () => ({
   aggregateRollupIncrements: () => [],
@@ -47,7 +48,9 @@ const event = {
 describe('analytics outbox first-image capture', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    db.$queryRaw.mockResolvedValue([{ locked: true }])
+    db.$queryRaw.mockResolvedValue([
+      { locked: true, statement: '0', lock: '0' },
+    ])
     db.analyticsEventOutbox.count.mockResolvedValue(0)
     db.analyticsEventOutbox.findMany.mockImplementation(async () => mocks.rows)
   })
@@ -60,14 +63,17 @@ describe('analytics outbox first-image capture', () => {
       { ...event, id: 'unknown', sourceHost: null },
     ]
     await drainAnalyticsOutboxBatch(through, 'https://app.example.test')
-    expect(mocks.record).toHaveBeenCalledExactlyOnceWith(
+    const insert = db.$executeRaw.mock.calls.find(([sql]) =>
+      sql.join('').includes('INSERT INTO "ImageMeasurementOutbox"'),
+    )
+    expect(insert).toBeDefined()
+    expect(JSON.parse(insert?.[2])).toEqual(
       [true, false, false, false].map((external) => ({
         external,
-        observedAt: event.ts,
+        observedAt: event.ts.toISOString(),
         orgId: 'organization',
         projectId: 'project',
       })),
-      db,
     )
   })
 
@@ -78,7 +84,7 @@ describe('analytics outbox first-image capture', () => {
       { ...event, bytesOut: 0 },
     ]
     await drainAnalyticsOutboxBatch(through, 'https://app.example.test')
-    expect(mocks.record).not.toHaveBeenCalled()
+    expect(db.$executeRaw).not.toHaveBeenCalled()
     expect(db.analyticsEventOutbox.deleteMany).toHaveBeenCalledOnce()
   })
 
@@ -86,9 +92,14 @@ describe('analytics outbox first-image capture', () => {
     mocks.rows = [event]
     await drainAnalyticsOutboxBatch(through)
     await drainProjectAnalyticsOutbox(db as never, 'project')
-    expect(mocks.record).toHaveBeenCalledTimes(2)
-    for (const [candidates] of mocks.record.mock.calls) {
-      expect(candidates).toEqual([expect.objectContaining({ external: false })])
+    const inserts = db.$executeRaw.mock.calls.filter(([sql]) =>
+      sql.join('').includes('INSERT INTO "ImageMeasurementOutbox"'),
+    )
+    expect(inserts).toHaveLength(2)
+    for (const insert of inserts) {
+      expect(JSON.parse(insert[2])).toEqual([
+        expect.objectContaining({ external: false }),
+      ])
     }
   })
 })

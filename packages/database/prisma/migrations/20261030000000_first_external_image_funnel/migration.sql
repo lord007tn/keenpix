@@ -12,3 +12,23 @@ CREATE TABLE "FirstExternalImageCoverage" (
   "definitionVersion" INTEGER NOT NULL PRIMARY KEY CHECK ("definitionVersion" = 1),
   "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Positive coverage evidence only. An unverified interval remains Unknown even
+-- if a dead process could not persist its interruption during a database outage.
+CREATE TABLE "FirstExternalImageVerifiedInterval" (
+  "startedAt" TIMESTAMP(3) NOT NULL,
+  "endedAt" TIMESTAMP(3) NOT NULL,
+  PRIMARY KEY ("startedAt", "endedAt"),
+  CHECK ("endedAt" > "startedAt")
+);
+CREATE TABLE "FirstExternalImageInterruption" (
+  "startedAt" TIMESTAMP(3) NOT NULL,
+  "endedAt" TIMESTAMP(3) NOT NULL,
+  PRIMARY KEY ("startedAt", "endedAt"),
+  CHECK ("endedAt" > "startedAt")
+);
+CREATE TABLE "ImageMeasurementOutbox" (
+  "id" TEXT PRIMARY KEY,
+  "candidates" JSONB NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

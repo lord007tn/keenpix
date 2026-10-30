@@ -1,5 +1,5 @@
 import type { Prisma } from '../generated/prisma/client'
-import { prisma } from '../index'
+import { measurementPrisma, prisma } from '../index'
 
 // Operator-only classification. No public or tenant endpoint exposes this write.
 // Enrollment starts at database time; reclassification never backdates coverage.
@@ -36,7 +36,7 @@ export function setOrganizationActivationClassification(input: {
 // already observed at or before the event, so a repeat delivery neither locks the
 // row nor writes WAL. CURRENT_TIMESTAMP is converted explicitly because funnel
 // days are UTC whatever the session time zone is.
-export function recordProjectFirstImageSuccesses(
+export async function recordProjectFirstImageSuccesses(
   input: {
     projectId: string
     orgId: string
@@ -45,7 +45,10 @@ export function recordProjectFirstImageSuccesses(
   }[],
   db: Pick<Prisma.TransactionClient, '$executeRaw'> = prisma,
 ) {
-  return db.$executeRaw`
+  const deadline = performance.now() + 2000
+  for (;;) {
+    try {
+      return await db.$executeRaw`
     WITH event AS (
       SELECT * FROM jsonb_to_recordset(${JSON.stringify(input)}::jsonb)
         AS event("projectId" text, "orgId" text, "observedAt" timestamp, "external" boolean)
@@ -83,6 +86,19 @@ export function recordProjectFirstImageSuccesses(
     ON CONFLICT ("projectId") DO UPDATE SET "observedAt" = EXCLUDED."observedAt"
       WHERE EXCLUDED."observedAt" < "ProjectFirstImageSuccess"."observedAt"
   `
+    } catch (error) {
+      // Retry a fresh standalone statement, never an already aborted transaction.
+      const details = JSON.stringify(error)
+      if (
+        (db !== prisma && db !== measurementPrisma) ||
+        performance.now() + 1500 >= deadline ||
+        !details.includes('23505') ||
+        !details.includes('ProjectFirstImageSuccess_projectId_orgId_key')
+      ) {
+        throw error
+      }
+    }
+  }
 }
 
 // Restricted operator aggregate: never return org/project/user identifiers,
@@ -205,11 +221,25 @@ export async function getFirstValueFunnelReadout(input: {
             WHERE u."role" = 'user' AND u."createdAt" >= d."start" AND u."createdAt" < d."end") AS "signups",
           (SELECT COUNT(*)::int FROM first_project f
             WHERE f."at" >= d."start" AND f."at" < d."end") AS "firstProjectWorkspaces",
-          CASE WHEN coverage."startedAt" <= d."start" THEN
+          CASE WHEN coverage."startedAt" <= d."start"
+            AND EXISTS (SELECT 1 FROM "FirstExternalImageVerifiedInterval" v
+              WHERE v."startedAt" <= d."start" AND v."endedAt" >= d."end")
+            AND NOT EXISTS (SELECT 1 FROM "ImageMeasurementOutbox" q,
+              LATERAL jsonb_array_elements(q."candidates") event
+              WHERE (event->>'observedAt')::timestamp < d."end")
+            AND NOT EXISTS (SELECT 1 FROM "FirstExternalImageInterruption" gap
+              WHERE gap."startedAt" < d."end" AND gap."endedAt" > d."start") THEN
             (SELECT COUNT(*)::int FROM first_image i
               WHERE i."at" >= d."start" AND i."at" < d."end")
           END AS "firstExternalImageWorkspaces",
-          CASE WHEN coverage."startedAt" <= d."start" THEN
+          CASE WHEN coverage."startedAt" <= d."start"
+            AND EXISTS (SELECT 1 FROM "FirstExternalImageVerifiedInterval" v
+              WHERE v."startedAt" <= d."start" AND v."endedAt" >= d."end")
+            AND NOT EXISTS (SELECT 1 FROM "ImageMeasurementOutbox" q,
+              LATERAL jsonb_array_elements(q."candidates") event
+              WHERE (event->>'observedAt')::timestamp < d."end")
+            AND NOT EXISTS (SELECT 1 FROM "FirstExternalImageInterruption" gap
+              WHERE gap."startedAt" < d."end" AND gap."endedAt" > d."start") THEN
             (SELECT COUNT(*)::int FROM first_image i
               JOIN first_project f ON f."orgId" = i."orgId"
               WHERE i."at" >= d."start" AND i."at" < d."end" AND f."at" < coverage."startedAt")
@@ -228,8 +258,11 @@ export async function getFirstValueFunnelReadout(input: {
         SELECT
           (SELECT to_char("startedAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
             FROM "FirstExternalImageCoverage" WHERE "definitionVersion" = 1) AS "coverageStartedAt",
-          (SELECT COUNT(*)::int FROM "AnalyticsEventOutbox"
-            WHERE "activationCandidate" AND "ts" < ${input.toDay}::date::timestamp) AS "pendingCandidateEvents",
+          ((SELECT COUNT(*)::int FROM "AnalyticsEventOutbox"
+            WHERE "activationCandidate" AND "ts" < ${input.toDay}::date::timestamp)
+            + (SELECT COUNT(*)::int FROM "ImageMeasurementOutbox" q,
+              LATERAL jsonb_array_elements(q."candidates") event
+              WHERE (event->>'observedAt')::timestamp < ${input.toDay}::date::timestamp)) AS "pendingCandidateEvents",
           (SELECT COUNT(DISTINCT s."orgId")::int
             FROM "ProjectFirstExternalImage" s
             LEFT JOIN "OrganizationActivationPolicy" policy ON policy."orgId" = s."orgId"
@@ -243,4 +276,24 @@ export async function getFirstValueFunnelReadout(input: {
     { isolationLevel: 'RepeatableRead' },
   )
   return { days, ...summary[0] }
+}
+
+// Operator attestation only, after all writers are paused/drained and independent
+// runtime evidence establishes uninterrupted capture. Never infer this from rows.
+export function verifyFirstExternalImageCoverage(input: {
+  from: Date
+  to: Date
+}) {
+  return prisma.$executeRaw`
+    INSERT INTO "FirstExternalImageVerifiedInterval" ("startedAt", "endedAt")
+    SELECT ${input.from}, ${input.to}
+    FROM "FirstExternalImageCoverage" c
+    WHERE c."definitionVersion" = 1 AND c."startedAt" <= ${input.from}
+      AND ${input.from} < ${input.to}
+      AND ${input.to} <= CURRENT_TIMESTAMP AT TIME ZONE 'UTC'
+      AND NOT EXISTS (SELECT 1 FROM "FirstExternalImageInterruption" g
+        WHERE g."startedAt" < ${input.to} AND g."endedAt" > ${input.from})
+      AND NOT EXISTS (SELECT 1 FROM "ImageMeasurementOutbox")
+      AND NOT EXISTS (SELECT 1 FROM "AnalyticsEventOutbox" WHERE "activationCandidate")
+    ON CONFLICT DO NOTHING`
 }

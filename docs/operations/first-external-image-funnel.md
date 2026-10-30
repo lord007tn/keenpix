@@ -35,21 +35,53 @@ stored time back. Deleting a project or organization cascades. `projectId` must
 stay the table's only unique index: `ON CONFLICT` arbitrates that key alone, and a
 second unique index turns simultaneous first deliveries into errors.
 
-Both ledgers are written by one statement, `recordProjectFirstImageSuccesses`.
+Both ledgers use the same idempotent statement; every existing v1 index remains.
+The specific v1 composite-index uniqueness race retries a fresh standalone
+statement within a two-second retry budget. Transactional retries retain the
+durable queue row and run in a fresh transaction on a later drain.
 
-- **Managed path:** the existing outbox candidate bit carries the request-time
-  exclusions and the persisted `sourceHost` decides the external flag at drain
-  time. There is no outbox schema change and still one bulk statement per batch.
-  Observation time is the original event time.
-- **Standalone transform:** the same awaited statement as v1, not a second round
-  trip, with the same fail-closed rule: a ledger error returns a sanitized 500
-  before accounting, trading availability for measurement durability. Every
-  otherwise qualifying cloud GET therefore depends on the database. Repeat
-  deliveries skip the external insert with a primary-key check, so they take no
-  row lock. On loopback PostgreSQL over Docker Desktop, 400 interleaved repeat
-  deliveries measured 1 to 2 ms more at p50 than the v1-only statement in typical
-  runs, on a noisy baseline of 5 to 7 ms. These are synthetic timings, not a
-  production guarantee.
+- **Standalone transform:** delivery and accounting never await capture. A
+  process-local queue holds at most 256 candidates, with two workers. A separate
+  pool has at most two connections, a 500 ms connection/acquisition timeout,
+  750 ms server statement timeout, 150 ms server lock timeout, and 1000 ms driver
+  query and idle-transaction timeouts. Candidate timestamps are request-time
+  observations, not background execution time. Errors use fixed messages only.
+  Overload and capture errors lose observations. Graceful shutdown discards and
+  records queued observations as interrupted, then waits for bounded active work.
+- **Managed path:** accounting transfers aggregate candidates into
+  `ImageMeasurementOutbox` under a savepoint. Optional handoff SQL uses bounded
+  statement/lock timeouts. Handoff failure rolls back to the savepoint, allowing
+  logs, rollups and accounting-outbox deletion to commit. After that commit,
+  measurement uses its own transaction and isolated pool. Failed capture retains
+  the retry row, including the original observation times, for a later drain.
+  Missing handoff tables can lose observations; unverified days remain Unknown.
+  This queue contains keys, timestamps and the external boolean only.
+
+## Coverage evidence and interruptions
+
+A start timestamp alone does **not** establish coverage. Both external-image
+columns require a closed `FirstExternalImageVerifiedInterval` covering the entire
+UTC day, with no intersecting `FirstExternalImageInterruption` and no unresolved
+measurement retry at or before that day. Even a one-millisecond interruption
+makes the entire day Unknown. Covered-day totals derive from these nullable days.
+
+Workers coalesce lost timestamps into persisted interruption intervals. When the
+database itself is unavailable, persistence may also fail. A crash or rollback
+cannot write a final record. These times remain Unknown because writers never
+create verified intervals automatically. This deliberately sacrifices automatic
+covered-day reporting rather than assert completeness from a heartbeat or from
+absence of errors. Recorded milestones remain available as observed lower bounds.
+
+Only attest a closed interval after independently establishing uninterrupted
+capture across **every** writer, with all writers paused and queues drained.
+Never attest an outage, an unobserved process exit, a rollback, or a period with
+missing evidence. Keep intervals disjoint from such gaps. The operator command
+also refuses pending candidates and known interruptions; it cannot supply the
+independent runtime evidence itself:
+
+```sh
+pnpm --silent --filter @keenpix/app activation:readout --verify-external-coverage --apply --from <verified-start-UTC> --to <verified-end-UTC>
+```
 
 ## Daily funnel
 
@@ -64,12 +96,12 @@ milestone today may have reached the previous one on any earlier day.
 | `firstExternalImageWorkspaces` | Eligible workspaces whose earliest observation across retained projects fell on that day; `null` is Unknown |
 | `preexistingFirstExternalImageWorkspaces` | The subset whose first project predates coverage, so their real first image may be earlier; `null` is Unknown |
 | `coverageStartedAt` | Recorded coverage start; `null` means coverage has not started |
-| `pendingCandidateEvents` | Candidate outbox events before `to`, including ones that may later be excluded |
+| `pendingCandidateEvents` | Accounting and measurement candidates before `to`, including eventual exclusions |
 | `observedWorkspaces` | Eligible workspaces with any recorded observation, for checking that capture is live |
 | `definition`, `definitionVersion` | The definition these totals use |
 
-`null` is never zero. A day reports first images only if the whole UTC day falls
-at or after the coverage start, so the day coverage starts is Unknown. Eligibility
+`null` is never zero. A day reports first images only with whole-day verified
+coverage at or after the coverage start. Partial start days remain Unknown. Eligibility
 and retained rows are the current snapshot: rerunning a past window can change
 after reclassification, deletion, or a late drain. Do not treat a day as settled
 while `pendingCandidateEvents > 0`. Output contains counts only.
@@ -84,42 +116,47 @@ while `pendingCandidateEvents > 0`. Output contains counts only.
 - The bot share is Unknown. A bot fetching an external image can qualify.
 - Acquisition source is Unknown. This is cookie-free and has no consent-safe join
   to browser analytics.
-- Coverage starts once and has no gaps recorded in the database. A rollback or
-  outage leaves uncovered days reading as measured, so record them privately.
+- Background capture is best effort: overload, shutdown or failure may lose the
+  real first observation. A later success cannot reconstruct that first time.
+- Coverage certification is manual and requires independent evidence; without it,
+  even a healthy day remains Unknown. A database failure never invents a zero.
 
 ## Release order
 
-The migration adds two tables and indexes. It has no drops or backfill, and it
-does not touch v1 tables, so older app and transform images keep working: they
-never read or write the new tables, and database cascades cover deletion.
+This additive migration preserves every existing table and index. Its composite
+foreign key takes **SHARE ROW EXCLUSIVE on `Project`**, so use a quiet deployment
+window and bounded lock/statement timeouts. Do not deploy services through plain
+Compose: it starts transform first. The app entrypoint runs migrations on startup
+unless explicitly disabled (`KEENPIX_RUN_MIGRATIONS=false`).
 
-The reverse is not safe. The new statement requires the new table, so a new
-transform running before the migration fails closed on **every qualifying GET**.
-Production Compose starts `transform` before `app` and only `app` migrates on
-start, so a plain stack redeploy would do exactly that.
-
-1. **Migration first, as its own step.** Run the new app revision's `migrate`
-   command as a one-off, without starting `transform`, and confirm it succeeded
-   before any service restarts. With the production Compose file, for example:
+1. **Migration alone:** pin the new reviewed app image digest in the release
+   configuration first, then run only its migration command with no dependencies.
+   Supply PostgreSQL startup options `-c lock_timeout=5s -c statement_timeout=60s`
+   to the migration connection (for example through its connection-string
+   `options` parameter, supplied by the release secret configuration). Do not print
+   credentials. `PGOPTIONS` alone is not a guarantee for a Prisma migration engine;
+   verify effective server settings for that connection. For Compose:
 
    ```sh
    docker compose -f docker-compose.production.yml run --rm --no-deps app migrate
    ```
 
-2. **Deploy app and transform together.** This is the first transform revision
-   with any first-image capture, so it also adds v1's awaited statement. Confirm
-   `KEENPIX_APP_URL` on both, and that the deployed delivery edge forwards the
-   exclusion bit with the correct `APP_ORIGIN`
-   ([edge release](delivery-edge-release.md)). Watch request latency, 5xx rate,
-   database errors, and outbox backlog.
-3. **Verify.** Run the daily readout below, and confirm the card on
-   `/admin/analytics` shows Unknown. Using a workspace classified `test`, confirm
-   that GET, HEAD, and preview requests write no ledger row and that request
-   accounting is unchanged. Do not send synthetic traffic through customer
-   workspaces.
-4. **Start coverage** once every serving runtime is verified. This is database
-   time, is never backdated, and repeating it keeps the original start. Until then
-   every first-image count stays Unknown. Capture already runs, so nothing is lost.
+   Verify the migration receipt and all new tables/indexes before proceeding.
+   A lock timeout is a failed migration step; investigate and retry separately.
+2. **App:** deploy the pinned app digest, verify accounting drains commit, retries
+   retain failed measurement, and backlog progresses. App startup migrates unless
+   disabled; this does not replace the migration-only step.
+3. **Transform:** deploy its pinned digest after app verification. Verify cached
+   and uncached image status, latency and accounting during synthetic measurement
+   failure; verify sanitized logging. Use only isolated synthetic/test workspaces.
+   Verify `KEENPIX_APP_URL` and edge exclusions on every writer
+   ([edge release](delivery-edge-release.md)).
+4. **Start coverage:** only after all serving writers are verified. The start uses
+   database time and cannot be backdated. Daily counts remain Unknown until closed
+   intervals are independently verified as described above.
+
+No browser screenshots are meaningful for this backend failure-isolation change;
+unit contracts and the PostgreSQL failure/lock tests provide verification evidence.
 
 ## Readout commands
 
@@ -141,12 +178,12 @@ Keep readouts private; aggregate counts of small cohorts can still be sensitive.
 
 ## Rollback
 
-Redeploy the previous app and transform images. Keep both tables and every row:
+Redeploy the previous app and transform images. Keep all measurement tables and every row:
 old images ignore them, and this migration has no down step. Do not delete the
 coverage row or restore a snapshot to improve the numbers. Drain pending outbox
 work with the upgraded binary first where possible, because old drainers do not
-write this ledger. Record the private start and end of the gap, since days inside
-it read as measured totals once a new image returns.
+write this ledger. Persist any known gap in `FirstExternalImageInterruption` and do not certify the
+rollback interval. Unverified days remain Unknown after a new image returns.
 
 ## Consent boundary
 

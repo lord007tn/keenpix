@@ -714,3 +714,22 @@ model Verification {
 
   @@index([identifier])
 }
+
+
+model FirstExternalImageVerifiedInterval {
+  startedAt DateTime @db.Timestamp(3)
+  endedAt DateTime @db.Timestamp(3)
+  @@id([startedAt, endedAt])
+}
+
+model FirstExternalImageInterruption {
+  startedAt DateTime @db.Timestamp(3)
+  endedAt DateTime @db.Timestamp(3)
+  @@id([startedAt, endedAt])
+}
+
+model ImageMeasurementOutbox {
+  id String @id
+  candidates Json
+  createdAt DateTime @default(now()) @db.Timestamp(3)
+}

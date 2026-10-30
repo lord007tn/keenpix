@@ -4,6 +4,7 @@ import {
   getFirstImageActivationReadout,
   setOrganizationActivationClassification,
   startFirstExternalImageCoverage,
+  verifyFirstExternalImageCoverage,
 } from '@keenpix/database/activation'
 import dayjs from 'dayjs'
 import { z } from 'zod'
@@ -20,10 +21,39 @@ async function main() {
       classification: { type: 'string' },
       apply: { type: 'boolean', default: false },
       daily: { type: 'boolean', default: false },
+      'verify-external-coverage': { type: 'boolean', default: false },
       'start-external-coverage': { type: 'boolean', default: false },
     },
     strict: true,
   })
+  if (values['verify-external-coverage']) {
+    if (
+      !values.apply ||
+      values.daily ||
+      values.org ||
+      values.classification ||
+      values['start-external-coverage']
+    ) {
+      throw new Error(
+        'Coverage verification is a separate explicit attestation.',
+      )
+    }
+    const range = z
+      .object({
+        from: z.iso.datetime({ offset: true }),
+        to: z.iso.datetime({ offset: true }),
+      })
+      .parse(values)
+    const verified = await verifyFirstExternalImageCoverage({
+      from: dayjs(range.from).toDate(),
+      to: dayjs(range.to).toDate(),
+    })
+    if (verified !== 1) {
+      throw new Error('Coverage cannot be verified.')
+    }
+    console.log(JSON.stringify({ verified }))
+    return
+  }
   if (values['start-external-coverage']) {
     if (
       !values.apply ||

@@ -12,7 +12,7 @@ import {
   recordProjectFirstImageSuccesses,
   setOrganizationActivationClassification,
 } from '../src/data-access/activation'
-import { prisma } from '../src/index'
+import { measurementPrisma, prisma } from '../src/index'
 
 const target = new URL(process.env.DATABASE_URL ?? 'file:///missing')
 assert.equal(
@@ -33,7 +33,10 @@ afterEach(async () => {
   orgIds.length = 0
   userIds.length = 0
 })
-after(() => prisma.$disconnect())
+after(async () => {
+  await prisma.$disconnect()
+  await measurementPrisma.$disconnect()
+})
 
 async function createWorkspace(role = 'user') {
   const orgId = `activation-${randomUUID()}`

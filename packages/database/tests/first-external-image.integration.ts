@@ -12,12 +12,13 @@ import {
   isActivationDelivery,
   isExternalImageSource,
 } from '../../transform/src/activation'
+import { createImageMeasurementBuffer } from '../src/actions/image-measurement'
 import {
   recordProjectFirstImageSuccesses,
   setOrganizationActivationClassification,
   startFirstExternalImageCoverage,
 } from '../src/data-access/activation'
-import { prisma } from '../src/index'
+import { measurementPrisma, prisma } from '../src/index'
 
 dayjs.extend(utc)
 
@@ -40,10 +41,16 @@ afterEach(async () => {
   })
   await prisma.user.deleteMany({ where: { id: { in: userIds } } })
   await prisma.firstExternalImageCoverage.deleteMany()
+  await prisma.$executeRaw`DELETE FROM "FirstExternalImageVerifiedInterval"`
+  await prisma.$executeRaw`DELETE FROM "FirstExternalImageInterruption"`
+  await prisma.$executeRaw`DELETE FROM "ImageMeasurementOutbox"`
   orgIds.length = 0
   userIds.length = 0
 })
-after(() => prisma.$disconnect())
+after(async () => {
+  await prisma.$disconnect()
+  await measurementPrisma.$disconnect()
+})
 
 function utcDate(value: string) {
   return dayjs.utc(value).toDate()
@@ -307,16 +314,25 @@ test('concurrent replicas and retries produce one idempotent row', async () => {
 })
 
 // A page of images makes a new project's first writes simultaneous, and the
-// standalone path fails closed, so a losing writer must never raise an error.
-test('simultaneous first deliveries of new projects never fail', async () => {
+// background capture retries the v1 uniqueness race without changing any index.
+test('simultaneous first deliveries of enrolled customers never fail', async () => {
   for (let round = 0; round < 40; round += 1) {
     const fixture = await createWorkspace()
+    await setOrganizationActivationClassification({
+      ...fixture,
+      classification: 'customer',
+    })
     await Promise.all(
       Array.from({ length: 24 }, () =>
         recordProjectFirstImageSuccesses([{ ...fixture, external: true }]),
       ),
     )
     assert.ok(await getLedgerRow(fixture.projectId))
+    assert.ok(
+      await prisma.projectFirstImageSuccess.findUnique({
+        where: { projectId: fixture.projectId },
+      }),
+    )
   }
 })
 
@@ -417,6 +433,7 @@ test('empty days report zero when covered and Unknown when not', async () => {
   await prisma.firstExternalImageCoverage.create({
     data: { definitionVersion: 1, startedAt: utcDate('2024-06-02T09:00:00Z') },
   })
+  await prisma.$executeRaw`INSERT INTO "FirstExternalImageVerifiedInterval" VALUES ('2024-06-02 09:00:00', '2024-06-04')`
   const covered = await getFirstValueFunnel(window)
   assert.equal(covered.coverageStartedAt, '2024-06-02T09:00:00.000Z')
   assert.deepEqual(
@@ -429,7 +446,8 @@ test('empty days report zero when covered and Unknown when not', async () => {
   )
 })
 
-test('coverage starting exactly at UTC midnight covers that day', async () => {
+test('coverage starting exactly at UTC midnight covers that verified day', async () => {
+  await prisma.$executeRaw`INSERT INTO "FirstExternalImageVerifiedInterval" VALUES ('2024-06-02', '2024-06-03')`
   await prisma.firstExternalImageCoverage.create({
     data: { definitionVersion: 1, startedAt: utcDate('2024-06-02T00:00:00Z') },
   })
@@ -444,6 +462,7 @@ test('coverage starting exactly at UTC midnight covers that day', async () => {
 })
 
 test('milestones land on half-open UTC days and stay separate per workspace', async () => {
+  await prisma.$executeRaw`INSERT INTO "FirstExternalImageVerifiedInterval" VALUES ('2024-07-01', '2024-07-04')`
   await prisma.firstExternalImageCoverage.create({
     data: { definitionVersion: 1, startedAt: utcDate('2024-07-01T00:00:00Z') },
   })
@@ -505,6 +524,7 @@ test('milestones land on half-open UTC days and stay separate per workspace', as
 })
 
 test('funnel counts exclude ineligible workspaces and operators, and flag pre-coverage projects', async () => {
+  await prisma.$executeRaw`INSERT INTO "FirstExternalImageVerifiedInterval" VALUES ('2024-08-01', '2024-08-11')`
   const day = utcDate('2024-08-10T12:00:00Z')
   await prisma.firstExternalImageCoverage.create({
     data: { definitionVersion: 1, startedAt: utcDate('2024-08-01T00:00:00Z') },
@@ -668,4 +688,145 @@ test('standalone capture keeps one statement and reports its repeat-delivery cos
   )
   assert.equal(await prisma.projectFirstExternalImage.count(), 1)
   assert.equal(await prisma.projectFirstImageSuccess.count(), 1)
+})
+
+test('missing capture table cannot roll back accounting, and durable retry recovers', async () => {
+  const fixture = await createWorkspace()
+  await persistAnalyticsOutboxEvent(outboxEvent(fixture), true)
+  await prisma.$executeRaw`ALTER TABLE "ProjectFirstExternalImage" RENAME TO "ExternalImageUnavailable"`
+  try {
+    const result = await drainAnalyticsOutboxBatch(
+      dayjs().add(1, 'minute').toDate(),
+      APP_ORIGIN,
+    )
+    assert.equal(result.status, 'drained')
+    assert.equal(await prisma.analyticsEventOutbox.count(), 0)
+    assert.equal(
+      await prisma.requestLog.count({
+        where: { projectId: fixture.projectId },
+      }),
+      1,
+    )
+    const pending = await prisma.$queryRaw<
+      { count: number }[]
+    >`SELECT COUNT(*)::int AS count FROM "ImageMeasurementOutbox"`
+    assert.equal(pending[0].count, 1)
+  } finally {
+    await prisma.$executeRaw`ALTER TABLE "ExternalImageUnavailable" RENAME TO "ProjectFirstExternalImage"`
+  }
+  await drainAnalyticsOutboxBatch(dayjs().add(1, 'minute').toDate(), APP_ORIGIN)
+  assert.ok(await getLedgerRow(fixture.projectId))
+})
+
+test('missing measurement handoff table cannot abort accounting', async () => {
+  const fixture = await createWorkspace()
+  await persistAnalyticsOutboxEvent(outboxEvent(fixture), true)
+  await prisma.$executeRaw`ALTER TABLE "ImageMeasurementOutbox" RENAME TO "MeasurementUnavailable"`
+  try {
+    assert.equal(
+      (
+        await drainAnalyticsOutboxBatch(
+          dayjs().add(1, 'minute').toDate(),
+          APP_ORIGIN,
+        )
+      ).status,
+      'drained',
+    )
+    assert.equal(await prisma.analyticsEventOutbox.count(), 0)
+    assert.equal(
+      await prisma.requestLog.count({
+        where: { projectId: fixture.projectId },
+      }),
+      1,
+    )
+  } finally {
+    await prisma.$executeRaw`ALTER TABLE "MeasurementUnavailable" RENAME TO "ImageMeasurementOutbox"`
+  }
+})
+
+test('unverified outages and partial-day interruptions are Unknown in both columns', async () => {
+  await prisma.firstExternalImageCoverage.create({
+    data: { definitionVersion: 1, startedAt: utcDate('2024-01-01') },
+  })
+  const window = { from: '2024-01-01T00:00:00Z', to: '2024-01-04T00:00:00Z' }
+  assert.deepEqual(
+    (await getFirstValueFunnel(window)).days.map(
+      (d) => d.firstExternalImageWorkspaces,
+    ),
+    [null, null, null],
+  )
+  await prisma.$executeRaw`INSERT INTO "FirstExternalImageVerifiedInterval" VALUES ('2024-01-01', '2024-01-03')`
+  await prisma.$executeRaw`INSERT INTO "FirstExternalImageInterruption" VALUES ('2024-01-02 12:00', '2024-01-02 12:01')`
+  const { days } = await getFirstValueFunnel(window)
+  assert.deepEqual(
+    days.map((d) => d.firstExternalImageWorkspaces),
+    [0, null, null],
+  )
+  assert.deepEqual(
+    days.map((d) => d.preexistingFirstExternalImageWorkspaces),
+    [0, null, null],
+  )
+})
+
+test('measurement lock waits time out on the isolated pool', async () => {
+  const fixture = await createWorkspace()
+  await prisma.$transaction(async (db) => {
+    await db.$executeRaw`LOCK TABLE "ProjectFirstExternalImage" IN ACCESS EXCLUSIVE MODE`
+    const start = performance.now()
+    await assert.rejects(
+      recordProjectFirstImageSuccesses(
+        [{ ...fixture, external: true }],
+        measurementPrisma,
+      ),
+    )
+    assert.ok(performance.now() - start < 2000)
+    assert.equal(
+      await db.project.count({ where: { id: fixture.projectId } }),
+      1,
+    )
+  })
+})
+
+test('real background capture failure persists an interruption with sanitized logging', {
+  timeout: 10_000,
+}, async () => {
+  const fixture = await createWorkspace()
+  const messages: string[] = []
+  let report = () => undefined
+  const failed = new Promise<void>((resolve) => {
+    report = resolve
+  })
+  const buffer = createImageMeasurementBuffer({
+    warn(message) {
+      messages.push(message)
+      report()
+    },
+  })
+  await prisma.$executeRaw`ALTER TABLE "ProjectFirstExternalImage" RENAME TO "ExternalImageUnavailable"`
+  try {
+    buffer.enqueue({ ...fixture, external: true })
+    await failed
+    await buffer.shutdown()
+    assert.deepEqual(messages, ['image measurement interrupted'])
+    const gaps = await prisma.$queryRaw<
+      { count: number }[]
+    >`SELECT COUNT(*)::int AS count FROM "FirstExternalImageInterruption"`
+    assert.ok(gaps[0].count > 0)
+  } finally {
+    await prisma.$executeRaw`ALTER TABLE "ExternalImageUnavailable" RENAME TO "ProjectFirstExternalImage"`
+  }
+})
+
+test('queue overflow and shutdown persist lost coverage without processing queued captures', async () => {
+  const fixture = await createWorkspace()
+  const buffer = createImageMeasurementBuffer({ warn: () => undefined })
+  for (let n = 0; n < 300; n += 1) {
+    buffer.enqueue({ ...fixture, external: true })
+  }
+  await buffer.shutdown()
+  assert.equal(await getLedgerRow(fixture.projectId), null)
+  const gaps = await prisma.$queryRaw<
+    { count: number }[]
+  >`SELECT COUNT(*)::int AS count FROM "FirstExternalImageInterruption"`
+  assert.ok(gaps[0].count > 0)
 })
