@@ -10,7 +10,7 @@ const SELF_HOSTED_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Is the self-hosted version really free?',
     answer:
-      'The current v0.3.0 source is AGPL-3.0, with no Keenpix license fee, team-member limit, transform limit, or telemetry. You operate and pay for the infrastructure. Managed cloud starts at $9/month for 100 GB of managed image delivery with unlimited transformations and team members (as of August 2026).',
+      'The current v0.3.2 source is AGPL-3.0, with no Keenpix license fee, team-member limit, transform limit, or telemetry. You operate and pay for the infrastructure. Managed cloud starts at $9/month for 100 GB of managed image delivery with unlimited transformations and team members (as of August 2026).',
   },
   {
     question: 'How does Keenpix compare to imgproxy?',
@@ -30,7 +30,7 @@ const SELF_HOSTED_FAQ: Array<{ answer: string; question: string }> = [
   {
     question: 'Can I move to the managed cloud later?',
     answer:
-      'The v0.3.0 cloud and self-host deployment paths share the transform URL grammar. Moving still requires a planned hostname, configuration, cache, database, and traffic migration; it is not only a DNS switch. Validate both directions with canary traffic before cutover.',
+      'The v0.3.2 cloud and self-host deployment paths share the transform URL grammar. Moving still requires a planned hostname, configuration, cache, database, and traffic migration; it is not only a DNS switch. Validate both directions with canary traffic before cutover.',
   },
 ]
 
@@ -116,7 +116,7 @@ const PROMISES = [
   },
   {
     title: 'AGPL-3.0, no license fee',
-    body: 'The current v0.3.0 source is AGPL-3.0. Earlier releases through v0.1.11 remain available under Apache-2.0.',
+    body: 'The current v0.3.2 source is AGPL-3.0. Earlier releases through v0.1.11 remain available under Apache-2.0.',
   },
   {
     title: 'No CLA',
@@ -184,7 +184,7 @@ export function SelfHostedLandingPage({
               you run yourself: sharp-powered transforms, automatic AVIF/WebP
               negotiation, a disk + memory cache with stale-while-revalidate,
               and built-in analytics — installed with one Docker command. It is
-              the v0.3.0 engine used by the managed-cloud code path, licensed
+              the v0.3.2 engine used by the managed-cloud code path, licensed
               AGPL-3.0, and designed to sit behind the CDN you already have.
             </p>
             <p className="mt-4 max-w-2xl text-muted-foreground leading-relaxed">
@@ -532,7 +532,7 @@ docker compose up -d --build
               >
                 Start a 14-day trial
               </Link>{' '}
-              — managed v0.3.0 deployment, from $9/month.
+              — managed v0.3.2 deployment, from $9/month.
             </p>
           </div>
         </section>

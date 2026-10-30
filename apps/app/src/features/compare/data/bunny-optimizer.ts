@@ -89,7 +89,7 @@ export const bunnyOptimizerComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'Managed Bunny service',
-      keenpix: 'v0.3.0 code is AGPL-3.0; you operate it',
+      keenpix: 'v0.3.2 code is AGPL-3.0; you operate it',
     },
   ],
   switchReasons: [
@@ -106,7 +106,7 @@ export const bunnyOptimizerComparison = {
     {
       title: 'A self-operated deployment option',
       detail:
-        'The current v0.3.0 code is AGPL-3.0 and includes Docker and Coolify deployment paths. Self-hosting requires operating and securing the service yourself.',
+        'The current v0.3.2 code is AGPL-3.0 and includes Docker and Coolify deployment paths. Self-hosting requires operating and securing the service yourself.',
     },
   ],
   whenCompetitorWins: [
@@ -160,5 +160,4 @@ export const bunnyOptimizerComparison = {
   pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
   verifiedAt: '2026-08-22',
-  nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

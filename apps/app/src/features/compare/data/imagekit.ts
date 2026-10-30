@@ -8,9 +8,9 @@ export const imagekitComparison = {
     'Keenpix vs ImageKit, August 2026: same $9 entry but 100 GB vs 40 GB, phase-specific overage, AGPL self-hosting — and where ImageKit still wins.',
   heroHeadline: 'Keenpix vs ImageKit: a bandwidth-first alternative',
   heroSubhead:
-    'ImageKit publishes bandwidth pricing; Keenpix publishes a managed-delivery meter. Keenpix bundles more delivery at its entry tier and v0.3.0 is AGPL-3.0, while ImageKit offers a much broader media platform.',
+    'ImageKit publishes bandwidth pricing; Keenpix publishes a managed-delivery meter. Keenpix bundles more delivery at its entry tier and v0.3.2 is AGPL-3.0, while ImageKit offers a much broader media platform.',
   verdict:
-    "If you want an all-in-one media platform — upload widgets, a media library your marketing team can browse, video streaming, and a free tier under 20 GB/month — ImageKit is the better product. Keenpix deliberately does none of that. Pick Keenpix if your images already live on origins you control and you need optimization and delivery with predictable costs: the same $9 entry buys 100 GB instead of 40 GB, overage is $0.07–0.12/GB, and paid delivery stays online. Published v0.3.0 also provides an AGPL-3.0 self-host path. Keenpix is younger and solo-built — weigh that honestly against ImageKit's maturity.",
+    "If you want an all-in-one media platform — upload widgets, a media library your marketing team can browse, video streaming, and a free tier under 20 GB/month — ImageKit is the better product. Keenpix deliberately does none of that. Pick Keenpix if your images already live on origins you control and you need optimization and delivery with predictable costs: the same $9 entry buys 100 GB instead of 40 GB, overage is $0.07–0.12/GB, and paid delivery stays online. Published v0.3.2 also provides an AGPL-3.0 self-host path. Keenpix is younger and solo-built — weigh that honestly against ImageKit's maturity.",
   pricingRows: [
     {
       scenario: '20 GB delivered / month',
@@ -52,7 +52,8 @@ export const imagekitComparison = {
     {
       feature: 'Free tier',
       competitor: '20 GB/mo — serving stops when exceeded',
-      keenpix: 'None — 14-day trial (card required)',
+      keenpix:
+        'None — 14-day trial: up to 2 projects and 20 GB delivered; card required',
     },
     {
       feature: 'Billing meters',
@@ -77,12 +78,12 @@ export const imagekitComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No',
-      keenpix: 'v0.3.0: AGPL-3.0 with Docker/Coolify files',
+      keenpix: 'v0.3.2: AGPL-3.0 with Docker/Coolify files',
     },
     {
       feature: 'Open source',
       competitor: 'No',
-      keenpix: 'v0.3.0 source: AGPL-3.0; prior releases keep their licenses',
+      keenpix: 'v0.3.2 source: AGPL-3.0; prior releases keep their licenses',
     },
     {
       feature: 'Storage / DAM',
@@ -140,7 +141,7 @@ export const imagekitComparison = {
     {
       title: 'Self-hosting is the exit ramp',
       detail:
-        'The published v0.3.0 release is licensed AGPL-3.0 and includes Docker and Coolify deployment files. Moving in-house avoids a Keenpix license fee but transfers infrastructure, updates, monitoring, and routing to you.',
+        'The published v0.3.2 release is licensed AGPL-3.0 and includes Docker and Coolify deployment files. Moving in-house avoids a Keenpix license fee but transfers infrastructure, updates, monitoring, and routing to you.',
     },
   ],
   whenCompetitorWins: [
@@ -178,7 +179,7 @@ export const imagekitComparison = {
     },
     {
       q: 'Can I self-host Keenpix?',
-      a: 'The published v0.3.0 release is AGPL-3.0 and includes Docker/Coolify deployment files. Self-hosting has no Keenpix license fee, but you own infrastructure, updates, monitoring, and routing.',
+      a: 'The published v0.3.2 release is AGPL-3.0 and includes Docker/Coolify deployment files. Self-hosting has no Keenpix license fee, but you own infrastructure, updates, monitoring, and routing.',
     },
     {
       q: 'Do I have to re-upload my images to migrate?',
@@ -196,5 +197,4 @@ export const imagekitComparison = {
   pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
   verifiedAt: '2026-08-22',
-  nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

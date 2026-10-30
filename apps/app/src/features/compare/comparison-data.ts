@@ -21,7 +21,6 @@ export interface ComparisonPageData {
   heroSubhead: string
   metaDescription: string
   migrationSteps: string[]
-  nextReviewAt: string
   pricingAsOf: string
   pricingRows: Array<{ scenario: string; competitor: string; keenpix: string }>
   reviewer: string

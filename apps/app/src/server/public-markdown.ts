@@ -89,7 +89,7 @@ function comparisonMarkdown(pathname: string, origin: string) {
     }),
     comparison.verdict,
     '',
-    `Facts verified: ${comparison.verifiedAt}. Pricing checked: ${comparison.pricingAsOf}. Next review: ${comparison.nextReviewAt}.`,
+    `Facts verified: ${comparison.verifiedAt}. Pricing checked: ${comparison.pricingAsOf}.`,
     '',
     '## Decision summary',
     '',
@@ -270,7 +270,7 @@ function staticMarkdown(pathname: string, origin: string) {
     }
   }
   if (pathname === '/changelog') {
-    return `${markdownMetadata({ canonicalUrl: `${origin}/changelog`, description: 'Every notable Keenpix release from the repository changelog.', title: 'Keenpix product changelog' })}\n${changelog.trim()}`
+    return `${markdownMetadata({ canonicalUrl: `${origin}/changelog`, description: 'Keenpix releases and confirmed incidents from the repository changelog.', title: 'Keenpix product changelog' })}\n${changelog.trim()}`
   }
   if (pathname === '/learn') {
     const posts = listBlogPosts()
@@ -329,7 +329,7 @@ function staticMarkdown(pathname: string, origin: string) {
         title: 'Compare image CDN options',
         updated: '2026-09-02',
       }),
-      'Keenpix writes these pages and benefits if you choose it. Each comparison uses primary vendor sources, visible assumptions, and a next-review date.',
+      'Keenpix writes these pages and benefits if you choose it. Each comparison uses primary vendor sources, visible assumptions, and the date its sources were last checked.',
       '',
       ...Object.values(COMPARISONS).map(
         (comparison) =>
@@ -340,7 +340,7 @@ function staticMarkdown(pathname: string, origin: string) {
     ].join('\n')
   }
   if (pathname === '/methodology/comparisons') {
-    return `${markdownMetadata({ canonicalUrl: `${origin}${pathname}`, description: 'How Keenpix verifies competitor facts, calculates pricing scenarios, discloses conflicts, and corrects comparison pages.', title: 'How Keenpix comparisons are researched', updated: '2026-09-02' })}\n## Source order\n\n1. Official pricing, product documentation, limits, and legal terms.\n2. Official release notes and support statements.\n3. Reproducible product behavior where public documentation is incomplete.\n\nUndocumented behavior stays labeled unknown. No customer ratings, market-share claims, or performance benchmarks are published without inspectable evidence.\n\n## Pricing comparisons\n\nEvery scenario states its workload and uses the public price checked on the page date. Taxes, contracts, legacy plans, regional differences, and external CDN charges remain limitations.\n\n## Product scope and licensing\n\nA media platform, image optimizer, CDN feature, and self-hosted transform engine are not interchangeable. Source-code licenses are checked from the applicable release.\n\n## Review and corrections\n\nCommercial facts are reviewed at least quarterly and after material announcements. Send the page, disputed statement, primary source, and check date to ${SUPPORT_EMAIL}.\n\n## What a verdict means\n\n“Best for” is a fit judgment for stated criteria, not a universal ranking. Every comparison states when the competitor is the better choice.`
+    return `${markdownMetadata({ canonicalUrl: `${origin}${pathname}`, description: 'How Keenpix verifies competitor facts, calculates pricing scenarios, discloses conflicts, and corrects comparison pages.', title: 'How Keenpix comparisons are researched', updated: '2026-10-30' })}\n## Source order\n\n1. Official pricing, product documentation, limits, and legal terms.\n2. Official release notes and support statements.\n3. Reproducible product behavior where public documentation is incomplete.\n\nUndocumented behavior stays labeled unknown. No customer ratings, market-share claims, or performance benchmarks are published without inspectable evidence.\n\n## Pricing comparisons\n\nEvery scenario states its workload and uses the public price checked on the page date. Taxes, contracts, legacy plans, regional differences, and external CDN charges remain limitations.\n\n## Product scope and licensing\n\nA media platform, image optimizer, CDN feature, and self-hosted transform engine are not interchangeable. Source-code licenses are checked from the applicable release.\n\n## Review and corrections\n\nEach page shows the date its sources were last checked. Send the page, disputed statement, primary source, and check date to ${SUPPORT_EMAIL}.\n\n## What a verdict means\n\n“Best for” is a fit judgment for stated criteria, not a universal ranking. Every comparison states when the competitor is the better choice.`
   }
   if (pathname === '/developers') {
     return `${markdownMetadata({ canonicalUrl: `${origin}/developers`, description: 'API discovery, project-scoped authentication, official SDK, and agent-readable public contracts.', title: 'Keenpix developer resources', updated: '2026-09-02' })}\n## Discover the API\n\n- [OpenAPI 3.1 specification](${origin}/openapi.json)\n- [SDK API documentation](${origin}/docs/reference/sdk-api)\n- [Public JSON health endpoint](${origin}/api/health)\n\n## Use the official SDK\n\nThe supported automation client is the server-side @keenpix/sdk package. Keenpix does not publish an official CLI, OAuth authorization server, or separate API sandbox.\n\n## Authentication and onboarding\n\nControl-plane operations use a project-scoped API key in Authorization: Bearer or X-Keenpix-Api-Key. Normal image delivery URLs are keyless after project and origin configuration. Keep keys in trusted server environments.\n\n## Agent-readable sources\n\n- [Concise LLM index](${origin}/llms.txt)\n- [Complete Markdown collection](${origin}/llms-full.txt)\n- [Learning hub](${origin}/learn)\n\nContact ${SUPPORT_EMAIL}.`

@@ -1,11 +1,7 @@
 import { ArrowRightIcon } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { SiteFooter, SiteHeader } from '@/features/blog/blog-chrome'
-import {
-  SUPPORT_EMAIL,
-  SUPPORT_WHATSAPP_LABEL,
-  SUPPORT_WHATSAPP_URL,
-} from '@/shared/authors'
+import { SUPPORT_EMAIL } from '@/shared/authors'
 import { REPOSITORY_URL } from '@/shared/repository'
 
 const RESOURCE_GROUPS = [
@@ -153,7 +149,7 @@ export function DeveloperResourcesPage() {
             <div className="mt-5 rounded-xl border p-5" id="contact">
               <h3 className="font-semibold">API and integration contact</h3>
               <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
-                Contact Raed Bahri for API documentation, integration, or
+                Contact the Keenpix team for API documentation, integration, or
                 agent-readiness questions.
               </p>
               <div className="mt-4 flex flex-wrap gap-4 text-sm">
@@ -162,12 +158,6 @@ export function DeveloperResourcesPage() {
                   href={`mailto:${SUPPORT_EMAIL}`}
                 >
                   {SUPPORT_EMAIL}
-                </a>
-                <a
-                  className="font-medium text-primary hover:underline"
-                  href={SUPPORT_WHATSAPP_URL}
-                >
-                  WhatsApp {SUPPORT_WHATSAPP_LABEL}
                 </a>
               </div>
             </div>

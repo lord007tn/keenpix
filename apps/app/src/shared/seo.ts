@@ -10,8 +10,6 @@ import {
   FOUNDER,
   getAuthor,
   SUPPORT_EMAIL,
-  SUPPORT_WHATSAPP_NUMBER,
-  SUPPORT_WHATSAPP_URL,
 } from '@/shared/authors'
 import {
   IMAGE_CDN_CALCULATOR_FAQ,
@@ -195,8 +193,7 @@ export function organizationJsonLd() {
       '@type': 'ContactPoint',
       contactType: 'customer support',
       email: SUPPORT_EMAIL,
-      telephone: SUPPORT_WHATSAPP_NUMBER,
-      url: SUPPORT_WHATSAPP_URL,
+      url: absoluteUrl('/support'),
     },
     description: SITE_DESCRIPTION,
     founder: {

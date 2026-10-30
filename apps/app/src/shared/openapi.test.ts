@@ -16,12 +16,10 @@ describe('Keenpix OpenAPI document', () => {
   it('publishes OpenAPI 3.1 and the truthful API-key security boundary', () => {
     expect(OPENAPI_DOCUMENT.openapi).toBe('3.1.1')
     expect(OPENAPI_DOCUMENT.info.title).toBe('Keenpix API')
-    expect(OPENAPI_DOCUMENT.info.contact).toEqual(
-      expect.objectContaining({
-        email: 'hi@raedbahri.com',
-        'x-whatsapp': 'https://wa.me/21626765990',
-      }),
-    )
+    expect(OPENAPI_DOCUMENT.info.contact).toEqual({
+      name: 'Keenpix',
+      email: 'fariq@keenpix.com',
+    })
     expect(OPENAPI_DOCUMENT.components.securitySchemes).toEqual(
       expect.objectContaining({
         bearerApiKey: expect.objectContaining({ scheme: 'bearer' }),

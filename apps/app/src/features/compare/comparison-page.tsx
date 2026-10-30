@@ -130,14 +130,6 @@ export function ComparisonPage({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Next review</dt>
-                  <dd className="mt-1 font-medium">
-                    <time dateTime={comparison.nextReviewAt}>
-                      {comparison.nextReviewAt}
-                    </time>
-                  </dd>
-                </div>
-                <div>
                   <dt className="text-muted-foreground">Reviewed by</dt>
                   <dd className="mt-1 font-medium">{comparison.reviewer}</dd>
                 </div>
@@ -194,7 +186,7 @@ export function ComparisonPage({
               </h2>
               <p className="mt-4 text-muted-foreground leading-relaxed">
                 Keenpix publishes this comparison and benefits if you choose
-                Keenpix. Vendor facts were checked against the primary sources
+                Keenpix. Vendor pricing was checked against the primary sources
                 listed here in {comparison.pricingAsOf}. Pricing scenarios are
                 estimates using the displayed assumptions, not quotes;
                 contracts, taxes, regions, cache behavior, and legacy plans can
@@ -204,10 +196,6 @@ export function ComparisonPage({
                 Facts verified{' '}
                 <time dateTime={comparison.verifiedAt}>
                   {comparison.verifiedAt}
-                </time>
-                ; next scheduled review{' '}
-                <time dateTime={comparison.nextReviewAt}>
-                  {comparison.nextReviewAt}
                 </time>
                 . Reviewed by {comparison.reviewer}.
               </p>
@@ -360,7 +348,7 @@ export function ComparisonPage({
                 </h3>
                 <p className="mt-3 text-muted-foreground leading-relaxed">
                   The linked public sources, this review method, and the cited
-                  Keenpix v0.3.1 behavior were last checked on{' '}
+                  Keenpix v0.3.2 behavior were last checked on{' '}
                   <time dateTime={comparison.verifiedAt}>
                     {comparison.verifiedAt}
                   </time>

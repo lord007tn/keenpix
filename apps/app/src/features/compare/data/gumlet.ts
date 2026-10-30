@@ -5,7 +5,7 @@ export const gumletComparison = {
   competitor: 'Gumlet Image',
   title: 'Gumlet Alternative: Keenpix vs Gumlet Image (2026)',
   metaDescription:
-    'Keenpix vs Gumlet Image (August 2026): compare bandwidth pricing, analytics, origin support, security, migration work, and self-hosting.',
+    'Keenpix vs Gumlet Image (October 2026): compare bandwidth pricing, analytics, origin support, security, migration work, and self-hosting.',
   heroHeadline: 'Keenpix vs Gumlet Image: two bandwidth-priced image CDNs',
   heroSubhead:
     'Both services optimize images from origins you already control and meter managed delivery by bandwidth. The meaningful differences are plan economics, source and integration breadth, operational maturity, and whether you need a supported self-host path.',
@@ -15,26 +15,27 @@ export const gumletComparison = {
     {
       scenario: 'Free evaluation',
       competitor: 'Free: 30 GB/month, 1 seat, then $0.50/GB',
-      keenpix: '14-day trial: up to 20 GB and 2 projects; card required',
+      keenpix:
+        '14-day trial: up to 2 projects and 20 GB delivered; card required',
     },
     {
       scenario: '100 GB delivered / month',
-      competitor: '$32 Growth includes 300 GB',
+      competitor: '$39 Growth includes 300 GB',
       keenpix: '$9 Basic includes 100 GB',
     },
     {
       scenario: '300 GB delivered / month',
-      competitor: '$32 Growth includes 300 GB',
+      competitor: '$39 Growth includes 300 GB',
       keenpix: '$29 Pro includes 400 GB',
     },
     {
       scenario: '1 TB delivered / month',
-      competitor: '$137 estimate on Growth: $32 plus 700 GB at $0.15/GB',
+      competitor: '$144 estimate on Growth: $39 plus 700 GB at $0.15/GB',
       keenpix: '$69 Business includes 1 TB',
     },
     {
       scenario: '2.5 TB delivered / month',
-      competitor: '$199 Business includes 2.5 TB',
+      competitor: '$259 Business includes 2,500 GB',
       keenpix: '$174 estimate on Business: $69 plus 1.5 TB at $0.07/GB',
     },
     {
@@ -99,11 +100,11 @@ export const gumletComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No public self-hosted Gumlet Image edition documented',
-      keenpix: 'Published v0.3.0 under AGPL-3.0 with Docker deployment files',
+      keenpix: 'Published v0.3.2 under AGPL-3.0 with Docker deployment files',
     },
     {
       feature: 'Managed entry price',
-      competitor: 'Free 30 GB; Growth $32 for 300 GB',
+      competitor: 'Free 30 GB; Growth $39 for 300 GB',
       keenpix: 'Basic $9 for 100 GB; no permanent free plan',
     },
   ],
@@ -111,7 +112,7 @@ export const gumletComparison = {
     {
       title: 'The lower Keenpix tiers may fit small managed workloads',
       detail:
-        'Keenpix publishes $9 for 100 GB and $29 for 400 GB. Gumlet publishes a permanent 30 GB free tier and then $32 Growth with 300 GB. Compare the full plan, not only one unit price: a free tier, included domains, source support, analytics, and overage may matter more than the headline allowance.',
+        'Keenpix publishes $9 for 100 GB and $29 for 400 GB. Gumlet publishes a permanent 30 GB free tier and then $39 Growth with 300 GB. Compare the full plan, not only one unit price: a free tier, included domains, source support, analytics, and overage may matter more than the headline allowance.',
     },
     {
       title: 'A supported self-host path changes the exit plan',
@@ -156,7 +157,7 @@ export const gumletComparison = {
     },
     {
       q: 'Which one is cheaper at 1 TB per month?',
-      a: 'Using the public August 2026 self-service rates and exactly 1,000 GB, Gumlet Growth estimates to $137 ($32 plus 700 GB at $0.15), while Keenpix Business lists $69 for 1 TB. That is a pricing scenario, not a universal bill: unit definitions, taxes, annual discounts, contracts, cache behavior, and other requirements can change the result.',
+      a: 'Using the public October 2026 monthly-billing rates and exactly 1,000 GB, Gumlet Growth estimates to $144 ($39 plus 700 GB at $0.15), while Keenpix Business lists $69 for 1 TB. That is a pricing scenario, not a universal bill: unit definitions, taxes, annual discounts, contracts, cache behavior, and other requirements can change the result.',
     },
     {
       q: 'Can Gumlet Image be self-hosted?',
@@ -191,8 +192,7 @@ export const gumletComparison = {
     },
     { label: 'Keenpix pricing', url: '/pricing' },
   ],
-  pricingAsOf: 'August 2026',
+  pricingAsOf: 'October 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
   verifiedAt: '2026-08-22',
-  nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

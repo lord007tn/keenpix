@@ -23,6 +23,10 @@ const PUBLIC_SOURCES = [
   'linkedin',
   'reddit',
   'producthunt',
+  'hackernews',
+  'devto',
+  'hashnode',
+  'indiehackers',
   'newsletter',
 ]
 const PUBLIC_MEDIA = [

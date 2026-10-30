@@ -64,9 +64,7 @@ export function ComparisonMethodology() {
             </p>
             <h2>Review and correction policy</h2>
             <p>
-              Commercial comparison facts are reviewed at least quarterly and
-              after material vendor announcements. Pages show the date their
-              sources were checked. Email{' '}
+              Each page shows the date its sources were last checked. Email{' '}
               <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> with a
               page URL, disputed statement, and primary source. Substantive
               changes update the article date; spelling-only edits do not.

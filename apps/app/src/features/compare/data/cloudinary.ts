@@ -14,7 +14,7 @@ export const cloudinaryComparison = {
   heroSubhead:
     'Cloudinary bundles transformations, storage, and bandwidth into credits. Keenpix bills exactly one thing: optimized bytes delivered through managed cloud, with unlimited transforms and team members plus always-on paid overage.',
   verdict:
-    'If you need video transcoding, a full digital asset manager, or AI-powered transforms today, pick Cloudinary — its breadth is real and Keenpix does not offer those capabilities. If what you use Cloudinary for is resizing and delivering images, Keenpix offers one managed-delivery meter, unlimited transformations and team members, managed custom domains, always-on paid usage, and an AGPL-3.0 v0.3.1 self-host path. Be aware of what you give up: Keenpix is a young solo-founder product with no video or storage. As of August 31, 2026, the Keenpix standard catalog lists 400 GB/month at $29; Cloudinary bandwidth draws from the Advanced plan’s pooled credits alongside transforms and storage.',
+    'If you need video transcoding, a full digital asset manager, or AI-powered transforms today, pick Cloudinary — its breadth is real and Keenpix does not offer those capabilities. If what you use Cloudinary for is resizing and delivering images, Keenpix offers one managed-delivery meter, unlimited transformations and team members, managed custom domains, always-on paid usage, and an AGPL-3.0 v0.3.2 self-host path. Be aware of what you give up: Keenpix is a young solo-founder product with no video or storage. As of August 31, 2026, the Keenpix standard catalog lists 400 GB/month at $29; Cloudinary bandwidth draws from the Advanced plan’s pooled credits alongside transforms and storage.',
   pricingRows: [
     {
       scenario: 'Credits → GB translation',
@@ -78,7 +78,7 @@ export const cloudinaryComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No',
-      keenpix: 'v0.3.1: AGPL-3.0 with Docker deployment files',
+      keenpix: 'v0.3.2: AGPL-3.0 with Docker deployment files',
     },
     {
       feature: 'Analytics',
@@ -140,7 +140,7 @@ export const cloudinaryComparison = {
     {
       title: 'An open-source escape hatch',
       detail:
-        'The published v0.3.1 release is AGPL-3.0 and includes Docker/Coolify deployment files. Moving in-house still requires infrastructure, operations, and a hostname/routing plan. Cloudinary has no self-host path.',
+        'The published v0.3.2 release is AGPL-3.0 and includes Docker/Coolify deployment files. Moving in-house still requires infrastructure, operations, and a hostname/routing plan. Cloudinary has no self-host path.',
     },
     {
       title: 'Core analytics on every Keenpix tier',
@@ -183,7 +183,7 @@ export const cloudinaryComparison = {
     },
     {
       q: 'Is the self-hosted version feature-limited?',
-      a: 'The published v0.3.1 release provides the engine under AGPL-3.0 and includes the transform pipeline, caching, and analytics. Self-hosting still requires your own infrastructure and operations.',
+      a: 'The published v0.3.2 release provides the engine under AGPL-3.0 and includes the transform pipeline, caching, and analytics. Self-hosting still requires your own infrastructure and operations.',
     },
     {
       q: 'Is there a free tier?',
@@ -213,12 +213,11 @@ export const cloudinaryComparison = {
       url: '/docs/reference/parameters',
     },
     {
-      label: 'Keenpix v0.3.1 release',
-      url: 'https://github.com/lord007tn/keenpix/releases/tag/v0.3.1',
+      label: 'Keenpix v0.3.2 release',
+      url: 'https://github.com/lord007tn/keenpix/releases/tag/v0.3.2',
     },
   ],
   pricingAsOf: 'August 31, 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
   verifiedAt: '2026-08-31',
-  nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData
