@@ -67,7 +67,7 @@ const config: KnipConfig = {
       entry: [
         'src/index.ts',
         'src/data-access/activation.ts',
-        'tests/activation.integration.ts',
+        'tests/*.integration.ts',
       ],
       project: ['src/**/*.ts', 'tests/**/*.ts'],
     },

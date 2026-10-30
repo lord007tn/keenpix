@@ -289,6 +289,7 @@ model Project {
   apiKeyScopes      ApiKeyScope[]
   customDomains     CustomDomain[]
   firstImageSuccess ProjectFirstImageSuccess?
+  firstExternalImages ProjectFirstExternalImage[]
 
   @@unique([id, orgId])
   @@index([orgId])
@@ -316,6 +317,30 @@ model ProjectFirstImageSuccess {
   @@unique([projectId, orgId])
   @@index([observedAt])
   @@index([orgId])
+}
+
+// origin_first_external_image_v1: a separately versioned ledger. Eligibility is
+// "not excluded" rather than v1's operator enrollment; see
+// docs/operations/first-external-image-funnel.md. projectId must stay the only
+// unique index: ON CONFLICT arbitrates just that key, so a second one would turn
+// simultaneous first deliveries into errors. That is why Prisma sees a list on
+// Project; the primary key still allows one row per project.
+model ProjectFirstExternalImage {
+  projectId         String   @id
+  orgId             String
+  project           Project  @relation(fields: [projectId, orgId], references: [id, orgId], onDelete: Cascade)
+  observedAt        DateTime @default(now())
+  definitionVersion Int      @default(1)
+
+  @@index([observedAt])
+  @@index([orgId])
+}
+
+// Operator-recorded after every writer is verified. No row means no coverage, so
+// funnel days read Unknown rather than zero.
+model FirstExternalImageCoverage {
+  definitionVersion Int      @id
+  startedAt         DateTime @default(now())
 }
 
 // Customer-owned delivery hostnames provisioned through Cloudflare for SaaS.

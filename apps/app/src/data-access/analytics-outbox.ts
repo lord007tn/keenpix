@@ -1,6 +1,7 @@
 import { prisma } from '@keenpix/database'
 import { recordProjectFirstImageSuccesses } from '@keenpix/database/activation'
 import type { AnalyticsEventOutbox, Prisma } from '@keenpix/database/client'
+import { isExternalImageSource } from '@keenpix/transform/activation'
 import {
   aggregateRollupIncrements,
   applyRollupIncrement,
@@ -23,6 +24,7 @@ export function persistAnalyticsOutboxEvent(
 async function writeOutboxBatch(
   db: Prisma.TransactionClient,
   batch: AnalyticsEventOutbox[],
+  appOrigin?: string,
 ) {
   const events = batch.map((log) => ({
     id: log.id,
@@ -47,8 +49,11 @@ async function writeOutboxBatch(
   for (const increment of aggregateRollupIncrements(events)) {
     await applyRollupIncrement(db, increment)
   }
-  // One statement per batch. The database filters enrollment before selecting
-  // each project's earliest event, including batches that straddle enrollment.
+  // One statement per batch for both ledgers. The database filters enrollment
+  // before selecting each project's earliest event, including batches that
+  // straddle enrollment. The candidate bit carries the request-time exclusions;
+  // the persisted source host decides the external ledger. Without an app origin
+  // no source can be proven external, so only origin_first_image_v1 is written.
   const candidates = batch
     .filter(
       (log) =>
@@ -58,6 +63,9 @@ async function writeOutboxBatch(
       projectId: log.projectId,
       orgId: log.orgId,
       observedAt: log.ts,
+      external: appOrigin
+        ? isExternalImageSource(log.sourceHost, appOrigin)
+        : false,
     }))
   if (candidates.length > 0) {
     await recordProjectFirstImageSuccesses(candidates, db)
@@ -68,6 +76,8 @@ async function writeOutboxBatch(
   return events
 }
 
+// Project deletion: both ledgers cascade with the project in this transaction,
+// so no external observation is derived here.
 export async function drainProjectAnalyticsOutbox(
   db: Prisma.TransactionClient,
   projectId: string,
@@ -78,7 +88,7 @@ export async function drainProjectAnalyticsOutbox(
   return batch.length > 0 ? writeOutboxBatch(db, batch) : []
 }
 
-export function drainAnalyticsOutboxBatch(through: Date) {
+export function drainAnalyticsOutboxBatch(through: Date, appOrigin?: string) {
   return prisma.$transaction(
     async (db) => {
       const locks = await db.$queryRaw<{ locked: boolean }[]>`
@@ -94,7 +104,7 @@ export function drainAnalyticsOutboxBatch(through: Date) {
       if (batch.length === 0) {
         return { status: 'empty' as const }
       }
-      const events = await writeOutboxBatch(db, batch)
+      const events = await writeOutboxBatch(db, batch, appOrigin)
       const remaining = await db.analyticsEventOutbox.count({
         where: { ts: { lt: through } },
       })

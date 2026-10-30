@@ -3,9 +3,11 @@ import { prisma } from '@keenpix/database'
 import {
   getFirstImageActivationReadout,
   setOrganizationActivationClassification,
+  startFirstExternalImageCoverage,
 } from '@keenpix/database/activation'
 import dayjs from 'dayjs'
 import { z } from 'zod'
+import { getFirstValueFunnel } from '../src/actions/admin/first-value'
 
 // Local operator command only. Use restricted DB credentials; never expose this
 // cross-tenant read/write capability as a tenant-facing function or public route.
@@ -17,9 +19,43 @@ async function main() {
       org: { type: 'string' },
       classification: { type: 'string' },
       apply: { type: 'boolean', default: false },
+      daily: { type: 'boolean', default: false },
+      'start-external-coverage': { type: 'boolean', default: false },
     },
     strict: true,
   })
+  if (values['start-external-coverage']) {
+    if (
+      !values.apply ||
+      values.org ||
+      values.classification ||
+      values.daily ||
+      values.from ||
+      values.to
+    ) {
+      throw new Error('Coverage start is a separate, explicit command.')
+    }
+    console.log(
+      JSON.stringify({
+        definition: 'origin_first_external_image_v1',
+        ...(await startFirstExternalImageCoverage()),
+      }),
+    )
+    return
+  }
+  if (values.daily) {
+    if (values.org || values.classification || values.apply) {
+      throw new Error('The daily funnel is a separate, read-only command.')
+    }
+    const input = z
+      .object({
+        from: z.iso.datetime({ offset: true }),
+        to: z.iso.datetime({ offset: true }),
+      })
+      .parse(values)
+    console.log(JSON.stringify(await getFirstValueFunnel(input), null, 2))
+    return
+  }
   if (values.org || values.classification || values.apply) {
     const input = z
       .object({

@@ -6,6 +6,7 @@
   "license": "AGPL-3.0-only",
   "exports": {
     ".": "./src/index.ts",
+    "./activation": "./src/activation.ts",
     "./sharp": "./src/sharp/index.ts"
   },
   "scripts": {

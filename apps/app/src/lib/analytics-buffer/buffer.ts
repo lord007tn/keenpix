@@ -11,7 +11,7 @@ import {
 import type { NewRequestLog, RequestLogEvent } from '@/data-access/request-logs'
 import { recordRequestEvents } from '@/lib/clickhouse/events'
 import { errorContext, logger } from '@/lib/logger/logger'
-import { isCloud } from '@/server/deployment'
+import { getAppUrl, isCloud } from '@/server/deployment'
 
 // Analytics writer for the public /img hot path. Self-hosted request logs are
 // buffered; successful managed deliveries first commit a lightweight durable
@@ -116,7 +116,7 @@ export function flushDurableRequestLogs(input?: {
       batchNumber < MAX_DURABLE_DRAIN_BATCHES;
       batchNumber += 1
     ) {
-      const result = await drainAnalyticsOutboxBatch(through)
+      const result = await drainAnalyticsOutboxBatch(through, getAppUrl())
       if (result.status === 'busy') {
         if (input?.requireComplete) {
           throw new Error('Analytics outbox is being drained by another job.')

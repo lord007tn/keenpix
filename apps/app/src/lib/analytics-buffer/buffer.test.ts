@@ -35,7 +35,10 @@ vi.mock('@/lib/logger/logger', () => ({
   errorContext: vi.fn(() => ({})),
   logger: { error: vi.fn(), warn: vi.fn() },
 }))
-vi.mock('@/server/deployment', () => ({ isCloud: () => cloud.value }))
+vi.mock('@/server/deployment', () => ({
+  getAppUrl: () => 'https://app.example.test',
+  isCloud: () => cloud.value,
+}))
 
 const { enqueueRequestLog, flushDurableRequestLogs, flushRequestLogs } =
   await import('./buffer')
@@ -92,7 +95,10 @@ describe('analytics buffer', () => {
 
     await flushDurableRequestLogs()
 
-    expect(drainAnalyticsOutboxBatch).toHaveBeenCalledOnce()
+    expect(drainAnalyticsOutboxBatch).toHaveBeenCalledExactlyOnceWith(
+      expect.any(Date),
+      'https://app.example.test',
+    )
     expect(recordRequestEvents).toHaveBeenCalledWith([event])
   })
 

@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getErrorMessage } from '@/errors/common'
+import { FirstValueCard } from '@/features/admin/first-value-card'
 import {
   getFinanceDashboardFn,
   getPlatformAnalyticsFn,
@@ -217,6 +218,8 @@ export function PlatformAnalyticsView() {
       ) : null}
 
       <ChartAreaInteractive data={series} edge={edgeStats?.series} funnel />
+
+      <FirstValueCard />
 
       <section className="flex flex-col gap-3">
         <div>

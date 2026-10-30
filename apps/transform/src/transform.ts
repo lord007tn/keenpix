@@ -10,6 +10,7 @@ import {
   getPublicTransformErrorMessage,
   getTransformErrorStatus,
   isActivationDelivery,
+  isExternalImageSource,
   type OutputFormat,
   optimizeSvgImage,
   parseTransformParams,
@@ -290,6 +291,10 @@ export async function optimizeProjectImage(input: {
           {
             projectId: project.id,
             orgId: project.orgId,
+            external: isExternalImageSource(
+              sourceHost(input.src),
+              env.KEENPIX_APP_URL,
+            ),
           },
         ])
       }

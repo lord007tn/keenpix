@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isActivationDelivery } from './activation'
+import { isActivationDelivery, isExternalImageSource } from './activation'
 
 describe('activation request eligibility', () => {
   it('accepts ordinary GET delivery without relying on Google consent', () => {
@@ -47,5 +47,40 @@ describe('activation request eligibility', () => {
         'https://keenpix.com',
       ),
     ).toBe(false)
+  })
+})
+
+describe('external image source policy', () => {
+  it.each([
+    'keenpix.com',
+    'www.keenpix.com',
+    'cdn.keenpix.com',
+    'a.b.keenpix.com',
+    'CDN.KeenPix.COM',
+    'keenpix.com.',
+    'cdn.keenpix.com..',
+    'app.example.test',
+    'APP.example.test',
+    'www.app.example.test',
+  ])('treats %s as Keenpix-owned', (host) => {
+    expect(isExternalImageSource(host, 'https://app.example.test')).toBe(false)
+  })
+
+  it.each([
+    'images.customer.test',
+    'notkeenpix.com',
+    'keenpix.com.customer.test',
+    'keenpix.co',
+    'other.app.example.test',
+  ])('treats %s as external', (host) => {
+    expect(isExternalImageSource(host, 'https://app.example.test')).toBe(true)
+  })
+
+  it('does not qualify a source whose host is unknown', () => {
+    for (const host of [undefined, null, '', '.']) {
+      expect(isExternalImageSource(host, 'https://app.example.test')).toBe(
+        false,
+      )
+    }
   })
 })

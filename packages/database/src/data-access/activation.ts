@@ -27,19 +27,50 @@ export function setOrganizationActivationClassification(input: {
 // The unique project key is the idempotency boundary across retries/replicas.
 // Keep the earliest qualified event time even when durable outbox batches arrive
 // out of order. This is an origin observation, not image receipt by a visitor.
+//
+// One statement writes both ledgers, so the standalone transform keeps a single
+// round trip and the outbox drain a single bulk statement per batch. The outer
+// INSERT is origin_first_image_v1 and its row count is what callers receive.
+// origin_first_external_image_v1 needs no enrollment: it only rejects internal/
+// test classifications and non-ordinary membership. Its NOT EXISTS skips projects
+// already observed at or before the event, so a repeat delivery neither locks the
+// row nor writes WAL. CURRENT_TIMESTAMP is converted explicitly because funnel
+// days are UTC whatever the session time zone is.
 export function recordProjectFirstImageSuccesses(
   input: {
     projectId: string
     orgId: string
     observedAt?: Date
+    external?: boolean
   }[],
   db: Pick<Prisma.TransactionClient, '$executeRaw'> = prisma,
 ) {
   return db.$executeRaw`
+    WITH event AS (
+      SELECT * FROM jsonb_to_recordset(${JSON.stringify(input)}::jsonb)
+        AS event("projectId" text, "orgId" text, "observedAt" timestamp, "external" boolean)
+    ), first_external_image AS (
+      INSERT INTO "ProjectFirstExternalImage" ("projectId", "orgId", "observedAt", "definitionVersion")
+      SELECT p."id", p."orgId", MIN(COALESCE(event."observedAt", CURRENT_TIMESTAMP AT TIME ZONE 'UTC')), 1
+      FROM event
+      JOIN "Project" p ON p."id" = event."projectId" AND p."orgId" = event."orgId"
+      LEFT JOIN "OrganizationActivationPolicy" policy ON policy."orgId" = p."orgId"
+      WHERE event."external"
+        AND (policy."classification" IS NULL OR policy."classification" NOT IN ('internal', 'test'))
+        AND NOT EXISTS (SELECT 1 FROM "ProjectFirstExternalImage" s
+          WHERE s."projectId" = p."id"
+            AND s."observedAt" <= COALESCE(event."observedAt", CURRENT_TIMESTAMP AT TIME ZONE 'UTC'))
+        AND EXISTS (SELECT 1 FROM "Member" m JOIN "User" u ON u."id" = m."userId"
+          WHERE m."organizationId" = p."orgId" AND m."role" = 'owner' AND u."role" = 'user')
+        AND NOT EXISTS (SELECT 1 FROM "Member" m JOIN "User" u ON u."id" = m."userId"
+          WHERE m."organizationId" = p."orgId" AND u."role" <> 'user')
+      GROUP BY p."id", p."orgId"
+      ON CONFLICT ("projectId") DO UPDATE SET "observedAt" = EXCLUDED."observedAt"
+        WHERE EXCLUDED."observedAt" < "ProjectFirstExternalImage"."observedAt"
+    )
     INSERT INTO "ProjectFirstImageSuccess" ("projectId", "orgId", "observedAt", "definitionVersion")
     SELECT p."id", p."orgId", MIN(COALESCE(event."observedAt", CURRENT_TIMESTAMP)), 1
-    FROM jsonb_to_recordset(${JSON.stringify(input)}::jsonb)
-      AS event("projectId" text, "orgId" text, "observedAt" timestamp)
+    FROM event
     JOIN "Project" p ON p."id" = event."projectId" AND p."orgId" = event."orgId"
     JOIN "OrganizationActivationPolicy" policy ON policy."orgId" = p."orgId"
     WHERE policy."classification" = 'customer' AND policy."eligibleSince" IS NOT NULL
@@ -102,4 +133,114 @@ export async function getFirstImageActivationReadout(input: {
     FROM classified
   `
   return rows[0]
+}
+
+// Operator-only, recorded after every writer is verified. Database time and DO
+// NOTHING mean a repeat keeps the original start and coverage is never backdated.
+export async function startFirstExternalImageCoverage() {
+  const rows = await prisma.$queryRaw<
+    { coverageStartedAt: string; started: boolean }[]
+  >`
+    WITH inserted AS (
+      INSERT INTO "FirstExternalImageCoverage" ("definitionVersion", "startedAt")
+      VALUES (1, CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
+      ON CONFLICT ("definitionVersion") DO NOTHING
+      RETURNING "startedAt"
+    ), coverage AS (
+      SELECT "startedAt" FROM inserted
+      UNION ALL
+      SELECT "startedAt" FROM "FirstExternalImageCoverage" WHERE "definitionVersion" = 1
+    )
+    SELECT to_char(MAX("startedAt"), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "coverageStartedAt",
+      EXISTS (SELECT 1 FROM inserted) AS "started"
+    FROM coverage
+  `
+  return rows[0]
+}
+
+// Daily milestone totals for half-open UTC days in [fromDay, toDay). Date-only
+// inputs and integer day offsets keep the boundaries independent of the session
+// time zone. Only a whole UTC day at or after the coverage start can report a
+// first image; a NULL count is Unknown and must never be read as zero.
+// Aggregate only: never return identifiers, emails, URLs, or per-customer rows.
+export async function getFirstValueFunnelReadout(input: {
+  fromDay: string
+  toDay: string
+}) {
+  const [days, summary] = await prisma.$transaction(
+    [
+      prisma.$queryRaw<
+        {
+          day: string
+          signups: number
+          firstProjectWorkspaces: number
+          firstExternalImageWorkspaces: number | null
+          preexistingFirstExternalImageWorkspaces: number | null
+        }[]
+      >`
+        WITH eligible AS (
+          SELECT o."id"
+          FROM "Organization" o
+          LEFT JOIN "OrganizationActivationPolicy" policy ON policy."orgId" = o."id"
+          WHERE (policy."classification" IS NULL OR policy."classification" NOT IN ('internal', 'test'))
+            AND EXISTS (SELECT 1 FROM "Member" m JOIN "User" u ON u."id" = m."userId"
+              WHERE m."organizationId" = o."id" AND m."role" = 'owner' AND u."role" = 'user')
+            AND NOT EXISTS (SELECT 1 FROM "Member" m JOIN "User" u ON u."id" = m."userId"
+              WHERE m."organizationId" = o."id" AND u."role" <> 'user')
+        ), first_project AS (
+          SELECT p."orgId", MIN(p."createdAt") AS "at"
+          FROM "Project" p JOIN eligible ON eligible."id" = p."orgId"
+          GROUP BY p."orgId"
+        ), first_image AS (
+          SELECT s."orgId", MIN(s."observedAt") AS "at"
+          FROM "ProjectFirstExternalImage" s JOIN eligible ON eligible."id" = s."orgId"
+          GROUP BY s."orgId"
+        ), days AS (
+          SELECT (${input.fromDay}::date + n)::timestamp AS "start",
+            (${input.fromDay}::date + n + 1)::timestamp AS "end"
+          FROM generate_series(0, ${input.toDay}::date - ${input.fromDay}::date - 1) AS n
+        )
+        SELECT to_char(d."start", 'YYYY-MM-DD') AS "day",
+          (SELECT COUNT(*)::int FROM "User" u
+            WHERE u."role" = 'user' AND u."createdAt" >= d."start" AND u."createdAt" < d."end") AS "signups",
+          (SELECT COUNT(*)::int FROM first_project f
+            WHERE f."at" >= d."start" AND f."at" < d."end") AS "firstProjectWorkspaces",
+          CASE WHEN coverage."startedAt" <= d."start" THEN
+            (SELECT COUNT(*)::int FROM first_image i
+              WHERE i."at" >= d."start" AND i."at" < d."end")
+          END AS "firstExternalImageWorkspaces",
+          CASE WHEN coverage."startedAt" <= d."start" THEN
+            (SELECT COUNT(*)::int FROM first_image i
+              JOIN first_project f ON f."orgId" = i."orgId"
+              WHERE i."at" >= d."start" AND i."at" < d."end" AND f."at" < coverage."startedAt")
+          END AS "preexistingFirstExternalImageWorkspaces"
+        FROM days d
+        LEFT JOIN "FirstExternalImageCoverage" coverage ON coverage."definitionVersion" = 1
+        ORDER BY d."start"
+      `,
+      prisma.$queryRaw<
+        {
+          coverageStartedAt: string | null
+          pendingCandidateEvents: number
+          observedWorkspaces: number
+        }[]
+      >`
+        SELECT
+          (SELECT to_char("startedAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+            FROM "FirstExternalImageCoverage" WHERE "definitionVersion" = 1) AS "coverageStartedAt",
+          (SELECT COUNT(*)::int FROM "AnalyticsEventOutbox"
+            WHERE "activationCandidate" AND "ts" < ${input.toDay}::date::timestamp) AS "pendingCandidateEvents",
+          (SELECT COUNT(DISTINCT s."orgId")::int
+            FROM "ProjectFirstExternalImage" s
+            LEFT JOIN "OrganizationActivationPolicy" policy ON policy."orgId" = s."orgId"
+            WHERE (policy."classification" IS NULL OR policy."classification" NOT IN ('internal', 'test'))
+              AND EXISTS (SELECT 1 FROM "Member" m JOIN "User" u ON u."id" = m."userId"
+                WHERE m."organizationId" = s."orgId" AND m."role" = 'owner' AND u."role" = 'user')
+              AND NOT EXISTS (SELECT 1 FROM "Member" m JOIN "User" u ON u."id" = m."userId"
+                WHERE m."organizationId" = s."orgId" AND u."role" <> 'user')) AS "observedWorkspaces"
+      `,
+    ],
+    { isolationLevel: 'RepeatableRead' },
+  )
+  return { days, ...summary[0] }
 }

@@ -9,7 +9,7 @@
     "./client": "./src/generated/prisma/client.ts"
   },
   "scripts": {
-    "test:activation": "tsx --tsconfig ../../apps/app/tsconfig.json --test tests/activation.integration.ts",
+    "test:activation": "tsx --tsconfig ../../apps/app/tsconfig.json --test --test-concurrency=1 tests/activation.integration.ts tests/first-external-image.integration.ts",
     "generate": "prisma generate",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",

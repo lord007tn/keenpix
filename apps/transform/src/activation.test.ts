@@ -66,8 +66,52 @@ describe('standalone transform first-image capture', () => {
       {
         projectId: 'project',
         orgId: 'organization',
+        external: true,
       },
     ])
+  })
+
+  it.each([
+    'https://keenpix.com/sample.jpg',
+    'https://cdn.keenpix.com/sample.jpg',
+    'https://CDN.KeenPix.com./sample.jpg',
+  ])('keeps the v1 capture but marks %s as not external', async (source) => {
+    mocks.project.mockResolvedValue({
+      id: 'project',
+      orgId: 'organization',
+      allowedOrigins: ['keenpix.com', 'cdn.keenpix.com', 'cdn.keenpix.com.'],
+      autoFormat: true,
+      defaultQuality: 75,
+      defaultDpr: 1,
+      defaultFit: 'cover',
+    })
+    const response = await handleTransformRequest(
+      new Request('https://images.customer.test/img/source?project=project'),
+      source,
+    )
+    expect(response.status).toBe(200)
+    expect(mocks.record).toHaveBeenCalledExactlyOnceWith([
+      { projectId: 'project', orgId: 'organization', external: false },
+    ])
+  })
+
+  it('awaits one statement for both ledgers before accounting the delivery', async () => {
+    let release: (value: number) => void = () => undefined
+    mocks.record.mockReturnValueOnce(
+      new Promise((resolve) => {
+        release = resolve
+      }),
+    )
+    const pending = handleTransformRequest(
+      new Request('https://images.customer.test/img/source?project=project'),
+      'https://example.test/image.jpg',
+    )
+    await vi.waitFor(() => expect(mocks.record).toHaveBeenCalledTimes(1))
+    expect(mocks.enqueue).not.toHaveBeenCalled()
+    release(0)
+    expect((await pending).status).toBe(200)
+    expect(mocks.record).toHaveBeenCalledTimes(1)
+    expect(mocks.enqueue).toHaveBeenCalledTimes(1)
   })
 
   it.each([

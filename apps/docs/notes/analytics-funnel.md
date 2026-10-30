@@ -43,6 +43,9 @@ Managed capture uses the existing request-accounting outbox transaction. Billing
 totals retain their existing semantics. See the
 [counting contract and operator readout](../../../docs/operations/first-image-activation.md)
 for enrollment, unknown history, edge-only cache limitations, and deployment gates.
+A separately versioned `origin_first_external_image_v1` ledger and its daily
+milestone totals are described in
+[first external image and the daily funnel](../../../docs/operations/first-external-image-funnel.md).
 
 The ledger is not Google attribution or proof that a person received/viewed an
 image. Anonymous unmarked QA remains indistinguishable from ordinary delivery.
