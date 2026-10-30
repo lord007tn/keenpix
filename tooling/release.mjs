@@ -136,6 +136,13 @@ const dependencyFields = [
   'devDependencies',
 ]
 
+const leadingDotSlash = /^\.\//
+
+const listDeclaredFiles = (value) =>
+  typeof value === 'string'
+    ? [value]
+    : Object.values(value ?? {}).flatMap(listDeclaredFiles)
+
 export const verifyPackedPackage = (tarball, expected, internalNames) => {
   const result = spawnSync('tar', ['-xOf', tarball, 'package/package.json'], {
     encoding: 'utf8',
@@ -174,6 +181,21 @@ export const verifyPackedPackage = (tarball, expected, internalNames) => {
       .some((file) => file.startsWith('package/dist/') && !file.endsWith('/'))
   ) {
     throw new Error(`${manifest.name} tarball has no built dist files.`)
+  }
+  const packedFiles = new Set(
+    files.stdout.split('\n').map((file) => file.trim()),
+  )
+  const declaredFiles = listDeclaredFiles([
+    manifest.main,
+    manifest.types,
+    manifest.exports,
+  ]).filter((target) => !(target.includes('*') || target.endsWith('/')))
+  for (const target of declaredFiles) {
+    if (!packedFiles.has(`package/${target.replace(leadingDotSlash, '')}`)) {
+      throw new Error(
+        `${manifest.name} declares ${target}, which is not packed.`,
+      )
+    }
   }
 }
 

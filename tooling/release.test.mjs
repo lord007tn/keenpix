@@ -13,6 +13,7 @@ import test from 'node:test'
 import { verifyPackedPackage } from './release.mjs'
 
 const missingDistPattern = /no built dist/
+const missingDeclaredFilePattern = /declares \.\/dist\/signing\.mjs/
 const tarballPublishPattern =
   /'publish',\s+process\.platform === 'win32' \? `"\$\{tarball\}"` : tarball,/
 const destinationCwdPattern = /cwd: destination,/
@@ -77,6 +78,38 @@ test('packed manifest guard rejects protocols in every dependency field and inco
     assert.throws(
       () => verifyPackedPackage(tarball, expected, internalNames),
       missingDistPattern,
+    )
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
+
+test('packed manifest guard rejects a declared entrypoint missing from the tarball', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'keenpix-pack-test-'))
+  try {
+    mkdirSync(join(directory, 'package/dist'), { recursive: true })
+    writeFileSync(join(directory, 'package/dist/index.mjs'), 'export {}')
+    const tarball = join(directory, 'fixture.tgz')
+    const writeManifest = (exports) => {
+      writeFileSync(
+        join(directory, 'package/package.json'),
+        JSON.stringify({ ...expected, main: 'dist/index.mjs', exports }),
+      )
+      execFileSync('tar', ['-czf', tarball, '-C', directory, 'package'])
+    }
+    writeManifest({
+      '.': { import: './dist/index.mjs' },
+      './internal': null,
+      './*': './dist/*.mjs',
+    })
+    verifyPackedPackage(tarball, expected, internalNames)
+    writeManifest({
+      '.': './dist/index.mjs',
+      './signing': { import: './dist/signing.mjs' },
+    })
+    assert.throws(
+      () => verifyPackedPackage(tarball, expected, internalNames),
+      missingDeclaredFilePattern,
     )
   } finally {
     rmSync(directory, { recursive: true, force: true })
