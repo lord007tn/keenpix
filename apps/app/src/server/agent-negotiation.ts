@@ -96,6 +96,8 @@ export function isDocumentPath(pathname: string) {
     pathname.startsWith('/api/') ||
     pathname.startsWith('/cdn-cgi/') ||
     pathname.startsWith('/img/') ||
+    pathname === '/demo' ||
+    pathname.startsWith('/demo/') ||
     pathname.startsWith('/og/') ||
     pathname.startsWith('/p/') ||
     pathname.startsWith('/_') ||

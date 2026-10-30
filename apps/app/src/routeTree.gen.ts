@@ -68,6 +68,7 @@ import { Route as AppLogsIndexRouteImport } from './routes/app/logs/index'
 import { Route as AppOnboardingIndexRouteImport } from './routes/app/onboarding/index'
 import { Route as AppOperationsIndexRouteImport } from './routes/app/operations/index'
 import { Route as AppSettingsIndexRouteImport } from './routes/app/settings/index'
+import { Route as DemoImgSplatRouteImport } from './routes/demo/img/$'
 import { Route as OgBlogSplatRouteImport } from './routes/og/blog/$'
 import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
 import { Route as AdminCustomersOrgIdIndexRouteImport } from './routes/admin/customers/$orgId/index'
@@ -372,6 +373,11 @@ const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   path: '/settings/',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const DemoImgSplatRoute = DemoImgSplatRouteImport.update({
+  id: '/demo/img/$',
+  path: '/demo/img/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OgBlogSplatRoute = OgBlogSplatRouteImport.update({
   id: '/og/blog/$',
   path: '/og/blog/$',
@@ -453,6 +459,7 @@ export interface FileRoutesByFullPath {
   '/compare/': typeof CompareIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
+  '/demo/img/$': typeof DemoImgSplatRoute
   '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/admin/analytics/': typeof AdminAnalyticsIndexRoute
@@ -518,6 +525,7 @@ export interface FileRoutesByTo {
   '/compare': typeof CompareIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
+  '/demo/img/$': typeof DemoImgSplatRoute
   '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/admin/analytics': typeof AdminAnalyticsIndexRoute
@@ -586,6 +594,7 @@ export interface FileRoutesById {
   '/compare/': typeof CompareIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/sdk/$': typeof ApiSdkSplatRoute
+  '/demo/img/$': typeof DemoImgSplatRoute
   '/og/blog/$': typeof OgBlogSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/admin/analytics/': typeof AdminAnalyticsIndexRoute
@@ -655,6 +664,7 @@ export interface FileRouteTypes {
     | '/compare/'
     | '/api/auth/$'
     | '/api/sdk/$'
+    | '/demo/img/$'
     | '/og/blog/$'
     | '/og/docs/$'
     | '/admin/analytics/'
@@ -720,6 +730,7 @@ export interface FileRouteTypes {
     | '/compare'
     | '/api/auth/$'
     | '/api/sdk/$'
+    | '/demo/img/$'
     | '/og/blog/$'
     | '/og/docs/$'
     | '/admin/analytics'
@@ -787,6 +798,7 @@ export interface FileRouteTypes {
     | '/compare/'
     | '/api/auth/$'
     | '/api/sdk/$'
+    | '/demo/img/$'
     | '/og/blog/$'
     | '/og/docs/$'
     | '/admin/analytics/'
@@ -853,6 +865,7 @@ export interface RootRouteChildren {
   CompareIndexRoute: typeof CompareIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiSdkSplatRoute: typeof ApiSdkSplatRoute
+  DemoImgSplatRoute: typeof DemoImgSplatRoute
   OgBlogSplatRoute: typeof OgBlogSplatRoute
   OgDocsSplatRoute: typeof OgDocsSplatRoute
   ApiAuthPolarSandboxWebhooksRoute: typeof ApiAuthPolarSandboxWebhooksRoute
@@ -1275,6 +1288,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/demo/img/$': {
+      id: '/demo/img/$'
+      path: '/demo/img/$'
+      fullPath: '/demo/img/$'
+      preLoaderRoute: typeof DemoImgSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/og/blog/$': {
       id: '/og/blog/$'
       path: '/og/blog/$'
@@ -1417,6 +1437,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompareIndexRoute: CompareIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiSdkSplatRoute: ApiSdkSplatRoute,
+  DemoImgSplatRoute: DemoImgSplatRoute,
   OgBlogSplatRoute: OgBlogSplatRoute,
   OgDocsSplatRoute: OgDocsSplatRoute,
   ApiAuthPolarSandboxWebhooksRoute: ApiAuthPolarSandboxWebhooksRoute,
