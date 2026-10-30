@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/sdk",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Server-side SDK for Keenpix project, domain, configuration, and prewarm APIs.",
   "type": "module",
   "license": "MIT",

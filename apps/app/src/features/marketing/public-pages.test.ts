@@ -127,9 +127,11 @@ describe('changelog incident entry', () => {
   )
   const sections = [...document.querySelectorAll('main section')]
 
-  it('renders as a dated incident note above the releases', () => {
-    const [incident, latestRelease] = sections
+  it('renders as a dated incident note between the releases', () => {
+    const [latestRelease, incident, previousRelease] = sections
 
+    expect(latestRelease?.querySelector('h2')?.textContent).toBe('v0.3.3')
+    expect(latestRelease?.querySelector('time')?.textContent).toBe('2026-10-30')
     expect(incident?.querySelector('h2')?.textContent).toBe(
       '2026-10-17 — Availability incident',
     )
@@ -139,7 +141,9 @@ describe('changelog incident entry', () => {
     expect(incident?.textContent).toContain(
       'origin TLS certificates had expired, and automatic renewal',
     )
-    expect(latestRelease?.querySelector('h2')?.textContent).toBe('v0.3.2')
-    expect(latestRelease?.querySelector('time')?.textContent).toBe('2026-09-01')
+    expect(previousRelease?.querySelector('h2')?.textContent).toBe('v0.3.2')
+    expect(previousRelease?.querySelector('time')?.textContent).toBe(
+      '2026-09-01',
+    )
   })
 })
