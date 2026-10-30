@@ -2,6 +2,14 @@
 
 All notable changes to Keenpix are documented here.
 
+## [v0.3.3] - 2026-10-30
+
+### Fixed
+
+- All public @keenpix packages install with npm, pnpm and yarn again; the 0.3.2 tarballs contained unresolved workspace dependencies.
+- Validate every packed manifest and built distribution before publishing any package.
+- Includes the fixes merged since v0.3.2.
+
 ## [v0.3.2] - 2026-09-01
 
 ### Added

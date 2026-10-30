@@ -1,6 +1,13 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const semanticVersionPattern =
@@ -114,47 +121,139 @@ const getOrderedPublicPackages = () => {
   return orderedPackages
 }
 
-const publishPackages = async (version) => {
-  verifyVersions(version)
-  const dryRun = process.env.RELEASE_DRY_RUN === 'true'
+const dependencyFields = [
+  'dependencies',
+  'optionalDependencies',
+  'peerDependencies',
+  'devDependencies',
+]
 
-  for (const packageEntry of getOrderedPublicPackages()) {
-    const { name } = packageEntry.manifest
-    const registryUrl = `https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(version)}`
-    const response = await fetch(registryUrl)
-
-    if (response.ok) {
-      console.log(`Skipping ${name}@${version}; it is already published.`)
-      continue
+export const verifyPackedPackage = (tarball, expected, internalNames) => {
+  const result = spawnSync('tar', ['-xOf', tarball, 'package/package.json'], {
+    encoding: 'utf8',
+  })
+  if (result.status !== 0) {
+    throw new Error(`Could not read packed manifest: ${tarball}`)
+  }
+  const manifest = JSON.parse(result.stdout)
+  if (
+    manifest.name !== expected.name ||
+    manifest.version !== expected.version
+  ) {
+    throw new Error(
+      `Packed identity does not match ${expected.name}@${expected.version}.`,
+    )
+  }
+  for (const field of dependencyFields) {
+    for (const [name, range] of Object.entries(manifest[field] ?? {})) {
+      if (range.includes('workspace:') || range.includes('catalog:')) {
+        throw new Error(`${manifest.name} ${field}.${name} contains ${range}.`)
+      }
+      if (internalNames.has(name) && range !== `^${expected.version}`) {
+        throw new Error(
+          `${manifest.name} ${field}.${name} must be ^${expected.version}; got ${range}.`,
+        )
+      }
     }
+  }
+  const files = spawnSync('tar', ['-tzf', tarball], { encoding: 'utf8' })
+  if (
+    files.status !== 0 ||
+    !files.stdout
+      .split('\n')
+      .some((file) => file.startsWith('package/dist/') && !file.endsWith('/'))
+  ) {
+    throw new Error(`${manifest.name} tarball has no built dist files.`)
+  }
+}
 
-    if (response.status !== 404) {
-      throw new Error(
-        `Could not check ${name}@${version}: npm returned ${response.status}.`,
-      )
+export const packPublicPackages = (destination) => {
+  const internalNames = new Set(
+    publicPackages.map(({ manifest }) => manifest.name),
+  )
+  return getOrderedPublicPackages().map((packageEntry) => {
+    const { manifest, directory } = packageEntry
+    if (!existsSync(join(directory, 'dist'))) {
+      throw new Error(`${manifest.name} needs a build before packing.`)
     }
-
-    if (dryRun) {
-      console.log(`Would publish ${name}@${version}.`)
-      continue
-    }
-
-    console.log(`Publishing ${name}@${version}.`)
     const result = spawnSync(
-      process.platform === 'win32' ? 'npm.cmd' : 'npm',
-      ['publish', '--access', 'public'],
+      'pnpm',
+      [
+        'pack',
+        '--pack-destination',
+        process.platform === 'win32' ? `"${destination}"` : destination,
+      ],
       {
-        cwd: packageEntry.directory,
-        env: process.env,
+        cwd: directory,
+        env: { ...process.env, NPM_CONFIG_IGNORE_SCRIPTS: 'true' },
+        shell: process.platform === 'win32',
         stdio: 'inherit',
       },
     )
-
     if (result.status !== 0) {
       throw new Error(
-        `Publishing ${name}@${version} failed with exit code ${result.status}.`,
+        `Packing ${manifest.name} failed: ${result.error ?? result.status}.`,
       )
     }
+    const tarball = join(
+      destination,
+      `${manifest.name.replace('@', '').replace('/', '-')}-${manifest.version}.tgz`,
+    )
+    verifyPackedPackage(tarball, manifest, internalNames)
+    console.log(`Verified packed ${manifest.name}@${manifest.version}.`)
+    return { ...packageEntry, tarball }
+  })
+}
+
+const publishPackages = async (version) => {
+  verifyVersions(version)
+  const destination = mkdtempSync(join(tmpdir(), 'keenpix-release-'))
+  try {
+    // Preflight the entire release before the first registry write, including on resume.
+    const packedPackages = packPublicPackages(destination)
+    for (const {
+      manifest: { name },
+      tarball,
+    } of packedPackages) {
+      const registryUrl = `https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(version)}`
+      const response = await fetch(registryUrl)
+      if (response.ok) {
+        console.log(`Skipping ${name}@${version}; it is already published.`)
+        continue
+      }
+      if (response.status !== 404) {
+        throw new Error(
+          `Could not check ${name}@${version}: npm returned ${response.status}.`,
+        )
+      }
+      if (process.env.RELEASE_DRY_RUN === 'true') {
+        console.log(`Would publish ${name}@${version}.`)
+        continue
+      }
+      console.log(`Publishing ${name}@${version}.`)
+      const result = spawnSync(
+        'npm',
+        [
+          'publish',
+          process.platform === 'win32' ? `"${tarball}"` : tarball,
+          '--access',
+          'public',
+        ],
+        {
+          cwd: destination,
+          env: process.env,
+          shell: process.platform === 'win32',
+          stdio: 'inherit',
+        },
+      )
+      if (result.status !== 0) {
+        throw new Error(
+          `Publishing ${name}@${version} failed: ${result.error ?? result.status}.`,
+        )
+      }
+    }
+  } finally {
+    rmSync(destination, { recursive: true, force: true })
   }
 }
 
@@ -276,15 +375,28 @@ const buildReleaseNotes = (version) => {
   return `${notes.trim()}\n`
 }
 
-const command = process.argv[2]
-const version = getVersion()
+if (
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === resolve(process.argv[1])
+) {
+  const command = process.argv[2]
+  const version =
+    command === 'check' ? publicPackages[0].manifest.version : getVersion()
 
-if (command === 'verify') {
-  verifyVersions(version)
-} else if (command === 'publish') {
-  await publishPackages(version)
-} else if (command === 'notes') {
-  process.stdout.write(buildReleaseNotes(version))
-} else {
-  throw new Error('Use release.mjs with verify, publish, or notes.')
+  if (command === 'check') {
+    const destination = mkdtempSync(join(tmpdir(), 'keenpix-release-check-'))
+    try {
+      packPublicPackages(destination)
+    } finally {
+      rmSync(destination, { recursive: true, force: true })
+    }
+  } else if (command === 'verify') {
+    verifyVersions(version)
+  } else if (command === 'publish') {
+    await publishPackages(version)
+  } else if (command === 'notes') {
+    process.stdout.write(buildReleaseNotes(version))
+  } else {
+    throw new Error('Use release.mjs with check, verify, publish, or notes.')
+  }
 }
