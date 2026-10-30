@@ -54,6 +54,9 @@ services:
     command:
       - --dir=/data
       - --default_lua_flags=allow-undeclared-keys
+      # A fixed name overwrites each save. The default adds a timestamp, so
+      # every snapshot would become a new file that nothing removes.
+      - --dbfilename=dump
       - --snapshot_cron=*/5 * * * *
     volumes:
       - keenpix_dragonfly:/data

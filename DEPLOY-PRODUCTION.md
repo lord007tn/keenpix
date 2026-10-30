@@ -223,6 +223,39 @@ docker compose -f docker-compose.production.yml exec pg-backup \
 For a full rebuild: create fresh volumes, start only `postgres`, copy a dump in
 (`docker cp`), `pg_restore`, then start the rest of the stack.
 
+## Dragonfly snapshots
+
+Dragonfly saves the queue and the image variant cache every 5 minutes. Its
+default filename adds a timestamp, so without `--dbfilename=dump` every save is
+a new set of files and none are ever removed. Each set can be as large as the
+whole variant cache (512 MB by default).
+
+A stack started without that flag keeps its old sets after the flag is added.
+Check how much space they use:
+
+```bash
+docker compose -f docker-compose.production.yml exec dragonfly \
+  sh -c 'ls /data | grep -c "^dump-20"; du -sh /data'
+```
+
+To stop the growth on a running stack, change the name in place. It needs no
+restart, but it only lasts until the container is recreated, so add the flag to
+the deployed Compose file as well:
+
+```bash
+docker compose -f docker-compose.production.yml exec dragonfly \
+  redis-cli config set dbfilename dump
+```
+
+The next save writes `/data/dump-summary.dfs`, and Dragonfly loads that set on
+restart even while the old sets are still there. Once that file exists, this
+frees their space. It permanently deletes them:
+
+```bash
+docker compose -f docker-compose.production.yml exec dragonfly \
+  find /data -maxdepth 1 -name 'dump-20*' -delete
+```
+
 ## After deploy
 
 - App health: open the generated app URL and `/api/health`.
