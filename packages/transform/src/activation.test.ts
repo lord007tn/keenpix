@@ -84,3 +84,13 @@ describe('external image source policy', () => {
     }
   })
 })
+
+it.each([
+  'app.example.test',
+  'www.app.example.test',
+  'APP.EXAMPLE.TEST.',
+])('excludes app-owned host %s when the configured app origin has a trailing dot', (host) => {
+  expect(isExternalImageSource(host, 'https://www.app.example.test.')).toBe(
+    false,
+  )
+})

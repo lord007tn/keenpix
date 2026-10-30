@@ -731,9 +731,9 @@ model FirstExternalImageInterruption {
 model ImageMeasurementOutbox {
   id            String   @id
   attempts      Int      @default(0)
-  nextAttemptAt DateTime @default(now()) @db.Timestamp(3)
+  nextAttemptAt DateTime @default(dbgenerated("(CURRENT_TIMESTAMP AT TIME ZONE 'UTC')")) @db.Timestamp(3)
   candidates    Json
-  createdAt     DateTime @default(now()) @db.Timestamp(3)
+  createdAt     DateTime @default(dbgenerated("(CURRENT_TIMESTAMP AT TIME ZONE 'UTC')")) @db.Timestamp(3)
 
   @@index([nextAttemptAt, createdAt])
 }

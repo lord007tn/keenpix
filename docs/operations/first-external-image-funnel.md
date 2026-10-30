@@ -38,8 +38,12 @@ stay the table's only unique index: `ON CONFLICT` arbitrates that key alone, and
 second unique index turns simultaneous first deliveries into errors.
 
 Both ledgers use the same idempotent statement; every existing v1 index remains.
-The specific v1 composite-index uniqueness race retries a fresh standalone
-statement within a two-second retry budget. Transactional retries retain the
+Capture first acquires per-project transaction advisory locks in sorted lock-key
+order, before either ledger writes. This prevents speculative inserts into v1's
+primary and composite unique indexes from racing or deadlocking. Unrelated hash
+collisions only serialize work. The isolated pool's lock and statement timeouts
+still bound optional work. The specific v1 composite-index uniqueness fallback
+retries a fresh standalone statement within a two-second retry budget. Transactional retries retain the
 durable queue row and run in a fresh transaction on a later drain.
 
 - **Standalone transform:** delivery and accounting never await capture. A

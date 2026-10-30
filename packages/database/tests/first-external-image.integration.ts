@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
+import { resolve } from 'node:path'
 import { after, afterEach, test } from 'node:test'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
@@ -1042,4 +1044,96 @@ test('a leased poison row does not block a healthy ready row', async () => {
     { id: string; attempts: number }[]
   >`SELECT "id", "attempts" FROM "ImageMeasurementOutbox"`
   assert.deepEqual(remaining, [{ id: 'poison', attempts: 1 }])
+})
+
+test('measurement queue defaults use UTC in non-UTC sessions and are immediately ready', async () => {
+  const fixture = await createWorkspace()
+  const candidates = [
+    { ...fixture, external: true, observedAt: dayjs().toDate() },
+  ]
+  for (const zone of ['Pacific/Kiritimati', 'America/Los_Angeles']) {
+    const id = randomUUID()
+    const [row] = await prisma.$transaction(async (db) => {
+      await db.$executeRaw`SELECT set_config('TimeZone', ${zone}, true)`
+      return db.$queryRaw<{ readySkew: number; createdSkew: number }[]>`
+        WITH inserted AS (
+          INSERT INTO "ImageMeasurementOutbox" ("id", "candidates")
+          VALUES (${id}, ${JSON.stringify(candidates)}::jsonb)
+          RETURNING "createdAt", "nextAttemptAt"
+        ) SELECT EXTRACT(EPOCH FROM ("nextAttemptAt" - (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')))::float AS "readySkew",
+          EXTRACT(EPOCH FROM ("createdAt" - (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')))::float AS "createdSkew" FROM inserted`
+    })
+    assert.ok(Math.abs(row.readySkew) < 0.001)
+    assert.ok(Math.abs(row.createdSkew) < 0.001)
+    await drainImageMeasurementOutbox()
+    const [pending] = await prisma.$queryRaw<
+      { n: number }[]
+    >`SELECT COUNT(*)::int n FROM "ImageMeasurementOutbox" WHERE "id" = ${id}`
+    assert.equal(pending.n, 0)
+  }
+})
+
+test('operator CLI rejects a future interruption without persisting a gap', async () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      resolve('node_modules/tsx/dist/cli.mjs'),
+      '--tsconfig',
+      '../../apps/app/tsconfig.json',
+      '../../apps/app/scripts/activation-readout.ts',
+      '--record-measurement-interruption',
+      '--apply',
+      '--from',
+      '2024-01-01T00:00:00Z',
+      '--to',
+      '2999-01-01T00:00:00Z',
+    ],
+    { encoding: 'utf8', env: process.env, timeout: 10_000 },
+  )
+  assert.equal(result.status, 1)
+  assert.equal(result.stdout.trim(), '')
+  assert.ok(result.stderr.includes('Activation operation failed'))
+  const [gaps] = await prisma.$queryRaw<
+    { n: number }[]
+  >`SELECT COUNT(*)::int n FROM "FirstExternalImageInterruption"`
+  assert.equal(gaps.n, 0)
+})
+
+test('oppositely ordered multi-project batches preserve earliest rows in both ledgers', async () => {
+  const fixtures = await Promise.all(
+    Array.from({ length: 3 }, () => createWorkspace()),
+  )
+  for (const fixture of fixtures) {
+    await setOrganizationActivationClassification({
+      ...fixture,
+      classification: 'customer',
+    })
+  }
+  const base = dayjs().add(1, 'minute')
+  await Promise.all(
+    Array.from({ length: 24 }, (_, index) => {
+      const order = index % 2 === 0 ? fixtures : [...fixtures].reverse()
+      return recordProjectFirstImageSuccesses(
+        order.map((fixture) => ({
+          ...fixture,
+          external: true,
+          observedAt: base.add(index, 'second').toDate(),
+        })),
+      )
+    }),
+  )
+  for (const fixture of fixtures) {
+    assert.equal(
+      (await getLedgerRow(fixture.projectId))?.observedAt.getTime(),
+      base.toDate().getTime(),
+    )
+    assert.equal(
+      (
+        await prisma.projectFirstImageSuccess.findUniqueOrThrow({
+          where: { projectId: fixture.projectId },
+        })
+      ).observedAt.getTime(),
+      base.toDate().getTime(),
+    )
+  }
 })

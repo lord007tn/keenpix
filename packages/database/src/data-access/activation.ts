@@ -28,6 +28,12 @@ export function setOrganizationActivationClassification(input: {
 // Keep the earliest qualified event time even when durable outbox batches arrive
 // out of order. This is an origin observation, not image receipt by a visitor.
 //
+// Acquire all per-project advisory keys before either ledger can write. Sorting
+// the actual lock keys prevents cross-project batches taking them in opposite
+// orders. This prevents speculative-insert races between v1's two unique indexes;
+// ON CONFLICT's primary-key arbiter alone cannot protect the composite index.
+// Hash collisions only serialize unrelated projects; eligibility still binds IDs.
+//
 // One statement writes both ledgers, so the standalone transform keeps a single
 // round trip and the outbox drain a single bulk statement per batch. The outer
 // INSERT is origin_first_image_v1 and its row count is what callers receive.
@@ -49,9 +55,17 @@ export async function recordProjectFirstImageSuccesses(
   for (;;) {
     try {
       return await db.$executeRaw`
-    WITH event AS (
+    WITH raw_event AS (
       SELECT * FROM jsonb_to_recordset(${JSON.stringify(input)}::jsonb)
         AS event("projectId" text, "orgId" text, "observedAt" timestamp, "external" boolean)
+    ), project_locks AS MATERIALIZED (
+      SELECT pg_advisory_xact_lock(27505, lock_key)
+      FROM (SELECT DISTINCT hashtext("projectId") AS lock_key FROM raw_event) keys
+      ORDER BY lock_key
+    ), event AS MATERIALIZED (
+      SELECT raw_event.* FROM raw_event
+      CROSS JOIN (SELECT COUNT(*) AS acquired FROM project_locks) locks
+      WHERE locks.acquired >= 0
     ), first_external_image AS (
       INSERT INTO "ProjectFirstExternalImage" ("projectId", "orgId", "observedAt", "definitionVersion")
       SELECT p."id", p."orgId", MIN(COALESCE(event."observedAt", CURRENT_TIMESTAMP AT TIME ZONE 'UTC')), 1

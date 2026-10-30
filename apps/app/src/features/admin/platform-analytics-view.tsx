@@ -133,6 +133,7 @@ export function PlatformAnalyticsView() {
             ))}
           </div>
         )}
+        <FirstValueCard key="first-value" />
       </div>
     )
   }
@@ -219,7 +220,7 @@ export function PlatformAnalyticsView() {
 
       <ChartAreaInteractive data={series} edge={edgeStats?.series} funnel />
 
-      <FirstValueCard />
+      <FirstValueCard key="first-value" />
 
       <section className="flex flex-col gap-3">
         <div>

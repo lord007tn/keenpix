@@ -100,3 +100,14 @@ describe('first value card', () => {
     expect(html).not.toContain('Coverage has not started')
   })
 })
+
+it('does not claim a verified midnight start day is Unknown', () => {
+  const html = render({
+    ...funnel,
+    coverageStartedAt: '2026-10-01T00:00:00.000Z',
+  })
+  expect(html).toContain(
+    'Only verified, uninterrupted whole days are measured.',
+  )
+  expect(html).not.toContain('earlier days and that day are Unknown')
+})

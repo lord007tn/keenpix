@@ -129,7 +129,7 @@ export function FirstValueFunnelSummary({
         {funnel ? (
           <p className="text-muted-foreground text-xs">
             {funnel.coverageStartedAt
-              ? `Coverage started ${dayjs.utc(funnel.coverageStartedAt).format('MMM D, YYYY HH:mm')} UTC; earlier days and that day are Unknown.`
+              ? `Coverage started ${dayjs.utc(funnel.coverageStartedAt).format('MMM D, YYYY HH:mm')} UTC. Only verified, uninterrupted whole days are measured.`
               : 'Coverage has not started, so first images are Unknown.'}{' '}
             Pre-existing workspaces had a project before coverage, so their real
             first image may be earlier. Edge-only cache hits are not observed.

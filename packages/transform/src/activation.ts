@@ -47,6 +47,9 @@ export function isExternalImageSource(
       (domain) => host === domain || host.endsWith(`.${domain}`),
     ) ||
     host.replace(WWW_PREFIX, '') ===
-      new URL(appOrigin).hostname.toLowerCase().replace(WWW_PREFIX, '')
+      new URL(appOrigin).hostname
+        .toLowerCase()
+        .replace(TRAILING_DOTS, '')
+        .replace(WWW_PREFIX, '')
   )
 }

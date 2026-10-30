@@ -50,6 +50,9 @@ async function main() {
     if (!from.isBefore(to)) {
       throw new Error('Interruption requires from < to.')
     }
+    if (to.isAfter(dayjs())) {
+      throw new Error('Interruption cannot end in the future.')
+    }
     await recordFirstExternalImageInterruption({
       from: from.toDate(),
       to: to.toDate(),
