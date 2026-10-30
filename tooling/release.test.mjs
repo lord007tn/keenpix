@@ -13,6 +13,10 @@ import test from 'node:test'
 import { verifyPackedPackage } from './release.mjs'
 
 const missingDistPattern = /no built dist/
+const tarballPublishPattern =
+  /'publish',\s+process\.platform === 'win32' \? `"\$\{tarball\}"` : tarball,/
+const destinationCwdPattern = /cwd: destination,/
+const packageDirectoryCwdPattern = /cwd: (packageEntry\.)?directory/
 const expected = { name: '@keenpix/next', version: '0.3.3' }
 const internalNames = new Set(['@keenpix/core'])
 
@@ -83,10 +87,7 @@ test('publishing sends the verified tarball, never the package directory', () =>
   const source = readFileSync(new URL('./release.mjs', import.meta.url), 'utf8')
   const publishPackages = source.slice(source.indexOf('const publishPackages'))
 
-  assert.match(
-    publishPackages,
-    /'publish',\s+process\.platform === 'win32' \? `"\$\{tarball\}"` : tarball,/,
-  )
-  assert.match(publishPackages, /cwd: destination,/)
-  assert.doesNotMatch(publishPackages, /cwd: (packageEntry\.)?directory/)
+  assert.match(publishPackages, tarballPublishPattern)
+  assert.match(publishPackages, destinationCwdPattern)
+  assert.doesNotMatch(publishPackages, packageDirectoryCwdPattern)
 })
