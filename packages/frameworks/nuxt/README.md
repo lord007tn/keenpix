@@ -6,7 +6,7 @@ Stable custom provider for Nuxt Image. It follows Nuxt Image's isomorphic `getIm
 pnpm add @keenpix/nuxt @nuxt/image
 ```
 
-Create `providers/keenpix.ts`:
+Create `app/providers/keenpix.ts` (Nuxt 4) or `providers/keenpix.ts` (Nuxt 3):
 
 ```ts
 import { defineProvider } from '@nuxt/image/runtime'
@@ -45,9 +45,3 @@ absolute source URLs; relative sources are rejected with HTTP 400. `baseURL` is 
 
 The default export above uses Nuxt Image v2. With v1, omit `defineProvider` and
 export `const { getImage } = createNuxtImageProvider(...)` using the same options.
-In Nuxt 4, put the provider under `app/providers/` because `~` resolves to `app/`;
-in Nuxt 3 it normally resolves to the project root.
-
-Published 0.3.2 tarballs contain unresolved `workspace:^` dependencies. A normal npm
-install fails with `EUNSUPPORTEDPROTOCOL`; a corrected publication is needed for
-installation without a local dependency-resolution workaround.

@@ -8,13 +8,6 @@ updated: "2026-10-30"
 Use `@keenpix/nuxt` as a custom provider for `@nuxt/image`. Nuxt generates
 responsive candidates; Keenpix delivers each transformed image.
 
-<Callout title="Published 0.3.2 installation caveat">
-  The 0.3.2 npm tarballs currently contain unresolved `workspace:^` dependencies.
-  A normal npm installation fails with `EUNSUPPORTEDPROTOCOL`. The provider setup
-  below requires those package dependencies to be resolved; check for a corrected
-  publication before adopting it.
-</Callout>
-
 ## 1. Install
 
 From an existing Nuxt application, add the Nuxt Image module and the Keenpix package:
@@ -30,7 +23,7 @@ Nuxt Image v2 and Nuxt 4.
 ## 2. Create the provider
 
 ```ts
-// providers/keenpix.ts
+// app/providers/keenpix.ts
 import { defineProvider } from '@nuxt/image/runtime'
 import { createManagedKeenpixConfig, createNuxtImageProvider } from '@keenpix/nuxt'
 
@@ -44,6 +37,8 @@ export default defineProvider(
   }),
 )
 ```
+
+Find `YOUR_PROJECT_ID` under **Settings → General → Project ID**.
 
 `baseURL` in this package means the **delivery base**, such as
 `https://cdn.keenpix.com`, never the source origin. `createManagedKeenpixConfig`
@@ -67,9 +62,8 @@ export default defineNuxtConfig({
 })
 ```
 
-In Nuxt 4, `~` resolves to `app/` by default: place the file at
-`app/providers/keenpix.ts`. In Nuxt 3 it normally resolves to the project root,
-so use `providers/keenpix.ts`. A custom `srcDir` changes that location.
+This path is for Nuxt 4, where `~` resolves to `app/`. In Nuxt 3, use
+`providers/keenpix.ts`. A custom `srcDir` changes that location.
 
 ## 4. Use NuxtImg
 
@@ -81,7 +75,7 @@ so use `providers/keenpix.ts`. A custom `srcDir` changes that location.
     width="1200"
     height="800"
     quality="75"
-    sizes="100vw md:50vw"
+    sizes="sm:100vw lg:600px"
     alt="A mountain at sunrise"
   />
 </template>
@@ -89,7 +83,8 @@ so use `providers/keenpix.ts`. A custom `srcDir` changes that location.
 
 <Callout>
   Add `assets.example.com` to your Keenpix project's origin allowlist in
-  **Settings > Security**. Sources must be absolute URLs on allowlisted hosts.
+  **Settings → Security → Allowed hosts**. Hosts outside the allowlist return HTTP 403.
+  Sources must be absolute URLs on allowlisted hosts.
   `/hero.jpg` and `photos/hero.jpg` produce relative sources that managed delivery
   rejects with HTTP 400. The provider's `baseURL` does not resolve relative sources.
 </Callout>
@@ -100,7 +95,7 @@ The published package supports the v1 provider contract too. Replace only the
 provider file with a named `getImage` export; v1 does not use `defineProvider`:
 
 ```ts
-// providers/keenpix.ts
+// app/providers/keenpix.ts
 import { createManagedKeenpixConfig, createNuxtImageProvider } from '@keenpix/nuxt'
 
 const managed = createManagedKeenpixConfig('YOUR_PROJECT_ID')
@@ -122,7 +117,8 @@ Keenpix negotiate output using the browser's `Accept` header. Set `format="webp"
 or `format="avif"` only when you want a fixed output format. To return an SVG
 source as optimized SVG, request `format="svg"`.
 
-Use `sizes` to describe the image's actual layout slot. Inspect the rendered
+Use `sizes` to describe the image's actual layout slot. Prefix every `sizes` value with a
+screen: an unprefixed `100vw` creates `1w` and `2w` candidates. Inspect the rendered
 `srcset` for managed URLs with different widths, then resize the viewport and
 check the selected candidate. Confirm the delivery cache separates negotiated
 formats and test a rejected source host before launch.

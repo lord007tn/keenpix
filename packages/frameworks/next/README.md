@@ -38,7 +38,3 @@ global loader supports Next's `src`, `width`, and `quality` contract; use
 `createNextImageProps` when an image also needs Keenpix-specific transforms.
 
 Support status: stable for Next.js 13 and newer App and Pages Routers.
-
-Published 0.3.2 tarballs contain unresolved `workspace:^` dependencies. A normal npm
-install fails with `EUNSUPPORTEDPROTOCOL`; a corrected publication is needed for
-installation without a local dependency-resolution workaround.
