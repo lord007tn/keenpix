@@ -8,7 +8,7 @@ export async function handleDemoRequest(request: Request, sample?: string) {
       headers: { 'Cache-Control': 'no-store' },
     })
   }
-  const params = new URL(request.url).searchParams
+  const { pathname, search, searchParams: params } = new URL(request.url)
   const invalid = [...params].find(
     ([key]) =>
       !['fmt', 'q', 'w'].includes(key) || params.getAll(key).length !== 1,
@@ -25,6 +25,13 @@ export async function handleDemoRequest(request: Request, sample?: string) {
     problem = ['q', quality ?? 'missing']
   } else if (!['320', '640', '960', '1200'].includes(width ?? '')) {
     problem = ['w', width ?? 'missing']
+  } else if (
+    !invalid &&
+    (pathname !== '/demo/img/og.png' ||
+      search !== `?fmt=${format}&q=${quality}&w=${width}`)
+  ) {
+    // Cloudflare caches by raw URL, so each variant gets exactly one cacheable spelling.
+    problem = ['url', 'a non-canonical spelling']
   }
   if (
     problem ||

@@ -21,13 +21,17 @@ export function LiveDemo() {
     const controller = new AbortController()
     setState('loading')
     setMessage('')
+    setCopied(false)
     const timer = setTimeout(() => setMessage('Generating…'), 300)
     async function measure() {
       try {
         const response = await fetch(url, { signal: controller.signal })
         if (response.status === 503) {
           setState('busy')
-          setMessage('The demo is busy. Try again in a minute.')
+          setResult(null)
+          setMessage(
+            'The demo is busy. Try again in a minute. This is a static copy, not a live result.',
+          )
           return
         }
         if (!response.ok) {
@@ -156,7 +160,7 @@ export function LiveDemo() {
               }
             }}
             src={
-              state === 'failed'
+              state === 'failed' || state === 'busy'
                 ? '/brand/keenpix-og.png'
                 : (result?.src ?? url)
             }
@@ -252,10 +256,16 @@ export function LiveDemo() {
           WebP, or JPEG from the browser's Accept header.
         </p>
         <div className="flex gap-4">
-          <a className="underline" href="/signup">
+          <a
+            className="inline-flex min-h-11 items-center underline"
+            href="/signup"
+          >
             Start free trial
           </a>
-          <a className="underline" href="/docs/reference/parameters">
+          <a
+            className="inline-flex min-h-11 items-center underline"
+            href="/docs/reference/parameters"
+          >
             URL parameters →
           </a>
         </div>

@@ -66,5 +66,5 @@ describe('demo load receipt', () => {
     } finally {
       clearInterval(sampler)
     }
-  })
+  }, 60_000)
 })

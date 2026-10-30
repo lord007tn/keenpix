@@ -1,4 +1,4 @@
-﻿import { createElement } from 'react'
+import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it } from 'vitest'
 import { LiveDemo } from './live-demo'

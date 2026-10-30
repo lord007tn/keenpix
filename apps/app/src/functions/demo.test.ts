@@ -4,7 +4,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { isCloud } from '@/server/deployment'
 import { handleDemoRequest } from './demo'
 
-const encodes = vi.hoisted(() => ({ active: 0, peak: 0, total: 0 }))
+const encodes = vi.hoisted(() => ({
+  active: 0,
+  hangNext: false,
+  peak: 0,
+  total: 0,
+}))
 vi.mock('@keenpix/transform/sharp', async (importOriginal) => {
   const engine =
     await importOriginal<typeof import('@keenpix/transform/sharp')>()
@@ -12,6 +17,10 @@ vi.mock('@keenpix/transform/sharp', async (importOriginal) => {
     transformImage: async (
       ...args: Parameters<typeof engine.transformImage>
     ) => {
+      if (encodes.hangNext) {
+        encodes.hangNext = false
+        return new Promise<never>(() => {})
+      }
       encodes.active++
       encodes.total++
       encodes.peak = Math.max(encodes.peak, encodes.active)
@@ -68,9 +77,7 @@ describe('bounded unmetered demo', () => {
     const metadata = await sharp(bytes).metadata()
     expect(metadata).toMatchObject({ width: 960, height: 504, format: 'webp' })
     expect(response.headers.get('content-length')).toBe(String(bytes.length))
-    expect(
-      (await request('w=960&q=70&fmt=webp')).headers.get('x-keenpix-cache'),
-    ).toBe('HIT')
+    expect((await request()).headers.get('x-keenpix-cache')).toBe('HIT')
     const source = await readFile(
       new URL('../../public/brand/keenpix-og.png', import.meta.url),
     )
@@ -91,6 +98,11 @@ describe('bounded unmetered demo', () => {
     'fmt=webp&q=71&w=960',
     'fmt=webp&q=70&w=960&url=https://example.com',
     'fmt=webp&fmt=jpeg&q=70&w=960',
+    'w=960&q=70&fmt=webp',
+    'fmt=webp&q=70&w=960&',
+    '&fmt=webp&q=70&w=960',
+    'fmt=webp&q=70&w=%39%36%30',
+    'f%6dt=webp&q=70&w=960',
   ])('rejects invalid query %s', async (query) => {
     const response = await request(query)
     expect(response.status).toBe(400)
@@ -106,6 +118,29 @@ describe('bounded unmetered demo', () => {
     'https://example.com/og.png',
   ])('rejects sample %s', async (sample) => {
     expect((await request(undefined, sample)).status).toBe(400)
+  })
+  it.each([
+    'https://keenpix.com/DEMO/img/og.png',
+    'https://keenpix.com/demo/img/og.png/',
+    'https://keenpix.com/demo/img/%6fg.png',
+  ])('rejects the non-canonical path %s', async (url) => {
+    const response = await handleDemoRequest(
+      new Request(`${url}?fmt=webp&q=70&w=960`),
+      'og.png',
+    )
+    expect(response.status).toBe(400)
+    expect(response.headers.get('cache-control')).toBe('no-store')
+  })
+  it('frees the queue when an encode never finishes', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    encodes.hangNext = true
+    const stuck = request('fmt=jpeg&q=85&w=640')
+    const next = request('fmt=jpeg&q=85&w=960')
+    await vi.advanceTimersByTimeAsync(30_000)
+    vi.useRealTimers()
+    expect((await stuck).status).toBe(500)
+    expect((await next).status).toBe(200)
+    expect((await request('fmt=jpeg&q=85&w=640')).status).toBe(200)
   })
   it('bounds a cold burst and coalesces identical variants', async () => {
     const before = encodes.total

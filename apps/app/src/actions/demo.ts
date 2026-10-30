@@ -12,6 +12,8 @@ const pending = new Map<
   string,
   Promise<Awaited<ReturnType<typeof transformImage>>>
 >()
+// A stuck encode must not hold the queue until the process restarts.
+const encodeTimeoutMs = 30_000
 let tail = Promise.resolve()
 let waiters = 0
 let usage = {
@@ -98,18 +100,27 @@ export async function generateDemoImage(
     encode = tail.then(async () => {
       const start = performance.now()
       try {
-        const image = await transformImage(
-          original,
-          {
-            format,
-            quality,
-            width,
-            fit: 'inside',
-            enlarge: false,
-            animated: false,
-          },
-          { maxDimension: 1200, maxInputPixels: 2_000_000 },
-        )
+        const timeout = new Promise<never>((_, reject) => {
+          setTimeout(
+            () => reject(new Error('Demo encode timed out')),
+            encodeTimeoutMs,
+          ).unref()
+        })
+        const image = await Promise.race([
+          transformImage(
+            original,
+            {
+              format,
+              quality,
+              width,
+              fit: 'inside',
+              enlarge: false,
+              animated: false,
+            },
+            { maxDimension: 1200, maxInputPixels: 2_000_000 },
+          ),
+          timeout,
+        ])
         cache.set(key, image)
         return image
       } finally {
