@@ -1,3 +1,4 @@
+-- The explicit transaction is required: without it these timeouts do not apply.
 BEGIN;
 SELECT set_config('lock_timeout', '5s', true), set_config('statement_timeout', '60s', true);
 

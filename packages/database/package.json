@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit",
     "migrate": "prisma migrate dev",
     "deploy": "prisma migrate deploy",
+    "migrate:resolve": "prisma migrate resolve",
     "push": "prisma db push",
     "seed": "tsx prisma/seed.ts",
     "reset": "prisma migrate reset --force",

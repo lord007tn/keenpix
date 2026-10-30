@@ -168,13 +168,17 @@ startup options. Do not silently remove timeout protection.
    Production Compose otherwise has only `build:`, which may build on the host
    or select the wrong image. Verify the locally available digest before running.
    Verify the migration receipt and all new tables/indexes before proceeding.
-   A lock timeout can leave a failed Prisma migration record (P3009). Inspect
+   A lock timeout can leave a failed Prisma migration record (P3009). The migration
+   runs in its own explicit transaction so its timeouts apply, which means Prisma
+   reports only `current transaction is aborted` and `_prisma_migrations.logs` stays
+   empty. After a wait of about 5 seconds, treat that message as a lock timeout. Inspect
    whether any additive objects remain and reconcile them with the reviewed SQL;
    marking a migration rolled back does not undo database changes. Before any
    retry, run the pinned app's Prisma command against the same migration database:
 
    ```sh
-   prisma migrate resolve --rolled-back 20261030000000_first_external_image_funnel
+   docker compose -f docker-compose.production.yml -f <digest-override> run --rm --no-deps --pull never app \
+     pnpm --filter @keenpix/database run migrate:resolve --rolled-back 20261030000000_first_external_image_funnel
    ```
 
    Then retry the migration-only step and verify it. Keep app startup migrations

@@ -141,7 +141,7 @@ export function flushDurableRequestLogs(input?: {
       if (!measurementFlushing) {
         measurementFlushing = (async () => {
           const deadline = performance.now() + 1500
-          let interrupted = false
+          let failures = 0
           for (
             let attempt = 0;
             attempt < 20 && performance.now() < deadline;
@@ -152,11 +152,15 @@ export function flushDurableRequestLogs(input?: {
                 break
               }
             } catch {
-              // The claimed row retains its lease; continue to other ready work.
-              interrupted = true
+              // The claimed row retains its lease, so other ready work can still
+              // progress; repeated failures mean the queue itself is unavailable.
+              failures += 1
+              if (failures === 3) {
+                break
+              }
             }
           }
-          if (interrupted) {
+          if (failures > 0) {
             logger.warn('image measurement retry deferred')
           }
         })().finally(() => {
