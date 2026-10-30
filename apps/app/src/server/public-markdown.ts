@@ -7,6 +7,7 @@ import { PLANS, TRIAL } from '@/lib/billing/plans'
 import { SUPPORT_EMAIL } from '@/shared/authors'
 import { blogSource, listBlogPosts } from '@/shared/blog-source'
 import { source } from '@/shared/docs-source'
+import { IMAGE_CDN_PRICING } from '@/shared/image-cdn-pricing'
 import {
   LEARNING_GUIDE_CLASSIFICATION,
   LEARNING_PILLARS,
@@ -85,7 +86,7 @@ function comparisonMarkdown(pathname: string, origin: string) {
       description: comparison.metaDescription,
       published: comparison.verifiedAt,
       title: comparison.title,
-      updated: comparison.verifiedAt,
+      updated: comparison.updatedAt,
     }),
     comparison.verdict,
     '',
@@ -147,7 +148,7 @@ function comparisonMarkdown(pathname: string, origin: string) {
     '',
     ...comparison.sources.map(
       (item) =>
-        `- [${item.label}](${item.url}), checked ${comparison.verifiedAt}.`,
+        `- [${item.label}](${item.url}), checked ${item.checkedAt ?? comparison.verifiedAt}.`,
     ),
     '',
     '## Limitations and disclosure',
@@ -352,7 +353,7 @@ function staticMarkdown(pathname: string, origin: string) {
     return `${markdownMetadata({ canonicalUrl: `${origin}${pathname}`, description: 'Run the Keenpix image transformation, cache, dashboard, analytics, origin controls, and signed delivery stack on infrastructure you operate.', title: 'The self-hosted image CDN that keeps the dashboard', updated: '2026-09-02' })}\n## What is included\n\nThe released AGPL-3.0 stack includes transforms, cache tiers, per-project origin allowlists, signed URLs, dashboard operations, and delivery analytics. There is no Keenpix license fee.\n\n## Your responsibilities\n\nYou own compute, storage, database, CDN configuration, TLS, network policy, backups, upgrades, monitoring, capacity, and incident response. Self-hosting is not a universal cost shortcut.\n\n## Architecture\n\nPlace a correctly configured CDN in front of the transform service and include every byte-changing input in the cache identity. Verify query strings and Accept variation before traffic.\n\n## Limitations and alternatives\n\nKeenpix is not a DAM or video platform. Choose imgproxy when you want a focused transform primitive, or a full media platform when uploads, library workflows, and video belong together.\n\n## Procedure\n\nFollow the [version-synchronized self-hosting guide](${origin}/docs/self-hosting), [health and operations](${origin}/docs/self-hosting/health-and-operations), and [safe rollout guide](${origin}/blog/safe-image-cdn-rollouts-and-rollbacks).`
   }
   if (pathname === '/image-cdn-cost-calculator') {
-    return `${markdownMetadata({ canonicalUrl: `${origin}${pathname}`, description: 'A source-dated workload model for comparing image delivery providers without treating estimates as quotes.', title: 'Image CDN cost calculator', updated: '2026-09-02' })}\n## Inputs\n\nDelivered GB, requests, unique transforms, source storage, projects, custom domains, and region.\n\n## Method\n\nThe calculator applies only public, source-backed pricing components implemented for each provider. Rows are labeled Estimated, Partial only, or Quote required. It does not invent enterprise discounts, CDN rates, taxes, or missing product behavior.\n\n## Verify before buying\n\nConfirm the provider's current pricing page, define the same workload, include external CDN/storage/operations, and inspect the calculation coverage note. An estimate is not an invoice or savings guarantee.\n\nUse the interactive [canonical calculator](${origin}${pathname}) and read [transparent image CDN pricing](${origin}/blog/transparent-image-cdn-pricing).`
+    return `${markdownMetadata({ canonicalUrl: `${origin}${pathname}`, description: 'A source-dated workload model for comparing image delivery providers without treating estimates as quotes.', title: 'Image CDN cost calculator', updated: IMAGE_CDN_PRICING.updatedAt })}\n## Inputs\n\nDelivered GB, requests, unique transforms, source storage, projects, custom domains, and region.\n\n## Method\n\nThe calculator applies only public, source-backed pricing components implemented for each provider. Rows are labeled Estimated, Partial only, or Quote required. It does not invent enterprise discounts, CDN rates, taxes, or missing product behavior.\n\n## Verify before buying\n\nConfirm the provider's current pricing page, define the same workload, include external CDN/storage/operations, and inspect the calculation coverage note. An estimate is not an invoice or savings guarantee.\n\nUse the interactive [canonical calculator](${origin}${pathname}) and read [transparent image CDN pricing](${origin}/blog/transparent-image-cdn-pricing).`
   }
   if (pathname === '/authors/raed-bahri') {
     return `${markdownMetadata({ author: 'Raed Bahri', canonicalUrl: `${origin}${pathname}`, description: 'Author and maintainer profile for Keenpix technical and comparison content.', title: 'Raed Bahri', updated: '2026-09-02' })}\nRaed Bahri builds and maintains Keenpix. Technical claims are checked against current public code and documentation; volatile competitor facts use dated primary sources. Request corrections through [support](${origin}/support).`

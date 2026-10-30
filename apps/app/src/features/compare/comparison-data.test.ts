@@ -34,6 +34,7 @@ describe('comparison data', () => {
       expect(comparison.verifiedAt >= earliestCurrentVerificationDate).toBe(
         true,
       )
+      expect(comparison.updatedAt >= comparison.verifiedAt).toBe(true)
       expect(comparison.sources.length).toBeGreaterThanOrEqual(3)
       expect(
         comparison.sources.every(
@@ -80,5 +81,12 @@ describe('comparison data', () => {
       expect(comparison.verifiedAt).toBe('2026-08-31')
       expect(comparison.sources.length).toBeGreaterThanOrEqual(6)
     }
+  })
+
+  it('dates a re-checked source separately from the page facts', () => {
+    const gumlet = COMPARISONS['gumlet-alternative']
+
+    expect(gumlet.verifiedAt).toBe('2026-08-22')
+    expect(gumlet.sources[0].checkedAt).toBe('2026-10-30')
   })
 })

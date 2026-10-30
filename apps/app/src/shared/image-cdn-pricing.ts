@@ -1,5 +1,7 @@
 export const IMAGE_CDN_PRICING = {
   currency: 'USD',
+  // Last change to this dataset or the calculator built on it.
+  updatedAt: '2026-10-30',
   // Oldest per-vendor check; each vendor row carries the date its own public
   // pricing source was last checked.
   verifiedAt: '2026-08-22',

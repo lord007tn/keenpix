@@ -1,3 +1,4 @@
+import { KEENPIX_RELEASE } from '@/shared/release'
 import type { ComparisonPageData } from '../comparison-data'
 
 export const gumletComparison = {
@@ -100,7 +101,7 @@ export const gumletComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No public self-hosted Gumlet Image edition documented',
-      keenpix: 'Published v0.3.2 under AGPL-3.0 with Docker deployment files',
+      keenpix: `Published ${KEENPIX_RELEASE} under AGPL-3.0 with Docker deployment files`,
     },
     {
       feature: 'Managed entry price',
@@ -173,7 +174,11 @@ export const gumletComparison = {
     },
   ],
   sources: [
-    { label: 'Gumlet pricing', url: 'https://www.gumlet.com/pricing/' },
+    {
+      checkedAt: '2026-10-30',
+      label: 'Gumlet pricing',
+      url: 'https://www.gumlet.com/pricing/',
+    },
     {
       label: 'Gumlet image pricing and company facts',
       url: 'https://www.gumlet.com/llm-info/',
@@ -194,5 +199,6 @@ export const gumletComparison = {
   ],
   pricingAsOf: 'October 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
+  updatedAt: '2026-10-30',
   verifiedAt: '2026-08-22',
 } satisfies ComparisonPageData

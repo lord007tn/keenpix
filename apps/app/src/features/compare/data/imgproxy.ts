@@ -220,5 +220,6 @@ export const imgproxyComparison = {
   ],
   pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
+  updatedAt: '2026-10-30',
   verifiedAt: '2026-08-22',
 } satisfies ComparisonPageData

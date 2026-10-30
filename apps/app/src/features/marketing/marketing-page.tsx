@@ -303,7 +303,9 @@ export function MarketingPage({
                 </a>
                 .
               </p>
-              <div className="mt-8 grid gap-3 text-sm sm:grid-cols-3">
+              <div
+                className={`mt-8 grid gap-3 text-sm ${showDeliveredImages ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}
+              >
                 {metrics.map(([value, label]) => (
                   <div className="border-white/10 border-t pt-3" key={value}>
                     <div className="font-mono font-semibold text-white">

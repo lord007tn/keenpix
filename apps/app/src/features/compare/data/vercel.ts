@@ -1,3 +1,4 @@
+import { KEENPIX_RELEASE } from '@/shared/release'
 import type { ComparisonPageData } from '../comparison-data'
 
 export const vercelComparison = {
@@ -9,8 +10,7 @@ export const vercelComparison = {
   heroHeadline: 'Keenpix vs Vercel Image Optimization: a portable alternative',
   heroSubhead:
     'Vercel Image Optimization bills transformations, cache reads, and cache writes — plus data transfer — and Hobby can return 402 at its included limits. Keenpix bills optimized managed delivery once across its edge and application; paid usage continues at the published overage rate.',
-  verdict:
-    "If your site fits inside Vercel's Hobby allowances, or you already pay for Vercel Pro and image usage costs little, stay put — the default next/image loader is zero-config and Keenpix cannot beat free or nearly-free. Consider Keenpix when you prefer one managed-delivery meter, image-specific analytics, managed custom domains, always-on paid usage, and the current v0.3.2 AGPL-3.0 self-host path. Keenpix is a young, focused product with no video or storage, so the trade is portability and predictability for platform breadth and maturity.",
+  verdict: `If your site fits inside Vercel's Hobby allowances, or you already pay for Vercel Pro and image usage costs little, stay put — the default next/image loader is zero-config and Keenpix cannot beat free or nearly-free. Consider Keenpix when you prefer one managed-delivery meter, image-specific analytics, managed custom domains, always-on paid usage, and the current ${KEENPIX_RELEASE} AGPL-3.0 self-host path. Keenpix is a young, focused product with no video or storage, so the trade is portability and predictability for platform breadth and maturity.`,
   pricingRows: [
     {
       scenario: 'Small site within Hobby caps (<5k transforms/mo)',
@@ -89,7 +89,7 @@ export const vercelComparison = {
     {
       feature: 'Open source / self-host',
       competitor: 'No — managed service',
-      keenpix: 'v0.3.2: AGPL-3.0 with Docker deployment files',
+      keenpix: `${KEENPIX_RELEASE}: AGPL-3.0 with Docker deployment files`,
     },
     {
       feature: 'Security model',
@@ -136,8 +136,7 @@ export const vercelComparison = {
     },
     {
       title: 'An open-source escape hatch',
-      detail:
-        'The current v0.3.2 code is AGPL-3.0 and includes a Docker deployment path. Moving from hosted Keenpix to self-hosting can preserve the transform grammar when you control routing, but it still requires an operational migration.',
+      detail: `The current ${KEENPIX_RELEASE} code is AGPL-3.0 and includes a Docker deployment path. Moving from hosted Keenpix to self-hosting can preserve the transform grammar when you control routing, but it still requires an operational migration.`,
     },
   ],
   whenCompetitorWins: [
@@ -179,7 +178,7 @@ export const vercelComparison = {
     },
     {
       q: 'Can I self-host Keenpix?',
-      a: 'The current v0.3.2 code is AGPL-3.0 and includes Docker/Coolify deployment files. Self-hosting has no Keenpix license fee, but you own infrastructure and routing.',
+      a: `The current ${KEENPIX_RELEASE} code is AGPL-3.0 and includes Docker/Coolify deployment files. Self-hosting has no Keenpix license fee, but you own infrastructure and routing.`,
     },
   ],
   sources: [
@@ -196,5 +195,6 @@ export const vercelComparison = {
   ],
   pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
+  updatedAt: '2026-10-30',
   verifiedAt: '2026-08-22',
 } satisfies ComparisonPageData

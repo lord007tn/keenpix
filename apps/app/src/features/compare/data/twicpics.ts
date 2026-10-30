@@ -1,3 +1,4 @@
+import { KEENPIX_RELEASE } from '@/shared/release'
 import type { ComparisonPageData } from '../comparison-data'
 
 export const twicpicsComparison = {
@@ -117,7 +118,7 @@ export const twicpicsComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No public self-hosted TwicPics service edition documented',
-      keenpix: 'Published v0.3.2 under AGPL-3.0 with Docker deployment files',
+      keenpix: `Published ${KEENPIX_RELEASE} under AGPL-3.0 with Docker deployment files`,
     },
     {
       feature: 'Support and maturity',
@@ -224,5 +225,6 @@ export const twicpicsComparison = {
   ],
   pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
+  updatedAt: '2026-10-30',
   verifiedAt: '2026-08-22',
 } satisfies ComparisonPageData

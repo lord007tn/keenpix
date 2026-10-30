@@ -347,10 +347,14 @@ export function ComparisonPage({
                   Reproduce this {comparison.competitor} review
                 </h3>
                 <p className="mt-3 text-muted-foreground leading-relaxed">
-                  The linked public sources, this review method, and the cited
-                  Keenpix v0.3.2 behavior were last checked on{' '}
+                  The linked public sources and this review method were last
+                  checked on{' '}
                   <time dateTime={comparison.verifiedAt}>
                     {comparison.verifiedAt}
+                  </time>
+                  , and the cited Keenpix behavior on{' '}
+                  <time dateTime={comparison.updatedAt}>
+                    {comparison.updatedAt}
                   </time>
                   . Save the inputs, outputs, headers, account tier, and test
                   date so another reviewer can repeat the decision.

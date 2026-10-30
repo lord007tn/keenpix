@@ -12,9 +12,9 @@ All notable changes to Keenpix are documented here.
 - We excluded the certificate-validation path from the redirect and renewed the
   certificates. The site was back by 03:44 UTC; login, pricing, app health, and
   image-transform readiness were confirmed by 03:51 UTC.
-- The same morning (about 04:47 UTC) we released a fix for a memory issue in a
-  daily log-retention job that had been causing app restarts. It was not the
-  cause of the certificate errors.
+- The same morning (about 04:47 UTC) we released a separate fix for a memory
+  issue in a daily log-retention job. It was not the cause of the certificate
+  errors.
 
 ## [v0.3.2] - 2026-09-01
 

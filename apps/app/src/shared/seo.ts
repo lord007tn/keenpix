@@ -531,7 +531,7 @@ export function imageCdnCalculatorJsonLd() {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
       '@id': `${url}#webpage`,
-      dateModified: IMAGE_CDN_PRICING.verifiedAt,
+      dateModified: IMAGE_CDN_PRICING.updatedAt,
       description:
         'Compare source-dated image CDN cost estimates while preserving vendor-specific billing boundaries and limitations.',
       inLanguage: 'en',

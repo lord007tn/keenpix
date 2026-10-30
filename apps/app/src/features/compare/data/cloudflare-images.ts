@@ -1,3 +1,4 @@
+import { KEENPIX_RELEASE } from '@/shared/release'
 import type { ComparisonPageData } from '../comparison-data'
 
 export const cloudflareImagesComparison = {
@@ -75,7 +76,7 @@ export const cloudflareImagesComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'Managed Cloudflare service',
-      keenpix: 'v0.3.2 code is AGPL-3.0; you operate it',
+      keenpix: `${KEENPIX_RELEASE} code is AGPL-3.0; you operate it`,
     },
     {
       feature: 'Image analytics',
@@ -96,8 +97,7 @@ export const cloudflareImagesComparison = {
     },
     {
       title: 'A self-operated path',
-      detail:
-        'The current v0.3.2 code is AGPL-3.0 and includes deployment files. Self-hosting removes a Keenpix service bill but adds infrastructure and operational work.',
+      detail: `The current ${KEENPIX_RELEASE} code is AGPL-3.0 and includes deployment files. Self-hosting removes a Keenpix service bill but adds infrastructure and operational work.`,
     },
   ],
   whenCompetitorWins: [
@@ -146,5 +146,6 @@ export const cloudflareImagesComparison = {
   ],
   pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
+  updatedAt: '2026-10-30',
   verifiedAt: '2026-08-22',
 } satisfies ComparisonPageData
