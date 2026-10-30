@@ -11,7 +11,7 @@ export const gumletComparison = {
   heroSubhead:
     'Both services optimize images from origins you already control and meter managed delivery by bandwidth. The meaningful differences are plan economics, source and integration breadth, operational maturity, and whether you need a supported self-host path.',
   verdict:
-    'Choose Gumlet Image when its free 30 GB tier, broad source integrations, WordPress workflow, mature CloudFront delivery, or combined image-and-video vendor relationship matters. Choose Keenpix when the published $9/100 GB, $29/400 GB, or $69/1 TB managed tiers fit your traffic, or when an AGPL-3.0 self-host path is part of the architecture. This is not a claim that one CDN is universally faster or cheaper: cache behavior, regions, transformations, source files, contract terms, and overage can reverse a real result. Test both with your own catalog and delivery pattern.',
+    'Choose Gumlet Image when its free 30 GB tier, broad source integrations, WordPress workflow, mature multi-CDN delivery, or combined image-and-video vendor relationship matters. Choose Keenpix when the published $9/100 GB, $29/400 GB, or $69/1 TB managed tiers fit your traffic, or when an AGPL-3.0 self-host path is part of the architecture. This is not a claim that one CDN is universally faster or cheaper: cache behavior, regions, transformations, source files, contract terms, and overage can reverse a real result. Test both with your own catalog and delivery pattern.',
   pricingRows: [
     {
       scenario: 'Free evaluation',
@@ -62,7 +62,8 @@ export const gumletComparison = {
     },
     {
       feature: 'Managed delivery',
-      competitor: 'CloudFront-backed image delivery',
+      competitor:
+        'Multi-CDN image delivery; Gumlet names Fastly and Amazon CloudFront',
       keenpix: 'Cloudflare-backed managed delivery on cdn.keenpix.com',
     },
     {
@@ -136,7 +137,7 @@ export const gumletComparison = {
     'You need Gumlet’s documented WordPress workflow or one of its broader managed source integrations.',
     'You want image and video infrastructure from the same established vendor; Keenpix has no video product.',
     'You need Gumlet’s current operational scale, support model, or enterprise terms rather than a young solo-founder product.',
-    'A CloudFront-backed delivery architecture or Gumlet-specific image analytics is already part of your platform standards.',
+    'A multi-CDN delivery architecture or Gumlet-specific image analytics is already part of your platform standards.',
   ],
   migrationSteps: [
     'Export an inventory of Gumlet sources, custom domains, security settings, signed-URL behavior, query parameters, and current bandwidth. Keep Gumlet running during the migration.',
@@ -180,6 +181,7 @@ export const gumletComparison = {
       url: 'https://www.gumlet.com/pricing/',
     },
     {
+      checkedAt: '2026-10-30',
       label: 'Gumlet image pricing and company facts',
       url: 'https://www.gumlet.com/llm-info/',
     },
