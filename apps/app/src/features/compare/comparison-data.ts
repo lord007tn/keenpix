@@ -21,14 +21,14 @@ export interface ComparisonPageData {
   heroSubhead: string
   metaDescription: string
   migrationSteps: string[]
-  nextReviewAt: string
   pricingAsOf: string
   pricingRows: Array<{ scenario: string; competitor: string; keenpix: string }>
   reviewer: string
   slug: string
-  sources: Array<{ label: string; url: string }>
+  sources: Array<{ checkedAt?: string; label: string; url: string }>
   switchReasons: Array<{ title: string; detail: string }>
   title: string
+  updatedAt: string
   verdict: string
   verifiedAt: string
   whenCompetitorWins: string[]

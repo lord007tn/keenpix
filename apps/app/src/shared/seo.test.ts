@@ -72,13 +72,12 @@ describe('SEO entity graphs', () => {
     expect(organizationJsonLd().founder.sameAs).toContain(
       'https://x.com/raedbahriworld',
     )
-    expect(organizationJsonLd().contactPoint).toEqual(
-      expect.objectContaining({
-        email: 'hi@raedbahri.com',
-        telephone: '+21626765990',
-        url: 'https://wa.me/21626765990',
-      }),
-    )
+    expect(organizationJsonLd().contactPoint).toEqual({
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      email: 'fariq@keenpix.com',
+      url: absoluteUrl('/support'),
+    })
   })
 
   it('emits English-only blog collection and article metadata', () => {

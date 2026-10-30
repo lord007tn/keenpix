@@ -1,3 +1,4 @@
+import { KEENPIX_RELEASE } from '@/shared/release'
 import type { ComparisonPageData } from '../comparison-data'
 
 export const imgixComparison = {
@@ -11,8 +12,7 @@ export const imgixComparison = {
   metaDescription:
     "Compare Keenpix and imgix after imgix's 2025 credit switch: one delivery meter, published rates, an AGPL self-host option, and a URL migration map.",
   heroHeadline: 'Keenpix vs imgix: a predictable image CDN alternative',
-  heroSubhead:
-    'Keenpix bills optimized bytes delivered through managed cloud — no credits, management meter, request fees, or seat charges. Published v0.3.1 is AGPL-3.0 and can be self-hosted without a Keenpix license fee, or used as a managed service from $9/month.',
+  heroSubhead: `Keenpix bills optimized bytes delivered through managed cloud — no credits, management meter, request fees, or seat charges. Published ${KEENPIX_RELEASE} is AGPL-3.0 and can be self-hosted without a Keenpix license fee, or used as a managed service from $9/month.`,
   verdict:
     "imgix has a broader rendering API — if you lean on face-aware cropping, text overlays, video, or its long tail of advanced parameters, Keenpix won't replace that today, and a mature vendor with enterprise support may matter more to you than price. imgix's credit model draws delivery and cached-storage management from one pool, with published self-serve packages from $25 Starter through $500 Growth Plus. Keenpix charges for managed delivery, publishes self-serve overage rates, and includes analytics on every tier. For core resize, crop, quality, and modern-format delivery, compare both services on your own traffic during the trial; do not assume feature or output parity.",
   pricingRows: [
@@ -88,7 +88,7 @@ export const imgixComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No',
-      keenpix: 'v0.3.1: AGPL-3.0 with Docker deployment files',
+      keenpix: `${KEENPIX_RELEASE}: AGPL-3.0 with Docker deployment files`,
     },
     {
       feature: 'Signed URLs',
@@ -138,9 +138,8 @@ export const imgixComparison = {
         'imgix publishes credit allowances, but teams should confirm current overage and enforcement behavior directly for their plan. Keenpix continues paid delivery at its published per-GB rate and shows projected charges throughout the billing period.',
     },
     {
-      title: 'An AGPL self-host option in v0.3.1',
-      detail:
-        'The published v0.3.1 release is AGPL-3.0 and includes Docker/Coolify deployment files. You can operate it in-house while owning infrastructure and routing. imgix is managed-only.',
+      title: `An AGPL self-host option in ${KEENPIX_RELEASE}`,
+      detail: `The published ${KEENPIX_RELEASE} release is AGPL-3.0 and includes Docker/Coolify deployment files. You can operate it in-house while owning infrastructure and routing. imgix is managed-only.`,
     },
     {
       title: 'Analytics on every plan, not a premium add-on',
@@ -183,7 +182,7 @@ export const imgixComparison = {
     },
     {
       q: 'Can I self-host Keenpix instead of paying for cloud?',
-      a: 'The published v0.3.1 release is licensed AGPL-3.0 and includes Docker and Coolify deployment files. Self-hosting has no Keenpix license fee, but you operate the infrastructure.',
+      a: `The published ${KEENPIX_RELEASE} release is licensed AGPL-3.0 and includes Docker and Coolify deployment files. Self-hosting has no Keenpix license fee, but you operate the infrastructure.`,
     },
     {
       q: 'What does Keenpix not do?',
@@ -217,12 +216,12 @@ export const imgixComparison = {
       url: '/docs/reference/parameters',
     },
     {
-      label: 'Keenpix v0.3.1 release',
-      url: 'https://github.com/lord007tn/keenpix/releases/tag/v0.3.1',
+      label: `Keenpix ${KEENPIX_RELEASE} release`,
+      url: `https://github.com/lord007tn/keenpix/releases/tag/${KEENPIX_RELEASE}`,
     },
   ],
   pricingAsOf: 'August 31, 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
+  updatedAt: '2026-10-30',
   verifiedAt: '2026-08-31',
-  nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

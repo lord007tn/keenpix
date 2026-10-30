@@ -2,6 +2,20 @@
 
 All notable changes to Keenpix are documented here.
 
+## 2026-10-17 — Availability incident
+
+- keenpix.com returned errors (Cloudflare 526) because our origin TLS
+  certificates had expired, and automatic renewal was blocked because an HTTPS
+  redirect rule also caught the certificate-validation path.
+- Affected: the website, login, dashboard, and API. We have not confirmed when
+  the errors began or whether image delivery was affected.
+- We excluded the certificate-validation path from the redirect and renewed the
+  certificates. The site was back by 03:44 UTC; login, pricing, app health, and
+  image-transform readiness were confirmed by 03:51 UTC.
+- The same morning (about 04:47 UTC) we released a separate fix for a memory
+  issue in a daily log-retention job. It was not the cause of the certificate
+  errors.
+
 ## [v0.3.2] - 2026-09-01
 
 ### Added

@@ -1,4 +1,4 @@
-import { SUPPORT_EMAIL, SUPPORT_WHATSAPP_URL } from '@/shared/authors'
+import { SUPPORT_EMAIL } from '@/shared/authors'
 
 const errorResponse = (description: string) => ({
   content: {
@@ -34,10 +34,8 @@ export const OPENAPI_DOCUMENT = {
     description:
       'The Keenpix JSON API exposes unauthenticated service health and an authenticated, versioned control plane for trusted backend integrations. Authentication intentionally uses project-scoped API keys. Keenpix does not operate an OAuth authorization server, a separate API sandbox, or an official CLI; integrations can call the REST API directly or use @keenpix/sdk.',
     contact: {
-      name: 'Raed Bahri',
+      name: 'Keenpix',
       email: SUPPORT_EMAIL,
-      url: 'https://keenpix.com/developers#contact',
-      'x-whatsapp': SUPPORT_WHATSAPP_URL,
     },
     license: {
       name: 'AGPL-3.0-only',

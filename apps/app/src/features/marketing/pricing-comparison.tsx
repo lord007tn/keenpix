@@ -25,7 +25,7 @@ const COMPETITORS = [
     values: [
       '$25',
       'Up to 100 GB',
-      '$0.25 / credit',
+      '$0.30 / credit',
       'Uses credits',
       'Not the billing unit',
       'No',
@@ -77,7 +77,7 @@ export function PricingComparison({ pricing }: { pricing: PlanPricing }) {
       <div className="mx-auto max-w-6xl px-6 py-20">
         <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
           <div>
-            <Badge variant="outline">Verified August 2026</Badge>
+            <Badge variant="outline">Verified October 2026</Badge>
             <h2 className="mt-4 text-balance font-semibold text-3xl tracking-tight md:text-4xl">
               More delivery before the overage starts.
             </h2>
@@ -165,7 +165,7 @@ export function PricingComparison({ pricing }: { pricing: PlanPricing }) {
         </div>
         <p className="mt-4 max-w-4xl text-muted-foreground text-xs leading-relaxed">
           Public self-service prices checked against vendor-owned pricing pages
-          on August 22, 2026. Products are not identical: ImageKit includes DAM
+          on October 30, 2026. Products are not identical: ImageKit includes DAM
           and video capabilities, imgix uses shared credits, and Bunny charges
           its CDN separately. Taxes, annual discounts, enterprise contracts, and
           regional CDN charges are excluded.
