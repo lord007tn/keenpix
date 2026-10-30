@@ -35,6 +35,7 @@ import {
 import {
   getPlanCardFeatures,
   PLAN_CARD_ORDER,
+  PLAN_CARD_TRIAL_LIMITS,
   PLAN_TAGLINES,
 } from '@/features/marketing/plan-card-content'
 import { catalogPricing, PLANS, type PlanPricing } from '@/lib/billing/plans'
@@ -89,10 +90,6 @@ const FEATURES = [
 // The lead "from $X/mo" metric is computed from live pricing in the component; the
 // rest are static product facts.
 const METRICS_TAIL = [['14 days', 'free trial — no charge until it ends']]
-
-// Verified against production telemetry on 2026-08-21. This monotonic floor
-// keeps the proof truthful if the daily public aggregate is briefly unavailable.
-const VERIFIED_DELIVERY_FLOOR = 17_000_000
 
 const PIPELINE_STEPS = [
   'Validate project and allowlisted source host',
@@ -177,13 +174,17 @@ export function MarketingPage({
   const fromCents = Math.min(
     ...PLAN_CARD_ORDER.map((planId) => prices.plans[planId].month.amountCents),
   )
+  const showDeliveredImages =
+    deliveredImages !== null && deliveredImages >= 1_000_000
   const metrics = [
-    [
-      `${Math.floor(
-        Math.max(deliveredImages ?? 0, VERIFIED_DELIVERY_FLOOR) / 1_000_000,
-      )}M+`,
-      'optimized image deliveries and counting',
-    ],
+    ...(showDeliveredImages
+      ? [
+          [
+            `${Math.floor(deliveredImages / 1_000_000)}M+`,
+            'recorded successful image responses',
+          ],
+        ]
+      : []),
     [
       `from ${formatUsd(fromCents)}/mo`,
       'or self-host with no Keenpix license fee',
@@ -324,7 +325,9 @@ export function MarketingPage({
                 </a>
                 .
               </p>
-              <div className="mt-8 grid gap-3 text-sm sm:grid-cols-3">
+              <div
+                className={`mt-8 grid gap-3 text-sm ${showDeliveredImages ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}
+              >
                 {metrics.map(([value, label]) => (
                   <div className="border-white/10 border-t pt-3" key={value}>
                     <div className="font-mono font-semibold text-white">
@@ -334,6 +337,13 @@ export function MarketingPage({
                   </div>
                 ))}
               </div>
+              {showDeliveredImages ? (
+                <p className="mt-3 text-white/60 text-xs">
+                  Successful (2xx) managed-cloud image responses Keenpix has
+                  recorded, including cache and edge hits, across all projects —
+                  Keenpix's own sites included. Updated about daily.
+                </p>
+              ) : null}
             </div>
           </div>
         </section>
@@ -509,16 +519,20 @@ Vary: Accept`}</CodeBlock>
                           </li>
                         ))}
                       </ul>
-                      <Link
-                        className={buttonVariants({
-                          className:
-                            'mt-auto min-h-12 w-full touch-manipulation',
-                          variant: featured ? 'default' : 'outline',
-                        })}
-                        to="/signup"
-                      >
-                        Start free trial
-                      </Link>
+                      <div className="mt-auto flex flex-col gap-2">
+                        <Link
+                          className={buttonVariants({
+                            className: 'min-h-12 w-full touch-manipulation',
+                            variant: featured ? 'default' : 'outline',
+                          })}
+                          to="/signup"
+                        >
+                          Start free trial
+                        </Link>
+                        <p className="text-center text-muted-foreground text-xs">
+                          {PLAN_CARD_TRIAL_LIMITS}
+                        </p>
+                      </div>
                     </CardContent>
                   </Card>
                 )
@@ -633,7 +647,7 @@ open http://localhost:3000`}</CodeBlock>
                 Frequently asked questions
               </h2>
             </div>
-            <Accordion>
+            <Accordion hiddenUntilFound>
               {MARKETING_FAQ.map((item) => (
                 <AccordionItem key={item.question} value={item.question}>
                   <AccordionTrigger className="py-5 text-lg">

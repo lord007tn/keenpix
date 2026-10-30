@@ -7,6 +7,7 @@ import { PLANS, TRIAL } from '@/lib/billing/plans'
 import { SUPPORT_EMAIL } from '@/shared/authors'
 import { blogSource, listBlogPosts } from '@/shared/blog-source'
 import { source } from '@/shared/docs-source'
+import { IMAGE_CDN_PRICING } from '@/shared/image-cdn-pricing'
 import {
   LEARNING_GUIDE_CLASSIFICATION,
   LEARNING_PILLARS,
@@ -85,11 +86,11 @@ function comparisonMarkdown(pathname: string, origin: string) {
       description: comparison.metaDescription,
       published: comparison.verifiedAt,
       title: comparison.title,
-      updated: comparison.verifiedAt,
+      updated: comparison.updatedAt,
     }),
     comparison.verdict,
     '',
-    `Facts verified: ${comparison.verifiedAt}. Pricing checked: ${comparison.pricingAsOf}. Next review: ${comparison.nextReviewAt}.`,
+    `Facts verified: ${comparison.verifiedAt}. Pricing checked: ${comparison.pricingAsOf}.`,
     '',
     '## Decision summary',
     '',
@@ -147,7 +148,7 @@ function comparisonMarkdown(pathname: string, origin: string) {
     '',
     ...comparison.sources.map(
       (item) =>
-        `- [${item.label}](${item.url}), checked ${comparison.verifiedAt}.`,
+        `- [${item.label}](${item.url}), checked ${item.checkedAt ?? comparison.verifiedAt}.`,
     ),
     '',
     '## Limitations and disclosure',
@@ -270,7 +271,7 @@ function staticMarkdown(pathname: string, origin: string) {
     }
   }
   if (pathname === '/changelog') {
-    return `${markdownMetadata({ canonicalUrl: `${origin}/changelog`, description: 'Every notable Keenpix release from the repository changelog.', title: 'Keenpix product changelog' })}\n${changelog.trim()}`
+    return `${markdownMetadata({ canonicalUrl: `${origin}/changelog`, description: 'Keenpix releases and confirmed incidents from the repository changelog.', title: 'Keenpix product changelog' })}\n${changelog.trim()}`
   }
   if (pathname === '/learn') {
     const posts = listBlogPosts()
@@ -329,7 +330,7 @@ function staticMarkdown(pathname: string, origin: string) {
         title: 'Compare image CDN options',
         updated: '2026-09-02',
       }),
-      'Keenpix writes these pages and benefits if you choose it. Each comparison uses primary vendor sources, visible assumptions, and a next-review date.',
+      'Keenpix writes these pages and benefits if you choose it. Each comparison uses primary vendor sources, visible assumptions, and the date its sources were last checked.',
       '',
       ...Object.values(COMPARISONS).map(
         (comparison) =>
@@ -340,7 +341,7 @@ function staticMarkdown(pathname: string, origin: string) {
     ].join('\n')
   }
   if (pathname === '/methodology/comparisons') {
-    return `${markdownMetadata({ canonicalUrl: `${origin}${pathname}`, description: 'How Keenpix verifies competitor facts, calculates pricing scenarios, discloses conflicts, and corrects comparison pages.', title: 'How Keenpix comparisons are researched', updated: '2026-09-02' })}\n## Source order\n\n1. Official pricing, product documentation, limits, and legal terms.\n2. Official release notes and support statements.\n3. Reproducible product behavior where public documentation is incomplete.\n\nUndocumented behavior stays labeled unknown. No customer ratings, market-share claims, or performance benchmarks are published without inspectable evidence.\n\n## Pricing comparisons\n\nEvery scenario states its workload and uses the public price checked on the page date. Taxes, contracts, legacy plans, regional differences, and external CDN charges remain limitations.\n\n## Product scope and licensing\n\nA media platform, image optimizer, CDN feature, and self-hosted transform engine are not interchangeable. Source-code licenses are checked from the applicable release.\n\n## Review and corrections\n\nCommercial facts are reviewed at least quarterly and after material announcements. Send the page, disputed statement, primary source, and check date to ${SUPPORT_EMAIL}.\n\n## What a verdict means\n\n“Best for” is a fit judgment for stated criteria, not a universal ranking. Every comparison states when the competitor is the better choice.`
+    return `${markdownMetadata({ canonicalUrl: `${origin}${pathname}`, description: 'How Keenpix verifies competitor facts, calculates pricing scenarios, discloses conflicts, and corrects comparison pages.', title: 'How Keenpix comparisons are researched', updated: '2026-10-30' })}\n## Source order\n\n1. Official pricing, product documentation, limits, and legal terms.\n2. Official release notes and support statements.\n3. Reproducible product behavior where public documentation is incomplete.\n\nUndocumented behavior stays labeled unknown. No customer ratings, market-share claims, or performance benchmarks are published without inspectable evidence.\n\n## Pricing comparisons\n\nEvery scenario states its workload and uses the public price checked on the page date. Taxes, contracts, legacy plans, regional differences, and external CDN charges remain limitations.\n\n## Product scope and licensing\n\nA media platform, image optimizer, CDN feature, and self-hosted transform engine are not interchangeable. Source-code licenses are checked from the applicable release.\n\n## Review and corrections\n\nEach page shows the date its sources were last checked. Send the page, disputed statement, primary source, and check date to ${SUPPORT_EMAIL}.\n\n## What a verdict means\n\n“Best for” is a fit judgment for stated criteria, not a universal ranking. Every comparison states when the competitor is the better choice.`
   }
   if (pathname === '/developers') {
     return `${markdownMetadata({ canonicalUrl: `${origin}/developers`, description: 'API discovery, project-scoped authentication, official SDK, and agent-readable public contracts.', title: 'Keenpix developer resources', updated: '2026-09-02' })}\n## Discover the API\n\n- [OpenAPI 3.1 specification](${origin}/openapi.json)\n- [SDK API documentation](${origin}/docs/reference/sdk-api)\n- [Public JSON health endpoint](${origin}/api/health)\n\n## Use the official SDK\n\nThe supported automation client is the server-side @keenpix/sdk package. Keenpix does not publish an official CLI, OAuth authorization server, or separate API sandbox.\n\n## Authentication and onboarding\n\nControl-plane operations use a project-scoped API key in Authorization: Bearer or X-Keenpix-Api-Key. Normal image delivery URLs are keyless after project and origin configuration. Keep keys in trusted server environments.\n\n## Agent-readable sources\n\n- [Concise LLM index](${origin}/llms.txt)\n- [Complete Markdown collection](${origin}/llms-full.txt)\n- [Learning hub](${origin}/learn)\n\nContact ${SUPPORT_EMAIL}.`
@@ -352,7 +353,7 @@ function staticMarkdown(pathname: string, origin: string) {
     return `${markdownMetadata({ canonicalUrl: `${origin}${pathname}`, description: 'Run the Keenpix image transformation, cache, dashboard, analytics, origin controls, and signed delivery stack on infrastructure you operate.', title: 'The self-hosted image CDN that keeps the dashboard', updated: '2026-09-02' })}\n## What is included\n\nThe released AGPL-3.0 stack includes transforms, cache tiers, per-project origin allowlists, signed URLs, dashboard operations, and delivery analytics. There is no Keenpix license fee.\n\n## Your responsibilities\n\nYou own compute, storage, database, CDN configuration, TLS, network policy, backups, upgrades, monitoring, capacity, and incident response. Self-hosting is not a universal cost shortcut.\n\n## Architecture\n\nPlace a correctly configured CDN in front of the transform service and include every byte-changing input in the cache identity. Verify query strings and Accept variation before traffic.\n\n## Limitations and alternatives\n\nKeenpix is not a DAM or video platform. Choose imgproxy when you want a focused transform primitive, or a full media platform when uploads, library workflows, and video belong together.\n\n## Procedure\n\nFollow the [version-synchronized self-hosting guide](${origin}/docs/self-hosting), [health and operations](${origin}/docs/self-hosting/health-and-operations), and [safe rollout guide](${origin}/blog/safe-image-cdn-rollouts-and-rollbacks).`
   }
   if (pathname === '/image-cdn-cost-calculator') {
-    return `${markdownMetadata({ canonicalUrl: `${origin}${pathname}`, description: 'A source-dated workload model for comparing image delivery providers without treating estimates as quotes.', title: 'Image CDN cost calculator', updated: '2026-09-02' })}\n## Inputs\n\nDelivered GB, requests, unique transforms, source storage, projects, custom domains, and region.\n\n## Method\n\nThe calculator applies only public, source-backed pricing components implemented for each provider. Rows are labeled Estimated, Partial only, or Quote required. It does not invent enterprise discounts, CDN rates, taxes, or missing product behavior.\n\n## Verify before buying\n\nConfirm the provider's current pricing page, define the same workload, include external CDN/storage/operations, and inspect the calculation coverage note. An estimate is not an invoice or savings guarantee.\n\nUse the interactive [canonical calculator](${origin}${pathname}) and read [transparent image CDN pricing](${origin}/blog/transparent-image-cdn-pricing).`
+    return `${markdownMetadata({ canonicalUrl: `${origin}${pathname}`, description: 'A source-dated workload model for comparing image delivery providers without treating estimates as quotes.', title: 'Image CDN cost calculator', updated: IMAGE_CDN_PRICING.updatedAt })}\n## Inputs\n\nDelivered GB, requests, unique transforms, source storage, projects, custom domains, and region.\n\n## Method\n\nThe calculator applies only public, source-backed pricing components implemented for each provider. Rows are labeled Estimated, Partial only, or Quote required. It does not invent enterprise discounts, CDN rates, taxes, or missing product behavior.\n\n## Verify before buying\n\nConfirm the provider's current pricing page, define the same workload, include external CDN/storage/operations, and inspect the calculation coverage note. An estimate is not an invoice or savings guarantee.\n\nUse the interactive [canonical calculator](${origin}${pathname}) and read [transparent image CDN pricing](${origin}/blog/transparent-image-cdn-pricing).`
   }
   if (pathname === '/authors/raed-bahri') {
     return `${markdownMetadata({ author: 'Raed Bahri', canonicalUrl: `${origin}${pathname}`, description: 'Author and maintainer profile for Keenpix technical and comparison content.', title: 'Raed Bahri', updated: '2026-09-02' })}\nRaed Bahri builds and maintains Keenpix. Technical claims are checked against current public code and documentation; volatile competitor facts use dated primary sources. Request corrections through [support](${origin}/support).`

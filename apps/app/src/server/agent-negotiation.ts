@@ -1,8 +1,4 @@
-import {
-  SUPPORT_EMAIL,
-  SUPPORT_WHATSAPP_LABEL,
-  SUPPORT_WHATSAPP_URL,
-} from '@/shared/authors'
+import { SUPPORT_EMAIL } from '@/shared/authors'
 import { getMarkdownPathname } from '@/shared/markdown-discovery'
 
 const DOCUMENT_REPRESENTATIONS = ['text/html', 'text/markdown']
@@ -135,7 +131,6 @@ Image delivery URLs are keyless after a project owner configures the project and
 ## API contact
 
 - [Email ${SUPPORT_EMAIL}](mailto:${SUPPORT_EMAIL})
-- [WhatsApp ${SUPPORT_WHATSAPP_LABEL}](${SUPPORT_WHATSAPP_URL})
 
 ## Product information
 

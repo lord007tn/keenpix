@@ -15,7 +15,7 @@ const KeenpixImage = createKeenpixImage({
 })
 
 export function Hero() {
-  return <KeenpixImage alt="Hero" src="/hero.jpg" widths={[640, 1280]} />
+  return <KeenpixImage alt="Hero" src="https://assets.example.com/hero.jpg" widths={[640, 1280]} />
 }
 ```
 
@@ -33,7 +33,7 @@ const loader = createNextLoader({
 })
 
 export function Hero() {
-  return <Image loader={loader} src="/hero.jpg" alt="Hero" width={1280} height={720} />
+  return <Image loader={loader} src="https://assets.example.com/hero.jpg" alt="Hero" width={1280} height={720} />
 }
 ```
 
@@ -52,7 +52,7 @@ const image = createTanStackImage({
 })
 
 export function Hero() {
-  return <img {...image({ alt: 'Hero', src: '/hero.jpg', widths: [640, 1280] })} />
+  return <img {...image({ alt: 'Hero', src: 'https://assets.example.com/hero.jpg', widths: [640, 1280] })} />
 }
 ```
 
@@ -78,7 +78,7 @@ import { createGatsbyImageData } from '@keenpix/gatsby'
 const image = createGatsbyImageData(config, {
   alt: 'Hero',
   height: 720,
-  src: '/hero.jpg',
+  src: 'https://assets.example.com/hero.jpg',
   width: 1280,
 })
 

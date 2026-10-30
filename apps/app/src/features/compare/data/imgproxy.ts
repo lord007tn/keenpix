@@ -117,7 +117,7 @@ export const imgproxyComparison = {
       competitor:
         'Community for OSS; priority creator support is a Pro benefit',
       keenpix:
-        'Managed product support by email and WhatsApp; open-source issue tracker for public code',
+        'Managed product support by email; open-source issue tracker for public code',
     },
     {
       feature: 'Video previews and ML features',
@@ -220,6 +220,6 @@ export const imgproxyComparison = {
   ],
   pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
+  updatedAt: '2026-10-30',
   verifiedAt: '2026-08-22',
-  nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

@@ -1,4 +1,4 @@
-import { PLANS, type PlanId } from '@/lib/billing/plans'
+import { PLANS, type PlanId, TRIAL } from '@/lib/billing/plans'
 
 // Single source of truth for the marketing plan cards, shared by the landing
 // page (#pricing) and /pricing so the two can never drift apart. Cumulative
@@ -12,6 +12,8 @@ function gb(bytes: number): string {
 }
 
 export const PLAN_CARD_ORDER: PlanId[] = ['basic', 'pro', 'business']
+
+export const PLAN_CARD_TRIAL_LIMITS = `${TRIAL.days}-day free trial · up to ${TRIAL.maxProjects} projects and ${gb(TRIAL.bandwidthBytes)} delivered · card required`
 
 export const PLAN_TAGLINES: Record<PlanId, string> = {
   basic: 'For a site or store getting started.',
