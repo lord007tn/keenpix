@@ -33,7 +33,7 @@
     "db:reset": "pnpm --filter @keenpix/database reset",
     "release:notes": "node tooling/release.mjs notes",
     "release:verify": "node tooling/release.mjs verify",
-    "release:check": "pnpm --recursive --workspace-concurrency=1 --if-present --filter=./packages/frameworks/** --filter=@keenpix/sdk run pack:check",
+    "release:check": "pnpm --recursive --workspace-concurrency=1 --if-present --filter=./packages/frameworks/** --filter=@keenpix/sdk run pack:check && node tooling/release.mjs check",
     "release:packages": "node tooling/release.mjs publish",
     "changeset": "changeset",
     "seo:drift": "pnpm --filter @keenpix/app seo:drift",

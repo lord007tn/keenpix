@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/next",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Keenpix loader and image helpers for Next.js.",
   "homepage": "https://keenpix.com",
   "repository": {
