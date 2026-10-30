@@ -5,6 +5,8 @@ responsible for responsive widths, lazy loading, preload behavior, and layout;
 Keenpix produces each transformed URL.
 
 ```tsx
+'use client'
+
 import Image from 'next/image'
 import { createManagedKeenpixConfig, createNextImageProps } from '@keenpix/next'
 
@@ -19,12 +21,17 @@ export default function Hero() {
         width: 1200,
         height: 800,
         fit: 'cover',
-        quality: 80,
+        quality: 75,
       })}
     />
   )
 }
 ```
+
+`createNextImageProps` returns a function-valued `loader`; call it inside a
+Client Component, as above. Use absolute sources on your project's allowlisted
+hosts. Next.js 16 defaults `images.qualities` to `[75]`; configure additional
+qualities before using other values.
 
 For a global `images.loaderFile`, export the result of `createNextLoader`. The
 global loader supports Next's `src`, `width`, and `quality` contract; use

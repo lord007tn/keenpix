@@ -2,70 +2,82 @@
 title: Next.js
 description: Configure next/image with a Keenpix custom loader, responsive sizes, managed or self-hosted delivery, origin controls, and production validation.
 icon: Triangle
-updated: "2026-08-18"
+updated: "2026-10-30"
 ---
 
 `next/image` lets you swap its optimizer for a custom loader. Point it at Keenpix and keep
-using `<Image>` exactly as before — Next still generates the `srcset`, Keenpix serves
-each width.
+using `<Image>` as before, with absolute source URLs — Next still generates the `srcset`,
+Keenpix serves each width.
 
 **Use this setup when you want image transformation and delivery to remain separate from
 the Next.js server or hosting platform.** Keep the built-in optimizer when it already meets
 your deployment, cache, and cost requirements. A custom image CDN adds another service
 boundary, so the gain must justify the URL migration, cache policy, and failure mode.
 
-## 1. Add the loader
+## 1. Install the package
 
-```js
-// keenpix-loader.js
-export default function keenpixLoader({ src, width, quality }) {
-  const baseUrl = process.env.NEXT_PUBLIC_KEENPIX_BASE_URL
-  const project = process.env.NEXT_PUBLIC_KEENPIX_PROJECT
-  const origin = process.env.NEXT_PUBLIC_IMAGE_ORIGIN ?? ''
-
-  // next/image passes `src` as-is; Keenpix needs an absolute URL.
-  const url = src.startsWith('http') ? src : `${origin}${src}`
-
-  const params = new URLSearchParams({ w: String(width), fmt: 'auto' })
-  if (project) params.set('project', project)
-  if (quality) params.set('q', String(quality))
-  return `${baseUrl}/img/${encodeURIComponent(url)}?${params.toString()}`
-}
+```bash
+pnpm add @keenpix/next
 ```
 
-Use the canonical managed-cloud path without a project query:
+## 2. Add a global loader
 
-```dotenv
-NEXT_PUBLIC_KEENPIX_BASE_URL=https://cdn.keenpix.com/p/YOUR_PROJECT_ID
-NEXT_PUBLIC_IMAGE_ORIGIN=https://assets.example.com
+```ts
+// keenpix-loader.ts
+'use client'
+
+import { createManagedKeenpixConfig, createNextLoader } from '@keenpix/next'
+
+export default createNextLoader(createManagedKeenpixConfig('YOUR_PROJECT_ID'))
 ```
 
-For a self-hosted instance, set `NEXT_PUBLIC_KEENPIX_BASE_URL` to your image host and
-set `NEXT_PUBLIC_KEENPIX_PROJECT`; the loader adds that project id to the query.
+Find `YOUR_PROJECT_ID` under **Settings → General → Project ID**.
 
-## 2. Point next.config at it
+Add this `images` block to your existing config. The path is relative to your project
+root. `next.config.ts` needs Next.js 15 or later; older versions use `next.config.js`.
 
-```js
-// next.config.js
-module.exports = {
-  images: { loader: 'custom', loaderFile: './keenpix-loader.js' },
-}
+```ts
+// next.config.ts
+import type { NextConfig } from 'next'
+
+export default {
+  images: {
+    loader: 'custom',
+    loaderFile: './keenpix-loader.ts',
+  },
+} satisfies NextConfig
 ```
+
+The global loader works with App Router Server Components as well as Client
+Components. The project id is public. To call `getImageProps()` in a Server Component,
+remove `'use client'` from this file.
 
 ## 3. Use `<Image>` normally
 
-```jsx
+```tsx
+// app/page.tsx
 import Image from 'next/image'
 
 export default function Hero() {
-  return <Image src="/hero/spring.jpg" width={1920} height={1080} alt="Spring" />
+  return (
+    <Image
+      src="https://assets.example.com/hero.jpg"
+      width={1200}
+      height={800}
+      alt="A mountain at sunrise"
+      sizes="(max-width: 768px) 100vw, 50vw"
+    />
+  )
 }
 ```
 
 <Callout>
-  Add the image origin host to the project's allowlist (**Settings → Security**). Set
-  `NEXT_PUBLIC_KEENPIX_BASE_URL` and `NEXT_PUBLIC_IMAGE_ORIGIN` in `.env`, plus
-  `NEXT_PUBLIC_KEENPIX_PROJECT` on self-hosted deployments.
+  Every `src` must be an absolute URL on a host in your project's origin allowlist
+  (**Settings → Security → Allowed hosts**). Add `assets.example.com` for these examples.
+  Hosts outside the allowlist return HTTP 403. Relative paths such as `/hero.jpg` are
+  rejected with HTTP 400 by managed delivery. The global loader applies to every
+  `<Image>`, including `public/` files and static imports. Move those to an allowlisted
+  host, or add `unoptimized` to skip Keenpix.
 </Callout>
 
 ## Set `sizes` for responsive layouts
@@ -80,7 +92,7 @@ slot needs.
   alt="Canvas backpack in olive green"
   height={1200}
   sizes="(max-width: 768px) 100vw, 50vw"
-  src="/products/backpack.jpg"
+  src="https://assets.example.com/products/backpack.jpg"
   width={1600}
 />
 ```
@@ -89,18 +101,90 @@ Keep width candidates aligned with real component breakpoints. More variants are
 automatically better: they create more cache keys, and adjacent widths that produce almost
 the same byte size add little value.
 
+## Quality on current Next.js
+
+Without a `quality` prop the loader sends no `q`, so Keenpix uses the project's **Default
+quality** (**Settings → Pipeline**). Next.js 16 defaults
+[`images.qualities`](https://nextjs.org/docs/app/api-reference/components/image#qualities)
+to `[75]`; its built-in optimizer selects the nearest allowed quality. Custom
+loaders receive the requested quality directly, so do not rely on snapping in
+this integration. If you need other values, add them to `images.qualities` in your
+existing image configuration, for example `qualities: [60, 75, 90]`, and choose one of
+those values on `<Image>`.
+
+## Per-image transforms in a Client Component
+
+`createNextImageProps` includes a `loader` function. Call it inside a Client
+Component so that function does not cross the Server Component serialization
+boundary. Use the global loader above for ordinary Server Component usage.
+
+```tsx
+// app/transformed-hero.tsx
+'use client'
+
+import Image from 'next/image'
+import { createManagedKeenpixConfig, createNextImageProps } from '@keenpix/next'
+
+const keenpix = createManagedKeenpixConfig('YOUR_PROJECT_ID')
+
+export default function TransformedHero() {
+  return (
+    <Image
+      {...createNextImageProps(keenpix, {
+        src: 'https://assets.example.com/hero.jpg',
+        alt: 'A mountain at sunrise',
+        width: 1200,
+        height: 800,
+        sizes: '(max-width: 768px) 100vw, 50vw',
+        quality: 75,
+        fit: 'cover',
+      })}
+    />
+  )
+}
+```
+
+## Without the package
+
+For managed delivery, you can replace `keenpix-loader.ts` with this minimal loader
+and keep the same `next.config.ts` registration and absolute sources:
+
+```ts
+// keenpix-loader.ts
+'use client'
+
+import type { ImageLoaderProps } from 'next/image'
+
+export default function keenpixLoader({ src, width, quality }: ImageLoaderProps) {
+  const params = new URLSearchParams({ w: String(width) })
+  if (quality) params.set('q', String(quality))
+  return `https://cdn.keenpix.com/p/YOUR_PROJECT_ID/img/${encodeURIComponent(src)}?${params}`
+}
+```
+
 ## Static export and non-Vercel deployments
 
 A custom loader returns ordinary external image URLs, so it also works when Next.js emits a
 static export and no Next.js image-optimization server exists at runtime. Keenpix still has
-to be reachable from the browser, and every relative `src` still needs an absolute
-`NEXT_PUBLIC_IMAGE_ORIGIN`.
+to be reachable from the browser. Continue to use absolute, allowlisted source URLs.
 
 For managed delivery, the public project id belongs in the
 `cdn.keenpix.com/p/<project-id>` path. It is routing context, not a secret. For self-hosting,
 the project query parameter selects the project on your own image host. The transform URL
 concepts are similar, but moving between the two paths still requires hostname, cache, and
-configuration planning.
+configuration planning. A self-hosted loader passes your image host and project id:
+
+```ts
+// keenpix-loader.ts
+'use client'
+
+import { createNextLoader } from '@keenpix/next'
+
+export default createNextLoader({
+  baseUrl: 'https://images.example.com',
+  projectId: 'YOUR_PROJECT_ID',
+})
+```
 
 ## Protect the source and URL grammar
 
@@ -109,7 +193,7 @@ set of source hosts your application actually uses and verify that an unapproved
 The fetcher also blocks private/internal addresses and revalidates redirects, but the
 allowlist remains the first product-level boundary.
 
-Do not put an HMAC signing secret in `keenpix-loader.js`; the loader is browser-facing. If
+Do not put an HMAC signing secret in `keenpix-loader.ts`; the loader is browser-facing. If
 your project requires signed transform URLs, sign them on a server you control or route the
 request through a server-side signing endpoint. Signatures are useful when third parties
 could append parameters and create expensive cache misses. They do not stop someone from
@@ -128,7 +212,7 @@ Check the result as a delivery pipeline, not only as a rendered image:
 5. Compare decoded output and transferred bytes with your own source files and settings.
 6. Test an uncached request, a repeat request, an origin failure, and the rollback path.
 
-`fmt=auto` varies the response by the browser's `Accept` header. Every cache in front of the
+Leaving `fmt` unset (the same as `fmt=auto`) varies the response by the browser's `Accept` header. Every cache in front of the
 image service must keep those variants separate. If the outer CDN cannot vary safely, use
 explicit AVIF/WebP URLs and provide a fallback through `<picture>` instead.
 
