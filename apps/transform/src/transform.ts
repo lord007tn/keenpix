@@ -1,6 +1,6 @@
 import { createRequestEventBuffer } from '@keenpix/analytics'
 import { createTransformCache } from '@keenpix/cache'
-import { recordProjectFirstImageSuccesses } from '@keenpix/database/activation'
+import { createImageMeasurementBuffer } from '@keenpix/database/image-measurement'
 import { createLogger } from '@keenpix/logger'
 import {
   assertAllowedOrigin,
@@ -10,6 +10,7 @@ import {
   getPublicTransformErrorMessage,
   getTransformErrorStatus,
   isActivationDelivery,
+  isExternalImageSource,
   type OutputFormat,
   optimizeSvgImage,
   parseTransformParams,
@@ -32,6 +33,7 @@ import {
 import { env } from './env'
 
 const logger = createLogger()
+const measurement = createImageMeasurementBuffer(logger)
 const analytics = createRequestEventBuffer({ logger })
 const inflight = new Map<string, Promise<{ bytesIn: number; out: Buffer }>>()
 const LEADING_SLASHES_RE = /^\/+/
@@ -279,20 +281,6 @@ export async function optimizeProjectImage(input: {
     throw error
   } finally {
     if (input.recordLog !== false) {
-      if (
-        input.recordActivation &&
-        !input.trusted &&
-        env.KEENPIX_MODE === 'cloud' &&
-        status === 200 &&
-        bytesOut > 0
-      ) {
-        await recordProjectFirstImageSuccesses([
-          {
-            projectId: project.id,
-            orgId: project.orgId,
-          },
-        ])
-      }
       analytics.enqueue({
         bytesIn,
         bytesOut,
@@ -309,6 +297,22 @@ export async function optimizeProjectImage(input: {
         status,
         width: options.width,
       })
+      if (
+        input.recordActivation &&
+        !input.trusted &&
+        env.KEENPIX_MODE === 'cloud' &&
+        status === 200 &&
+        bytesOut > 0
+      ) {
+        measurement.enqueue({
+          projectId: project.id,
+          orgId: project.orgId,
+          external: isExternalImageSource(
+            sourceHost(input.src),
+            env.KEENPIX_APP_URL,
+          ),
+        })
+      }
     }
   }
 }
@@ -407,3 +411,5 @@ function decodeSourcePath(pathSource: string) {
 }
 
 export const flushTransformAnalytics = analytics.flush
+
+export const shutdownImageMeasurement = measurement.shutdown

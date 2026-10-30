@@ -2,11 +2,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const {
   drainAnalyticsOutboxBatch,
+  drainImageMeasurementOutbox,
   persistAnalyticsOutboxEvent,
   recordRequestEvents,
   transaction,
 } = vi.hoisted(() => ({
   drainAnalyticsOutboxBatch: vi.fn(),
+  drainImageMeasurementOutbox: vi.fn().mockResolvedValue(false),
   persistAnalyticsOutboxEvent: vi.fn(),
   recordRequestEvents: vi.fn(),
   transaction: vi.fn(),
@@ -15,6 +17,10 @@ const cloud = vi.hoisted(() => ({ value: false }))
 
 vi.mock('@keenpix/database', () => ({
   prisma: { $transaction: transaction },
+}))
+
+vi.mock('@keenpix/database/measurement-outbox', () => ({
+  drainImageMeasurementOutbox,
 }))
 
 vi.mock('@/data-access/analytics-rollups', () => ({
@@ -35,7 +41,10 @@ vi.mock('@/lib/logger/logger', () => ({
   errorContext: vi.fn(() => ({})),
   logger: { error: vi.fn(), warn: vi.fn() },
 }))
-vi.mock('@/server/deployment', () => ({ isCloud: () => cloud.value }))
+vi.mock('@/server/deployment', () => ({
+  getAppUrl: () => 'https://app.example.test',
+  isCloud: () => cloud.value,
+}))
 
 const { enqueueRequestLog, flushDurableRequestLogs, flushRequestLogs } =
   await import('./buffer')
@@ -44,6 +53,7 @@ afterEach(() => {
   cloud.value = false
   vi.useRealTimers()
   vi.clearAllMocks()
+  drainImageMeasurementOutbox.mockReset().mockResolvedValue(false)
 })
 
 describe('analytics buffer', () => {
@@ -92,7 +102,10 @@ describe('analytics buffer', () => {
 
     await flushDurableRequestLogs()
 
-    expect(drainAnalyticsOutboxBatch).toHaveBeenCalledOnce()
+    expect(drainAnalyticsOutboxBatch).toHaveBeenCalledExactlyOnceWith(
+      expect.any(Date),
+      'https://app.example.test',
+    )
     expect(recordRequestEvents).toHaveBeenCalledWith([event])
   })
 
@@ -161,4 +174,70 @@ describe('analytics buffer', () => {
 
     expect(transaction).toHaveBeenCalledTimes(2)
   })
+})
+
+it('finishes all billing batches without waiting for a stalled measurement retry', async () => {
+  let release: () => void = () => undefined
+  drainImageMeasurementOutbox.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        release = resolve
+      }),
+  )
+  drainAnalyticsOutboxBatch
+    .mockResolvedValueOnce({ status: 'drained', events: [], remaining: 1 })
+    .mockResolvedValueOnce({ status: 'drained', events: [], remaining: 0 })
+  await flushDurableRequestLogs({ requireComplete: true })
+  expect(drainAnalyticsOutboxBatch).toHaveBeenCalledTimes(2)
+  expect(drainImageMeasurementOutbox).toHaveBeenCalledTimes(1)
+  release()
+  await Promise.resolve()
+})
+
+it('drains a backlog up to twenty claims after a single accounting flush', async () => {
+  drainAnalyticsOutboxBatch.mockResolvedValueOnce({ status: 'empty' })
+  drainImageMeasurementOutbox.mockResolvedValue(true)
+  await flushDurableRequestLogs({ requireComplete: true })
+  await vi.waitFor(() =>
+    expect(drainImageMeasurementOutbox).toHaveBeenCalledTimes(20),
+  )
+})
+
+it('stops measurement draining once no ready row is claimed', async () => {
+  drainAnalyticsOutboxBatch.mockResolvedValueOnce({ status: 'empty' })
+  drainImageMeasurementOutbox
+    .mockResolvedValueOnce(true)
+    .mockResolvedValueOnce(true)
+    .mockResolvedValueOnce(false)
+  await flushDurableRequestLogs()
+  await vi.waitFor(() =>
+    expect(drainImageMeasurementOutbox).toHaveBeenCalledTimes(3),
+  )
+})
+
+it('stops starting measurement claims after its wall-clock budget', async () => {
+  drainAnalyticsOutboxBatch.mockResolvedValueOnce({ status: 'empty' })
+  const clock = vi.spyOn(performance, 'now').mockReturnValue(0)
+  drainImageMeasurementOutbox.mockImplementationOnce(() => {
+    clock.mockReturnValue(1500)
+    return Promise.resolve(true)
+  })
+  try {
+    await flushDurableRequestLogs({ requireComplete: true })
+    expect(drainImageMeasurementOutbox).toHaveBeenCalledTimes(1)
+  } finally {
+    clock.mockRestore()
+  }
+})
+
+it('continues to healthy ready work after a poisoned claim fails', async () => {
+  drainAnalyticsOutboxBatch.mockResolvedValueOnce({ status: 'empty' })
+  drainImageMeasurementOutbox
+    .mockRejectedValueOnce(new Error('Synthetic poison row'))
+    .mockResolvedValueOnce(true)
+    .mockResolvedValueOnce(false)
+  await flushDurableRequestLogs()
+  await vi.waitFor(() =>
+    expect(drainImageMeasurementOutbox).toHaveBeenCalledTimes(3),
+  )
 })

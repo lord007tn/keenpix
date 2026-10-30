@@ -12,6 +12,7 @@ import {
   getFinanceSettings,
   updateFinanceSettings,
 } from '@/actions/admin/finance'
+import { getRecentFirstValueFunnel } from '@/actions/admin/first-value'
 import {
   acceptInvitation,
   createInvitation,
@@ -77,6 +78,13 @@ export const getPlatformAnalyticsFn = createServerFn({ method: 'GET' })
   .handler(({ context, data }) => {
     requireSuperAdmin(context)
     return getPlatformAnalytics(data)
+  })
+
+export const getFirstValueFunnelFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(({ context }) => {
+    requireSuperAdmin(context)
+    return getRecentFirstValueFunnel()
   })
 
 export const getFinanceDashboardFn = createServerFn({ method: 'GET' })

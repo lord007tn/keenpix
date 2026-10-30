@@ -1,9 +1,10 @@
 import { serve } from '@hono/node-server'
+import { measurementPrisma } from '@keenpix/database'
 import { createLogger, flushLogger, initializeLogger } from '@keenpix/logger'
 import packageJson from '../package.json' with { type: 'json' }
 import { createTransformApp } from './app'
 import { env } from './env'
-import { flushTransformAnalytics } from './transform'
+import { flushTransformAnalytics, shutdownImageMeasurement } from './transform'
 
 initializeLogger({
   environment: env.NODE_ENV,
@@ -32,6 +33,8 @@ async function shutdown(signal: NodeJS.Signals) {
     server.close((error) => (error ? reject(error) : resolve()))
   })
   await flushTransformAnalytics()
+  await shutdownImageMeasurement()
+  await measurementPrisma.$disconnect()
   await flushLogger()
 }
 

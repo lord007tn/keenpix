@@ -1,4 +1,5 @@
 import { prisma } from '@keenpix/database'
+import { drainImageMeasurementOutbox } from '@keenpix/database/measurement-outbox'
 import cuid from 'cuid'
 import {
   drainAnalyticsOutboxBatch,
@@ -11,7 +12,7 @@ import {
 import type { NewRequestLog, RequestLogEvent } from '@/data-access/request-logs'
 import { recordRequestEvents } from '@/lib/clickhouse/events'
 import { errorContext, logger } from '@/lib/logger/logger'
-import { isCloud } from '@/server/deployment'
+import { getAppUrl, isCloud } from '@/server/deployment'
 
 // Analytics writer for the public /img hot path. Self-hosted request logs are
 // buffered; successful managed deliveries first commit a lightweight durable
@@ -35,6 +36,7 @@ let timer: NodeJS.Timeout | null = null
 let flushing: Promise<void> | null = null
 let durableTimer: NodeJS.Timeout | null = null
 let durableFlushing: Promise<void> | null = null
+let measurementFlushing: Promise<void> | null = null
 
 async function persistManagedDelivery(
   event: RequestLogEvent,
@@ -116,7 +118,7 @@ export function flushDurableRequestLogs(input?: {
       batchNumber < MAX_DURABLE_DRAIN_BATCHES;
       batchNumber += 1
     ) {
-      const result = await drainAnalyticsOutboxBatch(through)
+      const result = await drainAnalyticsOutboxBatch(through, getAppUrl())
       if (result.status === 'busy') {
         if (input?.requireComplete) {
           throw new Error('Analytics outbox is being drained by another job.')
@@ -132,9 +134,43 @@ export function flushDurableRequestLogs(input?: {
       }
     }
     throw new Error('Analytics outbox backlog exceeds the bounded drain limit.')
-  })().finally(() => {
-    durableFlushing = null
-  })
+  })()
+    .then(() => {
+      // Detached for background and billing callers: joining a background flush
+      // must not make a later requireComplete caller wait for measurement either.
+      if (!measurementFlushing) {
+        measurementFlushing = (async () => {
+          const deadline = performance.now() + 1500
+          let failures = 0
+          for (
+            let attempt = 0;
+            attempt < 20 && performance.now() < deadline;
+            attempt += 1
+          ) {
+            try {
+              if (!(await drainImageMeasurementOutbox())) {
+                break
+              }
+            } catch {
+              // The claimed row retains its lease, so other ready work can still
+              // progress; repeated failures mean the queue itself is unavailable.
+              failures += 1
+              if (failures === 3) {
+                break
+              }
+            }
+          }
+          if (failures > 0) {
+            logger.warn('image measurement retry deferred')
+          }
+        })().finally(() => {
+          measurementFlushing = null
+        })
+      }
+    })
+    .finally(() => {
+      durableFlushing = null
+    })
   return durableFlushing
 }
 

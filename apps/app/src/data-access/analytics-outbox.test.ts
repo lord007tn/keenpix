@@ -1,0 +1,105 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const mocks = vi.hoisted(() => ({
+  record: vi.fn(),
+  rows: [] as Record<string, unknown>[],
+}))
+const db = vi.hoisted(() => ({
+  $queryRaw: vi.fn(),
+  $executeRaw: vi.fn(),
+  analyticsEventOutbox: {
+    count: vi.fn(),
+    deleteMany: vi.fn(),
+    findMany: vi.fn(),
+  },
+  requestLog: { createMany: vi.fn() },
+}))
+
+vi.mock('@keenpix/database', () => ({
+  prisma: {
+    $transaction: (work: (client: typeof db) => unknown) => work(db),
+  },
+}))
+vi.mock('@keenpix/database/measurement-outbox', () => ({
+  drainImageMeasurementOutbox: mocks.record,
+}))
+vi.mock('@/data-access/analytics-rollups', () => ({
+  aggregateRollupIncrements: () => [],
+  applyRollupIncrement: vi.fn(),
+}))
+
+import {
+  drainAnalyticsOutboxBatch,
+  drainProjectAnalyticsOutbox,
+} from './analytics-outbox'
+
+const through = new Date('2026-10-02T00:00:00Z')
+const event = {
+  activationCandidate: true,
+  bytesOut: 12,
+  id: 'event',
+  orgId: 'organization',
+  projectId: 'project',
+  sourceHost: 'images.customer.test',
+  status: 200,
+  ts: new Date('2026-10-01T00:00:00Z'),
+}
+
+describe('analytics outbox first-image capture', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    db.$queryRaw.mockResolvedValue([
+      { locked: true, available: true, statement: '0', lock: '0' },
+    ])
+    db.analyticsEventOutbox.count.mockResolvedValue(0)
+    db.analyticsEventOutbox.findMany.mockImplementation(async () => mocks.rows)
+  })
+
+  it('derives the external bit from the persisted host in one statement', async () => {
+    mocks.rows = [
+      { ...event, id: 'external' },
+      { ...event, id: 'owned', sourceHost: 'CDN.Keenpix.com' },
+      { ...event, id: 'app', sourceHost: 'app.example.test' },
+      { ...event, id: 'unknown', sourceHost: null },
+    ]
+    await drainAnalyticsOutboxBatch(through, 'https://app.example.test')
+    const insert = db.$executeRaw.mock.calls.find(([sql]) =>
+      sql.join('').includes('INSERT INTO "ImageMeasurementOutbox"'),
+    )
+    expect(insert).toBeDefined()
+    expect(JSON.parse(insert?.[2])).toEqual(
+      [true, false, false, false].map((external) => ({
+        external,
+        observedAt: event.ts.toISOString(),
+        orgId: 'organization',
+        projectId: 'project',
+      })),
+    )
+  })
+
+  it('never turns an unmarked, failed, or empty event into a candidate', async () => {
+    mocks.rows = [
+      { ...event, activationCandidate: false },
+      { ...event, status: 404 },
+      { ...event, bytesOut: 0 },
+    ]
+    await drainAnalyticsOutboxBatch(through, 'https://app.example.test')
+    expect(db.$executeRaw).not.toHaveBeenCalled()
+    expect(db.analyticsEventOutbox.deleteMany).toHaveBeenCalledOnce()
+  })
+
+  it('proves no external source when the caller has no app origin', async () => {
+    mocks.rows = [event]
+    await drainAnalyticsOutboxBatch(through)
+    await drainProjectAnalyticsOutbox(db as never, 'project')
+    const inserts = db.$executeRaw.mock.calls.filter(([sql]) =>
+      sql.join('').includes('INSERT INTO "ImageMeasurementOutbox"'),
+    )
+    expect(inserts).toHaveLength(2)
+    for (const insert of inserts) {
+      expect(JSON.parse(insert[2])).toEqual([
+        expect.objectContaining({ external: false }),
+      ])
+    }
+  })
+})

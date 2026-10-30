@@ -5,9 +5,13 @@ const mocks = vi.hoisted(() => ({
   cache: vi.fn(),
   project: vi.fn(),
   enqueue: vi.fn(),
+  warn: vi.fn(),
 }))
 vi.mock('@keenpix/database/activation', () => ({
   recordProjectFirstImageSuccesses: mocks.record,
+}))
+vi.mock('@keenpix/database', () => ({
+  measurementPrisma: { $executeRaw: vi.fn(), $disconnect: vi.fn() },
 }))
 vi.mock('@keenpix/analytics', () => ({
   createRequestEventBuffer: () => ({ enqueue: mocks.enqueue, flush: vi.fn() }),
@@ -21,7 +25,7 @@ vi.mock('@keenpix/cache', () => ({
   }),
 }))
 vi.mock('@keenpix/logger', () => ({
-  createLogger: () => ({ warn: vi.fn(), error: vi.fn() }),
+  createLogger: () => ({ warn: mocks.warn, error: vi.fn() }),
 }))
 vi.mock('./data-access', () => ({
   getTransformProject: mocks.project,
@@ -62,12 +66,71 @@ describe('standalone transform first-image capture', () => {
     )
     expect(response.status).toBe(200)
     expect(await response.text()).toBe('image')
-    expect(mocks.record).toHaveBeenCalledExactlyOnceWith([
-      {
-        projectId: 'project',
-        orgId: 'organization',
-      },
-    ])
+    await vi.waitFor(() => expect(mocks.record).toHaveBeenCalledTimes(1))
+    expect(mocks.record).toHaveBeenCalledWith(
+      [
+        {
+          projectId: 'project',
+          orgId: 'organization',
+          external: true,
+          observedAt: expect.any(Date),
+        },
+      ],
+      expect.anything(),
+    )
+  })
+
+  it.each([
+    'https://keenpix.com/sample.jpg',
+    'https://cdn.keenpix.com/sample.jpg',
+    'https://CDN.KeenPix.com./sample.jpg',
+  ])('keeps the v1 capture but marks %s as not external', async (source) => {
+    mocks.project.mockResolvedValue({
+      id: 'project',
+      orgId: 'organization',
+      allowedOrigins: ['keenpix.com', 'cdn.keenpix.com', 'cdn.keenpix.com.'],
+      autoFormat: true,
+      defaultQuality: 75,
+      defaultDpr: 1,
+      defaultFit: 'cover',
+    })
+    const response = await handleTransformRequest(
+      new Request('https://images.customer.test/img/source?project=project'),
+      source,
+    )
+    expect(response.status).toBe(200)
+    await vi.waitFor(() => expect(mocks.record).toHaveBeenCalledTimes(1))
+    expect(mocks.record).toHaveBeenCalledWith(
+      [
+        {
+          projectId: 'project',
+          orgId: 'organization',
+          external: false,
+          observedAt: expect.any(Date),
+        },
+      ],
+      expect.anything(),
+    )
+  })
+
+  it('serves and accounts before a stalled capture completes', async () => {
+    let release: (value: number) => void = () => undefined
+    mocks.record.mockReturnValueOnce(
+      new Promise((resolve) => {
+        release = resolve
+      }),
+    )
+    const pending = handleTransformRequest(
+      new Request('https://images.customer.test/img/source?project=project'),
+      'https://example.test/image.jpg',
+    )
+    await vi.waitFor(() => expect(mocks.record).toHaveBeenCalledTimes(1))
+    expect((await pending).status).toBe(200)
+    expect(mocks.enqueue).toHaveBeenCalledTimes(1)
+    release(0)
+    expect((await pending).status).toBe(200)
+    await vi.waitFor(() => expect(mocks.record).toHaveBeenCalledTimes(1))
+    expect(mocks.enqueue).toHaveBeenCalledTimes(1)
   })
 
   it.each([
@@ -96,7 +159,7 @@ describe('standalone transform first-image capture', () => {
       'https://example.test/image.jpg',
     )
     expect(response.status).toBe(200)
-    expect(mocks.record).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() => expect(mocks.record).toHaveBeenCalledTimes(1))
     expect(mocks.enqueue).toHaveBeenCalledTimes(1)
   })
 
@@ -114,23 +177,29 @@ describe('standalone transform first-image capture', () => {
     expect(mocks.enqueue).not.toHaveBeenCalled()
   })
 
-  it('fails before accounting when durability fails, then accounts one successful retry', async () => {
+  it('serves and accounts when capture fails and logs no internals', async () => {
     mocks.record.mockRejectedValueOnce(new Error('Synthetic ledger failure'))
     const response = await handleTransformRequest(
       new Request('https://images.customer.test/img/source?project=project'),
       'https://example.test/image.jpg',
     )
-    expect(response.status).toBe(500)
-    expect(mocks.enqueue).not.toHaveBeenCalled()
-    expect(await response.text()).not.toContain('Synthetic ledger failure')
+    expect(response.status).toBe(200)
+    expect(mocks.enqueue).toHaveBeenCalledTimes(1)
+    expect(await response.text()).toBe('image')
+    await vi.waitFor(() =>
+      expect(mocks.warn).toHaveBeenCalledWith('image measurement interrupted'),
+    )
+    expect(JSON.stringify(mocks.warn.mock.calls)).not.toContain(
+      'Synthetic ledger failure',
+    )
     const retry = await handleTransformRequest(
       new Request('https://images.customer.test/img/source?project=project'),
       'https://example.test/image.jpg',
     )
     expect(retry.status).toBe(200)
     expect(await retry.text()).toBe('image')
-    expect(mocks.record).toHaveBeenCalledTimes(2)
-    expect(mocks.enqueue).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() => expect(mocks.record).toHaveBeenCalledTimes(2))
+    expect(mocks.enqueue).toHaveBeenCalledTimes(2)
     expect(mocks.enqueue).toHaveBeenCalledWith(
       expect.objectContaining({ status: 200, bytesOut: 5 }),
     )
