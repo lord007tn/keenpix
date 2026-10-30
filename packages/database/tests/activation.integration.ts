@@ -235,6 +235,7 @@ test('aggregate readout separates legacy history, prospective observations and u
     legacyFirstObservationsInWindow: 1,
     prospectiveProjectsWithoutObservation: 1,
     pendingCandidateEvents: 0,
+    coverageInterruptions: 0,
   })
   assert.ok(!JSON.stringify(result).includes(fixture.orgId))
   const first = await prisma.projectFirstImageSuccess.findUniqueOrThrow({
