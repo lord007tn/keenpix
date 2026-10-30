@@ -64,7 +64,7 @@ jobs:
         run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0 --prefer-offline
 
       - name: Manual image workflow contracts
-        run: node --test tooling/docker-images.test.mjs
+        run: node --test tooling/docker-images.test.mjs tooling/release.test.mjs
 
       - name: Generate Prisma client
         run: pnpm db:generate
@@ -79,3 +79,6 @@ jobs:
 
       - name: Repository health
         run: pnpm run health
+
+      - name: Packed release manifest contracts
+        run: node tooling/release.mjs check

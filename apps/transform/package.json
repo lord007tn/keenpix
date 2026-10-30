@@ -1,6 +1,6 @@
 {
   "name": "@keenpix/transform-app",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
   "description": "Keenpix image transformation data plane.",
   "type": "module",

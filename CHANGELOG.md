@@ -2,6 +2,19 @@
 
 All notable changes to Keenpix are documented here.
 
+## [v0.3.3] - 2026-10-30
+
+### Fixed
+
+- Keenpix packages at 0.3.2 that depend on another Keenpix package couldn't be
+  installed from npm. 0.3.3 fixes it.
+
+### Changed
+
+- Every package is now packed and checked before any package is published.
+- The platform apps include everything merged since v0.3.2; the release notes
+  list it by component.
+
 ## 2026-10-17 — Availability incident
 
 - keenpix.com returned errors (Cloudflare 526) because our origin TLS
