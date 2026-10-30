@@ -225,20 +225,23 @@ For a full rebuild: create fresh volumes, start only `postgres`, copy a dump in
 
 ## Dragonfly snapshots
 
-Dragonfly saves the queue and the image variant cache every 5 minutes. Its
-default filename adds a timestamp, so without `--dbfilename=dump` every save is
-a new set of files and none are ever removed. Each set can be as large as the
-whole variant cache (512 MB by default).
+Dragonfly saves the queue and the image variant cache on the `--snapshot_cron`
+schedule and again each time it stops. Its default filename adds a timestamp, so
+without `--dbfilename=dump` every save is a new set of files, and Dragonfly has
+no setting that removes old ones. Each set can be as large as the whole variant
+cache (512 MB by default).
 
 A stack started without that flag keeps its old sets after the flag is added.
-Check how much space they use:
+Check how much space they use and which flags the container is really running
+with, because a long-lived container can differ from this file:
 
 ```bash
 docker compose -f docker-compose.production.yml exec dragonfly \
   sh -c 'ls /data | grep -c "^dump-20"; du -sh /data'
+docker inspect --format '{{json .Args}}' <dragonfly-container>
 ```
 
-To stop the growth on a running stack, change the name in place. It needs no
+To stop new sets on a running stack, change the name in place. It needs no
 restart, but it only lasts until the container is recreated, so add the flag to
 the deployed Compose file as well:
 
