@@ -1137,3 +1137,95 @@ test('oppositely ordered multi-project batches preserve earliest rows in both le
     )
   }
 })
+
+test('covered customer and unclassified repeats bypass capture keys and both ledger row locks', async () => {
+  for (const classification of ['customer', 'unclassified'] as const) {
+    const fixture = await createWorkspace()
+    await setOrganizationActivationClassification({
+      ...fixture,
+      classification,
+    })
+    const first = dayjs().add(1, 'minute')
+    await recordProjectFirstImageSuccesses([
+      { ...fixture, external: true, observedAt: first.toDate() },
+    ])
+    await prisma.$transaction(async (db) => {
+      await db.$executeRaw`SELECT pg_advisory_xact_lock(27505, hashtext(${fixture.projectId}))`
+      await db.$executeRaw`SELECT "projectId" FROM "ProjectFirstImageSuccess" WHERE "projectId" = ${fixture.projectId} FOR UPDATE`
+      await db.$executeRaw`SELECT "projectId" FROM "ProjectFirstExternalImage" WHERE "projectId" = ${fixture.projectId} FOR UPDATE`
+      assert.equal(
+        await recordProjectFirstImageSuccesses(
+          [
+            {
+              ...fixture,
+              external: true,
+              observedAt: first.add(1, 'minute').toDate(),
+            },
+          ],
+          measurementPrisma,
+        ),
+        0,
+      )
+    })
+    assert.equal(
+      (await getLedgerRow(fixture.projectId))?.observedAt.getTime(),
+      first.toDate().getTime(),
+    )
+    const earlier = first.subtract(1, 'second').toDate()
+    await recordProjectFirstImageSuccesses(
+      [{ ...fixture, external: true, observedAt: earlier }],
+      measurementPrisma,
+    )
+    assert.equal(
+      (await getLedgerRow(fixture.projectId))?.observedAt.getTime(),
+      earlier.getTime(),
+    )
+    const v1 = await prisma.projectFirstImageSuccess.findUnique({
+      where: { projectId: fixture.projectId },
+    })
+    assert.equal(
+      v1?.observedAt.getTime() ?? null,
+      classification === 'customer' ? earlier.getTime() : null,
+    )
+  }
+})
+
+test('a missing external row still needs a capture key when v1 is already covered', async () => {
+  const fixture = await createWorkspace()
+  await setOrganizationActivationClassification({
+    ...fixture,
+    classification: 'customer',
+  })
+  const first = dayjs().add(1, 'minute').toDate()
+  await recordProjectFirstImageSuccesses([
+    { ...fixture, external: false, observedAt: first },
+  ])
+  await prisma.$transaction(async (db) => {
+    await db.$executeRaw`SELECT pg_advisory_xact_lock(27505, hashtext(${fixture.projectId}))`
+    await assert.rejects(
+      recordProjectFirstImageSuccesses(
+        [{ ...fixture, external: true, observedAt: first }],
+        measurementPrisma,
+      ),
+      (error) => JSON.stringify(error).includes('55P03'),
+    )
+  })
+  await recordProjectFirstImageSuccesses(
+    [{ ...fixture, external: true, observedAt: first }],
+    measurementPrisma,
+  )
+  assert.ok(await getLedgerRow(fixture.projectId))
+})
+
+test('measurement drain reports each real claim, including repeat-only rows, then emptiness', async () => {
+  const fixture = await createWorkspace()
+  const candidates = [
+    { ...fixture, external: true, observedAt: dayjs().toDate() },
+  ]
+  await prisma.$executeRaw`INSERT INTO "ImageMeasurementOutbox" ("id", "candidates") SELECT 'claim-' || n, ${JSON.stringify(candidates)}::jsonb FROM generate_series(1, 3) n`
+  assert.equal(await drainImageMeasurementOutbox(), true)
+  assert.equal(await drainImageMeasurementOutbox(), true)
+  assert.equal(await drainImageMeasurementOutbox(), true)
+  assert.equal(await drainImageMeasurementOutbox(), false)
+  assert.ok(await getLedgerRow(fixture.projectId))
+})

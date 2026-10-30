@@ -28,7 +28,7 @@ export function setOrganizationActivationClassification(input: {
 // Keep the earliest qualified event time even when durable outbox batches arrive
 // out of order. This is an origin observation, not image receipt by a visitor.
 //
-// Acquire all per-project advisory keys before either ledger can write. Sorting
+// Acquire all pending project advisory keys before either ledger can write. Sorting
 // the actual lock keys prevents cross-project batches taking them in opposite
 // orders. This prevents speculative-insert races between v1's two unique indexes;
 // ON CONFLICT's primary-key arbiter alone cannot protect the composite index.
@@ -39,9 +39,11 @@ export function setOrganizationActivationClassification(input: {
 // INSERT is origin_first_image_v1 and its row count is what callers receive.
 // origin_first_external_image_v1 needs no enrollment: it only rejects internal/
 // test classifications and non-ordinary membership. Its NOT EXISTS skips projects
-// already observed at or before the event, so a repeat delivery neither locks the
-// row nor writes WAL. CURRENT_TIMESTAMP is converted explicitly because funnel
-// days are UTC whatever the session time zone is.
+// already observed at or before the event. Only events still needed by an eligible
+// ledger enter the lock set; both inserts skip already-covered observations, so
+// covered repeats acquire neither capture advisory keys nor ledger row locks.
+// CURRENT_TIMESTAMP is converted explicitly because funnel days are UTC whatever
+// the session time zone is.
 export async function recordProjectFirstImageSuccesses(
   input: {
     projectId: string
@@ -58,12 +60,31 @@ export async function recordProjectFirstImageSuccesses(
     WITH raw_event AS (
       SELECT * FROM jsonb_to_recordset(${JSON.stringify(input)}::jsonb)
         AS event("projectId" text, "orgId" text, "observedAt" timestamp, "external" boolean)
+    ), pending_event AS MATERIALIZED (
+      SELECT event.* FROM raw_event event
+      JOIN "Project" p ON p."id" = event."projectId" AND p."orgId" = event."orgId"
+      LEFT JOIN "OrganizationActivationPolicy" policy ON policy."orgId" = p."orgId"
+      WHERE EXISTS (SELECT 1 FROM "Member" m JOIN "User" u ON u."id" = m."userId"
+          WHERE m."organizationId" = p."orgId" AND m."role" = 'owner' AND u."role" = 'user')
+        AND NOT EXISTS (SELECT 1 FROM "Member" m JOIN "User" u ON u."id" = m."userId"
+          WHERE m."organizationId" = p."orgId" AND u."role" <> 'user')
+        AND (
+          (event."external" AND (policy."classification" IS NULL OR policy."classification" NOT IN ('internal', 'test'))
+            AND NOT EXISTS (SELECT 1 FROM "ProjectFirstExternalImage" s
+              WHERE s."projectId" = p."id"
+                AND s."observedAt" <= COALESCE(event."observedAt", CURRENT_TIMESTAMP AT TIME ZONE 'UTC')))
+          OR (policy."classification" = 'customer' AND policy."eligibleSince" IS NOT NULL
+            AND policy."eligibleSince" <= COALESCE(event."observedAt", CURRENT_TIMESTAMP)
+            AND NOT EXISTS (SELECT 1 FROM "ProjectFirstImageSuccess" s
+              WHERE s."projectId" = p."id"
+                AND s."observedAt" <= COALESCE(event."observedAt", CURRENT_TIMESTAMP)))
+        )
     ), project_locks AS MATERIALIZED (
       SELECT pg_advisory_xact_lock(27505, lock_key)
-      FROM (SELECT DISTINCT hashtext("projectId") AS lock_key FROM raw_event) keys
+      FROM (SELECT DISTINCT hashtext("projectId") AS lock_key FROM pending_event) keys
       ORDER BY lock_key
     ), event AS MATERIALIZED (
-      SELECT raw_event.* FROM raw_event
+      SELECT pending_event.* FROM pending_event
       CROSS JOIN (SELECT COUNT(*) AS acquired FROM project_locks) locks
       WHERE locks.acquired >= 0
     ), first_external_image AS (
@@ -92,6 +113,9 @@ export async function recordProjectFirstImageSuccesses(
     JOIN "OrganizationActivationPolicy" policy ON policy."orgId" = p."orgId"
     WHERE policy."classification" = 'customer' AND policy."eligibleSince" IS NOT NULL
       AND policy."eligibleSince" <= COALESCE(event."observedAt", CURRENT_TIMESTAMP)
+      AND NOT EXISTS (SELECT 1 FROM "ProjectFirstImageSuccess" s
+        WHERE s."projectId" = p."id"
+          AND s."observedAt" <= COALESCE(event."observedAt", CURRENT_TIMESTAMP))
       AND EXISTS (SELECT 1 FROM "Member" m JOIN "User" u ON u."id" = m."userId"
         WHERE m."organizationId" = p."orgId" AND m."role" = 'owner' AND u."role" = 'user')
       AND NOT EXISTS (SELECT 1 FROM "Member" m JOIN "User" u ON u."id" = m."userId"

@@ -38,8 +38,9 @@ stay the table's only unique index: `ON CONFLICT` arbitrates that key alone, and
 second unique index turns simultaneous first deliveries into errors.
 
 Both ledgers use the same idempotent statement; every existing v1 index remains.
-Capture first acquires per-project transaction advisory locks in sorted lock-key
-order, before either ledger writes. This prevents speculative inserts into v1's
+Capture first filters observations already covered by each eligible ledger, then
+acquires per-project transaction advisory locks in sorted lock-key order only for
+remaining work, before either ledger writes. This prevents speculative inserts into v1's
 primary and composite unique indexes from racing or deadlocking. Unrelated hash
 collisions only serialize work. The isolated pool's lock and statement timeouts
 still bound optional work. The specific v1 composite-index uniqueness fallback
@@ -59,8 +60,10 @@ durable queue row and run in a fresh transaction on a later drain.
   `ImageMeasurementOutbox` under a savepoint. Optional handoff SQL uses bounded
   statement/lock timeouts. Handoff failure rolls back to the savepoint, allowing
   logs, rollups and accounting-outbox deletion to commit. After that commit,
-  measurement uses its isolated pool once after the accounting loop, detached
-  from billing completion. At most 1,000 batches are admitted; capacity overflow
+  measurement uses its isolated pool after the accounting loop, detached from
+  billing completion. Each pass claims up to 20 ready batches, stopping on no ready
+  row or once 1.5 seconds have elapsed. The deadline is checked between operations;
+  an operation already in progress remains bounded by its database timeouts. At most 1,000 batches are admitted; capacity overflow
   takes the interruption path. Failed attempts persist outside the capture
   transaction with a five-second lease, allowing other ready rows to progress.
   Five failed attempts or 24 hours retire the row together with a MIN/MAX
@@ -144,18 +147,18 @@ Keep `KEENPIX_RUN_MIGRATIONS=false` on app service starts until the migration-on
 step is verified. Startup `migrate deploy` otherwise exits on failure under
 `set -eu`, and Prisma P3009 can make every subsequent app start fail.
 
-Check whether the endpoint is PgBouncer in transaction mode: PostgreSQL startup
-timeout parameters may be rejected there. Use an approved direct/session endpoint
-for the isolated measurement pool and migration connection before rollout; do not
-silently remove the timeout protection.
+Check whether the endpoint is PgBouncer in transaction mode: the measurement
+pool's PostgreSQL startup timeout parameters may be rejected there. Use an approved
+direct/session endpoint for that pool and migration connection. Migration timeouts
+are set transaction-locally by the migration SQL itself; they do not require URL
+startup options. Do not silently remove timeout protection.
 
 1. **Migration alone:** pin the new reviewed app image digest in the release
    configuration first, then run only its migration command with no dependencies.
-   Supply PostgreSQL startup options `-c lock_timeout=5s -c statement_timeout=60s`
-   to the migration connection (for example through its connection-string
-   `options` parameter, supplied by the release secret configuration). Do not print
-   credentials. `PGOPTIONS` alone is not a guarantee for a Prisma migration engine;
-   verify effective server settings for that connection. For Compose:
+   The migration begins an explicit transaction and calls
+   `set_config('lock_timeout','5s',true)` and
+   `set_config('statement_timeout','60s',true)` before its additive DDL. These local
+   settings bound its lock/statement waits and revert at transaction end. For Compose:
 
    ```sh
    docker compose -f docker-compose.production.yml -f <digest-override> run --rm --no-deps --pull never app migrate
@@ -176,12 +179,33 @@ silently remove the timeout protection.
 
    Then retry the migration-only step and verify it. Keep app startup migrations
    disabled throughout this recovery.
-2. **App:** deploy the pinned app digest, verify accounting drains commit, retries
-   retain failed measurement, and backlog progresses. App startup migrates unless
-   disabled; this does not replace the migration-only step.
-3. **Transform:** deploy its pinned digest after app verification. Verify cached
-   and uncached image status, latency and accounting during synthetic measurement
-   failure; verify sanitized logging. Use only isolated synthetic/test workspaces.
+2. **App:** leave the current pre-capture transform image running and deploy only
+   the pinned app digest. Compose declares app's transform dependency as
+   `service_healthy`; omitting `--no-deps` can replace transform before app is verified,
+   even when both digests are pinned in the override. Run exactly:
+
+   ```sh
+   KEENPIX_RUN_MIGRATIONS=false docker compose -f docker-compose.production.yml -f <digest-override> up -d --no-deps --no-build --pull never app
+   ```
+
+   Verify accounting drains commit, retries retain failed measurement, and the
+   bounded measurement passes reduce a pre-existing ready backlog. Confirm the
+   pinned image is locally available. App startup migrations stay disabled.
+3. **Transform:** upgrade directly from its current pre-capture image to this PR's
+   reviewed transform digest after app verification. **Never deploy the v0.3.3
+   transform as an intermediate image.** It awaits capture inside `finally`, fails
+   closed before accounting and takes no capture advisory locks; it can race the
+   new app's drain. The current older pre-capture transform is safe beside the new
+   app. `KEENPIX_RUNTIME_IMAGE_TAG` also selects the transform image in the base
+   Compose file; the digest override must pin `services.transform.image` explicitly.
+   Run only the transform service:
+
+   ```sh
+   KEENPIX_RUN_MIGRATIONS=false docker compose -f docker-compose.production.yml -f <digest-override> up -d --no-deps --no-build --pull never transform
+   ```
+
+   Verify cached and uncached image status, latency and accounting during synthetic
+   measurement failure; verify sanitized logging. Use isolated synthetic/test workspaces.
    Verify `KEENPIX_APP_URL` and edge exclusions on every writer
    ([edge release](delivery-edge-release.md)).
 4. **Start coverage:** only after all serving writers are verified. The start uses

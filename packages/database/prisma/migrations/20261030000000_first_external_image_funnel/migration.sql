@@ -1,3 +1,6 @@
+BEGIN;
+SELECT set_config('lock_timeout', '5s', true), set_config('statement_timeout', '60s', true);
+
 CREATE TABLE "ProjectFirstExternalImage" (
   "projectId" TEXT NOT NULL PRIMARY KEY,
   "orgId" TEXT NOT NULL,
@@ -35,3 +38,5 @@ CREATE TABLE "ImageMeasurementOutbox" (
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
 );
 CREATE INDEX "ImageMeasurementOutbox_nextAttemptAt_createdAt_idx" ON "ImageMeasurementOutbox"("nextAttemptAt", "createdAt");
+
+COMMIT;

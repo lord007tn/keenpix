@@ -139,13 +139,29 @@ export function flushDurableRequestLogs(input?: {
       // Detached for background and billing callers: joining a background flush
       // must not make a later requireComplete caller wait for measurement either.
       if (!measurementFlushing) {
-        measurementFlushing = drainImageMeasurementOutbox()
-          .catch(() => {
+        measurementFlushing = (async () => {
+          const deadline = performance.now() + 1500
+          let interrupted = false
+          for (
+            let attempt = 0;
+            attempt < 20 && performance.now() < deadline;
+            attempt += 1
+          ) {
+            try {
+              if (!(await drainImageMeasurementOutbox())) {
+                break
+              }
+            } catch {
+              // The claimed row retains its lease; continue to other ready work.
+              interrupted = true
+            }
+          }
+          if (interrupted) {
             logger.warn('image measurement retry deferred')
-          })
-          .finally(() => {
-            measurementFlushing = null
-          })
+          }
+        })().finally(() => {
+          measurementFlushing = null
+        })
       }
     })
     .finally(() => {

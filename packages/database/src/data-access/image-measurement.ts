@@ -35,15 +35,16 @@ export async function drainImageMeasurementOutbox() {
       q."createdAt" <= (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - interval '24 hours' AS expired`
   const row = rows[0]
   if (!row) {
-    return
+    return false
   }
   if (row.expired || row.attempts > 5) {
     await retireImageMeasurementOutbox(row.id)
-    return
+    return true
   }
   try {
     await recordProjectFirstImageSuccesses(row.candidates, measurementPrisma)
     await measurementPrisma.$executeRaw`DELETE FROM "ImageMeasurementOutbox" WHERE "id" = ${row.id}`
+    return true
   } catch (error) {
     if (row.attempts >= 5) {
       await retireImageMeasurementOutbox(row.id)

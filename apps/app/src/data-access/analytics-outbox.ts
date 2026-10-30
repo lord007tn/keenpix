@@ -60,7 +60,7 @@ async function writeOutboxBatch(
         SELECT current_setting('statement_timeout') AS statement, current_setting('lock_timeout') AS lock`
       await db.$executeRaw`SELECT set_config('statement_timeout', '750ms', true), set_config('lock_timeout', '150ms', true)`
       const [capacity] = await db.$queryRaw<{ available: boolean }[]>`
-        SELECT pg_try_advisory_xact_lock(27504, 3)
+        SELECT pg_try_advisory_xact_lock(${OUTBOX_LOCK_CLASS}, 3)
           AND (SELECT COUNT(*) FROM "ImageMeasurementOutbox") < 1000 AS available`
       if (!capacity?.available) {
         throw new Error('Measurement queue capacity reached')
