@@ -69,6 +69,10 @@ jobs:
       - name: Generate Prisma client
         run: pnpm db:generate
 
+      # The contract imports app accounting code, which uses the logger's built exports.
+      - name: Build activation contract runtime dependencies
+        run: pnpm --filter @keenpix/logger build
+
       - name: Activation migration and PostgreSQL contract
         env:
           DATABASE_URL: postgresql://activation_test:activation-test-only@127.0.0.1:5432/keenpix_activation_test
