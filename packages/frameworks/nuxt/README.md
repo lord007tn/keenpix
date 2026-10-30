@@ -37,4 +37,17 @@ export default defineNuxtConfig({
 })
 ```
 
-Then use `<NuxtImg src="photos/hero.jpg" width="1200" quality="80" />`. `baseURL` may instead be supplied by Nuxt Image as a provider option.
+Then use `<NuxtImg src="https://assets.example.com/hero.jpg" width="1200" quality="75" alt="A mountain at sunrise" />`.
+
+Add `assets.example.com` to the project's origin allowlist. Managed delivery requires
+absolute source URLs; relative sources are rejected with HTTP 400. `baseURL` is the
+**delivery base**, not a source origin, and can also be supplied as a provider option.
+
+The default export above uses Nuxt Image v2. With v1, omit `defineProvider` and
+export `const { getImage } = createNuxtImageProvider(...)` using the same options.
+In Nuxt 4, put the provider under `app/providers/` because `~` resolves to `app/`;
+in Nuxt 3 it normally resolves to the project root.
+
+Published 0.3.2 tarballs contain unresolved `workspace:^` dependencies. A normal npm
+install fails with `EUNSUPPORTEDPROTOCOL`; a corrected publication is needed for
+installation without a local dependency-resolution workaround.
