@@ -43,8 +43,8 @@ describe('agent content negotiation', () => {
 
     expect(home).toContain('https://keenpix.com/openapi.json')
     expect(home).toContain('https://keenpix.com/developers')
-    expect(home).toContain('mailto:hi@raedbahri.com')
-    expect(home).toContain('https://wa.me/21626765990')
+    expect(home).toContain('mailto:fariq@keenpix.com')
+    expect(home).not.toContain('WhatsApp')
     expect(home).toContain('does not operate an OAuth authorization server')
     expect(home).toContain('separate API sandbox')
     expect(home).toContain('official CLI')

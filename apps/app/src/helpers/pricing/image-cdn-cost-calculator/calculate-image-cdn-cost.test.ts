@@ -107,6 +107,35 @@ describe('calculateImageCdnCosts', () => {
     expect(results.find((result) => result.id === 'twicpics')?.monthly).toBe(19)
   })
 
+  it.each([
+    { deliveredGb: 107, monthly: 38.5, plan: 'Free' },
+    { deliveredGb: 109, monthly: 39, plan: 'Growth' },
+    { deliveredGb: 300, monthly: 39, plan: 'Growth' },
+    { deliveredGb: 301, monthly: 39.15, plan: 'Growth' },
+    { deliveredGb: 1000, monthly: 144, plan: 'Growth' },
+    { deliveredGb: 1766, monthly: 258.9, plan: 'Growth' },
+    { deliveredGb: 1767, monthly: 259, plan: 'Business' },
+    { deliveredGb: 2500, monthly: 259, plan: 'Business' },
+    { deliveredGb: 2501, monthly: 259.08, plan: 'Business' },
+  ])('models Gumlet monthly billing at $deliveredGb GB', ({
+    deliveredGb,
+    monthly,
+    plan,
+  }) => {
+    const gumlet = calculateImageCdnCosts({
+      customDomains: 0,
+      deliveredGb,
+      projects: 1,
+      region: 'eu-na',
+      requests: 1_000_000,
+      sourceStorageGb: 0,
+      uniqueTransforms: 1000,
+    }).find((result) => result.id === 'gumlet')
+
+    expect(gumlet?.plan).toBe(plan)
+    expect(gumlet?.monthly).toBe(monthly)
+  })
+
   it('models TwicPics bandwidth tiers and domain limits', () => {
     const business = calculateImageCdnCosts({
       customDomains: 1,

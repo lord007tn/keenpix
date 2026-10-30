@@ -1,7 +1,10 @@
 export const IMAGE_CDN_PRICING = {
   currency: 'USD',
+  // Last change to this dataset or the calculator built on it.
+  updatedAt: '2026-10-30',
+  // Oldest per-vendor check; each vendor row carries the date its own public
+  // pricing source was last checked.
   verifiedAt: '2026-08-22',
-  nextReviewAt: '2026-10-22',
   methodology:
     'Public self-serve prices only. Taxes, contracts, legacy plans, platform fees, delivery outside the stated meter, and vendor-specific feature charges are excluded unless a row says otherwise.',
   vendors: [
@@ -9,60 +12,70 @@ export const IMAGE_CDN_PRICING = {
       id: 'keenpix',
       name: 'Keenpix',
       source: 'https://keenpix.com/pricing',
+      verifiedAt: '2026-10-30',
       note: 'Managed delivery only; unlimited transforms and team members.',
     },
     {
       id: 'cloudinary',
       name: 'Cloudinary',
       source: 'https://cloudinary.com/pricing',
+      verifiedAt: '2026-08-22',
       note: 'One pooled credit is 1 GB bandwidth, 1 GB storage, or 1,000 transforms.',
     },
     {
       id: 'imgix',
       name: 'imgix',
       source: 'https://www.imgix.com/pricing',
+      verifiedAt: '2026-08-22',
       note: 'Estimate uses delivery and management credits; feature-specific transform credits are excluded.',
     },
     {
       id: 'imagekit',
       name: 'ImageKit',
       source: 'https://imagekit.io/plans',
+      verifiedAt: '2026-10-30',
       note: 'Estimate uses published delivery and media-storage allowances and overage.',
     },
     {
       id: 'gumlet',
       name: 'Gumlet Image',
-      source: 'https://www.gumlet.com/pricing/image/',
-      note: 'Image-only public plans; video products are outside this comparison.',
+      source: 'https://www.gumlet.com/pricing/',
+      verifiedAt: '2026-10-30',
+      note: 'Image-only public plans at monthly billing; annual discounts and video products are outside this comparison.',
     },
     {
       id: 'twicpics',
       name: 'TwicPics',
       source: 'https://www.twicpics.com/pricing',
+      verifiedAt: '2026-10-30',
       note: 'Published CDN-bandwidth plans; video and smart-media features are not separately modeled.',
     },
     {
       id: 'cloudflare',
       name: 'Cloudflare Images',
       source: 'https://developers.cloudflare.com/images/pricing/',
+      verifiedAt: '2026-10-30',
       note: 'Remote-origin transformation estimate only; hosted-image storage and delivery are excluded.',
     },
     {
       id: 'bunny',
       name: 'Bunny Optimizer',
       source: 'https://bunny.net/pricing/optimizer/',
+      verifiedAt: '2026-10-30',
       note: 'Optimizer site fee plus the selected public Bunny CDN regional rate.',
     },
     {
       id: 'vercel',
       name: 'Vercel Image Optimization',
       source: 'https://vercel.com/docs/image-optimization/limits-and-pricing',
+      verifiedAt: '2026-08-22',
       note: 'Image meters only; plan, Fast Data Transfer, and Edge Request charges are excluded.',
     },
     {
       id: 'imgproxy',
       name: 'imgproxy',
       source: 'https://imgproxy.net/pricing',
+      verifiedAt: '2026-08-22',
       note: 'License price only; infrastructure, CDN, storage, monitoring, and operations remain yours.',
     },
   ],

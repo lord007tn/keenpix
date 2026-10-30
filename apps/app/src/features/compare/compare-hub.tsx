@@ -39,7 +39,7 @@ export function CompareHub() {
               <ul className="mt-4 grid gap-4 text-sm">
                 <li className="flex gap-3">
                   <CalendarCheckIcon className="mt-0.5 size-4 shrink-0 text-primary" />
-                  <span>Dated pricing and a scheduled review</span>
+                  <span>Dated pricing and source checks</span>
                 </li>
                 <li className="flex gap-3">
                   <FileCheckIcon className="mt-0.5 size-4 shrink-0 text-primary" />
@@ -141,10 +141,10 @@ export function CompareHub() {
               <p className="mt-3 max-w-4xl text-muted-foreground leading-relaxed">
                 Each page uses current vendor pricing and documentation,
                 discloses that Keenpix benefits if you choose it, states where
-                the competitor wins, and carries a verification and next-review
-                date. Pricing scenarios are estimates, not quotes, and no page
-                substitutes unsupported benchmarks, ratings, or customer proof
-                for reproducible evidence.
+                the competitor wins, and shows the date its sources were last
+                checked. Pricing scenarios are estimates, not quotes, and no
+                page substitutes unsupported benchmarks, ratings, or customer
+                proof for reproducible evidence.
               </p>
             </div>
             <Link
@@ -202,10 +202,10 @@ export function CompareHub() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-muted-foreground">Next review</dt>
+                      <dt className="text-muted-foreground">Facts verified</dt>
                       <dd className="mt-1 font-medium">
-                        <time dateTime={comparison.nextReviewAt}>
-                          {comparison.nextReviewAt}
+                        <time dateTime={comparison.verifiedAt}>
+                          {comparison.verifiedAt}
                         </time>
                       </dd>
                     </div>

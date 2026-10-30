@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { TRIAL } from '@/lib/billing/plans'
 import { COMPARISONS } from './comparison-data'
 
 const comparisonIntentPattern = /alternative|vs/
@@ -33,7 +34,7 @@ describe('comparison data', () => {
       expect(comparison.verifiedAt >= earliestCurrentVerificationDate).toBe(
         true,
       )
-      expect(comparison.nextReviewAt).toBe('2026-10-12')
+      expect(comparison.updatedAt >= comparison.verifiedAt).toBe(true)
       expect(comparison.sources.length).toBeGreaterThanOrEqual(3)
       expect(
         comparison.sources.every(
@@ -42,6 +43,21 @@ describe('comparison data', () => {
         ),
       ).toBe(true)
       expect(comparison.whenCompetitorWins.length).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it('states the catalog trial limits wherever a pricing row mentions the trial', () => {
+    const trialLine = `${TRIAL.days}-day trial: up to ${TRIAL.maxProjects} projects and ${TRIAL.bandwidthBytes / 1024 ** 3} GB delivered; card required`
+    const trialRows = Object.values(COMPARISONS)
+      .flatMap((comparison) => [
+        ...comparison.pricingRows,
+        ...comparison.featureRows,
+      ])
+      .filter((row) => row.keenpix.includes('trial'))
+
+    expect(trialRows.length).toBeGreaterThanOrEqual(5)
+    for (const row of trialRows) {
+      expect(row.keenpix).toContain(trialLine)
     }
   })
 
@@ -65,5 +81,12 @@ describe('comparison data', () => {
       expect(comparison.verifiedAt).toBe('2026-08-31')
       expect(comparison.sources.length).toBeGreaterThanOrEqual(6)
     }
+  })
+
+  it('dates a re-checked source separately from the page facts', () => {
+    const gumlet = COMPARISONS['gumlet-alternative']
+
+    expect(gumlet.verifiedAt).toBe('2026-08-22')
+    expect(gumlet.sources[0].checkedAt).toBe('2026-10-30')
   })
 })

@@ -109,8 +109,8 @@ export function ChangelogPage({ markdown }: { markdown: string }) {
               What's new in Keenpix
             </h1>
             <p className="mt-4 max-w-2xl text-balance text-lg text-muted-foreground leading-relaxed">
-              All notable changes, straight from the repository's changelog.
-              Tagged builds are also published as{' '}
+              Releases and confirmed incidents, straight from the repository's
+              changelog. Tagged builds are also published as{' '}
               <a
                 className="text-foreground underline underline-offset-4 hover:text-primary"
                 href={RELEASES_URL}

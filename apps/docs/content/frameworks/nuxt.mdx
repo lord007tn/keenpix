@@ -1,81 +1,128 @@
 ---
 title: Nuxt
-description: Register Keenpix as a custom @nuxt/image provider.
+description: Use @keenpix/nuxt with Nuxt Image for managed image delivery.
 icon: Mountain
-updated: "2026-08-16"
+updated: "2026-10-30"
 ---
 
-[`@nuxt/image`](https://image.nuxt.com) supports custom providers, so `<NuxtImg>` and
-`<NuxtPicture>` can route through Keenpix with full responsive support.
+Use `@keenpix/nuxt` as a custom provider for `@nuxt/image`. Nuxt generates
+responsive candidates; Keenpix delivers each transformed image.
 
-## 1. Add a provider
+## 1. Install
 
-```ts
-// providers/keenpix.ts
-import { createOperationsGenerator } from '#image'
+From an existing Nuxt application, add the Nuxt Image module and the Keenpix package:
 
-const operationsGenerator = createOperationsGenerator({
-  keyMap: { width: 'w', height: 'h', quality: 'q', format: 'fmt', fit: 'fit' },
-  joinWith: '&',
-  formatter: (key, value) => `${key}=${value}`,
-})
-
-export const getImage = (src, { modifiers = {}, baseURL = '', project = '' } = {}) => {
-  const operations = operationsGenerator(modifiers)
-  const url = src.startsWith('http') ? src : `${baseURL}${src}` // Keenpix needs an absolute URL
-  return {
-    url: `https://cdn.keenpix.com/p/${encodeURIComponent(project)}/img/${encodeURIComponent(url)}${operations ? `?${operations}` : ''}`,
-  }
-}
+```bash
+pnpm exec nuxt module add image
+pnpm add @keenpix/nuxt
 ```
 
-## 2. Register it
+The module command installs `@nuxt/image` and registers it. The setup below uses
+Nuxt Image v2 and Nuxt 4.
+
+## 2. Create the provider
+
+```ts
+// app/providers/keenpix.ts
+import { defineProvider } from '@nuxt/image/runtime'
+import { createManagedKeenpixConfig, createNuxtImageProvider } from '@keenpix/nuxt'
+
+const managed = createManagedKeenpixConfig('YOUR_PROJECT_ID')
+
+export default defineProvider(
+  createNuxtImageProvider({
+    baseURL: managed.baseUrl,
+    projectId: managed.projectId,
+    projectInPath: managed.projectInPath,
+  }),
+)
+```
+
+Find `YOUR_PROJECT_ID` under **Settings → General → Project ID**.
+
+`baseURL` in this package means the **delivery base**, such as
+`https://cdn.keenpix.com`, never the source origin. `createManagedKeenpixConfig`
+sets that delivery base and puts the project id in `/p/<project-id>`. The source
+origin is part of each absolute `src` instead.
+
+## 3. Register the provider
+
+Keep a single `@nuxt/image` entry in your module list:
 
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
   modules: ['@nuxt/image'],
   image: {
+    provider: 'keenpix',
     providers: {
-      keenpix: {
-        name: 'keenpix',
-        provider: '~/providers/keenpix.ts',
-        options: { baseURL: 'https://cdn.example.com', project: 'YOUR_ID' },
-      },
+      keenpix: { provider: '~/providers/keenpix' },
     },
   },
 })
 ```
 
-## 3. Use it
+This path is for Nuxt 4, where `~` resolves to `app/`. In Nuxt 3, use
+`providers/keenpix.ts`. A custom `srcDir` changes that location.
+
+## 4. Use NuxtImg
 
 ```vue
+<!-- app/app.vue (Nuxt 4) -->
 <template>
-  <NuxtImg provider="keenpix" src="/hero.jpg" width="1200" sizes="100vw" />
+  <NuxtImg
+    src="https://assets.example.com/hero.jpg"
+    width="1200"
+    height="800"
+    quality="75"
+    sizes="sm:100vw lg:600px"
+    alt="A mountain at sunrise"
+  />
 </template>
 ```
 
-Leaving `format` unset means the generated Keenpix URL has no `fmt` parameter, so
-Keenpix uses the browser's `Accept` header and serves AVIF, WebP, or JPEG based on
-support, including for SVG sources. Passing `format="avif"` or `format="webp"`
-intentionally forces that output format; passing `format="svg"` is required when you
-want an SVG origin returned as optimized SVG.
-
-<Callout title="Nuxt Image format props">
-  In `@nuxt/image`, the `format` prop maps to Keenpix's `fmt` query parameter. Do not
-  pass a helper that always returns `avif` unless you want to force AVIF for every
-  client. For JoodCMS-style wrappers, keep the wrapper's default `format` value
-undefined and only pass a format for deliberate fixed-format URLs.
+<Callout>
+  Add `assets.example.com` to your Keenpix project's origin allowlist in
+  **Settings → Security → Allowed hosts**. Hosts outside the allowlist return HTTP 403.
+  Sources must be absolute URLs on allowlisted hosts.
+  `/hero.jpg` and `photos/hero.jpg` produce relative sources that managed delivery
+  rejects with HTTP 400. The provider's `baseURL` does not resolve relative sources.
 </Callout>
 
-<Callout title="Self-hosted delivery">
-  The snippet above is for managed cloud and never emits the retired
-  application hostname. For self-hosting, use `@keenpix/nuxt` with your own
-  delivery base URL and public project query.
-</Callout>
+## Nuxt Image v1
 
-<Callout title="Simpler option">
-  If you don't need `@nuxt/image`'s responsive machinery, skip the provider and bind a
-  plain `<img :src="keenpix('/hero.jpg', { w: 1200 })">` using the
-  [universal helper](/docs/frameworks#the-universal-pattern).
-</Callout>
+The published package supports the v1 provider contract too. Replace only the
+provider file with a named `getImage` export; v1 does not use `defineProvider`:
+
+```ts
+// app/providers/keenpix.ts
+import { createManagedKeenpixConfig, createNuxtImageProvider } from '@keenpix/nuxt'
+
+const managed = createManagedKeenpixConfig('YOUR_PROJECT_ID')
+
+export const { getImage } = createNuxtImageProvider({
+  baseURL: managed.baseUrl,
+  projectId: managed.projectId,
+  projectInPath: managed.projectInPath,
+})
+```
+
+See the official [Nuxt Image v2 migration guide](https://image.nuxt.com/get-started/migration)
+for the provider export change.
+
+## Formats and responsive delivery
+
+The `format` prop maps to Keenpix's `fmt` query parameter. Leaving it unset lets
+Keenpix negotiate output using the browser's `Accept` header. Set `format="webp"`
+or `format="avif"` only when you want a fixed output format. To return an SVG
+source as optimized SVG, request `format="svg"`.
+
+Use `sizes` to describe the image's actual layout slot. Prefix every `sizes` value with a
+screen: an unprefixed `100vw` creates `1w` and `2w` candidates. Inspect the rendered
+`srcset` for managed URLs with different widths, then resize the viewport and
+check the selected candidate. Confirm the delivery cache separates negotiated
+formats and test a rejected source host before launch.
+
+For self-hosting, pass your own delivery `baseURL` and public `projectId` to
+`createNuxtImageProvider`, with `projectInPath: false`. Keep absolute sources;
+this setting uses a project query parameter on your own image host.

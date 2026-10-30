@@ -269,6 +269,50 @@ describe('consent-aware Google analytics', () => {
     )
   })
 
+  it.each([
+    'hackernews',
+    'devto',
+    'hashnode',
+    'indiehackers',
+  ])('accepts the %s launch-channel campaign source', (source) => {
+    clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
+    window.history.replaceState({}, '', `/pricing?utm_source=${source}`)
+    setAnalyticsConsent('granted')
+    trackAcquisitionContext()
+
+    expect(
+      JSON.parse(
+        window.localStorage.getItem('keenpix.activation-context.v1') ?? '{}',
+      ),
+    ).toMatchObject({ activation_utm_source: source })
+    expect(JSON.stringify(window.dataLayer)).toContain(
+      `"utm_source":"${source}"`,
+    )
+  })
+
+  it.each([
+    'hacker-news',
+    'HackerNews',
+    'private@example.test',
+    'hackernews launch thread',
+  ])('rejects arbitrary campaign source text: %s', (source) => {
+    clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
+    window.history.replaceState(
+      {},
+      '',
+      `/pricing?utm_source=${encodeURIComponent(source)}`,
+    )
+    setAnalyticsConsent('granted')
+    trackAcquisitionContext()
+
+    expect(
+      JSON.parse(
+        window.localStorage.getItem('keenpix.activation-context.v1') ?? '{}',
+      ),
+    ).not.toHaveProperty('activation_utm_source')
+    expect(JSON.stringify(window.dataLayer)).not.toContain(source)
+  })
+
   it('does not claim a product or Google return is a new acquisition landing', () => {
     clientEnv.VITE_GTM_CONTAINER_ID = 'GTM-KEENPIX123'
     window.history.replaceState({}, '', '/app/dashboard?new_user=google')

@@ -21,6 +21,7 @@ import {
   calculateImageCdnCosts,
   type ImageCdnCostInputs,
 } from '@/helpers/pricing/image-cdn-cost-calculator/calculate-image-cdn-cost'
+import { SUPPORT_EMAIL } from '@/shared/authors'
 import {
   IMAGE_CDN_CALCULATOR_FAQ,
   IMAGE_CDN_PRICING,
@@ -84,7 +85,7 @@ export function ImageCdnCostCalculatorPage({
             </div>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-muted-foreground text-xs sm:text-sm lg:justify-end">
               <span className="hidden sm:inline">
-                Prices checked {IMAGE_CDN_PRICING.verifiedAt}
+                Prices checked {IMAGE_CDN_PRICING.verifiedAt} or later
               </span>
               <a
                 className="font-medium text-primary hover:underline"
@@ -459,7 +460,8 @@ export function ImageCdnCostCalculatorPage({
                         rel="noopener noreferrer"
                         target="_blank"
                       >
-                        Official pricing source
+                        Official pricing source, checked{' '}
+                        {result.vendor?.verifiedAt}
                         <ExternalLinkIcon className="size-3" />
                       </a>
                     </div>
@@ -513,13 +515,13 @@ export function ImageCdnCostCalculatorPage({
               </article>
             </div>
             <p className="mt-6 text-muted-foreground text-sm">
-              Last verified {IMAGE_CDN_PRICING.verifiedAt}; next scheduled
-              review {IMAGE_CDN_PRICING.nextReviewAt}. Corrections:{' '}
+              Each vendor row shows the date its pricing source was last
+              checked. Corrections:{' '}
               <a
                 className="font-medium text-primary hover:underline"
-                href="mailto:hi@raedbahri.com"
+                href={`mailto:${SUPPORT_EMAIL}`}
               >
-                hi@raedbahri.com
+                {SUPPORT_EMAIL}
               </a>
               .
             </p>

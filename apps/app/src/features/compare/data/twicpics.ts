@@ -1,3 +1,4 @@
+import { KEENPIX_RELEASE } from '@/shared/release'
 import type { ComparisonPageData } from '../comparison-data'
 
 export const twicpicsComparison = {
@@ -16,7 +17,8 @@ export const twicpicsComparison = {
       scenario: 'Permanent free use',
       competitor:
         'Free: 3 GB CDN bandwidth, 1 workspace, 1 domain, 1 user; no custom domain',
-      keenpix: '14-day trial: up to 20 GB and 2 projects; card required',
+      keenpix:
+        '14-day trial: up to 2 projects and 20 GB delivered; card required',
     },
     {
       scenario: '40 GB delivered / month',
@@ -116,14 +118,14 @@ export const twicpicsComparison = {
     {
       feature: 'Self-hosting',
       competitor: 'No public self-hosted TwicPics service edition documented',
-      keenpix: 'Published v0.3.0 under AGPL-3.0 with Docker deployment files',
+      keenpix: `Published ${KEENPIX_RELEASE} under AGPL-3.0 with Docker deployment files`,
     },
     {
       feature: 'Support and maturity',
       competitor:
         'Paid plans publish premium email/live-chat support; enterprise adds dedicated success and SLA options',
       keenpix:
-        'Founder support by email and WhatsApp; younger product with limited public customer evidence',
+        'Founder support by email; younger product with limited public customer evidence',
     },
   ],
   switchReasons: [
@@ -223,6 +225,6 @@ export const twicpicsComparison = {
   ],
   pricingAsOf: 'August 2026',
   reviewer: 'Raed Bahri, Keenpix founder and maintainer',
+  updatedAt: '2026-10-30',
   verifiedAt: '2026-08-22',
-  nextReviewAt: '2026-10-12',
 } satisfies ComparisonPageData

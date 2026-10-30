@@ -91,17 +91,19 @@ export function calculateImageCdnCosts(inputs: ImageCdnCostInputs) {
     plan.monthly < best.monthly ? plan : best,
   )
 
+  // Gumlet Image monthly-billing prices; its lower annual prices are excluded
+  // like every other vendor's annual discount.
   const gumlet = [
     {
       monthly: Math.max(0, inputs.deliveredGb - 30) * 0.5,
       plan: 'Free',
     },
     {
-      monthly: 32 + Math.max(0, inputs.deliveredGb - 300) * 0.15,
+      monthly: 39 + Math.max(0, inputs.deliveredGb - 300) * 0.15,
       plan: 'Growth',
     },
     {
-      monthly: 199 + Math.max(0, inputs.deliveredGb - 2500) * 0.08,
+      monthly: 259 + Math.max(0, inputs.deliveredGb - 2500) * 0.08,
       plan: 'Business',
     },
   ].reduce((best, plan) => (plan.monthly < best.monthly ? plan : best))
@@ -189,7 +191,8 @@ export function calculateImageCdnCosts(inputs: ImageCdnCostInputs) {
       monthly: money(gumlet.monthly),
       plan: gumlet.plan,
       status: 'comparable',
-      detail: 'Public Gumlet Image bandwidth plan; video is excluded.',
+      detail:
+        'Public Gumlet Image bandwidth plan at monthly billing; video is excluded.',
     },
     {
       id: 'imgix',

@@ -24,7 +24,7 @@ const compareMetaFn = createServerFn({ method: 'GET' })
       jsonLd: selfHost
         ? null
         : comparisonPageJsonLd({
-            dateModified: comparison.verifiedAt,
+            dateModified: comparison.updatedAt,
             description: comparison.metaDescription,
             name: comparison.title,
             path: [
