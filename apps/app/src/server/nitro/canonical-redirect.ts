@@ -1,7 +1,14 @@
 import { defineHandler, redirect } from 'nitro/h3'
 import { RETIRED_ARABIC_BLOG_REDIRECTS } from '@/shared/blog-redirects'
 
-const DELIVERY_PATH_PREFIXES = ['/api/', '/cdn-cgi/', '/img/', '/og/', '/p/']
+const DELIVERY_PATH_PREFIXES = [
+  '/demo/',
+  '/api/',
+  '/cdn-cgi/',
+  '/img/',
+  '/og/',
+  '/p/',
+]
 const PUBLIC_PAGE_PREFIXES = [
   '/about',
   '/authors',
