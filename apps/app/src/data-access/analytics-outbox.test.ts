@@ -49,7 +49,7 @@ describe('analytics outbox first-image capture', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     db.$queryRaw.mockResolvedValue([
-      { locked: true, statement: '0', lock: '0' },
+      { locked: true, available: true, statement: '0', lock: '0' },
     ])
     db.analyticsEventOutbox.count.mockResolvedValue(0)
     db.analyticsEventOutbox.findMany.mockImplementation(async () => mocks.rows)

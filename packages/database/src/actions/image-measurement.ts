@@ -9,7 +9,7 @@ type Candidate = Parameters<typeof recordProjectFirstImageSuccesses>[0][number]
 export function createImageMeasurementBuffer(logger: {
   warn: (message: string) => unknown
 }) {
-  const queue: Candidate[] = []
+  const queue = new Map<string, Candidate>()
   let active = 0
   let scheduled = false
   let stopped = false
@@ -59,11 +59,13 @@ export function createImageMeasurementBuffer(logger: {
 
   function pump() {
     scheduled = false
-    while (active < 2 && queue.length > 0) {
-      const candidate = queue.shift()
-      if (!candidate) {
+    while (active < 2 && queue.size > 0) {
+      const entry = queue.entries().next().value
+      if (!entry) {
         break
       }
+      const [key, candidate] = entry
+      queue.delete(key)
       active += 1
       const work = run(candidate)
         .catch(() => {
@@ -85,11 +87,19 @@ export function createImageMeasurementBuffer(logger: {
         ...candidate,
         observedAt: candidate.observedAt ?? dayjs().toDate(),
       }
-      if (stopped || queue.length >= 256) {
+      const key = `${event.projectId}:${Boolean(event.external)}`
+      const existing = queue.get(key)
+      if (existing) {
+        if (!existing.observedAt || event.observedAt < existing.observedAt) {
+          queue.set(key, event)
+        }
+        return
+      }
+      if (stopped || queue.size >= 256) {
         markLost(event.observedAt)
         return
       }
-      queue.push(event)
+      queue.set(key, event)
       if (!scheduled) {
         scheduled = true
         setImmediate(pump)
@@ -97,10 +107,10 @@ export function createImageMeasurementBuffer(logger: {
     },
     async shutdown() {
       stopped = true
-      for (const candidate of queue) {
+      for (const candidate of queue.values()) {
         markLost(candidate.observedAt)
       }
-      queue.length = 0
+      queue.clear()
       while (pending.size > 0) {
         await Promise.all(pending)
       }

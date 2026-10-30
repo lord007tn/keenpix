@@ -107,20 +107,24 @@ export async function getFirstImageActivationReadout(input: {
   from: Date
   to: Date
 }) {
-  const rows = await prisma.$queryRaw<
-    {
-      retainedProjects: number
-      unclassifiedProjects: number
-      excludedProjects: number
-      classifiedCustomerProjects: number
-      prospectiveProjects: number
-      prospectiveProjectsCreatedInWindow: number
-      prospectiveFirstSuccessesInWindow: number
-      legacyFirstObservationsInWindow: number
-      prospectiveProjectsWithoutObservation: number
-      pendingCandidateEvents: number
-    }[]
-  >`
+  const [, rows] = await prisma.$transaction(
+    [
+      prisma.$executeRaw`SET LOCAL statement_timeout = '2000ms'`,
+      prisma.$queryRaw<
+        {
+          retainedProjects: number
+          unclassifiedProjects: number
+          excludedProjects: number
+          classifiedCustomerProjects: number
+          prospectiveProjects: number
+          prospectiveProjectsCreatedInWindow: number
+          prospectiveFirstSuccessesInWindow: number
+          legacyFirstObservationsInWindow: number
+          prospectiveProjectsWithoutObservation: number
+          pendingCandidateEvents: number
+          coverageInterruptions: number
+        }[]
+      >`
     WITH projects AS (
       SELECT p."id", p."createdAt", policy."classification", policy."eligibleSince", s."observedAt",
         EXISTS (SELECT 1 FROM "Member" m JOIN "User" u ON u."id" = m."userId"
@@ -145,9 +149,17 @@ export async function getFirstImageActivationReadout(input: {
       COUNT(*) FILTER (WHERE eligible AND "createdAt" >= "eligibleSince" AND "observedAt" >= "eligibleSince" AND "observedAt" >= ${input.from} AND "observedAt" < ${input.to})::int AS "prospectiveFirstSuccessesInWindow",
       COUNT(*) FILTER (WHERE eligible AND "createdAt" < "eligibleSince" AND "observedAt" >= "eligibleSince" AND "observedAt" >= ${input.from} AND "observedAt" < ${input.to})::int AS "legacyFirstObservationsInWindow",
       COUNT(*) FILTER (WHERE eligible AND "createdAt" >= "eligibleSince" AND ("observedAt" IS NULL OR "observedAt" >= ${input.to}))::int AS "prospectiveProjectsWithoutObservation",
-      (SELECT COUNT(*)::int FROM "AnalyticsEventOutbox" WHERE "activationCandidate" AND "ts" < ${input.to}) AS "pendingCandidateEvents"
+      ((SELECT COUNT(*)::int FROM "AnalyticsEventOutbox" WHERE "activationCandidate" AND "ts" < ${input.to})
+        + (SELECT COUNT(*)::int FROM "ImageMeasurementOutbox" q,
+          LATERAL jsonb_array_elements(q."candidates") event
+          WHERE (event->>'observedAt')::timestamp < ${input.to})) AS "pendingCandidateEvents",
+      (SELECT COUNT(*)::int FROM "FirstExternalImageInterruption"
+        WHERE "startedAt" < ${input.to} AND "endedAt" > ${input.from}) AS "coverageInterruptions"
     FROM classified
-  `
+  `,
+    ],
+    { maxWait: 500, timeout: 5000 },
+  )
   return rows[0]
 }
 
@@ -183,8 +195,9 @@ export async function getFirstValueFunnelReadout(input: {
   fromDay: string
   toDay: string
 }) {
-  const [days, summary] = await prisma.$transaction(
+  const [, days, summary] = await prisma.$transaction(
     [
+      prisma.$executeRaw`SET LOCAL statement_timeout = '2000ms'`,
       prisma.$queryRaw<
         {
           day: string
@@ -194,7 +207,13 @@ export async function getFirstValueFunnelReadout(input: {
           preexistingFirstExternalImageWorkspaces: number | null
         }[]
       >`
-        WITH eligible AS (
+        WITH pending AS MATERIALIZED (
+          SELECT LEAST(
+            (SELECT MIN((event->>'observedAt')::timestamp)
+              FROM "ImageMeasurementOutbox" q, LATERAL jsonb_array_elements(q."candidates") event),
+            (SELECT MIN("ts") FROM "AnalyticsEventOutbox" WHERE "activationCandidate")
+          ) AS "at"
+        ), eligible AS (
           SELECT o."id"
           FROM "Organization" o
           LEFT JOIN "OrganizationActivationPolicy" policy ON policy."orgId" = o."id"
@@ -224,9 +243,7 @@ export async function getFirstValueFunnelReadout(input: {
           CASE WHEN coverage."startedAt" <= d."start"
             AND EXISTS (SELECT 1 FROM "FirstExternalImageVerifiedInterval" v
               WHERE v."startedAt" <= d."start" AND v."endedAt" >= d."end")
-            AND NOT EXISTS (SELECT 1 FROM "ImageMeasurementOutbox" q,
-              LATERAL jsonb_array_elements(q."candidates") event
-              WHERE (event->>'observedAt')::timestamp < d."end")
+            AND (pending."at" IS NULL OR pending."at" >= d."end")
             AND NOT EXISTS (SELECT 1 FROM "FirstExternalImageInterruption" gap
               WHERE gap."startedAt" < d."end" AND gap."endedAt" > d."start") THEN
             (SELECT COUNT(*)::int FROM first_image i
@@ -235,16 +252,14 @@ export async function getFirstValueFunnelReadout(input: {
           CASE WHEN coverage."startedAt" <= d."start"
             AND EXISTS (SELECT 1 FROM "FirstExternalImageVerifiedInterval" v
               WHERE v."startedAt" <= d."start" AND v."endedAt" >= d."end")
-            AND NOT EXISTS (SELECT 1 FROM "ImageMeasurementOutbox" q,
-              LATERAL jsonb_array_elements(q."candidates") event
-              WHERE (event->>'observedAt')::timestamp < d."end")
+            AND (pending."at" IS NULL OR pending."at" >= d."end")
             AND NOT EXISTS (SELECT 1 FROM "FirstExternalImageInterruption" gap
               WHERE gap."startedAt" < d."end" AND gap."endedAt" > d."start") THEN
             (SELECT COUNT(*)::int FROM first_image i
               JOIN first_project f ON f."orgId" = i."orgId"
               WHERE i."at" >= d."start" AND i."at" < d."end" AND f."at" < coverage."startedAt")
           END AS "preexistingFirstExternalImageWorkspaces"
-        FROM days d
+        FROM days d CROSS JOIN pending
         LEFT JOIN "FirstExternalImageCoverage" coverage ON coverage."definitionVersion" = 1
         ORDER BY d."start"
       `,
@@ -273,7 +288,7 @@ export async function getFirstValueFunnelReadout(input: {
                 WHERE m."organizationId" = s."orgId" AND u."role" <> 'user')) AS "observedWorkspaces"
       `,
     ],
-    { isolationLevel: 'RepeatableRead' },
+    { isolationLevel: 'RepeatableRead', maxWait: 500, timeout: 5000 },
   )
   return { days, ...summary[0] }
 }

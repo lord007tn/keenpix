@@ -70,7 +70,7 @@ describe('first value card', () => {
 
   it('reports a covered total of zero as 0, not Unknown', () => {
     const html = render(funnel)
-    expect(html).toContain('1 of 2 days covered')
+    expect(html).toContain('Covered days only: 1 of 2 days')
     expect(html).toContain(
       '<span class="font-semibold text-2xl tabular-nums">0</span>',
     )
@@ -86,7 +86,7 @@ describe('first value card', () => {
         preexistingFirstExternalImageWorkspaces: null,
       })),
     })
-    expect(html).toContain('0 of 2 days covered')
+    expect(html).toContain('Covered days only: 0 of 2 days')
     expect(html).toContain('Coverage has not started')
     expect(html).toContain(
       '<span class="font-semibold text-2xl tabular-nums">Unknown</span>',

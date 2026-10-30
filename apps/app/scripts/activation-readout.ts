@@ -1,11 +1,12 @@
 import { parseArgs } from 'node:util'
-import { prisma } from '@keenpix/database'
+import { measurementPrisma, prisma } from '@keenpix/database'
 import {
   getFirstImageActivationReadout,
   setOrganizationActivationClassification,
   startFirstExternalImageCoverage,
   verifyFirstExternalImageCoverage,
 } from '@keenpix/database/activation'
+import { recordFirstExternalImageInterruption } from '@keenpix/database/measurement-outbox'
 import dayjs from 'dayjs'
 import { z } from 'zod'
 import { getFirstValueFunnel } from '../src/actions/admin/first-value'
@@ -21,11 +22,41 @@ async function main() {
       classification: { type: 'string' },
       apply: { type: 'boolean', default: false },
       daily: { type: 'boolean', default: false },
+      'record-measurement-interruption': { type: 'boolean', default: false },
       'verify-external-coverage': { type: 'boolean', default: false },
       'start-external-coverage': { type: 'boolean', default: false },
     },
     strict: true,
   })
+  if (values['record-measurement-interruption']) {
+    if (
+      !values.apply ||
+      values.daily ||
+      values.org ||
+      values.classification ||
+      values['verify-external-coverage'] ||
+      values['start-external-coverage']
+    ) {
+      throw new Error('Interruption recording is a separate explicit command.')
+    }
+    const range = z
+      .object({
+        from: z.iso.datetime({ offset: true }),
+        to: z.iso.datetime({ offset: true }),
+      })
+      .parse(values)
+    const from = dayjs(range.from)
+    const to = dayjs(range.to)
+    if (!from.isBefore(to)) {
+      throw new Error('Interruption requires from < to.')
+    }
+    await recordFirstExternalImageInterruption({
+      from: from.toDate(),
+      to: to.toDate(),
+    })
+    console.log(JSON.stringify({ recorded: true }))
+    return
+  }
   if (values['verify-external-coverage']) {
     if (
       !values.apply ||
@@ -158,4 +189,6 @@ main()
     )
     process.exitCode = 1
   })
-  .finally(() => prisma.$disconnect())
+  .finally(() =>
+    Promise.all([prisma.$disconnect(), measurementPrisma.$disconnect()]),
+  )

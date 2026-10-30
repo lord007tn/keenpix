@@ -1,4 +1,5 @@
 import { prisma } from '@keenpix/database'
+import { drainImageMeasurementOutbox } from '@keenpix/database/measurement-outbox'
 import cuid from 'cuid'
 import {
   drainAnalyticsOutboxBatch,
@@ -35,6 +36,7 @@ let timer: NodeJS.Timeout | null = null
 let flushing: Promise<void> | null = null
 let durableTimer: NodeJS.Timeout | null = null
 let durableFlushing: Promise<void> | null = null
+let measurementFlushing: Promise<void> | null = null
 
 async function persistManagedDelivery(
   event: RequestLogEvent,
@@ -132,9 +134,23 @@ export function flushDurableRequestLogs(input?: {
       }
     }
     throw new Error('Analytics outbox backlog exceeds the bounded drain limit.')
-  })().finally(() => {
-    durableFlushing = null
-  })
+  })()
+    .then(() => {
+      // Detached for background and billing callers: joining a background flush
+      // must not make a later requireComplete caller wait for measurement either.
+      if (!measurementFlushing) {
+        measurementFlushing = drainImageMeasurementOutbox()
+          .catch(() => {
+            logger.warn('image measurement retry deferred')
+          })
+          .finally(() => {
+            measurementFlushing = null
+          })
+      }
+    })
+    .finally(() => {
+      durableFlushing = null
+    })
   return durableFlushing
 }
 

@@ -2,11 +2,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const {
   drainAnalyticsOutboxBatch,
+  drainImageMeasurementOutbox,
   persistAnalyticsOutboxEvent,
   recordRequestEvents,
   transaction,
 } = vi.hoisted(() => ({
   drainAnalyticsOutboxBatch: vi.fn(),
+  drainImageMeasurementOutbox: vi.fn().mockResolvedValue(undefined),
   persistAnalyticsOutboxEvent: vi.fn(),
   recordRequestEvents: vi.fn(),
   transaction: vi.fn(),
@@ -15,6 +17,10 @@ const cloud = vi.hoisted(() => ({ value: false }))
 
 vi.mock('@keenpix/database', () => ({
   prisma: { $transaction: transaction },
+}))
+
+vi.mock('@keenpix/database/measurement-outbox', () => ({
+  drainImageMeasurementOutbox,
 }))
 
 vi.mock('@/data-access/analytics-rollups', () => ({
@@ -167,4 +173,22 @@ describe('analytics buffer', () => {
 
     expect(transaction).toHaveBeenCalledTimes(2)
   })
+})
+
+it('finishes all billing batches without waiting for a stalled measurement retry', async () => {
+  let release: () => void = () => undefined
+  drainImageMeasurementOutbox.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        release = resolve
+      }),
+  )
+  drainAnalyticsOutboxBatch
+    .mockResolvedValueOnce({ status: 'drained', events: [], remaining: 1 })
+    .mockResolvedValueOnce({ status: 'drained', events: [], remaining: 0 })
+  await flushDurableRequestLogs({ requireComplete: true })
+  expect(drainAnalyticsOutboxBatch).toHaveBeenCalledTimes(2)
+  expect(drainImageMeasurementOutbox).toHaveBeenCalledTimes(1)
+  release()
+  await Promise.resolve()
 })

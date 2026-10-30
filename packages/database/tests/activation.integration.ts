@@ -12,6 +12,7 @@ import {
   recordProjectFirstImageSuccesses,
   setOrganizationActivationClassification,
 } from '../src/data-access/activation'
+import { drainImageMeasurementOutbox } from '../src/data-access/image-measurement'
 import { measurementPrisma, prisma } from '../src/index'
 
 const target = new URL(process.env.DATABASE_URL ?? 'file:///missing')
@@ -30,6 +31,8 @@ afterEach(async () => {
     where: { orgId: { in: orgIds } },
   })
   await prisma.user.deleteMany({ where: { id: { in: userIds } } })
+  await prisma.$executeRaw`DELETE FROM "ImageMeasurementOutbox"`
+  await prisma.$executeRaw`DELETE FROM "FirstExternalImageInterruption"`
   orgIds.length = 0
   userIds.length = 0
 })
@@ -283,8 +286,11 @@ test('outbox processing atomically commits activation and billing, and retries a
   assert.equal(await prisma.projectFirstImageSuccess.count(), 0)
   assert.equal(await prisma.requestLog.count(), 0)
   assert.equal(await prisma.analyticsEventOutbox.count(), 1)
-  assert.equal((await drainAnalyticsOutboxBatch(window.to)).status, 'drained')
-  assert.equal((await drainAnalyticsOutboxBatch(window.to)).status, 'empty')
+  assert.equal(
+    (await flushAccountingAndMeasurement(window.to)).status,
+    'drained',
+  )
+  assert.equal((await flushAccountingAndMeasurement(window.to)).status, 'empty')
   assert.equal(await prisma.analyticsEventOutbox.count(), 0)
   const first = await prisma.projectFirstImageSuccess.findUniqueOrThrow({
     where: { projectId: fixture.projectId },
@@ -325,7 +331,7 @@ test('old outbox rows and observations before enrollment never create reconstruc
     { ...base, id: randomUUID(), ts: dayjs().subtract(1, 'day').toDate() },
     true,
   )
-  await drainAnalyticsOutboxBatch(dayjs().add(1, 'minute').toDate())
+  await flushAccountingAndMeasurement(dayjs().add(1, 'minute').toDate())
   assert.equal(await prisma.projectFirstImageSuccess.count(), 0)
   assert.equal(await prisma.requestLog.count(), 2)
 })
@@ -360,7 +366,7 @@ test('a pre-enrollment event in one batch cannot hide a later eligible event', a
       true,
     )
   }
-  await drainAnalyticsOutboxBatch(dayjs().add(1, 'minute').toDate())
+  await flushAccountingAndMeasurement(dayjs().add(1, 'minute').toDate())
   assert.equal(await prisma.requestLog.count(), 3)
   assert.equal(await prisma.projectFirstImageSuccess.count(), 1)
   assert.deepEqual(
@@ -452,7 +458,7 @@ test('full 500-event batches drain with one bulk activation write and unchanged 
       }),
     })
     const startedAt = performance.now()
-    const result = await drainAnalyticsOutboxBatch(
+    const result = await flushAccountingAndMeasurement(
       dayjs().add(1, 'minute').toDate(),
     )
     timings.push(Math.round(performance.now() - startedAt))
@@ -516,3 +522,12 @@ test('classification corrections exclude recorded outcomes and reopening starts 
   assert.ok(dayjs(reopened.eligibleSince).isAfter(initial.eligibleSince))
   assert.equal(await prisma.projectFirstImageSuccess.count(), 1)
 })
+
+// Exercise both independent phases explicitly; accounting commits before retry.
+async function flushAccountingAndMeasurement(
+  ...args: Parameters<typeof drainAnalyticsOutboxBatch>
+) {
+  const result = await drainAnalyticsOutboxBatch(...args)
+  await drainImageMeasurementOutbox().catch(() => undefined)
+  return result
+}

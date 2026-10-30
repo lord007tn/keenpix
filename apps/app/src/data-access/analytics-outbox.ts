@@ -1,15 +1,12 @@
 import { prisma } from '@keenpix/database'
 import type { AnalyticsEventOutbox, Prisma } from '@keenpix/database/client'
-import { drainImageMeasurementOutbox } from '@keenpix/database/measurement-outbox'
-import { createLogger } from '@keenpix/logger'
-import { isExternalImageSource } from '@keenpix/transform/activation'
 import {
   aggregateRollupIncrements,
   applyRollupIncrement,
 } from '@/data-access/analytics-rollups'
 import type { RequestLogEvent } from '@/data-access/request-logs'
+import { selectImageMeasurementCandidates } from '@/helpers/analytics/measurement-candidates'
 
-const logger = createLogger()
 const OUTBOX_BATCH_SIZE = 500
 const OUTBOX_LOCK_CLASS = 0x6b_70
 const OUTBOX_LOCK_OBJ = 2
@@ -51,19 +48,7 @@ async function writeOutboxBatch(
   for (const increment of aggregateRollupIncrements(events)) {
     await applyRollupIncrement(db, increment)
   }
-  const candidates = batch
-    .filter(
-      (log) =>
-        log.activationCandidate && log.status === 200 && log.bytesOut > 0,
-    )
-    .map((log) => ({
-      projectId: log.projectId,
-      orgId: log.orgId,
-      observedAt: log.ts,
-      external: appOrigin
-        ? isExternalImageSource(log.sourceHost, appOrigin)
-        : false,
-    }))
+  const candidates = selectImageMeasurementCandidates(batch, appOrigin)
   if (candidates.length > 0) {
     // A savepoint is required: catching a PostgreSQL error alone leaves the
     // accounting transaction aborted. Only optional handoff is rolled back.
@@ -74,6 +59,12 @@ async function writeOutboxBatch(
       >`
         SELECT current_setting('statement_timeout') AS statement, current_setting('lock_timeout') AS lock`
       await db.$executeRaw`SELECT set_config('statement_timeout', '750ms', true), set_config('lock_timeout', '150ms', true)`
+      const [capacity] = await db.$queryRaw<{ available: boolean }[]>`
+        SELECT pg_try_advisory_xact_lock(27504, 3)
+          AND (SELECT COUNT(*) FROM "ImageMeasurementOutbox") < 1000 AS available`
+      if (!capacity?.available) {
+        throw new Error('Measurement queue capacity reached')
+      }
       await db.$executeRaw`
         INSERT INTO "ImageMeasurementOutbox" ("id", "candidates")
         VALUES (${batch[0].id}, ${JSON.stringify(candidates)}::jsonb)
@@ -102,9 +93,6 @@ async function writeOutboxBatch(
         await db.$executeRaw`ROLLBACK TO SAVEPOINT image_measurement_gap`
       }
       await db.$executeRaw`RELEASE SAVEPOINT image_measurement_gap`
-      logger.warn(
-        'image measurement handoff interrupted; coverage remains unverified',
-      )
     }
   }
   await db.analyticsEventOutbox.deleteMany({
@@ -125,11 +113,8 @@ export async function drainProjectAnalyticsOutbox(
   return batch.length > 0 ? writeOutboxBatch(db, batch) : []
 }
 
-export async function drainAnalyticsOutboxBatch(
-  through: Date,
-  appOrigin?: string,
-) {
-  const result = await prisma.$transaction(
+export function drainAnalyticsOutboxBatch(through: Date, appOrigin?: string) {
+  return prisma.$transaction(
     async (db) => {
       const locks = await db.$queryRaw<{ locked: boolean }[]>`
         SELECT pg_try_advisory_xact_lock(${OUTBOX_LOCK_CLASS}, ${OUTBOX_LOCK_OBJ}) AS locked`
@@ -152,10 +137,4 @@ export async function drainAnalyticsOutboxBatch(
     },
     { timeout: 30_000 },
   )
-  try {
-    await drainImageMeasurementOutbox()
-  } catch {
-    logger.warn('image measurement retry deferred')
-  }
-  return result
 }

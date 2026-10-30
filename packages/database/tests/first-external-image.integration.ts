@@ -14,10 +14,12 @@ import {
 } from '../../transform/src/activation'
 import { createImageMeasurementBuffer } from '../src/actions/image-measurement'
 import {
+  getFirstImageActivationReadout,
   recordProjectFirstImageSuccesses,
   setOrganizationActivationClassification,
   startFirstExternalImageCoverage,
 } from '../src/data-access/activation'
+import { drainImageMeasurementOutbox } from '../src/data-access/image-measurement'
 import { measurementPrisma, prisma } from '../src/index'
 
 dayjs.extend(utc)
@@ -234,7 +236,10 @@ test('owned source hosts are excluded through the durable drain, including case 
     outboxEvent(external, { sourceHost: 'keenpix.com.customer.example.test' }),
     true,
   )
-  await drainAnalyticsOutboxBatch(dayjs().add(1, 'minute').toDate(), APP_ORIGIN)
+  await flushAccountingAndMeasurement(
+    dayjs().add(1, 'minute').toDate(),
+    APP_ORIGIN,
+  )
 
   assert.equal(await prisma.projectFirstExternalImage.count(), 1)
   assert.ok(await getLedgerRow(external.projectId))
@@ -253,7 +258,10 @@ test('an earlier owned-host event cannot hide a later external one in a batch', 
     outboxEvent(fixture, { ts: external }),
     true,
   )
-  await drainAnalyticsOutboxBatch(dayjs().add(1, 'minute').toDate(), APP_ORIGIN)
+  await flushAccountingAndMeasurement(
+    dayjs().add(1, 'minute').toDate(),
+    APP_ORIGIN,
+  )
   const row = await getLedgerRow(fixture.projectId)
   assert.equal(row?.observedAt.getTime(), external.getTime())
 })
@@ -284,7 +292,10 @@ test('requests failing any request-time exclusion never reach the ledger', async
     { ...outboxEvent(fixture), bytesOut: 0 },
     true,
   )
-  await drainAnalyticsOutboxBatch(dayjs().add(1, 'minute').toDate(), APP_ORIGIN)
+  await flushAccountingAndMeasurement(
+    dayjs().add(1, 'minute').toDate(),
+    APP_ORIGIN,
+  )
   assert.equal(await prisma.projectFirstExternalImage.count(), 0)
   assert.equal(await prisma.analyticsEventOutbox.count(), 0)
 
@@ -293,7 +304,10 @@ test('requests failing any request-time exclusion never reach the ledger', async
     isActivationDelivery(new Request(url), APP_ORIGIN) &&
       isExternalImageSource('images.example.test', APP_ORIGIN),
   )
-  await drainAnalyticsOutboxBatch(dayjs().add(1, 'minute').toDate(), APP_ORIGIN)
+  await flushAccountingAndMeasurement(
+    dayjs().add(1, 'minute').toDate(),
+    APP_ORIGIN,
+  )
   assert.equal(await prisma.projectFirstExternalImage.count(), 1)
 })
 
@@ -614,7 +628,7 @@ test('a batch of 500 events writes both ledgers in one drain with unchanged acco
       })),
     })
     const startedAt = performance.now()
-    const result = await drainAnalyticsOutboxBatch(
+    const result = await flushAccountingAndMeasurement(
       dayjs().add(1, 'minute').toDate(),
       APP_ORIGIN,
     )
@@ -695,7 +709,7 @@ test('missing capture table cannot roll back accounting, and durable retry recov
   await persistAnalyticsOutboxEvent(outboxEvent(fixture), true)
   await prisma.$executeRaw`ALTER TABLE "ProjectFirstExternalImage" RENAME TO "ExternalImageUnavailable"`
   try {
-    const result = await drainAnalyticsOutboxBatch(
+    const result = await flushAccountingAndMeasurement(
       dayjs().add(1, 'minute').toDate(),
       APP_ORIGIN,
     )
@@ -714,7 +728,11 @@ test('missing capture table cannot roll back accounting, and durable retry recov
   } finally {
     await prisma.$executeRaw`ALTER TABLE "ExternalImageUnavailable" RENAME TO "ProjectFirstExternalImage"`
   }
-  await drainAnalyticsOutboxBatch(dayjs().add(1, 'minute').toDate(), APP_ORIGIN)
+  await prisma.$executeRaw`UPDATE "ImageMeasurementOutbox" SET "nextAttemptAt" = CURRENT_TIMESTAMP - interval '1 second'`
+  await flushAccountingAndMeasurement(
+    dayjs().add(1, 'minute').toDate(),
+    APP_ORIGIN,
+  )
   assert.ok(await getLedgerRow(fixture.projectId))
 })
 
@@ -725,7 +743,7 @@ test('missing measurement handoff table cannot abort accounting', async () => {
   try {
     assert.equal(
       (
-        await drainAnalyticsOutboxBatch(
+        await flushAccountingAndMeasurement(
           dayjs().add(1, 'minute').toDate(),
           APP_ORIGIN,
         )
@@ -821,7 +839,7 @@ test('queue overflow and shutdown persist lost coverage without processing queue
   const fixture = await createWorkspace()
   const buffer = createImageMeasurementBuffer({ warn: () => undefined })
   for (let n = 0; n < 300; n += 1) {
-    buffer.enqueue({ ...fixture, external: true })
+    buffer.enqueue({ ...fixture, projectId: `synthetic-${n}`, external: true })
   }
   await buffer.shutdown()
   assert.equal(await getLedgerRow(fixture.projectId), null)
@@ -829,4 +847,199 @@ test('queue overflow and shutdown persist lost coverage without processing queue
     { count: number }[]
   >`SELECT COUNT(*)::int AS count FROM "FirstExternalImageInterruption"`
   assert.ok(gaps[0].count > 0)
+})
+
+// Exercise both independent phases explicitly; accounting commits before retry.
+async function flushAccountingAndMeasurement(
+  ...args: Parameters<typeof drainAnalyticsOutboxBatch>
+) {
+  const result = await drainAnalyticsOutboxBatch(...args)
+  await drainImageMeasurementOutbox().catch(() => undefined)
+  return result
+}
+
+test('v1 pending counts both queues before to and reports overlapping loss intervals', async () => {
+  const fixture = await createWorkspace()
+  const before = utcDate('2024-01-01T23:59:59.999Z')
+  const boundary = utcDate('2024-01-02T00:00:00Z')
+  await persistAnalyticsOutboxEvent(outboxEvent(fixture, { ts: before }), true)
+  const candidates = [before, boundary].map((observedAt) => ({
+    ...fixture,
+    observedAt,
+    external: true,
+  }))
+  await prisma.$executeRaw`INSERT INTO "ImageMeasurementOutbox" ("id", "candidates") VALUES ('pending-test', ${JSON.stringify(candidates)}::jsonb)`
+  await prisma.$executeRaw`INSERT INTO "FirstExternalImageInterruption" VALUES
+    ('2023-12-31', '2024-01-01'), ('2024-01-01 12:00', '2024-01-01 12:01'), ('2024-01-02', '2024-01-03')`
+  const result = await getFirstImageActivationReadout({
+    from: utcDate('2024-01-01'),
+    to: boundary,
+  })
+  assert.equal(result.pendingCandidateEvents, 2)
+  assert.equal(result.coverageInterruptions, 1)
+})
+
+test('full measurement queue records a gap while accounting commits', async () => {
+  const fixture = await createWorkspace()
+  const candidates = [
+    { ...fixture, observedAt: dayjs().toDate(), external: true },
+  ]
+  await prisma.$executeRaw`INSERT INTO "ImageMeasurementOutbox" ("id", "candidates") SELECT 'capacity-' || n, ${JSON.stringify(candidates)}::jsonb FROM generate_series(1, 1000) n`
+  await persistAnalyticsOutboxEvent(outboxEvent(fixture), true)
+  assert.equal(
+    (
+      await drainAnalyticsOutboxBatch(
+        dayjs().add(1, 'minute').toDate(),
+        APP_ORIGIN,
+      )
+    ).status,
+    'drained',
+  )
+  assert.equal(await prisma.analyticsEventOutbox.count(), 0)
+  assert.equal(
+    await prisma.requestLog.count({ where: { projectId: fixture.projectId } }),
+    1,
+  )
+  const [counts] = await prisma.$queryRaw<
+    { queued: number; gaps: number }[]
+  >`SELECT
+    (SELECT COUNT(*)::int FROM "ImageMeasurementOutbox") queued,
+    (SELECT COUNT(*)::int FROM "FirstExternalImageInterruption") gaps`
+  assert.equal(counts.queued, 1000)
+  assert.equal(counts.gaps, 1)
+})
+
+test('five failed attempts retire poison work atomically and a later healthy row progresses', async () => {
+  const fixture = await createWorkspace()
+  const candidates = [
+    { ...fixture, observedAt: dayjs().toDate(), external: true },
+  ]
+  await prisma.$executeRaw`INSERT INTO "ImageMeasurementOutbox" ("id", "candidates") VALUES ('poison', ${JSON.stringify(candidates)}::jsonb)`
+  await prisma.$executeRaw`ALTER TABLE "ProjectFirstExternalImage" RENAME TO "ExternalImageUnavailable"`
+  try {
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      await assert.rejects(drainImageMeasurementOutbox())
+      if (attempt < 5) {
+        const [row] = await prisma.$queryRaw<
+          { attempts: number }[]
+        >`SELECT "attempts" FROM "ImageMeasurementOutbox" WHERE "id" = 'poison'`
+        assert.equal(row.attempts, attempt)
+        await prisma.$executeRaw`UPDATE "ImageMeasurementOutbox" SET "nextAttemptAt" = CURRENT_TIMESTAMP - interval '1 second'`
+      }
+    }
+    const [counts] = await prisma.$queryRaw<
+      { queued: number; gaps: number }[]
+    >`SELECT
+      (SELECT COUNT(*)::int FROM "ImageMeasurementOutbox") queued,
+      (SELECT COUNT(*)::int FROM "FirstExternalImageInterruption") gaps`
+    assert.equal(counts.queued, 0)
+    assert.equal(counts.gaps, 1)
+  } finally {
+    await prisma.$executeRaw`ALTER TABLE "ExternalImageUnavailable" RENAME TO "ProjectFirstExternalImage"`
+  }
+  await prisma.$executeRaw`INSERT INTO "ImageMeasurementOutbox" ("id", "candidates") VALUES ('healthy', ${JSON.stringify(candidates)}::jsonb)`
+  await drainImageMeasurementOutbox()
+  assert.ok(await getLedgerRow(fixture.projectId))
+})
+
+test('expired work records the complete observed-time range and releases the next row', async () => {
+  const fixture = await createWorkspace()
+  const candidates = ['2024-01-01T23:59:59.999Z', '2024-01-02T00:00:00Z'].map(
+    (at) => ({ ...fixture, external: true, observedAt: utcDate(at) }),
+  )
+  await prisma.$executeRaw`INSERT INTO "ImageMeasurementOutbox" ("id", "candidates", "createdAt") VALUES ('expired', ${JSON.stringify(candidates)}::jsonb, CURRENT_TIMESTAMP - interval '25 hours')`
+  await drainImageMeasurementOutbox()
+  const [gap] = await prisma.$queryRaw<
+    { startedAt: Date; endedAt: Date }[]
+  >`SELECT * FROM "FirstExternalImageInterruption"`
+  assert.equal(gap.startedAt.toISOString(), '2024-01-01T23:59:59.999Z')
+  assert.equal(gap.endedAt.toISOString(), '2024-01-02T00:00:00.001Z')
+  const [count] = await prisma.$queryRaw<
+    { n: number }[]
+  >`SELECT COUNT(*)::int n FROM "ImageMeasurementOutbox"`
+  assert.equal(count.n, 0)
+  assert.equal(await getLedgerRow(fixture.projectId), null)
+})
+
+test('duplicate bursts coalesce earliest events without a coverage interruption in PostgreSQL', async () => {
+  const fixture = await createWorkspace()
+  await setOrganizationActivationClassification({
+    ...fixture,
+    classification: 'customer',
+  })
+  const early = dayjs().add(1, 'minute').toDate()
+  const late = dayjs().add(2, 'minute').toDate()
+  const messages: string[] = []
+  const buffer = createImageMeasurementBuffer({
+    warn: (message) => messages.push(message),
+  })
+  for (let n = 0; n < 1000; n += 1) {
+    buffer.enqueue({
+      ...fixture,
+      external: true,
+      observedAt: n === 500 ? early : late,
+    })
+  }
+  const ownedEarly = dayjs(early).subtract(30, 'second').toDate()
+  buffer.enqueue({ ...fixture, external: false, observedAt: ownedEarly })
+  await new Promise<void>((resolve) => setImmediate(resolve))
+  await buffer.shutdown()
+  assert.equal(
+    (await getLedgerRow(fixture.projectId))?.observedAt.getTime(),
+    early.getTime(),
+  )
+  assert.equal(
+    (
+      await prisma.projectFirstImageSuccess.findUniqueOrThrow({
+        where: { projectId: fixture.projectId },
+      })
+    ).observedAt.getTime(),
+    ownedEarly.getTime(),
+  )
+  assert.deepEqual(messages, [])
+  const [gaps] = await prisma.$queryRaw<
+    { n: number }[]
+  >`SELECT COUNT(*)::int n FROM "FirstExternalImageInterruption"`
+  assert.equal(gaps.n, 0)
+})
+
+test('pending accounting candidates keep both daily columns Unknown until drained', async () => {
+  const fixture = await createWorkspace()
+  await prisma.firstExternalImageCoverage.create({
+    data: { definitionVersion: 1, startedAt: utcDate('2024-01-01') },
+  })
+  await prisma.$executeRaw`INSERT INTO "FirstExternalImageVerifiedInterval" VALUES ('2024-01-01', '2024-01-03')`
+  await persistAnalyticsOutboxEvent(
+    outboxEvent(fixture, { ts: utcDate('2024-01-02T12:00:00Z') }),
+    true,
+  )
+  const { days } = await getFirstValueFunnel({
+    from: '2024-01-01T00:00:00Z',
+    to: '2024-01-03T00:00:00Z',
+  })
+  assert.deepEqual(
+    days.map((d) => d.firstExternalImageWorkspaces),
+    [0, null],
+  )
+  assert.deepEqual(
+    days.map((d) => d.preexistingFirstExternalImageWorkspaces),
+    [0, null],
+  )
+})
+
+test('a leased poison row does not block a healthy ready row', async () => {
+  const fixture = await createWorkspace()
+  const poison = [
+    { ...fixture, external: true, observedAt: 'invalid synthetic timestamp' },
+  ]
+  await prisma.$executeRaw`INSERT INTO "ImageMeasurementOutbox" ("id", "candidates") VALUES ('poison', ${JSON.stringify(poison)}::jsonb)`
+  await assert.rejects(drainImageMeasurementOutbox())
+  const healthy = [{ ...fixture, external: true, observedAt: dayjs().toDate() }]
+  await prisma.$executeRaw`INSERT INTO "ImageMeasurementOutbox" ("id", "candidates") VALUES ('healthy', ${JSON.stringify(healthy)}::jsonb)`
+  await drainImageMeasurementOutbox()
+  assert.ok(await getLedgerRow(fixture.projectId))
+  const remaining = await prisma.$queryRaw<
+    { id: string; attempts: number }[]
+  >`SELECT "id", "attempts" FROM "ImageMeasurementOutbox"`
+  assert.deepEqual(remaining, [{ id: 'poison', attempts: 1 }])
 })

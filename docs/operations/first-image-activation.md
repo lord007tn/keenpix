@@ -45,34 +45,30 @@ can move the stored time earlier, without creating another record. Project or
 organization deletion cascades to the ledger; this is a retained-project metric,
 not a permanent historical customer ledger.
 
-The managed app persists the candidate bit in the existing durable analytics
-outbox before returning success. Draining commits the ledger, request log,
-billing rollup, and outbox deletion in one transaction. Its observation time is
-the original event time, not drain time. Old outbox rows default to non-candidates.
-Events before enrollment cannot be backfilled into activation. Each managed
-batch adds at most one bulk activation SQL statement. Tenant/enrollment/membership
-filters run before selecting each project's minimum event time, so a rejected
-earlier event cannot hide a later eligible event. Repeated observations preserve
-the existing earlier time and do not insert another row.
+The managed app durably persists the candidate bit with request accounting before
+returning success. Accounting drains commit logs, billing rollups and outbox
+deletion independently of measurement. A savepoint transfers candidates to
+`ImageMeasurementOutbox`; capture is retried separately after the accounting loop,
+without holding up billing. Original observation times survive these retries.
+Old accounting events default to non-candidates; events before enrollment do not
+backfill activation. The shared statement keeps the earliest qualified event.
 
-The standalone transform adds one awaited SQL statement for **every otherwise
-qualifying cloud GET**, including unclassified/excluded workspaces and projects
-already observed. Eligibility is determined inside that statement; no cached
-classification can silently extend customer coverage after an exclusion. This
-cost and database availability dependency apply even when no row is written.
-HEAD, marked preview, prewarm, and self-hosted requests skip it.
+The standalone transform queues optional capture after successful accounting.
+Neither an image response nor accounting waits for the ledger query. A bounded
+Map coalesces each project/external flag to its earliest queued observation,
+with at most 256 distinct keys and two workers on an isolated, timed-out pool.
+Failure, capacity exhaustion and shutdown can lose observations. Fixed error
+messages contain no request or database internals. Eligibility still runs in SQL.
+HEAD, marked preview, prewarm and self-hosted requests skip capture.
 
-The standalone runtime checks durability before buffering successful accounting
-and returning an image. A ledger-query error therefore returns a sanitized 500,
-without enqueueing a successful request. This deliberate fail-closed policy
-prevents acknowledging an origin success while its first observation is silently
-lost; it trades availability for measurement durability. On retry, a successful
-ledger query allows exactly one success enqueue for that attempt. If the database
-committed but its acknowledgment was lost, the earlier ledger row may survive
-the failed HTTP attempt; the retry converges on that same row. This is another
-reason the ledger does not prove receipt. The standalone analytics buffer itself
-remains non-durable and is not an exactly-once billing guarantee. Monitor request
-latency, database failures, and managed backlog before customer enrollment.
+Both metrics now use best-effort capture rather than the former fail-closed 500
+policy. The durable queue admits at most 1,000 batches; a rejected handoff records
+an interruption. Five failed attempts or 24 hours retire a batch atomically with
+its observation-time interruption interval. v1 counts are **lower bounds** when
+`coverageInterruptions > 0`; zero pending work does not repair lost observations.
+Database failure or abrupt process death can also prevent gap persistence, so a
+zero interruption count alone does not establish complete coverage. See the
+[coverage evidence contract](first-external-image-funnel.md#coverage-evidence-and-interruptions).
 
 ## Restricted operator commands
 
@@ -118,7 +114,8 @@ sensitive. Failure produces a nonzero exit and generic error, never invented zer
 | `prospectiveFirstSuccessesInWindow` | Prospective projects whose first qualifying origin observation is in `[from, to)` |
 | `legacyFirstObservationsInWindow` | Eligible projects predating enrollment with an in-window observation; lifetime-first history is unknown |
 | `prospectiveProjectsWithoutObservation` | Prospective projects without a recorded observation before `to`; not proof of no delivery |
-| `pendingCandidateEvents` | Candidate outbox events before `to` awaiting drain, including candidates that may later be excluded |
+| `pendingCandidateEvents` | Candidates before `to` in both accounting and measurement outboxes, including eventual exclusions |
+| `coverageInterruptions` | Persisted interruption intervals intersecting `[from, to)`; counts are lower bounds when nonzero |
 
 Do not treat an observation count as settled while `pendingCandidateEvents > 0`.
 A zero backlog still cannot prove edge-only delivery, receipt, viewing, or complete
@@ -150,7 +147,9 @@ Save the timestamped private readout with its exact revision and deployment cove
 For rollback, stop customer capture by changing enrolled policies to
 `unclassified` using the restricted command. Preserve the private prior
 classification inventory. Drain pending request accounting with the upgraded
-binary before reverting it; old drainers do not write the new ledger. Retain the
+binary before reverting it, and drain `ImageMeasurementOutbox` separately while
+running the upgraded binary. Old images ignore queued v1 measurement candidates;
+rolling back does not complete or recover those observations. Retain the
 additive schema and all ledger records. Do not drop tables or restore an old
 snapshot to improve the metric. Document the coverage interruption; a later
 re-enrollment starts fresh coverage and cannot recover missing observations.

@@ -30,5 +30,8 @@ CREATE TABLE "FirstExternalImageInterruption" (
 CREATE TABLE "ImageMeasurementOutbox" (
   "id" TEXT PRIMARY KEY,
   "candidates" JSONB NOT NULL,
+  "attempts" INTEGER NOT NULL DEFAULT 0,
+  "nextAttemptAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX "ImageMeasurementOutbox_nextAttemptAt_createdAt_idx" ON "ImageMeasurementOutbox"("nextAttemptAt", "createdAt");

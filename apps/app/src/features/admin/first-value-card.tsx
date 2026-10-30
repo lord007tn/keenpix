@@ -74,7 +74,7 @@ export function FirstValueFunnelSummary({
           />
           <StatCard
             label="First eligible external image"
-            sub={`${coveredDays.length} of ${days.length} days covered`}
+            sub={`Covered days only: ${coveredDays.length} of ${days.length} days`}
             value={
               coveredDays.length > 0
                 ? String(

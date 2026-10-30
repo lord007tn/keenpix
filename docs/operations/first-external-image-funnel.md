@@ -2,8 +2,10 @@
 
 `origin_first_external_image_v1` (`definitionVersion` 1) is a prospective,
 cookie-free server observation: the earliest qualifying origin observation per
-project. It sits beside [`origin_first_image_v1`](first-image-activation.md) and
-does not change that definition, its enrollment, or its rows. It answers a
+project. It sits beside [`origin_first_image_v1`](first-image-activation.md).
+The v1 eligibility definition, enrollment and existing rows are preserved, but
+v1 capture now becomes best effort, with pending work and loss intervals exposed.
+It answers a
 different question: did an ordinary workspace serve an image from a source that
 Keenpix does not host? It does not establish that a client received the response
 or that a person viewed an image. Call it "first eligible external image", never
@@ -41,7 +43,8 @@ statement within a two-second retry budget. Transactional retries retain the
 durable queue row and run in a fresh transaction on a later drain.
 
 - **Standalone transform:** delivery and accounting never await capture. A
-  process-local queue holds at most 256 candidates, with two workers. A separate
+  process-local Map holds at most 256 distinct project/external keys, with two
+  workers. Duplicate queued keys retain the earliest observation. A separate
   pool has at most two connections, a 500 ms connection/acquisition timeout,
   750 ms server statement timeout, 150 ms server lock timeout, and 1000 ms driver
   query and idle-transaction timeouts. Candidate timestamps are request-time
@@ -52,8 +55,12 @@ durable queue row and run in a fresh transaction on a later drain.
   `ImageMeasurementOutbox` under a savepoint. Optional handoff SQL uses bounded
   statement/lock timeouts. Handoff failure rolls back to the savepoint, allowing
   logs, rollups and accounting-outbox deletion to commit. After that commit,
-  measurement uses its own transaction and isolated pool. Failed capture retains
-  the retry row, including the original observation times, for a later drain.
+  measurement uses its isolated pool once after the accounting loop, detached
+  from billing completion. At most 1,000 batches are admitted; capacity overflow
+  takes the interruption path. Failed attempts persist outside the capture
+  transaction with a five-second lease, allowing other ready rows to progress.
+  Five failed attempts or 24 hours retire the row together with a MIN/MAX
+  observation-time interruption. Earlier failures retain original timestamps.
   Missing handoff tables can lose observations; unverified days remain Unknown.
   This queue contains keys, timestamps and the external boolean only.
 
@@ -129,6 +136,15 @@ window and bounded lock/statement timeouts. Do not deploy services through plain
 Compose: it starts transform first. The app entrypoint runs migrations on startup
 unless explicitly disabled (`KEENPIX_RUN_MIGRATIONS=false`).
 
+Keep `KEENPIX_RUN_MIGRATIONS=false` on app service starts until the migration-only
+step is verified. Startup `migrate deploy` otherwise exits on failure under
+`set -eu`, and Prisma P3009 can make every subsequent app start fail.
+
+Check whether the endpoint is PgBouncer in transaction mode: PostgreSQL startup
+timeout parameters may be rejected there. Use an approved direct/session endpoint
+for the isolated measurement pool and migration connection before rollout; do not
+silently remove the timeout protection.
+
 1. **Migration alone:** pin the new reviewed app image digest in the release
    configuration first, then run only its migration command with no dependencies.
    Supply PostgreSQL startup options `-c lock_timeout=5s -c statement_timeout=60s`
@@ -138,11 +154,24 @@ unless explicitly disabled (`KEENPIX_RUN_MIGRATIONS=false`).
    verify effective server settings for that connection. For Compose:
 
    ```sh
-   docker compose -f docker-compose.production.yml run --rm --no-deps app migrate
+   docker compose -f docker-compose.production.yml -f <digest-override> run --rm --no-deps --pull never app migrate
    ```
 
+   The override must set `services.app.image` to the reviewed app digest.
+   Production Compose otherwise has only `build:`, which may build on the host
+   or select the wrong image. Verify the locally available digest before running.
    Verify the migration receipt and all new tables/indexes before proceeding.
-   A lock timeout is a failed migration step; investigate and retry separately.
+   A lock timeout can leave a failed Prisma migration record (P3009). Inspect
+   whether any additive objects remain and reconcile them with the reviewed SQL;
+   marking a migration rolled back does not undo database changes. Before any
+   retry, run the pinned app's Prisma command against the same migration database:
+
+   ```sh
+   prisma migrate resolve --rolled-back 20261030000000_first_external_image_funnel
+   ```
+
+   Then retry the migration-only step and verify it. Keep app startup migrations
+   disabled throughout this recovery.
 2. **App:** deploy the pinned app digest, verify accounting drains commit, retries
    retain failed measurement, and backlog progresses. App startup migrates unless
    disabled; this does not replace the migration-only step.
@@ -181,9 +210,15 @@ Keep readouts private; aggregate counts of small cohorts can still be sensitive.
 Redeploy the previous app and transform images. Keep all measurement tables and every row:
 old images ignore them, and this migration has no down step. Do not delete the
 coverage row or restore a snapshot to improve the numbers. Drain pending outbox
-work with the upgraded binary first where possible, because old drainers do not
-write this ledger. Persist any known gap in `FirstExternalImageInterruption` and do not certify the
+accounting and measurement work with the upgraded binary first where possible.
+Old images ignore queued v1 as well as external measurement candidates. Persist any known gap in `FirstExternalImageInterruption` and do not certify the
 rollback interval. Unverified days remain Unknown after a new image returns.
+
+Record a known rollback gap with the upgraded operator command (no customer IDs):
+
+```sh
+pnpm --silent --filter @keenpix/app activation:readout --record-measurement-interruption --apply --from <gap-start-UTC> --to <gap-end-UTC>
+```
 
 ## Consent boundary
 
