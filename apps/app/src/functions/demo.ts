@@ -1,4 +1,5 @@
 import { generateDemoImage, recordDemoError } from '@/actions/demo'
+import { errorContext, logger } from '@/lib/logger/logger'
 import { isCloud } from '@/server/deployment'
 
 export async function handleDemoRequest(request: Request, sample?: string) {
@@ -75,7 +76,8 @@ export async function handleDemoRequest(request: Request, sample?: string) {
         'Timing-Allow-Origin': '*',
       },
     })
-  } catch {
+  } catch (error) {
+    logger.error(errorContext(error), 'demo image failed')
     return new Response('Demo unavailable', {
       status: 500,
       headers: { 'Cache-Control': 'no-store' },

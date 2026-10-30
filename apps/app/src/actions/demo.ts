@@ -1,5 +1,6 @@
 import { transformImage } from '@keenpix/transform/sharp'
 import { LRUCache } from 'lru-cache'
+import { logger } from '@/lib/logger/logger'
 import source from '../../public/brand/keenpix-og.png?inline'
 
 // Vite embeds these server-owned bytes in the app bundle; no filesystem or network lookup.
@@ -14,12 +15,14 @@ const pending = new Map<
 >()
 // A stuck encode must not hold the queue until the process restarts.
 const encodeTimeoutMs = 30_000
+const encodeTimedOut = new Error('Demo encode timed out')
 let tail = Promise.resolve()
 let waiters = 0
 let usage = {
   requests: 0,
   misses: 0,
   errors: 0,
+  timeouts: 0,
   overloads: 0,
   bySample: { og: 0 },
   byFormat: { avif: 0, webp: 0, jpeg: 0 },
@@ -50,18 +53,20 @@ setInterval(() => {
     cumulative += n
     return cumulative >= count * 0.95
   })
-  console.info(
-    JSON.stringify({
+  logger.info(
+    {
       event: 'demo_usage',
       windowSeconds: 300,
       ...usage,
       p95EncodeMs: count ? Math.min(buckets[bucket], maxEncodeMs) : 0,
-    }),
+    },
+    'demo_usage',
   )
   usage = {
     requests: 0,
     misses: 0,
     errors: 0,
+    timeouts: 0,
     overloads: 0,
     bySample: { og: 0 },
     byFormat: { avif: 0, webp: 0, jpeg: 0 },
@@ -101,10 +106,7 @@ export async function generateDemoImage(
       const start = performance.now()
       try {
         const timeout = new Promise<never>((_, reject) => {
-          setTimeout(
-            () => reject(new Error('Demo encode timed out')),
-            encodeTimeoutMs,
-          ).unref()
+          setTimeout(() => reject(encodeTimedOut), encodeTimeoutMs).unref()
         })
         const image = await Promise.race([
           transformImage(
@@ -142,7 +144,11 @@ export async function generateDemoImage(
       originalBytes: original.length,
     }
   } catch (error) {
-    usage.errors++
+    if (error === encodeTimedOut) {
+      usage.timeouts++
+    } else {
+      usage.errors++
+    }
     throw error
   } finally {
     pending.delete(key)

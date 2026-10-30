@@ -25,7 +25,11 @@ export function LiveDemo() {
     const timer = setTimeout(() => setMessage('Generating…'), 300)
     async function measure() {
       try {
-        const response = await fetch(url, { signal: controller.signal })
+        const response = await fetch(url, {
+          // Revalidates, so the receipt never replays a label from the browser cache.
+          cache: 'no-cache',
+          signal: controller.signal,
+        })
         if (response.status === 503) {
           setState('busy')
           setResult(null)
@@ -241,8 +245,8 @@ export function LiveDemo() {
       <div className="mt-4 space-y-3 text-sm text-white/80 leading-relaxed">
         <p>
           This runs the same open-source transform pipeline as Keenpix cloud,
-          with a bounded in-process cache, on keenpix.com with fixed sample
-          images and options. It is not a customer project: no account,
+          with a bounded in-process cache, on keenpix.com with a fixed sample
+          image and options. It is not a customer project: no account,
           allowlist, or billing, and it isn't counted in usage. Your project's
           URLs look like:
         </p>

@@ -22,7 +22,7 @@ const requestDetails = new WeakMap<
 // watch for error rates and slow requests.
 const plugin: NitroAppPlugin = (nitroApp) => {
   nitroApp.hooks.hook('request', (event) => {
-    if (new URL(event.req.url).pathname.startsWith('/demo/')) {
+    if (new URL(event.req.url).pathname.startsWith('/demo/img/')) {
       return
     }
     const incomingRequestId = event.req.headers.get('x-request-id')
@@ -46,7 +46,7 @@ const plugin: NitroAppPlugin = (nitroApp) => {
     } catch {
       path = event.req.url
     }
-    if (path.startsWith('/demo/') || SILENT_PATHS.has(path)) {
+    if (path.startsWith('/demo/img/') || SILENT_PATHS.has(path)) {
       return
     }
     const latencyMs =

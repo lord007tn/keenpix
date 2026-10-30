@@ -252,6 +252,7 @@ export function MarketingPage({
               alt=""
               aria-hidden="true"
               className="absolute inset-0 -z-10 h-full w-full object-cover opacity-60"
+              fetchPriority="high"
               height="630"
               src="/demo/img/og.png?fmt=jpeg&q=50&w=1200"
               width="1200"
