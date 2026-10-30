@@ -44,6 +44,7 @@ import { MARKETING_FAQ } from '@/shared/marketing-faq'
 import { REPOSITORY_URL } from '@/shared/repository'
 import { AiExtensionsPreview } from './ai-extensions-preview'
 import { FrameworkLogos } from './framework-logos'
+import { LiveDemo } from './live-demo'
 import { PricingComparison } from './pricing-comparison'
 
 // Drop a trailing `.00` so whole-dollar prices read as "$9" not "$9.00".
@@ -141,7 +142,11 @@ function MobileNav() {
           </SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col gap-0.5 p-3">
-          {[...NAV_LINKS, { href: '/login', label: 'Sign in' }].map((link) => (
+          {[
+            ...NAV_LINKS,
+            { href: '/login', label: 'Sign in' },
+            { href: '/signup', label: 'Start free trial' },
+          ].map((link) => (
             <a
               className="flex min-h-12 touch-manipulation items-center rounded-md px-3 font-medium text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               href={link.href}
@@ -233,15 +238,22 @@ export function MarketingPage({
       <main id="main-content">
         <section className="relative isolate overflow-hidden border-b bg-[#06101f] text-white">
           <picture>
-            <source srcSet="/brand/keenpix-hero.avif" type="image/avif" />
-            <source srcSet="/brand/keenpix-hero.webp" type="image/webp" />
+            <source
+              sizes="100vw"
+              srcSet="/demo/img/og.png?fmt=avif&q=50&w=640 640w, /demo/img/og.png?fmt=avif&q=50&w=960 960w, /demo/img/og.png?fmt=avif&q=50&w=1200 1200w"
+              type="image/avif"
+            />
+            <source
+              sizes="100vw"
+              srcSet="/demo/img/og.png?fmt=webp&q=50&w=640 640w, /demo/img/og.png?fmt=webp&q=50&w=960 960w, /demo/img/og.png?fmt=webp&q=50&w=1200 1200w"
+              type="image/webp"
+            />
             <img
               alt=""
               aria-hidden="true"
               className="absolute inset-0 -z-10 h-full w-full object-cover opacity-60"
-              fetchPriority="high"
               height="630"
-              src="/brand/keenpix-og.png"
+              src="/demo/img/og.png?fmt=jpeg&q=50&w=1200"
               width="1200"
             />
           </picture>
@@ -288,9 +300,18 @@ export function MarketingPage({
                   Self-host
                 </a>
               </div>
+              <a
+                className="mt-4 inline-flex min-h-11 items-center underline"
+                href="#demo"
+              >
+                See it live ↓
+              </a>
               <p className="mt-3 text-white/60 text-xs">
                 14-day trial · card required · trial usage is never billed
               </p>
+            </div>
+            <LiveDemo />
+            <div className="max-w-2xl lg:col-start-1 lg:row-start-2">
               <p className="mt-5 text-sm text-white/60">
                 JoodCMS includes a first-party Keenpix image-delivery
                 integration —{' '}
@@ -311,65 +332,6 @@ export function MarketingPage({
                     <div className="mt-1 text-white/60">{label}</div>
                   </div>
                 ))}
-              </div>
-            </div>
-            <div className="hidden items-end justify-end lg:flex">
-              <div className="w-full max-w-md rounded-lg border border-white/10 bg-background/10 p-5 shadow-2xl backdrop-blur-md">
-                <div className="flex items-center justify-between border-white/10 border-b pb-4">
-                  <div className="font-medium text-sm text-white">
-                    Transform request
-                  </div>
-                  <Badge className="border-emerald-300/25 bg-emerald-300/15 text-emerald-100 hover:bg-emerald-300/15">
-                    cached
-                  </Badge>
-                </div>
-                <div className="mt-5 space-y-4 font-mono text-sm">
-                  <div className="text-cyan-100">
-                    GET /img/https://…/hero.jpg
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    {['w=1200', 'fmt=auto', 'q=82'].map((param) => (
-                      <span
-                        className="rounded-md border border-white/10 bg-white/10 px-2 py-2 text-center text-white/80"
-                        key={param}
-                      >
-                        {param}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="space-y-3 pt-2">
-                    {[
-                      'Allowlisted host validated',
-                      'Fetched with SSRF guards',
-                      'Transformed & variant cached',
-                      'Served immutable for your CDN',
-                    ].map((step) => (
-                      <div className="flex items-start gap-3" key={step}>
-                        <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-emerald-300" />
-                        <span className="text-white/70">{step}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="border-white/10 border-t pt-4 text-xs">
-                    <div className="flex items-center justify-between text-white/60">
-                      <span>hero.jpg · original</span>
-                      <span>2.1 MB</span>
-                    </div>
-                    <div className="mt-2 h-1.5 w-full rounded-full bg-white/15">
-                      <div className="h-1.5 w-[23%] rounded-full bg-emerald-300" />
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-emerald-200">
-                        hero.avif · delivered
-                      </span>
-                      <span className="text-white">480 KB · 77% smaller</span>
-                    </div>
-                    <p className="mt-2 text-[11px] text-white/60 leading-relaxed">
-                      Illustrative example; output varies by source, dimensions,
-                      format, quality, and encoder settings.
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -457,7 +419,7 @@ export function MarketingPage({
               </div>
             </div>
             <CodeBlock>{`<img
-  src="https://keenpix.example.com/img/https://cdn.example.com/hero.jpg?project=site&w=1200&fmt=webp&q=82"
+  src="https://cdn.keenpix.com/p/<project-id>/img/https%3A%2F%2Fcdn.example.com%2Fhero.jpg?fmt=webp&q=70&w=1200"
   width="1200"
   height="800"
   alt="Product hero"

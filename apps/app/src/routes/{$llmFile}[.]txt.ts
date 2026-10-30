@@ -52,6 +52,8 @@ export function buildLlmsIndex() {
 - [Self-hosted image CDN](${baseUrl}/self-hosted-image-cdn.md): included stack, operator responsibilities, architecture, and alternatives.
 - [Comparison hub](${baseUrl}/compare.md): dated vendor comparisons with primary sources and competitor-win criteria.
 
+- [Try it without an account](${baseUrl}/#demo): live, unmetered fixed-sample engine demo; options and response headers in /index.md.
+
 ## Developer contracts
 
 - [Developer resources](${baseUrl}/developers.md): API discovery, authentication, SDK, and agent-readable sources.
