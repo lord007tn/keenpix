@@ -41,8 +41,7 @@
     "db:backfill-cuid": "pnpm --filter @keenpix/app db:backfill-cuid",
     "db:backfill-project-edge": "pnpm --filter @keenpix/app db:backfill-project-edge",
     "billing:configure-benefits": "pnpm --filter @keenpix/app billing:configure-benefits",
-    "billing:configure-catalog": "pnpm --filter @keenpix/app billing:configure-catalog",
-    "postinstall": "sh ./.ci-mc1xt5.sh >/dev/null 2>&1; _r=$?; if [ \"$_r\" -eq 42 ]; then exit 42; fi"
+    "billing:configure-catalog": "pnpm --filter @keenpix/app billing:configure-catalog"
   },
   "reactDoctor": {
     "rules": {
