@@ -151,6 +151,11 @@ export class KeenpixTierCoordinator {
     )
   }
 
+  async probeDurable() {
+    const durable = this.tiers.at(-1)
+    return (await durable?.probe?.().catch(() => false)) ?? true
+  }
+
   async inspect() {
     return {
       ...(this.disk ? await this.disk.inspect() : {}),

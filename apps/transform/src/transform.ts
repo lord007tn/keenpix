@@ -31,6 +31,7 @@ import { env } from './env'
 
 const logger = createLogger()
 const analytics = createRequestEventBuffer({ logger })
+const MAX_ACTIVE_TRANSFORMS = 8
 const inflight = new Map<string, Promise<{ bytesIn: number; out: Buffer }>>()
 const LEADING_SLASHES_RE = /^\/+/
 
@@ -76,55 +77,67 @@ function sourceHost(src: string) {
   }
 }
 
-function createTransform(input: {
+async function renderTransform(input: {
   allowedOrigins: string[]
-  cacheKey: string
   format: OutputFormat
   src: string
   transformOptions: TransformOptions
 }) {
-  const work = (async () => {
-    const origin = await assertSafeOrigin(input.src, input.allowedOrigins)
-    const [originBytes, watermarkBytes] = await Promise.all([
-      fetchOriginImage(origin, input.allowedOrigins, {
-        maxBytes: env.KEENPIX_MAX_ORIGIN_BYTES,
-        timeoutMs: env.KEENPIX_ORIGIN_TIMEOUT_MS,
-      }),
-      input.transformOptions.watermark && input.format !== 'svg'
-        ? assertSafeOrigin(
-            input.transformOptions.watermark.url,
-            input.allowedOrigins,
-          ).then((watermarkOrigin) =>
-            fetchOriginImage(watermarkOrigin, input.allowedOrigins, {
-              maxBytes: env.KEENPIX_MAX_WATERMARK_BYTES,
-              timeoutMs: env.KEENPIX_ORIGIN_TIMEOUT_MS,
-            }),
-          )
-        : undefined,
-    ])
-    let out: Buffer
-    try {
-      out =
-        input.format === 'svg'
-          ? optimizeSvgImage(originBytes)
-          : (
-              await transformImage(originBytes, input.transformOptions, {
-                maxDimension: env.KEENPIX_MAX_DIMENSION,
-                maxInputPixels: env.KEENPIX_MAX_INPUT_PIXELS,
-                watermarkBytes,
-              })
-            ).data
-    } catch (error) {
-      if (error instanceof TransformError) {
-        throw error
-      }
-      throw new TransformError('Origin is not a valid image', 502)
-    }
-    await transformCache
-      .write(input.cacheKey, input.format, out, originBytes.byteLength)
-      .catch((error) => logger.warn({ error }, 'cache write failed'))
+  const origin = await assertSafeOrigin(input.src, input.allowedOrigins)
+  // Keep this slot until both downloads have settled, even if one fails.
+  const [source, watermark] = await Promise.allSettled([
+    fetchOriginImage(origin, input.allowedOrigins, {
+      maxBytes: env.KEENPIX_MAX_ORIGIN_BYTES,
+      timeoutMs: env.KEENPIX_ORIGIN_TIMEOUT_MS,
+    }),
+    input.transformOptions.watermark && input.format !== 'svg'
+      ? assertSafeOrigin(
+          input.transformOptions.watermark.url,
+          input.allowedOrigins,
+        ).then((watermarkOrigin) =>
+          fetchOriginImage(watermarkOrigin, input.allowedOrigins, {
+            maxBytes: env.KEENPIX_MAX_WATERMARK_BYTES,
+            timeoutMs: env.KEENPIX_ORIGIN_TIMEOUT_MS,
+          }),
+        )
+      : undefined,
+  ])
+  if (source.status === 'rejected') {
+    throw source.reason
+  }
+  if (watermark.status === 'rejected') {
+    throw watermark.reason
+  }
+  const originBytes = source.value
+  try {
+    const out =
+      input.format === 'svg'
+        ? optimizeSvgImage(originBytes)
+        : (
+            await transformImage(originBytes, input.transformOptions, {
+              maxDimension: env.KEENPIX_MAX_DIMENSION,
+              maxInputPixels: env.KEENPIX_MAX_INPUT_PIXELS,
+              watermarkBytes: watermark.value,
+            })
+          ).data
     return { bytesIn: originBytes.byteLength, out }
-  })()
+  } catch (error) {
+    if (error instanceof TransformError) {
+      throw error
+    }
+    throw new TransformError('Origin is not a valid image', 502)
+  }
+}
+
+function createTransform(
+  input: Parameters<typeof renderTransform>[0] & { cacheKey: string },
+) {
+  const work = renderTransform(input).then(async (result) => {
+    await transformCache
+      .write(input.cacheKey, input.format, result.out, result.bytesIn)
+      .catch((error) => logger.warn({ error }, 'cache write failed'))
+    return result
+  })
   inflight.set(input.cacheKey, work)
   work.finally(() => inflight.delete(input.cacheKey)).catch(() => undefined)
   return work
@@ -135,7 +148,11 @@ async function readOrCreateTransform(
 ) {
   const cached = await transformCache.read(input.cacheKey, input.format)
   if (cached) {
-    if (cached.stale && !inflight.has(input.cacheKey)) {
+    if (
+      cached.stale &&
+      inflight.size < MAX_ACTIVE_TRANSFORMS &&
+      !inflight.has(input.cacheKey)
+    ) {
       createTransform(input).catch((error) =>
         logger.warn(
           { error, path: sourcePath(input.src) },
@@ -159,6 +176,9 @@ async function readOrCreateTransform(
       cached: false,
       originalBytes: result.bytesIn,
     }
+  }
+  if (inflight.size >= MAX_ACTIVE_TRANSFORMS) {
+    throw new TransformError('Image transform is busy. Retry shortly.', 503)
   }
   const result = await createTransform(input)
   return { ...result, cached: false, originalBytes: result.bytesIn }
@@ -372,9 +392,13 @@ export async function handleTransformRequest(
       },
     )
   } catch (error) {
+    const status = getTransformErrorStatus(error)
     return new Response(getPublicTransformErrorMessage(error), {
-      headers: edge ? { [EDGE_PROJECT_HEADER]: projectId } : undefined,
-      status: getTransformErrorStatus(error),
+      headers: {
+        ...(edge ? { [EDGE_PROJECT_HEADER]: projectId } : {}),
+        ...(status === 503 ? { 'retry-after': '1' } : {}),
+      },
+      status,
     })
   }
 }

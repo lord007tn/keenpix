@@ -69,7 +69,7 @@ export function createTransformApp() {
     )
     .get('/health/ready', async (context) => {
       const health = await getTransformHealth({
-        probeCache: transformCache.probe.bind(transformCache),
+        probeCache: transformCache.probeDurable.bind(transformCache),
         probeDatabase: () =>
           prisma.$queryRaw`SELECT 1`.then(
             () => true,
