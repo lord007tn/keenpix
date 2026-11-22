@@ -70,4 +70,30 @@ describe('Dragonfly cache pressure', () => {
     }
     expect(redis.zrange).toHaveBeenCalledTimes(1)
   })
+
+  it('starts a new sweep for a write completing just as the prior sweep ends', async () => {
+    const cache = new DragonflyCacheStore('redis://example.test', 1024)
+    let resolveTotal: (value: string) => void = () => undefined
+    const firstTotal = new Promise<string>((resolve) => {
+      resolveTotal = resolve
+    })
+    let resolveWrite: (value: number) => void = () => undefined
+    const secondWrite = new Promise<number>((resolve) => {
+      resolveWrite = resolve
+    })
+    redis.get.mockReturnValueOnce(firstTotal).mockResolvedValueOnce('1100')
+    redis.eval
+      .mockResolvedValueOnce(1050)
+      .mockReturnValueOnce(secondWrite)
+      .mockResolvedValueOnce(1000)
+    redis.zrange.mockResolvedValue(['old.webp'])
+
+    const first = cache.set('one', 'webp', Buffer.from('one'))
+    await vi.waitFor(() => expect(redis.get).toHaveBeenCalledTimes(1))
+    const second = cache.set('two', 'webp', Buffer.from('two'))
+    resolveTotal('1000')
+    resolveWrite(1100)
+    await Promise.all([first, second])
+    expect(redis.zrange).toHaveBeenCalledTimes(1)
+  })
 })
