@@ -131,26 +131,29 @@ export class DragonflyCacheStore implements CacheStore {
       )
       if (this.maxBytes > 0 && total > this.maxBytes) {
         this.evictionRequested = true
-        this.eviction ??= this.enforceLimit().finally(() => {
-          this.eviction = undefined
-        })
+        this.eviction ??= Promise.resolve().then(() => this.enforceLimit())
         await this.eviction
       }
     })
   }
 
   private async enforceLimit() {
-    do {
-      this.evictionRequested = false
-      let total = Number((await this.redis.get(this.totalKey)) ?? 0)
-      while (total > this.maxBytes) {
-        const [oldest] = await this.redis.zrange(this.lruKey, 0, 0)
-        if (!oldest) {
-          break
+    try {
+      do {
+        this.evictionRequested = false
+        let total = Number((await this.redis.get(this.totalKey)) ?? 0)
+        while (total > this.maxBytes) {
+          const [oldest] = await this.redis.zrange(this.lruKey, 0, 0)
+          if (!oldest) {
+            break
+          }
+          total = await this.removeEntry(oldest)
         }
-        total = await this.removeEntry(oldest)
-      }
-    } while (this.evictionRequested)
+      } while (this.evictionRequested)
+    } finally {
+      // A later write must start a sweep once the final flag check passes.
+      this.eviction = undefined
+    }
   }
 
   private async removeEntry(name: string) {
